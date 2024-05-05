@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	monitoringthanosiov1aplha1 "github.com/thanos-community/thanos-operator/api/v1aplha1"
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 )
 
 // ThanosServiceReconciler reconciles a ThanosService object
@@ -57,6 +57,6 @@ func (r *ThanosServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&monitoringthanosiov1aplha1.ThanosService{}).
+		For(&monitoringthanosiov1alpha1.ThanosService{}).
 		Complete(r)
 }

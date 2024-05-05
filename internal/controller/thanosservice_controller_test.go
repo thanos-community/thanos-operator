@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	monitoringthanosiov1aplha1 "github.com/thanos-community/thanos-operator/api/v1aplha1"
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 )
 
 var _ = Describe("ThanosService Controller", func() {
@@ -40,13 +40,13 @@ var _ = Describe("ThanosService Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		thanosservice := &monitoringthanosiov1aplha1.ThanosService{}
+		thanosservice := &monitoringthanosiov1alpha1.ThanosService{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind ThanosService")
 			err := k8sClient.Get(ctx, typeNamespacedName, thanosservice)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &monitoringthanosiov1aplha1.ThanosService{
+				resource := &monitoringthanosiov1alpha1.ThanosService{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +59,7 @@ var _ = Describe("ThanosService Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &monitoringthanosiov1aplha1.ThanosService{}
+			resource := &monitoringthanosiov1alpha1.ThanosService{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
