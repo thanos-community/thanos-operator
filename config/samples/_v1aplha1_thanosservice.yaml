@@ -1,4 +1,4 @@
-apiVersion: monitoring.thanos.io/v1aplha1
+apiVersion: monitoring.thanos.io/v1alpha1
 kind: ThanosService
 metadata:
   labels:

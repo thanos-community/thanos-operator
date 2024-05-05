@@ -14,7 +14,7 @@ spec:
     singular: thanosservice
   scope: Namespaced
   versions:
-  - name: v1aplha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ThanosService is the Schema for the thanosservices API

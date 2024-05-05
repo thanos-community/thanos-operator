@@ -14,6 +14,6 @@ resources:
   controller: true
   domain: monitoring.thanos.io
   kind: ThanosService
-  path: github.com/thanos-community/thanos-operator/api/v1aplha1
-  version: v1aplha1
+  path: github.com/thanos-community/thanos-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
