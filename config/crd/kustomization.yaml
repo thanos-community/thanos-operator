@@ -5,6 +5,7 @@ resources:
 - bases/monitoring.thanos.io_thanosservices.yaml
 - bases/monitoring.thanos.io_thanosqueries.yaml
 - bases/monitoring.thanos.io_thanosreceivehashrings.yaml
+- bases/monitoring.thanos.io_thanosreceiverouters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -19,6 +20,7 @@ patches:
 #- path: patches/cainjection_in_thanosservices.yaml
 #- path: patches/cainjection_in_thanosqueries.yaml
 #- path: patches/cainjection_in_thanosreceivehashrings.yaml
+#- path: patches/cainjection_in_thanosreceiverouters.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section
