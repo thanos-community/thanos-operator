@@ -29,7 +29,7 @@ func (d Dummy) GoString() string {
 }
 
 type TestOptions struct {
-	String       string         `opt:"string"`
+	String       string         `json:"string"`
 	Int          int            `opt:"int"`    // Zero value is ignored
 	IntPtr       *int           `opt:"intptr"` // Zero value is not ignored
 	Float        float64        `opt:"float"`

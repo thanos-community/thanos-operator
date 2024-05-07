@@ -1,0 +1,230 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: thanosqueries.monitoring.thanos.io
+spec:
+  group: monitoring.thanos.io
+  names:
+    kind: ThanosQuery
+    listKind: ThanosQueryList
+    plural: thanosqueries
+    singular: thanosquery
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ThanosQuery is the Schema for the thanosqueries API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ThanosQuerySpec defines the desired state of Thanos Query.
+            properties:
+              activeQueryPath:
+                description: Directory to log currently active queries in the queries.active
+                  file.
+                type: string
+              alertQueryURL:
+                description: The external Thanos Query URL that would be set in all
+                  alerts 'Source' field.
+                type: string
+              autoDownsampling:
+                default: true
+                description: Enable automatic adjustment (step / 5) to what source
+                  of data should be used in store gateways if no max_source_resolution
+                  param is specified.
+                type: boolean
+              defaultEvaluationInterval:
+                default: 1m
+                description: Default evaluation interval for sub queries.
+                format: int64
+                type: integer
+              defaultStep:
+                default: 1s
+                description: |-
+                  Set default step for range queries. Default step is only used when step is not set in UI.
+                  In such cases, Thanos UI will use default step to calculate resolution (resolution = max(rangeSeconds / 250, defaultStep)).
+                  This will not work from Grafana, but Grafana has __step variable which can be used
+                format: int64
+                type: integer
+              dynamicLookbackDelta:
+                description: Allow for larger lookback duration for queries based
+                  on resolution.
+                type: boolean
+              endpoint:
+                description: |-
+                  Addresses of statically configured Thanos API servers.
+                  The scheme may be prefixed with 'dns+' or 'dnssrv+' to detect Thanos API
+                  servers through respective DNS lookups.
+                  Only to be used for out-of-cluster connections.
+                items:
+                  type: string
+                type: array
+              endpointGroup:
+                description: |-
+                  Experimental: DNS name of statically configured Thanos API server groups.
+                  Targets resolved from the DNS name will be queried in a round-robin, instead of a fanout manner.
+                  This flag should be used when connecting a Thanos Query to HA groups of Thanos components.
+                  Only to be used for out-of-cluster connections.
+                items:
+                  type: string
+                type: array
+              endpointGroupStrict:
+                description: |-
+                  Experimental: Addresses of only statically configured Thanos API servers groups that are always used,
+                  even if the health check fails. Useful if you have a caching layer on top.
+                  Only to be used for out-of-cluster connections.
+                items:
+                  type: string
+                type: array
+              endpointStrict:
+                description: |-
+                  Addresses of only statically configured Thanos API servers that are always used,
+                  even if the health check fails. Useful if you have a caching layer on top.
+                  Only to be used for out-of-cluster connections.
+                items:
+                  type: string
+                type: array
+              image:
+                description: Container image to use for the Thanos components.
+                type: string
+              imagePullPolicy:
+                description: |-
+                  Image pull policy for the Thanos containers.
+                  See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
+                enum:
+                - ""
+                - Always
+                - Never
+                - IfNotPresent
+                type: string
+              imagePullSecrets:
+                description: |-
+                  An optional list of references to Secrets in the same namespace
+                  to use for pulling images from registries.
+                  See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        TODO: Add other useful fields. apiVersion, kind, uid?
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              logFormat:
+                description: Log format for Thanos.
+                enum:
+                - ""
+                - logfmt
+                - json
+                type: string
+              logLevel:
+                description: Log level for Thanos.
+                enum:
+                - ""
+                - debug
+                - info
+                - warn
+                - error
+                type: string
+              lookbackDelta:
+                description: |-
+                  The maximum lookback duration for retrieving metrics during expression evaluations.
+                  PromQL always evaluates the query for the certain timestamp (query range timestamps are deduced by step).
+                  Since scrape intervals might be different, PromQL looks back for given amount of time to get latest sample.
+                  If it exceeds the maximum lookback delta it assumes series is stale and returns none (a gap).
+                  This is why lookback delta should be set to at least 2 times of the slowest scrape interval. If unset it will use the promql default of 5m.
+                format: int64
+                type: integer
+              maxConcurrent:
+                default: "20"
+                description: Maximum number of queries processed concurrently by query
+                  node.
+                type: integer
+              maxConcurrentSelect:
+                default: "4"
+                description: Maximum number of select requests made concurrently per
+                  a query.
+                type: integer
+              metadataDefaultTimeRange:
+                default: 0s
+                description: |-
+                  The default metadata time range duration for retrieving labels through Labels and Series API
+                  when the range parameters are not specified. The zero value means range covers the time since the beginning.
+                format: int64
+                type: integer
+              partialResponse:
+                default: true
+                description: Enable partial response for queries if no partial_response
+                  param is specified. --no-query.partial-response for disabling.
+                type: boolean
+              paused:
+                description: |-
+                  When a Thanos deployment is paused, no actions except for deletion
+                  will be performed on the underlying objects.
+                type: boolean
+              promQLEngine:
+                default: thanos
+                description: Default PromQL engine to use.
+                enum:
+                - thanos
+                - prometheus
+                type: string
+              replicaLabels:
+                description: |-
+                  Labels to treat as a replica indicator along which data is deduplicated.
+                  Still you will be able to query without deduplication using 'dedup=false' parameter.
+                  Data includes time series, recording rules, and alerting rules.
+                items:
+                  type: string
+                type: array
+              useFileForAutoSD:
+                default: false
+                description: |-
+                  Default behavior of the Operator is to add new Thanos API servers to an SD file.
+                  Setting this to true, ensures that the operator will instead discover Thanos API
+                  servers and configure them on querier as --endpoint flags and redeploy.
+                type: boolean
+              version:
+                description: |-
+                  Version of Thanos to be deployed.
+                  If not specified, the operator assumes the latest upstream version of
+                  Thanos available at the time when the version of the operator was
+                  released.
+                type: string
+            required:
+            - useFileForAutoSD
+            type: object
+          status:
+            description: ThanosQueryStatus defines the observed state of ThanosQuery
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
