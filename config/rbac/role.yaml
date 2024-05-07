@@ -33,6 +33,32 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
+  - thanosreceivehashrings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceivehashrings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceivehashrings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
   - thanosservices
   verbs:
   - create
