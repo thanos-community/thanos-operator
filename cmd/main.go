@@ -136,6 +136,20 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
 	}
+	if err = (&controller.ThanosReceiveHashringReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceiveHashring")
+		os.Exit(1)
+	}
+	if err = (&controller.ThanosReceiveRouterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceiveRouter")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
