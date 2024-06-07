@@ -5,6 +5,41 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - monitoring.thanos.io
   resources:
   - thanosqueries
@@ -26,6 +61,32 @@ rules:
   - monitoring.thanos.io
   resources:
   - thanosqueries/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives/status
   verbs:
   - get
   - patch

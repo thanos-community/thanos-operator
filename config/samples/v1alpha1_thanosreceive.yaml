@@ -1,0 +1,9 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosReceive
+metadata:
+  labels:
+    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: thanosreceive-sample
+spec:
+  # TODO(user): Add fields here
