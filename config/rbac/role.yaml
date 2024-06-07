@@ -7,6 +7,32 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
+  - thanosqueries
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosqueries/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosqueries/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
   - thanosservices
   verbs:
   - create
