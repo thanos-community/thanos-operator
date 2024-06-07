@@ -1,0 +1,162 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: thanosqueries.monitoring.thanos.io
+spec:
+  group: monitoring.thanos.io
+  names:
+    kind: ThanosQuery
+    listKind: ThanosQueryList
+    plural: thanosqueries
+    singular: thanosquery
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ThanosQuery is the Schema for the thanosqueries API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ThanosQuerySpec defines the desired state of ThanosQuery
+            properties:
+              image:
+                description: Container image to use for the Thanos components.
+                type: string
+              imagePullPolicy:
+                default: IfNotPresent
+                description: |-
+                  Image pull policy for the Thanos containers.
+                  See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
+                enum:
+                - Always
+                - Never
+                - IfNotPresent
+                type: string
+              imagePullSecrets:
+                description: |-
+                  An optional list of references to Secrets in the same namespace
+                  to use for pulling images from registries.
+                  See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        TODO: Add other useful fields. apiVersion, kind, uid?
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              logFormat:
+                default: logfmt
+                description: Log format for Thanos.
+                enum:
+                - logfmt
+                - json
+                type: string
+              logLevel:
+                default: info
+                description: Log level for Thanos.
+                enum:
+                - debug
+                - info
+                - warn
+                - error
+                type: string
+              paused:
+                description: |-
+                  When a Thanos deployment is paused, no actions except for deletion
+                  will be performed on the underlying objects.
+                type: boolean
+              replicaLabels:
+                description: Querier replica labels to configure.
+                items:
+                  type: string
+                type: array
+              storeLabelSelector:
+                description: |-
+                  By default, the operator will add all discoverable StoreAPIs to the Querier,
+                  if they have store labels. You can optionally choose to override default
+                  StoreAPI selector labels, to select a subset of StoreAPIs to query.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              version:
+                description: |-
+                  Version of Thanos to be deployed.
+                  If not specified, the operator assumes the latest upstream version of
+                  Thanos available at the time when the version of the operator was
+                  released.
+                type: string
+            type: object
+          status:
+            description: ThanosQueryStatus defines the observed state of ThanosQuery
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

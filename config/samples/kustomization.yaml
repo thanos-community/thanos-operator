@@ -1,4 +1,5 @@
 ## Append samples of your project ##
 resources:
 - _v1alpha1_thanosservice.yaml
+- _v1alpha1_thanosquery.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
