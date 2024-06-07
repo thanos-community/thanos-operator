@@ -25,9 +25,13 @@ type ThanosQuerySpec struct {
 	CommonThanosFields `json:",inline"`
 
 	// Querier replica labels to configure.
+	// +optional
 	QuerierReplicaLabels []string `json:"replicaLabels,omitempty"`
 
-	// Override default StoreAPI selector labels, to select specific StoreAPIs to query.
+	// By default, the operator will add all discoverable StoreAPIs to the Querier,
+	// if they have store labels. You can optionally choose to override default
+	// StoreAPI selector labels, to select a subset of StoreAPIs to query.
+	// +optional
 	CustomStoreLabelSelector *metav1.LabelSelector `json:"storeLabelSelector,omitempty"`
 }
 

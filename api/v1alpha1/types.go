@@ -18,7 +18,8 @@ type CommonThanosFields struct {
 
 	// Image pull policy for the Thanos containers.
 	// See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
-	// +kubebuilder:validation:Enum="";Always;Never;IfNotPresent
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	// +kubebuilder:default:=IfNotPresent
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// An optional list of references to Secrets in the same namespace
 	// to use for pulling images from registries.
@@ -30,9 +31,11 @@ type CommonThanosFields struct {
 	Paused bool `json:"paused,omitempty"`
 
 	// Log level for Thanos.
-	// +kubebuilder:validation:Enum="";debug;info;warn;error
+	// +kubebuilder:validation:Enum=debug;info;warn;error
+	// +kubebuilder:default:=info
 	LogLevel string `json:"logLevel,omitempty" opt:"log.level"`
 	// Log format for Thanos.
-	// +kubebuilder:validation:Enum="";logfmt;json
+	// +kubebuilder:validation:Enum=logfmt;json
+	// +kubebuilder:default:=logfmt
 	LogFormat string `json:"logFormat,omitempty" opt:"log.format"`
 }
