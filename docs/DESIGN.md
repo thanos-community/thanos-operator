@@ -136,6 +136,19 @@ Same as prior implementation.
 
 ### Metrics Compaction
 
+#### Proposed Design: Compactor
+
+We propose that there should be a single CRD for Thanos Compactor.
+The initial implementation will be a simple compactor CRD that will support explicit sharding via external labels.
+We intend to add more complex shard management/automation in future iterations. Some ideas
+
+1. Auto-discovery of external labels and shard creation based on those labels.
+2. Time based sharding based on auto-discovery of a compaction backlog.
+
+<img src="img/ThanosCompact.png" alt="Thanos Compactor" width="800"/>
+
+
+
 ## Alternatives
 
 ### [Existing Thanos operator](https://github.com/banzaicloud/thanos-operator)
