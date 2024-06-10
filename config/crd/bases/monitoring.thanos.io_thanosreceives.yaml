@@ -39,92 +39,6 @@ spec:
           spec:
             description: ThanosReceiveSpec defines the desired state of ThanosReceive
             properties:
-              hashrings:
-                description: Hashrings is a list of hashrings to route to.
-                items:
-                  description: IngestorHashringSpec represents the configuration for
-                    a hashring to be used by the Thanos Receive StatefulSet.
-                  properties:
-                    labels:
-                      additionalProperties:
-                        type: string
-                      description: |-
-                        Labels are additional labels to add to the hashring components.
-                        Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
-                      type: object
-                    name:
-                      description: |-
-                        Name is the name of the hashring.
-                        Name will be used to generate the names for the resources created for the hashring.
-                        By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
-                        In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
-                        the Name will be used as is and must be unique within the namespace.
-                        This field is immutable.
-                      maxLength: 253
-                      minLength: 1
-                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
-                    objectStorageConfig:
-                      description: |-
-                        ObjectStorageConfig is the secret's key that contains the object storage configuration.
-                        The secret needs to be in the same namespace as the ReceiveHashring object.
-                      properties:
-                        key:
-                          description: The key of the secret to select from.  Must
-                            be a valid secret key.
-                          type: string
-                        name:
-                          description: |-
-                            Name of the referent.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                            TODO: Add other useful fields. apiVersion, kind, uid?
-                          type: string
-                        optional:
-                          description: Specify whether the Secret or its key must
-                            be defined
-                          type: boolean
-                      required:
-                      - key
-                      type: object
-                      x-kubernetes-map-type: atomic
-                    replicas:
-                      description: Replicas is the number of replicas/members of the
-                        hashring to add to the Thanos Receive StatefulSet.
-                      format: int32
-                      minimum: 1
-                      type: integer
-                    retention:
-                      default: 2h
-                      description: Retention is the duration for which the Thanos
-                        Receive StatefulSet will retain data.
-                      pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
-                      type: string
-                    storageSize:
-                      description: StorageSize is the size of the storage to be used
-                        by the Thanos Receive StatefulSet.
-                      type: string
-                    tenantMatcherType:
-                      default: exact
-                      description: TenantMatcherType is the type of tenant matching
-                        to use.
-                      enum:
-                      - exact
-                      - glob
-                      type: string
-                    tenants:
-                      description: |-
-                        Tenants is a list of tenants that should be matched by the hashring.
-                        An empty list matches all tenants.
-                      items:
-                        type: string
-                      type: array
-                  required:
-                  - objectStorageConfig
-                  type: object
-                type: array
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -157,6 +71,118 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+              ingestor:
+                description: Ingestor is the configuration for the ingestor.
+                properties:
+                  hashrings:
+                    description: Hashrings is a list of hashrings to route to.
+                    items:
+                      description: IngestorHashringSpec represents the configuration
+                        for a hashring to be used by the Thanos Receive StatefulSet.
+                      properties:
+                        labels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Labels are additional labels to add to the hashring components.
+                            Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
+                          type: object
+                        name:
+                          description: |-
+                            Name is the name of the hashring.
+                            Name will be used to generate the names for the resources created for the hashring.
+                            By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
+                            In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
+                            the Name will be used as is and must be unique within the namespace.
+                            This field is immutable.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                          x-kubernetes-validations:
+                          - message: Value is immutable
+                            rule: self == oldSelf
+                        objectStorageConfig:
+                          description: |-
+                            ObjectStorageConfig is the secret's key that contains the object storage configuration.
+                            The secret needs to be in the same namespace as the ReceiveHashring object.
+                          properties:
+                            key:
+                              description: The key of the secret to select from.  Must
+                                be a valid secret key.
+                              type: string
+                            name:
+                              description: |-
+                                Name of the referent.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?
+                              type: string
+                            optional:
+                              description: Specify whether the Secret or its key must
+                                be defined
+                              type: boolean
+                          required:
+                          - key
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        replicas:
+                          description: Replicas is the number of replicas/members
+                            of the hashring to add to the Thanos Receive StatefulSet.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        retention:
+                          default: 2h
+                          description: Retention is the duration for which the Thanos
+                            Receive StatefulSet will retain data.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          type: string
+                        storageSize:
+                          description: StorageSize is the size of the storage to be
+                            used by the Thanos Receive StatefulSet.
+                          type: string
+                        tenantMatcherType:
+                          default: exact
+                          description: TenantMatcherType is the type of tenant matching
+                            to use.
+                          enum:
+                          - exact
+                          - glob
+                          type: string
+                        tenants:
+                          description: |-
+                            Tenants is a list of tenants that should be matched by the hashring.
+                            An empty list matches all tenants.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    type: array
+                  objectStorageConfig:
+                    description: |-
+                      ObjectStorageConfig is the secret's key that contains the object storage configuration.
+                      The secret needs to be in the same namespace as the ReceiveHashring object.
+                      Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
               logFormat:
                 default: logfmt
                 description: Log format for Thanos.
@@ -165,9 +191,9 @@ spec:
                 - json
                 type: string
               logLevel:
+                default: info
                 description: Log level for Thanos.
                 enum:
-                - ""
                 - debug
                 - info
                 - warn

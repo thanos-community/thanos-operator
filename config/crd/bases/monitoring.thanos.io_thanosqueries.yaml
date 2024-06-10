@@ -89,7 +89,7 @@ spec:
                 type: string
               paused:
                 description: |-
-                  When a Thanos deployment is paused, no actions except for deletion
+                  When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
               replicaLabels:

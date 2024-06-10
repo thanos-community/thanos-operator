@@ -56,6 +56,17 @@ type RouterSpec struct {
 	ReplicationFactor *int32 `json:"replicationFactor,omitempty"`
 }
 
+// IngestorSpec represents the configuration for the ingestor
+type IngestorSpec struct {
+	// ObjectStorageConfig is the secret's key that contains the object storage configuration.
+	// The secret needs to be in the same namespace as the ReceiveHashring object.
+	// Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec.
+	// +kubebuilder:validation:Optional
+	ObjectStorageConfig corev1.SecretKeySelector `json:"objectStorageConfig"`
+	// Hashrings is a list of hashrings to route to.
+	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
+}
+
 // IngestorHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.
 type IngestorHashringSpec struct {
 	// Name is the name of the hashring.
@@ -84,7 +95,7 @@ type IngestorHashringSpec struct {
 	Retention Duration `json:"retention,omitempty"`
 	// ObjectStorageConfig is the secret's key that contains the object storage configuration.
 	// The secret needs to be in the same namespace as the ReceiveHashring object.
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	ObjectStorageConfig corev1.SecretKeySelector `json:"objectStorageConfig"`
 	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Required
@@ -104,9 +115,10 @@ type ThanosReceiveSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
 	CommonThanosFields `json:",inline"`
 	// Router is the configuration for the router.
+	// +kubebuilder:validation:Required
 	Router RouterSpec `json:"router,omitempty"`
-	// Hashrings is a list of hashrings to route to.
-	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
+	// Ingestor is the configuration for the ingestor.
+	Ingestor IngestorSpec `json:"ingestor,omitempty"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive
