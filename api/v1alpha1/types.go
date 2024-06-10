@@ -4,6 +4,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
+// Supported units: y, w, d, h, m, s, ms
+// Examples: `30s`, `1m`, `1h20m15s`, `15d`
+// +kubebuilder:validation:Pattern:="^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$"
+type Duration string
+
 // CommonThanosFields are the options available to all Thanos components.
 // +k8s:deepcopy-gen=true
 type CommonThanosFields struct {
@@ -26,7 +32,7 @@ type CommonThanosFields struct {
 	// See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// When a Thanos deployment is paused, no actions except for deletion
+	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	Paused bool `json:"paused,omitempty"`
 

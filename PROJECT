@@ -24,4 +24,12 @@ resources:
   kind: ThanosQuery
   path: github.com/thanos-community/thanos-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: monitoring.thanos.io
+  kind: ThanosReceive
+  path: github.com/thanos-community/thanos-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

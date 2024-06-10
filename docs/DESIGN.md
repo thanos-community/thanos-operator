@@ -39,6 +39,43 @@ The following sections outline the identified use cases and stories per componen
 
 ### Metrics Ingest
 
+#### Proposed Design: Receive
+
+We propose that there should be a single CRD for Thanos Receive.
+
+_ThanosReceive_ will be responsible for managing the lifecycle Receive routing and ingest components.
+It will manage the hashring configuration for the ingest components that it deploys.
+
+**Option One - Split routing and metrics ingest components**
+
+<img src="img/ThanosReceive.png" alt="Thanos Receive" width="800"/>
+
+**_“As a developer, I want to be able to spin up Thanos Receive as a remote write sink with minimal configuration and simple documentation.”_**
+
+A single custom resource will manage the full configuration of metrics ingestion. Hashring configuration will be managed
+by default without the need for a third party controller/component.
+
+**_“As an operator of a multi-tenant metrics backend, I want to be able to deploy multiple distinct configurations with respect to metrics object storage targets, retention, data replication factor and the hashing algorithm used.”_**
+
+We will support managing multiple hashrings in a single spec. Each hashring can have distinct configuration.
+Replication factor will be tied to the router so this will not be configurable per hashring.
+Additional custom resources can be created to manage different data replication requirements.
+
+**_“As an operator of a multi-tenant metrics backend, I want to be able to offer different levels of service to different tenants (shared infrastructure/hard tenancy).”_**
+
+Full hard tenancy can be supported by creating a dedicated custom resource per tenant.
+A single custom resource can support shared routing and hard tenancy across ingesters by specifying multiple hashrings.
+Shared routing and shared ingest can be supported by passing multiple tenants to the tenant list in hashring configuration.
+
+**_“As an operator of a multi-tenant metrics backend, I want to be able to easily move tenants around without data loss and/or service disruption.”_**
+
+Hashring configurations will be updated dynamically at runtime by the controller.
+Tenants can safely be added or removed from a hashring without disruption.
+
+**_“As an operator of a multi-tenant metrics backend, I want to be able to do blue/green deployments for new Thanos releases”_**
+
+We will support adding custom image and version overrides per router/ingester.
+
 ### Metrics Query
 
 #### Proposed Design: Query
