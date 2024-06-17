@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,10 +37,9 @@ const (
 type ThanosCompactSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
 	CommonThanosFields `json:",inline"`
-	// ObjectStorageConfig is the secret's key that contains the object storage configuration.
-	// The secret needs to be in the same namespace as the ThanosCompact object.
+	// ObjectStorageConfig is the object storage configuration for the compact component.
 	// +kubebuilder:validation:Required
-	ObjectStorageConfig corev1.SecretKeySelector `json:"objectStorageConfig"`
+	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
 	// RetentionConfig is the retention configuration for the compact component.
 	// +kubebuilder:validation:Required
 	RetentionConfig RetentionResolutionConfig `json:"retentionConfig,omitempty"`
@@ -53,7 +51,7 @@ type ThanosCompactSpec struct {
 	GroupConfig GroupConfig `json:"groupConfig,omitempty"`
 	// ShardingConfig is the sharding configuration for the compact component.
 	// +kubebuilder:validation:Optional
-	ShardingConfig ShardingConfig `json:"shardingConfig,omitempty"`
+	ShardingConfig *ShardingConfig `json:"shardingConfig,omitempty"`
 }
 
 // ThanosCompactStatus defines the observed state of ThanosCompact
@@ -164,17 +162,9 @@ type ShardingConfig struct {
 }
 
 // ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.
-type ExternalLabelShardingConfig struct {
-	// ExternalLabel is the external label to shard on.
-	// This label must be present in the block's metadata.
-	// +kubebuilder:validation:Required
-	ExternalLabel string `json:"externalLabel,omitempty"`
-	// Values is the list of values (as a regular expression) to shard on.
-	// Each value will be a configured and deployed as a separate compact component.
-	// +kubebuilder:default=".*"
-	// +kubebuilder:validation:Optional
-	Values []string `json:"values,omitempty"`
-}
+// The keys are the external labels to shard on and the values are the values (as regular expressions) to shard on.
+// Each value will be a configured and deployed as a separate compact component.
+type ExternalLabelShardingConfig map[string]string
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

@@ -10,16 +10,21 @@ import (
 // +kubebuilder:validation:Pattern:="^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$"
 type Duration string
 
+// ObjectStorageConfig is the secret that contains the object storage configuration.
+// The secret needs to be in the same namespace as the ReceiveHashring object.
+// See https://thanos.io/tip/thanos/storage.md/#supported-clients for relevant documentation.
+type ObjectStorageConfig corev1.SecretKeySelector
+
 // CommonThanosFields are the options available to all Thanos components.
 // +k8s:deepcopy-gen=true
 type CommonThanosFields struct {
 	// Version of Thanos to be deployed.
 	// If not specified, the operator assumes the latest upstream version of
-	// Thanos available at the time when the version of the operator was
-	// released.
-	Version string `json:"version,omitempty"`
+	// Thanos available at the time when the version of the operator was released.
+	// +kubebuilder:validation:Optional
+	Version *string `json:"version,omitempty"`
 	// Container image to use for the Thanos components.
-	// +optional
+	// +kubebuilder:validation:Optional
 	Image *string `json:"image,omitempty"`
 
 	// Image pull policy for the Thanos containers.

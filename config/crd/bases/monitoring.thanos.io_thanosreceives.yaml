@@ -37,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ThanosReceiveSpec defines the desired state of ThanosReceive
+            description: Spec defines the desired state of ThanosReceive
             properties:
               image:
                 description: Container image to use for the Thanos components.
@@ -72,8 +72,31 @@ spec:
                   x-kubernetes-map-type: atomic
                 type: array
               ingestor:
-                description: Ingestor is the configuration for the ingestor.
+                description: Ingester is the configuration for the ingestor.
                 properties:
+                  defaultObjectStorageConfig:
+                    description: |-
+                      DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
+                      Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec per hashring.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
                   hashrings:
                     description: Hashrings is a list of hashrings to route to.
                     items:
@@ -103,9 +126,8 @@ spec:
                           - message: Value is immutable
                             rule: self == oldSelf
                         objectStorageConfig:
-                          description: |-
-                            ObjectStorageConfig is the secret's key that contains the object storage configuration.
-                            The secret needs to be in the same namespace as the ReceiveHashring object.
+                          description: ObjectStorageConfig is the secret that contains
+                            the object storage configuration for the hashring.
                           properties:
                             key:
                               description: The key of the secret to select from.  Must
@@ -126,6 +148,7 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                         replicas:
+                          default: 1
                           description: Replicas is the number of replicas/members
                             of the hashring to add to the Thanos Receive StatefulSet.
                           format: int32
@@ -140,6 +163,7 @@ spec:
                         storageSize:
                           description: StorageSize is the size of the storage to be
                             used by the Thanos Receive StatefulSet.
+                          pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                           type: string
                         tenantMatcherType:
                           default: exact
@@ -156,32 +180,15 @@ spec:
                           items:
                             type: string
                           type: array
+                      required:
+                      - name
+                      - storageSize
                       type: object
+                    maxItems: 100
                     type: array
-                  objectStorageConfig:
-                    description: |-
-                      ObjectStorageConfig is the secret's key that contains the object storage configuration.
-                      The secret needs to be in the same namespace as the ReceiveHashring object.
-                      Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec.
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        description: |-
-                          Name of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                 type: object
               logFormat:
                 default: logfmt
@@ -215,11 +222,13 @@ spec:
                       Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
                     type: object
                   replicas:
+                    default: 1
                     description: Replicas is the number of router replicas.
                     format: int32
                     minimum: 1
                     type: integer
                   replicationFactor:
+                    default: 1
                     description: ReplicationFactor is the replication factor for the
                       router.
                     enum:
@@ -233,12 +242,16 @@ spec:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
-                  Thanos available at the time when the version of the operator was
-                  released.
+                  Thanos available at the time when the version of the operator was released.
                 type: string
             type: object
+            x-kubernetes-validations:
+            - message: Ingester replicas must be greater than or equal to the Router
+                replicas
+              rule: self.ingestor.hashrings.all(h, h.replicas >= self.router.replicas
+                )
           status:
-            description: ThanosReceiveStatus defines the observed state of ThanosReceive
+            description: Status defines the observed state of ThanosReceive
             properties:
               conditions:
                 description: Conditions represent the latest available observations

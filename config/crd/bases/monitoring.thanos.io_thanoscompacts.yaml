@@ -192,9 +192,8 @@ spec:
                 - error
                 type: string
               objectStorageConfig:
-                description: |-
-                  ObjectStorageConfig is the secret's key that contains the object storage configuration.
-                  The secret needs to be in the same namespace as the ThanosCompact object.
+                description: ObjectStorageConfig is the object storage configuration
+                  for the compact component.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -252,33 +251,18 @@ spec:
                   compact component.
                 properties:
                   externalLabelSharding:
+                    additionalProperties:
+                      type: string
                     description: ExternalLabelSharding is the sharding configuration
                       based on explicit external labels and their values.
-                    properties:
-                      externalLabel:
-                        description: |-
-                          ExternalLabel is the external label to shard on.
-                          This label must be present in the block's metadata.
-                        type: string
-                      values:
-                        default: .*
-                        description: |-
-                          Values is the list of values (as a regular expression) to shard on.
-                          Each value will be a configured and deployed as a separate compact component.
-                        items:
-                          type: string
-                        type: array
                     type: object
                 type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
-                  Thanos available at the time when the version of the operator was
-                  released.
+                  Thanos available at the time when the version of the operator was released.
                 type: string
-            required:
-            - objectStorageConfig
             type: object
           status:
             description: ThanosCompactStatus defines the observed state of ThanosCompact

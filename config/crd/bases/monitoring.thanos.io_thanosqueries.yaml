@@ -148,8 +148,7 @@ spec:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
-                  Thanos available at the time when the version of the operator was
-                  released.
+                  Thanos available at the time when the version of the operator was released.
                 type: string
             type: object
           status:
