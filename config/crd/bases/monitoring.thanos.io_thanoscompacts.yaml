@@ -1,0 +1,346 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: thanoscompacts.monitoring.thanos.io
+spec:
+  group: monitoring.thanos.io
+  names:
+    kind: ThanosCompact
+    listKind: ThanosCompactList
+    plural: thanoscompacts
+    singular: thanoscompact
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ThanosCompact is the Schema for the thanoscompacts API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ThanosCompactSpec defines the desired state of ThanosCompact
+            properties:
+              blockConfig:
+                description: BlockConfig defines settings for block handling.
+                properties:
+                  blockCleanupInterval:
+                    default: 5m
+                    description: |-
+                      BlockCleanupInterval configures how often we should clean up partially uploaded blocks and blocks
+                      that are marked for deletion.
+                      Cleaning happens at the end of an iteration.
+                      Setting this to 0s disables the cleanup.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  blockConsistencyDelay:
+                    default: 30m
+                    description: |-
+                      BlockConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.
+                      Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  blockDiscoveryStrategy:
+                    default: concurrent
+                    description: BlockDiscoveryStrategy is the discovery strategy
+                      to use for block discovery in storage.
+                    enum:
+                    - concurrent
+                    - recursive
+                    type: string
+                  blockFetchConcurrency:
+                    default: 1
+                    description: BlockFetchConcurrency is the number of goroutines
+                      to use when fetching blocks from object storage.
+                    format: int32
+                    type: integer
+                  blockFilesConcurrency:
+                    default: 1
+                    description: |-
+                      BlockFilesConcurrency is the number of goroutines to use when to use when
+                      fetching/uploading block files from object storage.
+                    format: int32
+                    type: integer
+                  blockMetaFetchConcurrency:
+                    default: 32
+                    description: BlockMetaFetchConcurrency is the number of goroutines
+                      to use when fetching block metadata from object storage.
+                    format: int32
+                    type: integer
+                  blockViewerGlobalSync:
+                    default: 1m
+                    description: BlockViewerGlobalSyncInterval for syncing the blocks
+                      between local and remote view for /global Block Viewer UI.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  blockViewerGlobalSyncTimeout:
+                    default: 5m
+                    description: |-
+                      BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks
+                      between local and remote view for /global Block Viewer UI.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                type: object
+              groupConfig:
+                description: GroupConfig defines settings for group handling.
+                properties:
+                  blockDiscoveryStrategy:
+                    default: concurrent
+                    description: BlockDiscoveryStrategy is the discovery strategy
+                      to use for block discovery in storage.
+                    enum:
+                    - concurrent
+                    - recursive
+                    type: string
+                  blockFilesConcurrency:
+                    default: 1
+                    description: |-
+                      BlockFilesConcurrency is the number of goroutines to use when to use when
+                      fetching/uploading block files from object storage.
+                    format: int32
+                    type: integer
+                  blockMetaFetchConcurrency:
+                    default: 32
+                    description: BlockMetaFetchConcurrency is the number of goroutines
+                      to use when fetching block metadata from object storage.
+                    format: int32
+                    type: integer
+                  blockViewerGlobalSync:
+                    default: 1m
+                    description: BlockViewerGlobalSyncInterval for syncing the blocks
+                      between local and remote view for /global Block Viewer UI.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  blockViewerGlobalSyncTimeout:
+                    default: 5m
+                    description: |-
+                      BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks
+                      between local and remote view for /global Block Viewer UI.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  groupConcurrency:
+                    default: 1
+                    description: GroupConcurrency is the number of goroutines to use
+                      when compacting groups.
+                    format: int32
+                    type: integer
+                type: object
+              image:
+                description: Container image to use for the Thanos components.
+                type: string
+              imagePullPolicy:
+                default: IfNotPresent
+                description: |-
+                  Image pull policy for the Thanos containers.
+                  See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
+                enum:
+                - Always
+                - Never
+                - IfNotPresent
+                type: string
+              imagePullSecrets:
+                description: |-
+                  An optional list of references to Secrets in the same namespace
+                  to use for pulling images from registries.
+                  See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+                items:
+                  description: |-
+                    LocalObjectReference contains enough information to let you locate the
+                    referenced object inside the same namespace.
+                  properties:
+                    name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        TODO: Add other useful fields. apiVersion, kind, uid?
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              logFormat:
+                default: logfmt
+                description: Log format for Thanos.
+                enum:
+                - logfmt
+                - json
+                type: string
+              logLevel:
+                default: info
+                description: Log level for Thanos.
+                enum:
+                - debug
+                - info
+                - warn
+                - error
+                type: string
+              objectStorageConfig:
+                description: ObjectStorageConfig is the object storage configuration
+                  for the compact component.
+                properties:
+                  key:
+                    description: The key of the secret to select from.  Must be a
+                      valid secret key.
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?
+                    type: string
+                  optional:
+                    description: Specify whether the Secret or its key must be defined
+                    type: boolean
+                required:
+                - key
+                type: object
+                x-kubernetes-map-type: atomic
+              paused:
+                description: |-
+                  When a resource is paused, no actions except for deletion
+                  will be performed on the underlying objects.
+                type: boolean
+              retentionConfig:
+                description: RetentionConfig is the retention configuration for the
+                  compact component.
+                properties:
+                  fiveMinutes:
+                    default: 0d
+                    description: |-
+                      FiveMinutes is the retention configuration for samples of resolution 1 (5 minutes).
+                      This configures how long to retain samples of resolution 1 (5 minutes) in storage.
+                      The default value is 0d, which means these samples are retained indefinitely.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  oneHour:
+                    default: 0d
+                    description: |-
+                      OneHour is the retention configuration for samples of resolution 2 (1 hour).
+                      This configures how long to retain samples of resolution 2 (1 hour) in storage.
+                      The default value is 0d, which means these samples are retained indefinitely.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                  raw:
+                    default: 0d
+                    description: |-
+                      Raw is the retention configuration for the raw samples.
+                      This configures how long to retain raw samples in the storage.
+                      The default value is 0d, which means samples are retained indefinitely.
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                type: object
+              shardingConfig:
+                description: ShardingConfig is the sharding configuration for the
+                  compact component.
+                properties:
+                  externalLabelSharding:
+                    additionalProperties:
+                      type: string
+                    description: ExternalLabelSharding is the sharding configuration
+                      based on explicit external labels and their values.
+                    type: object
+                type: object
+              version:
+                description: |-
+                  Version of Thanos to be deployed.
+                  If not specified, the operator assumes the latest upstream version of
+                  Thanos available at the time when the version of the operator was released.
+                type: string
+            type: object
+          status:
+            description: ThanosCompactStatus defines the observed state of ThanosCompact
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the state of the hashring.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
