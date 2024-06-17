@@ -155,11 +155,6 @@ func (in *IngestorHashringSpec) DeepCopyInto(out *IngestorHashringSpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.Replicas != nil {
-		in, out := &in.Replicas, &out.Replicas
-		*out = new(int32)
-		**out = **in
-	}
 	if in.Retention != nil {
 		in, out := &in.Retention, &out.Retention
 		*out = new(Duration)
@@ -232,16 +227,6 @@ func (in *RouterSpec) DeepCopyInto(out *RouterSpec) {
 		for key, val := range *in {
 			(*out)[key] = val
 		}
-	}
-	if in.Replicas != nil {
-		in, out := &in.Replicas, &out.Replicas
-		*out = new(int32)
-		**out = **in
-	}
-	if in.ReplicationFactor != nil {
-		in, out := &in.ReplicationFactor, &out.ReplicationFactor
-		*out = new(int32)
-		**out = **in
 	}
 }
 

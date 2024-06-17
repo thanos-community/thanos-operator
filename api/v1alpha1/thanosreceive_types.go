@@ -29,13 +29,13 @@ type RouterSpec struct {
 	// Replicas is the number of router replicas.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
-	// +kubebuilder:validation:Optional
-	Replicas *int32 `json:"replicas,omitempty"`
+	// +kubebuilder:validation:Required
+	Replicas int32 `json:"replicas,omitempty"`
 	// ReplicationFactor is the replication factor for the router.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Enum=1;3;5
-	// +kubebuilder:validation:Optional
-	ReplicationFactor *int32 `json:"replicationFactor,omitempty"`
+	// +kubebuilder:validation:Required
+	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
 }
 
 // IngesterSpec represents the configuration for the ingestor
@@ -46,7 +46,7 @@ type IngesterSpec struct {
 	DefaultObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
 	// Hashrings is a list of hashrings to route to.
 	// +kubebuilder:validation:MaxItems=100
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// +listType=map
 	// +listMapKey=name
 	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
@@ -59,12 +59,10 @@ type IngestorHashringSpec struct {
 	// By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
 	// In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
 	// the Name will be used as is and must be unique within the namespace.
-	// This field is immutable.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="Value is immutable"
 	Name string `json:"name"`
 	// Labels are additional labels to add to the hashring components.
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
@@ -73,8 +71,8 @@ type IngestorHashringSpec struct {
 	// Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
-	// +kubebuilder:validation:Optional
-	Replicas *int32 `json:"replicas,omitempty"`
+	// +kubebuilder:validation:Required
+	Replicas int32 `json:"replicas,omitempty"`
 	// Retention is the duration for which the Thanos Receive StatefulSet will retain data.
 	// +kubebuilder:default="2h"
 	// +kubebuilder:validation:Optional
@@ -97,7 +95,7 @@ type IngestorHashringSpec struct {
 }
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive
-// +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicas )", message="Ingester replicas must be greater than or equal to the Router replicas"
+// +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
 	CommonThanosFields `json:",inline"`
@@ -105,6 +103,7 @@ type ThanosReceiveSpec struct {
 	// +kubebuilder:validation:Required
 	Router RouterSpec `json:"router,omitempty"`
 	// Ingester is the configuration for the ingestor.
+	// +kubebuilder:validation:Required
 	Ingester IngesterSpec `json:"ingestor,omitempty"`
 }
 
