@@ -117,14 +117,10 @@ spec:
                             By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
                             In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
                             the Name will be used as is and must be unique within the namespace.
-                            This field is immutable.
                           maxLength: 253
                           minLength: 1
                           pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
-                          x-kubernetes-validations:
-                          - message: Value is immutable
-                            rule: self == oldSelf
                         objectStorageConfig:
                           description: ObjectStorageConfig is the secret that contains
                             the object storage configuration for the hashring.
@@ -246,9 +242,9 @@ spec:
                 type: string
             type: object
             x-kubernetes-validations:
-            - message: Ingester replicas must be greater than or equal to the Router
-                replicas
-              rule: self.ingestor.hashrings.all(h, h.replicas >= self.router.replicas
+            - message: ' Ingester replicas must be greater than or equal to the Router
+                replicas'
+              rule: self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor
                 )
           status:
             description: Status defines the observed state of ThanosReceive

@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
@@ -49,4 +50,12 @@ type CommonThanosFields struct {
 	// +kubebuilder:validation:Enum=logfmt;json
 	// +kubebuilder:default:=logfmt
 	LogFormat string `json:"logFormat,omitempty" opt:"log.format"`
+}
+
+func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
+	return corev1.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: osc.Name},
+		Key:                  osc.Key,
+		Optional:             ptr.To(false),
+	}
 }

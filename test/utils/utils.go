@@ -17,12 +17,17 @@ limitations under the License.
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
+
+	appsv1 "k8s.io/api/apps/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -41,7 +46,7 @@ func warnError(err error) {
 // InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
 func InstallPrometheusOperator() error {
 	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "create", "-f", url)
+	cmd := exec.Command("kubectl", "apply", "--server-side", "-f", url)
 	_, err := Run(cmd)
 	return err
 }
@@ -103,7 +108,7 @@ func InstallCertManager() error {
 	return err
 }
 
-// LoadImageToKindCluster loads a local docker image to the kind cluster
+// LoadImageToKindClusterWithName  loads a local docker image to the kind cluster
 func LoadImageToKindClusterWithName(name string) error {
 	cluster := "kind"
 	if v, ok := os.LookupEnv("KIND_CLUSTER"); ok {
@@ -137,4 +142,50 @@ func GetProjectDir() (string, error) {
 	}
 	wd = strings.Replace(wd, "/test/e2e", "", -1)
 	return wd, nil
+}
+
+// InstallMinIO installs the object store
+func InstallMinIO() error {
+	cmd := exec.Command("kubectl", "apply", "-f", minioTestData())
+	_, err := Run(cmd)
+	return err
+}
+
+// UninstallMinIO uninstalls the object store
+func UninstallMinIO() {
+	cmd := exec.Command("kubectl", "delete", "-f", minioTestData())
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+}
+
+func CreateMinioObjectStorageSecret() error {
+	wd, _ := os.Getwd()
+	path := wd + "/test/utils/testdata/minio-secret.yaml"
+	cmd := exec.Command("kubectl", "apply", "-f", path)
+	_, err := Run(cmd)
+	return err
+}
+
+func VerifyStsReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
+	sts := &appsv1.StatefulSet{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, sts)
+	if err != nil {
+		return false
+	}
+	if *sts.Spec.Replicas != int32(expect) {
+		return false
+	}
+	if sts.Status.ReadyReplicas != int32(expect) {
+		return false
+	}
+	return true
+}
+
+func minioTestData() string {
+	wd, _ := os.Getwd()
+	return wd + "/test/utils/testdata/minio.yaml"
 }

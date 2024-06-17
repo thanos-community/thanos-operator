@@ -17,19 +17,41 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-const namespace = "thanos-operator-system"
+const (
+	namespace = "thanos-operator-system"
+
+	objStoreSecret    = "thanos-object-storage"
+	objStoreSecretKey = "thanos.yaml"
+
+	receiveName  = "example-receive"
+	hashringName = "default"
+)
 
 var _ = Describe("controller", Ordered, func() {
+	var c client.Client
+
 	BeforeAll(func() {
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
@@ -40,6 +62,35 @@ var _ = Describe("controller", Ordered, func() {
 		By("creating manager namespace")
 		cmd := exec.Command("kubectl", "create", "ns", namespace)
 		_, _ = utils.Run(cmd)
+
+		By("install MinIO")
+		Expect(utils.InstallMinIO()).To(Succeed())
+
+		By("create secret")
+		Expect(utils.CreateMinioObjectStorageSecret()).To(Succeed())
+
+		scheme := runtime.NewScheme()
+		if err := v1alpha1.AddToScheme(scheme); err != nil {
+			fmt.Println("failed to add scheme")
+			os.Exit(1)
+		}
+		if err := appsv1.AddToScheme(scheme); err != nil {
+			fmt.Println("failed to add scheme")
+			os.Exit(1)
+		}
+		if err := corev1.AddToScheme(scheme); err != nil {
+			fmt.Println("failed to add scheme")
+			os.Exit(1)
+		}
+
+		cl, err := client.New(config.GetConfigOrDie(), client.Options{
+			Scheme: scheme,
+		})
+		if err != nil {
+			fmt.Println("failed to create client")
+			os.Exit(1)
+		}
+		c = cl
 	})
 
 	AfterAll(func() {
@@ -48,6 +99,9 @@ var _ = Describe("controller", Ordered, func() {
 
 		By("uninstalling the cert-manager bundle")
 		utils.UninstallCertManager()
+
+		By("uninstalling MinIO")
+		utils.UninstallMinIO()
 
 		By("removing manager namespace")
 		cmd := exec.Command("kubectl", "delete", "ns", namespace)
@@ -117,6 +171,41 @@ var _ = Describe("controller", Ordered, func() {
 			}
 			EventuallyWithOffset(1, verifyControllerUp, time.Minute, time.Second).Should(Succeed())
 
+		})
+	})
+
+	Context("Thanos Receive", func() {
+		It("should bring up the ingest components", func() {
+			cr := &v1alpha1.ThanosReceive{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      receiveName,
+					Namespace: namespace,
+				},
+				Spec: v1alpha1.ThanosReceiveSpec{
+					CommonThanosFields: v1alpha1.CommonThanosFields{},
+					Ingester: v1alpha1.IngesterSpec{
+						DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: objStoreSecret,
+							},
+							Key: objStoreSecretKey,
+						},
+						Hashrings: []v1alpha1.IngestorHashringSpec{
+							{
+								Name:        hashringName,
+								StorageSize: "100Mi",
+							},
+						},
+					},
+				},
+			}
+			err := c.Create(context.Background(), cr, &client.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			stsName := receive.IngesterNameFromParent(receiveName, hashringName)
+			Eventually(func() bool {
+				return utils.VerifyStsReplicasRunning(c, 1, stsName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 	})
 })
