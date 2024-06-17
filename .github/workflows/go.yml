@@ -8,18 +8,24 @@ on:
     tags:
   pull_request:
 
+env:
+  golang-version: '1.22'
+  kind-version: 'v0.20.0'
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     name: Linters (Static Analysis) for Go
     steps:
       - name: Checkout code into the Go module directory.
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.22.x
+          go-version: ${{ env.golang-version }}
 
       - uses: actions/cache@v3
         with:
@@ -30,3 +36,41 @@ jobs:
         env:
           GOBIN: /tmp/.bin
         run: make lint
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Unit tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.golang-version }}
+      - run: make --always-make test
+  e2e-tests:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kind-image:
+          - 'kindest/node:v1.28.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.golang-version }}
+      - name: Start kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          version: ${{ env.kind-version }}
+          node_image: ${{ matrix.kind-image }}
+          wait: 10s
+          cluster_name: kind
+      - name: Wait for cluster to bootstrap
+        run: kubectl wait --for=condition=Ready pods --all --all-namespaces --timeout=300s
+      - name: Run tests
+        run: |
+          export KUBECONFIG="${HOME}/.kube/config"
+          make test-e2e
