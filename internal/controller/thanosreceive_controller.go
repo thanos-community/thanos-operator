@@ -129,14 +129,8 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receive mon
 			}
 		}
 
-		depAnnotations, err := k8s.GetDependentAnnotations(ctx, r.Client, obj)
-		if err != nil {
-			logger.Error(err, "failed to fetch dependent annotations")
-			return err
-		}
-
 		desired := obj.DeepCopyObject().(client.Object)
-		mutateFn := manifests.MutateFuncFor(obj, desired, depAnnotations)
+		mutateFn := manifests.MutateFuncFor(obj, desired)
 
 		op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
 		if err != nil {

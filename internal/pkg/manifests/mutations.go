@@ -22,7 +22,7 @@ import (
 //   - ServiceAccount
 //   - Deployment
 //   - StatefulSet
-func MutateFuncFor(existing, desired client.Object, depAnnotations map[string]string) controllerutil.MutateFn {
+func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 	return func() error {
 		existingAnnotations := existing.GetAnnotations()
 		if err := mergeWithOverride(&existingAnnotations, desired.GetAnnotations()); err != nil {
@@ -51,9 +51,6 @@ func MutateFuncFor(existing, desired client.Object, depAnnotations map[string]st
 			wantS := desired.(*corev1.Secret)
 			mutateSecret(s, wantS)
 			existingAnnotations := s.GetAnnotations()
-			if err := mergeWithOverride(&existingAnnotations, depAnnotations); err != nil {
-				return err
-			}
 			s.SetAnnotations(existingAnnotations)
 
 		case *corev1.Service:
