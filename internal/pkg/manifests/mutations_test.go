@@ -35,7 +35,7 @@ func TestGetMutateFunc_MutateObjectMeta(t *testing.T) {
 	}
 
 	got := &corev1.ConfigMap{}
-	f := MutateFuncFor(got, want, nil)
+	f := MutateFuncFor(got, want)
 	err := f()
 	require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestGetMutateFunc_MutateObjectMeta(t *testing.T) {
 func TestGetMutateFunc_ReturnErrOnNotSupportedType(t *testing.T) {
 	got := &corev1.Endpoints{}
 	want := &corev1.Endpoints{}
-	f := MutateFuncFor(got, want, nil)
+	f := MutateFuncFor(got, want)
 
 	require.Error(t, f())
 }
@@ -64,7 +64,7 @@ func TestGetMutateFunc_MutateConfigMap(t *testing.T) {
 		BinaryData: map[string][]byte{"btest": []byte("btestss")},
 	}
 
-	f := MutateFuncFor(got, want, nil)
+	f := MutateFuncFor(got, want)
 	err := f()
 	require.NoError(t, err)
 
@@ -111,7 +111,7 @@ func TestGetMutateFunc_MutateServiceSpec(t *testing.T) {
 		},
 	}
 
-	f := MutateFuncFor(got, want, nil)
+	f := MutateFuncFor(got, want)
 	err := f()
 	require.NoError(t, err)
 
@@ -226,7 +226,7 @@ func TestGetMutateFunc_MutateServiceAccountObjectMeta(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			f := MutateFuncFor(tt.got, tt.want, nil)
+			f := MutateFuncFor(tt.got, tt.want)
 			err := f()
 			require.NoError(t, err)
 
@@ -385,7 +385,7 @@ func TestMutateFuncFor_MutateDeploymentSpec(t *testing.T) {
 		tst := tst
 		t.Run(tst.name, func(t *testing.T) {
 			t.Parallel()
-			f := MutateFuncFor(tst.got, tst.want, nil)
+			f := MutateFuncFor(tst.got, tst.want)
 			err := f()
 			require.NoError(t, err)
 
@@ -575,7 +575,7 @@ func TestMutateFuncFor_MutateStatefulSetSpec(t *testing.T) {
 		tst := tst
 		t.Run(tst.name, func(t *testing.T) {
 			t.Parallel()
-			f := MutateFuncFor(tst.got, tst.want, nil)
+			f := MutateFuncFor(tst.got, tst.want)
 			err := f()
 			require.NoError(t, err)
 

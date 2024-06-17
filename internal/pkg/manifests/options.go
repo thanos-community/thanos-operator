@@ -24,7 +24,11 @@ type Options struct {
 	// Image is the image to use for the component
 	Image *string
 	// Version is the version of Thanos
-	Version        *string
+	Version *string
+	// LogLevel is the log level for the component
+	LogLevel string
+	// LogFormat is the log format for the component
+	LogFormat      string
 	containerImage string
 }
 
@@ -38,6 +42,14 @@ func (o Options) ApplyDefaults() Options {
 		o.Version = ptr.To(DefaultThanosVersion)
 	}
 	o.containerImage = fmt.Sprintf("%s:%s", *o.Image, *o.Version)
+
+	if o.LogLevel == "" {
+		o.LogLevel = "info"
+	}
+
+	if o.LogFormat == "" {
+		o.LogFormat = "logfmt"
+	}
 
 	return o
 }

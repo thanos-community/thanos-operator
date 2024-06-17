@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/k8s"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 
@@ -71,8 +70,8 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	isMarkedForDeletion := receiver.GetDeletionTimestamp() != nil
-	if isMarkedForDeletion {
+	// handle object being deleted - inferred from the existence of DeletionTimestamp
+	if !receiver.GetDeletionTimestamp().IsZero() {
 		return r.handleDeletionTimestamp(logger, receiver)
 	}
 
@@ -120,7 +119,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receive mon
 
 	var errCount int32
 	for _, obj := range objs {
-		if k8s.IsNamespacedResource(obj) {
+		if manifests.IsNamespacedResource(obj) {
 			obj.SetNamespace(receive.Namespace)
 			if err := ctrl.SetControllerReference(&receive, obj, r.Scheme); err != nil {
 				logger.Error(err, "failed to set controller owner reference to resource")
@@ -162,13 +161,12 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receive mon
 func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
 	opts := make([]receive.IngesterOptions, 0)
 	baseLabels := receiver.GetLabels()
-	baseSecret := k8s.ToSecretKeySelector(receiver.Spec.Ingester.DefaultObjectStorageConfig)
-	image := receiver.Spec.Image
+	baseSecret := receiver.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
 
 	for _, hashring := range receiver.Spec.Ingester.Hashrings {
 		objStoreSecret := baseSecret
 		if hashring.ObjectStorageConfig != nil {
-			objStoreSecret = k8s.ToSecretKeySelector(*hashring.ObjectStorageConfig)
+			objStoreSecret = hashring.ObjectStorageConfig.ToSecretKeySelector()
 		}
 
 		metaOpts := manifests.Options{
@@ -176,7 +174,9 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			Namespace: receiver.GetNamespace(),
 			Replicas:  hashring.Replicas,
 			Labels:    manifests.MergeLabels(baseLabels, hashring.Labels),
-			Image:     image,
+			Image:     receiver.Spec.Image,
+			LogLevel:  receiver.Spec.LogLevel,
+			LogFormat: receiver.Spec.LogFormat,
 		}.ApplyDefaults()
 
 		opt := receive.IngesterOptions{

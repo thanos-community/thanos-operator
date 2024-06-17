@@ -369,8 +369,8 @@ func IngesterNameFromParent(receiveName, ingesterName string) string {
 func ingestorArgsFrom(opts IngesterOptions) []string {
 	args := []string{
 		"receive",
-		"--log.level=info",
-		"--log.format=logfmt",
+		fmt.Sprintf("--log.level=%s", opts.LogLevel),
+		fmt.Sprintf("--log.format=%s", opts.LogFormat),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", IngestGRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", IngestHTTPPort),
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", IngestRemoteWritePort),

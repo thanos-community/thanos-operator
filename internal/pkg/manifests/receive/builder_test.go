@@ -100,7 +100,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		},
+		}.ApplyDefaults(),
 	}
 
 	for _, tc := range []struct {
