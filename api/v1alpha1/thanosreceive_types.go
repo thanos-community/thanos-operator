@@ -17,26 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// TenantMatcher represents the type of tenant matching to use.
-type TenantMatcher string
-
-const (
-	// TenantMatcherTypeExact matches tenants exactly. This is also the default one.
-	TenantMatcherTypeExact TenantMatcher = "exact"
-	// TenantMatcherGlob matches tenants using glob patterns.
-	TenantMatcherGlob TenantMatcher = "glob"
-)
-
-// HashringAlgorithm represents the hashing algorithm to use.
-type HashringAlgorithm string
-
-const (
-	// AlgorithmKetama is the ketama hashing algorithm.
-	AlgorithmKetama HashringAlgorithm = "ketama"
 )
 
 // RouterSpec represents the configuration for the router
@@ -47,23 +28,27 @@ type RouterSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// Replicas is the number of router replicas.
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Required
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// ReplicationFactor is the replication factor for the router.
-	// +kubebuilder:validation:Default=1
+	// +kubebuilder:default=1
 	// +kubebuilder:validation:Enum=1;3;5
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	ReplicationFactor *int32 `json:"replicationFactor,omitempty"`
 }
 
-// IngestorSpec represents the configuration for the ingestor
-type IngestorSpec struct {
-	// ObjectStorageConfig is the secret's key that contains the object storage configuration.
-	// The secret needs to be in the same namespace as the ReceiveHashring object.
-	// Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec.
-	// +kubebuilder:validation:Optional
-	ObjectStorageConfig corev1.SecretKeySelector `json:"objectStorageConfig"`
+// IngesterSpec represents the configuration for the ingestor
+type IngesterSpec struct {
+	// DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
+	// Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec per hashring.
+	// +kubebuilder:validation:Required
+	DefaultObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
 	// Hashrings is a list of hashrings to route to.
+	// +kubebuilder:validation:MaxItems=100
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
 	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
 }
 
@@ -80,26 +65,27 @@ type IngestorHashringSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="Value is immutable"
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// Labels are additional labels to add to the hashring components.
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
 	// Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Required
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Retention is the duration for which the Thanos Receive StatefulSet will retain data.
 	// +kubebuilder:default="2h"
-	// +kubebuilder:validation:Required
-	Retention Duration `json:"retention,omitempty"`
-	// ObjectStorageConfig is the secret's key that contains the object storage configuration.
-	// The secret needs to be in the same namespace as the ReceiveHashring object.
 	// +kubebuilder:validation:Optional
-	ObjectStorageConfig corev1.SecretKeySelector `json:"objectStorageConfig"`
+	Retention *Duration `json:"retention,omitempty"`
+	// ObjectStorageConfig is the secret that contains the object storage configuration for the hashring.
+	// +kubebuilder:validation:Optional
+	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
 	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Required
-	StorageSize *string `json:"storageSize,omitempty"`
+	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
+	StorageSize string `json:"storageSize"`
 	// Tenants is a list of tenants that should be matched by the hashring.
 	// An empty list matches all tenants.
 	// +kubebuilder:validation:Optional
@@ -107,18 +93,19 @@ type IngestorHashringSpec struct {
 	// TenantMatcherType is the type of tenant matching to use.
 	// +kubebuilder:default:="exact"
 	// +kubebuilder:validation:Enum=exact;glob
-	TenantMatcherType TenantMatcher `json:"tenantMatcherType,omitempty"`
+	TenantMatcherType string `json:"tenantMatcherType,omitempty"`
 }
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive
+// +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicas )", message="Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
 	CommonThanosFields `json:",inline"`
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required
 	Router RouterSpec `json:"router,omitempty"`
-	// Ingestor is the configuration for the ingestor.
-	Ingestor IngestorSpec `json:"ingestor,omitempty"`
+	// Ingester is the configuration for the ingestor.
+	Ingester IngesterSpec `json:"ingestor,omitempty"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive
@@ -135,7 +122,9 @@ type ThanosReceive struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ThanosReceiveSpec   `json:"spec,omitempty"`
+	// Spec defines the desired state of ThanosReceive
+	Spec ThanosReceiveSpec `json:"spec,omitempty"`
+	// Status defines the observed state of ThanosReceive
 	Status ThanosReceiveStatus `json:"status,omitempty"`
 }
 
