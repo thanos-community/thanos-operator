@@ -137,8 +137,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.ThanosReceiveReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("thanos-receive-ingest-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
