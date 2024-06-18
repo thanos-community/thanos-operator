@@ -3,14 +3,15 @@ package query
 import (
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -235,6 +236,8 @@ func querierArgs(opts QuerierOptions) []string {
 			args = append(args, fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
 		case GroupStrict:
 			args = append(args, fmt.Sprintf("--endpoint-group-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
+		default:
+			panic("unknown endpoint type")
 		}
 	}
 

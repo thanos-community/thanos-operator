@@ -145,13 +145,17 @@ spec:
                   will be performed on the underlying objects.
                 type: boolean
               querierReplicaLabels:
-                description: Querier replica labels to configure.
+                description: |-
+                  Labels to treat as a replica indicator along which data is deduplicated.
+                  Still you will be able to query without deduplication using 'dedup=false' parameter.
+                  Data includes time series, recording rules, and alerting rules.
+                  Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
                 items:
                   type: string
                 type: array
               replicas:
                 default: 1
-                description: Replicas is the number of router replicas.
+                description: Replicas is the number of querier replicas.
                 format: int32
                 minimum: 1
                 type: integer

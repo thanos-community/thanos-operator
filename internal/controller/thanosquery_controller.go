@@ -20,18 +20,19 @@ import (
 	"context"
 	"fmt"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 )
 
 // ThanosQueryReconciler reconciles a ThanosQuery object
@@ -114,7 +115,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
+		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 
 	return nil
