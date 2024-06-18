@@ -29,7 +29,6 @@ type ThanosQuerySpec struct {
 	// +kubebuilder:validation:Required
 	Replicas int32 `json:"replicas,omitempty"`
 	// Labels are additional labels to add to the Querier component.
-	// Labels set here will overwrite the default labels inherited from the ThanosQuery object if they have the same key.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
 	// Querier replica labels to configure.

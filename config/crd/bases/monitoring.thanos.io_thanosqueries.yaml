@@ -121,9 +121,7 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: |-
-                  Labels are additional labels to add to the Querier component.
-                  Labels set here will overwrite the default labels inherited from the ThanosQuery object if they have the same key.
+                description: Labels are additional labels to add to the Querier component.
                 type: object
               logFormat:
                 default: logfmt

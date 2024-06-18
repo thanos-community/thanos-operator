@@ -47,6 +47,8 @@ const (
 
 	receiveName  = "example-receive"
 	hashringName = "default"
+
+	queryName = "example-query"
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -205,6 +207,36 @@ var _ = Describe("controller", Ordered, func() {
 			stsName := receive.IngesterNameFromParent(receiveName, hashringName)
 			Eventually(func() bool {
 				return utils.VerifyStsReplicasRunning(c, 1, stsName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+		})
+	})
+
+	Context("Thanos Query", func() {
+		It("should bring up the querier", func() {
+			cr := &v1alpha1.ThanosQuery{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      queryName,
+					Namespace: namespace,
+				},
+				Spec: v1alpha1.ThanosQuerySpec{
+					CommonThanosFields: v1alpha1.CommonThanosFields{},
+					Replicas:           1,
+					Labels: map[string]string{
+						"some-label": "xyz",
+					},
+					QuerierReplicaLabels: []string{
+						"prometheus_replica",
+						"replica",
+						"rule_replica",
+					},
+				},
+			}
+			err := c.Create(context.Background(), cr, &client.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			deploymentName := queryName
+			Eventually(func() bool {
+				return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 	})
