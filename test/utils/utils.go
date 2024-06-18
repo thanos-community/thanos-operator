@@ -185,6 +185,24 @@ func VerifyStsReplicasRunning(c client.Client, expect int, name string, namespac
 	return true
 }
 
+func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+	if err != nil {
+		return false
+	}
+	if *deployment.Spec.Replicas != int32(expect) {
+		return false
+	}
+	if deployment.Status.ReadyReplicas != int32(expect) {
+		return false
+	}
+	return true
+}
+
 func minioTestData() string {
 	wd, _ := os.Getwd()
 	return wd + "/test/utils/testdata/minio.yaml"

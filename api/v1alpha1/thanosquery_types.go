@@ -23,22 +23,31 @@ import (
 // ThanosQuerySpec defines the desired state of ThanosQuery
 type ThanosQuerySpec struct {
 	CommonThanosFields `json:",inline"`
-
-	// Querier replica labels to configure.
-	// +optional
-	QuerierReplicaLabels []string `json:"replicaLabels,omitempty"`
-
+	// Replicas is the number of querier replicas.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Required
+	Replicas int32 `json:"replicas,omitempty"`
+	// Labels are additional labels to add to the Querier component.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Labels to treat as a replica indicator along which data is deduplicated.
+	// Still you will be able to query without deduplication using 'dedup=false' parameter.
+	// Data includes time series, recording rules, and alerting rules.
+	// Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
+	// +kubebuilder:validation:Optional
+	QuerierReplicaLabels []string `json:"querierReplicaLabels,omitempty"`
 	// By default, the operator will add all discoverable StoreAPIs to the Querier,
 	// if they have store labels. You can optionally choose to override default
 	// StoreAPI selector labels, to select a subset of StoreAPIs to query.
-	// +optional
-	CustomStoreLabelSelector *metav1.LabelSelector `json:"storeLabelSelector,omitempty"`
+	// +kubebuilder:validation:Optional
+	CustomStoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery
 type ThanosQueryStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Conditions represent the latest available observations of the state of the Querier.
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 //+kubebuilder:object:root=true
