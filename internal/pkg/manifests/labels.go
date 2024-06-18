@@ -3,6 +3,7 @@ package manifests
 const (
 	// The following labels are used to identify the components and will be set on the resources created by the operator.
 	// These labels cannot be overridden by the user via additional labels configuration.
+	// This is ensured by updates to components.
 	// See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
 
 	NameLabel      = "app.kubernetes.io/name"
