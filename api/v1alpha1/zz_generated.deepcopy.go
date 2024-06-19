@@ -447,8 +447,8 @@ func (in *ThanosQuerySpec) DeepCopyInto(out *ThanosQuerySpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.CustomStoreLabelSelector != nil {
-		in, out := &in.CustomStoreLabelSelector, &out.CustomStoreLabelSelector
+	if in.StoreLabelSelector != nil {
+		in, out := &in.StoreLabelSelector, &out.StoreLabelSelector
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}

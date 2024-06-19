@@ -41,7 +41,8 @@ type ThanosQuerySpec struct {
 	// if they have store labels. You can optionally choose to override default
 	// StoreAPI selector labels, to select a subset of StoreAPIs to query.
 	// +kubebuilder:validation:Optional
-	CustomStoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
+	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/store-api": "true"}}
+	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery
