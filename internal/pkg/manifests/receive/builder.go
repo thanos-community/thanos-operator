@@ -388,10 +388,11 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 
 func labelsForIngestor(opts IngesterOptions) map[string]string {
 	return map[string]string{
-		manifests.NameLabel:      Name,
-		manifests.ComponentLabel: IngestComponentName,
-		manifests.InstanceLabel:  opts.Name,
-		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
-		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
+		manifests.NameLabel:            Name,
+		manifests.ComponentLabel:       IngestComponentName,
+		manifests.InstanceLabel:        opts.Name,
+		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
+		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
+		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 	}
 }

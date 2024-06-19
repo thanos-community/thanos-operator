@@ -40,6 +40,9 @@ spec:
             description: ThanosQuerySpec defines the desired state of ThanosQuery
             properties:
               customStoreLabelSelector:
+                default:
+                  matchLabels:
+                    operator.thanos.io/store-api: "true"
                 description: |-
                   By default, the operator will add all discoverable StoreAPIs to the Querier,
                   if they have store labels. You can optionally choose to override default

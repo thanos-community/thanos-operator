@@ -247,7 +247,7 @@ func querierArgs(opts QuerierOptions) []string {
 func labelsForQuerier(opts QuerierOptions) map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
-		manifests.ComponentLabel: Name,
+		manifests.ComponentLabel: ComponentName,
 		manifests.InstanceLabel:  opts.Name,
 		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,

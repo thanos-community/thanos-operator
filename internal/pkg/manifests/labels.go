@@ -14,6 +14,10 @@ const (
 
 	DefaultPartOfLabel    = "thanos"
 	DefaultManagedByLabel = "thanos-operator"
+
+	// The following label is used to identify StoreAPIs and will be set on the resources created by the operator.
+	DefaultStoreAPILabel = "operator.thanos.io/store-api"
+	DefaultStoreAPIValue = "true"
 )
 
 // MergeLabels merges the provided labels with the default labels for a component.
