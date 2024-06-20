@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
@@ -170,6 +171,26 @@ func CreateMinioObjectStorageSecret() error {
 	return err
 }
 
+func VerifyServiceExists(c client.Client, name string, namespace string) bool {
+	svc := &corev1.Service{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, svc)
+
+	return err == nil
+}
+
+func VerifyServiceAccountExists(c client.Client, name string, namespace string) bool {
+	sa := &corev1.ServiceAccount{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, sa)
+
+	return err == nil
+}
+
 func VerifyStsReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
 	sts := &appsv1.StatefulSet{}
 	err := c.Get(context.Background(), client.ObjectKey{
@@ -188,6 +209,16 @@ func VerifyStsReplicasRunning(c client.Client, expect int, name string, namespac
 	return true
 }
 
+func VerifyDeploymentExists(c client.Client, name string, namespace string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+
+	return err == nil
+}
+
 func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
 	deployment := &appsv1.Deployment{}
 	err := c.Get(context.Background(), client.ObjectKey{
@@ -204,6 +235,19 @@ func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, n
 		return false
 	}
 	return true
+}
+
+func VerifyDeploymentArgs(c client.Client, name string, namespace string, containsArg string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+	if err != nil {
+		return false
+	}
+
+	return slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args, containsArg)
 }
 
 func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {

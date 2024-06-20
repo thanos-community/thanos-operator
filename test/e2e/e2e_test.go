@@ -248,6 +248,11 @@ var _ = Describe("controller", Ordered, func() {
 						"replica",
 						"rule_replica",
 					},
+					StoreLabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"operator.thanos.io/store-api": "true",
+						},
+					},
 				},
 			}
 			err := c.Create(context.Background(), cr, &client.CreateOptions{})
@@ -256,7 +261,15 @@ var _ = Describe("controller", Ordered, func() {
 			deploymentName := queryName
 			Eventually(func() bool {
 				return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
+
+			Eventually(func() bool {
+				return utils.VerifyDeploymentArgs(c,
+					deploymentName,
+					namespace,
+					"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})
 	})
 })

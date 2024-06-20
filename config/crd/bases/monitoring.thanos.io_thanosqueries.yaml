@@ -148,6 +148,8 @@ spec:
                   will be performed on the underlying objects.
                 type: boolean
               querierReplicaLabels:
+                default:
+                - replica
                 description: |-
                   Labels to treat as a replica indicator along which data is deduplicated.
                   Still you will be able to query without deduplication using 'dedup=false' parameter.

@@ -35,6 +35,7 @@ type ThanosQuerySpec struct {
 	// Still you will be able to query without deduplication using 'dedup=false' parameter.
 	// Data includes time series, recording rules, and alerting rules.
 	// Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
+	// +kubebuilder:default:={"replica"}
 	// +kubebuilder:validation:Optional
 	QuerierReplicaLabels []string `json:"querierReplicaLabels,omitempty"`
 	// By default, the operator will add all discoverable StoreAPIs to the Querier,

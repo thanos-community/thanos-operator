@@ -42,10 +42,10 @@ type QuerierOptions struct {
 type EndpointType string
 
 const (
-	Regular     EndpointType = "regular"
-	Strict      EndpointType = "strict"
-	Group       EndpointType = "group"
-	GroupStrict EndpointType = "groupStrict"
+	RegularLabel     EndpointType = "operator.thanos.io/endpoint"
+	StrictLabel      EndpointType = "operator.thanos.io/endpoint-strict"
+	GroupLabel       EndpointType = "operator.thanos.io/endpoint-group"
+	GroupStrictLabel EndpointType = "operator.thanos.io/endpoint-group-strict"
 )
 
 // Endpoint represents a single StoreAPI DNS formatted address.
@@ -54,6 +54,7 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Type        EndpointType
+	Port        int32
 }
 
 func BuildQuerier(opts QuerierOptions) []client.Object {
@@ -227,15 +228,15 @@ func querierArgs(opts QuerierOptions) []string {
 
 	for _, ep := range opts.Endpoints {
 		switch ep.Type {
-		case Regular:
+		case RegularLabel:
 			// TODO(saswatamcode): For regular probably use SD file.
 			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case Strict:
+		case StrictLabel:
 			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case Group:
-			args = append(args, fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case GroupStrict:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
+		case GroupLabel:
+			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
+		case GroupStrictLabel:
+			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		default:
 			panic("unknown endpoint type")
 		}

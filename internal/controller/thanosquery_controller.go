@@ -27,12 +27,19 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ThanosQueryReconciler reconciles a ThanosQuery object
@@ -79,7 +86,8 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	logger := log.FromContext(ctx)
 	var objs []client.Object
 
-	objs = append(objs, r.buildQuerier(query)...)
+	desiredObjs := r.buildQuerier(ctx, query)
+	objs = append(objs, desiredObjs...)
 
 	var errCount int32
 	for _, obj := range objs {
@@ -121,7 +129,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	return nil
 }
 
-func (r *ThanosQueryReconciler) buildQuerier(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
+func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
 	metaOpts := manifests.Options{
 		Name:      query.GetName(),
 		Namespace: query.GetNamespace(),
@@ -132,29 +140,116 @@ func (r *ThanosQueryReconciler) buildQuerier(query monitoringthanosiov1alpha1.Th
 		LogFormat: query.Spec.LogFormat,
 	}.ApplyDefaults()
 
+	endpoints := r.getStoreAPIServiceEndpoints(ctx, query)
 	return manifestquery.BuildQuerier(manifestquery.QuerierOptions{
 		Options:       metaOpts,
 		ReplicaLabels: query.Spec.QuerierReplicaLabels,
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
-
-		// TODO(saswatamcode): Add logic to for automated tracking of endpoints.
-		Endpoints: []manifestquery.Endpoint{{
-			ServiceName: "thanos-receive",
-			Namespace:   query.GetNamespace(),
-			Type:        manifestquery.Regular,
-		}},
+		Endpoints:     endpoints,
 	})
+}
+
+// getStoreAPIServiceEndpoints returns the list of endpoints for the StoreAPI services that match the ThanosQuery storeLabelSelector.
+func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) []manifestquery.Endpoint {
+	services := &corev1.ServiceList{}
+	listOpts := []client.ListOption{
+		client.MatchingLabels(query.Spec.StoreLabelSelector.MatchLabels),
+		client.InNamespace(query.Namespace),
+	}
+	if err := r.List(ctx, services, listOpts...); err != nil {
+		return []manifestquery.Endpoint{}
+	}
+
+	if len(services.Items) == 0 {
+		return []manifestquery.Endpoint{}
+	}
+
+	endpoints := make([]manifestquery.Endpoint, len(services.Items))
+	for i, svc := range services.Items {
+		etype := manifestquery.RegularLabel
+
+		if metav1.HasLabel(svc.ObjectMeta, string(manifestquery.StrictLabel)) {
+			etype = manifestquery.StrictLabel
+		} else if metav1.HasLabel(svc.ObjectMeta, string(manifestquery.GroupStrictLabel)) {
+			etype = manifestquery.GroupStrictLabel
+		} else if metav1.HasLabel(svc.ObjectMeta, string(manifestquery.GroupLabel)) {
+			etype = manifestquery.GroupLabel
+		}
+
+		for _, port := range svc.Spec.Ports {
+			if port.Name == "grpc" {
+				endpoints[i].Port = port.Port
+				break
+			}
+		}
+
+		endpoints[i] = manifestquery.Endpoint{
+			ServiceName: svc.GetName(),
+			Namespace:   svc.GetNamespace(),
+			Type:        etype,
+		}
+	}
+
+	return endpoints
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	servicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
+			manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosQuery{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
+		Watches(
+			&corev1.Service{},
+			r.enqueueForService(),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}, servicePredicate),
+		).
 		Complete(r)
+}
+
+// enqueueForService returns an EventHandler that will enqueue a request for the ThanosQuery instances
+// that matches the Service.
+func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+		if obj.GetLabels()[manifests.DefaultStoreAPILabel] != manifests.DefaultStoreAPIValue {
+			return nil
+		}
+
+		listOpts := []client.ListOption{
+			client.InNamespace(obj.GetNamespace()),
+		}
+
+		queriers := &monitoringthanosiov1alpha1.ThanosQueryList{}
+		err := r.List(ctx, queriers, listOpts...)
+		if err != nil {
+			return []reconcile.Request{}
+		}
+
+		requests := []reconcile.Request{}
+		for _, query := range queriers.Items {
+			if labels.SelectorFromSet(query.Spec.StoreLabelSelector.MatchLabels).Matches(labels.Set(obj.GetLabels())) {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      query.GetName(),
+						Namespace: query.GetNamespace(),
+					},
+				})
+			}
+		}
+		return requests
+	})
 }
