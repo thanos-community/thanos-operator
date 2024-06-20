@@ -261,15 +261,15 @@ var _ = Describe("controller", Ordered, func() {
 			deploymentName := queryName
 			Eventually(func() bool {
 				return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
 
 			Eventually(func() bool {
 				return utils.VerifyDeploymentArgs(c,
 					deploymentName,
 					namespace,
-					fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", receiveName, namespace))
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
-
+					"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})
 	})
 })

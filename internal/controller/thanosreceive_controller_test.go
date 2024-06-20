@@ -42,7 +42,7 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
 		const (
 			resourceName = "test-resource"
-			ns           = "default"
+			ns           = "treceive"
 
 			objStoreSecretName = "test-secret"
 			objStoreSecretKey  = "test-key.yaml"
@@ -54,6 +54,15 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 			Name:      resourceName,
 			Namespace: ns,
 		}
+
+		BeforeAll(func() {
+			By("creating the namespace")
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})).Should(Succeed())
+		})
 
 		BeforeEach(func() {
 			By("creating the object store secret")
@@ -68,7 +77,7 @@ config:
   bucket: "thanos"
   access_key: "thanos"
   secret_key: "thanos-secret"
-  endpoint: "minio.default.svc:9000"
+  endpoint: "minio.treceive.svc:9000"
   insecure: true
   trace:
     enable: false`,
@@ -297,15 +306,15 @@ config:
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "some-hostname-b.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:19291",
                 "az": ""
             },
             {
-                "address": "some-hostname-c.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:19291",
                 "az": ""
             },
             {
-                "address": "some-hostname.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:19291",
                 "az": ""
             }
         ]

@@ -22,29 +22,29 @@ import (
 	"slices"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	resourceName = "test-resource"
-	ns           = "default"
-)
-
-var _ = Describe("ThanosQuery Controller", func() {
+var _ = Describe("ThanosQuery Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
+		const (
+			resourceName = "test-resource"
+			ns           = "tquery"
+		)
 
 		ctx := context.Background()
 
@@ -52,6 +52,15 @@ var _ = Describe("ThanosQuery Controller", func() {
 			Name:      resourceName,
 			Namespace: ns,
 		}
+
+		BeforeAll(func() {
+			By("creating the namespace")
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})).Should(Succeed())
+		})
 
 		AfterEach(func() {
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{}
@@ -92,29 +101,18 @@ var _ = Describe("ThanosQuery Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				EventuallyWithOffset(1, func() error {
-					sa := &corev1.ServiceAccount{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, sa); err != nil {
-						return err
+					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service account not found")
 					}
 
-					svc := &corev1.Service{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, svc); err != nil {
-						return err
+					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service not found")
 					}
 
-					deployment := &appsv1.Deployment{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, deployment); err != nil {
-						return err
+					if !utils.VerifyDeploymentExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("deployment not found")
 					}
+
 					return nil
 
 				}, time.Minute*1, time.Second*10).Should(Succeed())
@@ -152,20 +150,12 @@ var _ = Describe("ThanosQuery Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				EventuallyWithOffset(1, func() error {
-					sa := &corev1.ServiceAccount{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, sa); err != nil {
-						return err
+					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service account not found")
 					}
 
-					svc := &corev1.Service{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, svc); err != nil {
-						return err
+					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service not found")
 					}
 
 					deployment := &appsv1.Deployment{}
@@ -177,7 +167,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 					}
 
 					if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args,
-						"--endpoint=dnssrv+_grpc._tcp.thanos-receive.default.svc.cluster.local") {
+						"--endpoint=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local") {
 						return fmt.Errorf("endpoint not set: %v", deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
@@ -239,20 +229,12 @@ var _ = Describe("ThanosQuery Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				EventuallyWithOffset(1, func() error {
-					sa := &corev1.ServiceAccount{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, sa); err != nil {
-						return err
+					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service account not found")
 					}
 
-					svc := &corev1.Service{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, svc); err != nil {
-						return err
+					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
+						return fmt.Errorf("service not found")
 					}
 
 					deployment := &appsv1.Deployment{}
@@ -270,7 +252,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 					}
 
 					if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args,
-						"--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.default.svc.cluster.local") {
+						"--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local") {
 						return fmt.Errorf("endpoint strict not set: %v", deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
@@ -280,7 +262,5 @@ var _ = Describe("ThanosQuery Controller", func() {
 			})
 
 		})
-
 	})
-
 })
