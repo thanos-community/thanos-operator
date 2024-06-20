@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
@@ -203,6 +204,23 @@ func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, n
 	if deployment.Status.ReadyReplicas != int32(expect) {
 		return false
 	}
+	return true
+}
+
+func VerifyDeploymentArgs(c client.Client, name string, namespace string, containsArg string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+	if err != nil {
+		return false
+	}
+
+	if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args, containsArg) {
+		return false
+	}
+
 	return true
 }
 

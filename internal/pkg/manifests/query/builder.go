@@ -54,6 +54,7 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Type        EndpointType
+	Port        int32
 }
 
 func BuildQuerier(opts QuerierOptions) []client.Object {
@@ -233,9 +234,9 @@ func querierArgs(opts QuerierOptions) []string {
 		case StrictLabel:
 			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
 		case GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
+			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		case GroupStrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
+			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		default:
 			panic("unknown endpoint type")
 		}

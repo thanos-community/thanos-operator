@@ -178,6 +178,13 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 			etype = manifestquery.GroupLabel
 		}
 
+		for _, port := range svc.Spec.Ports {
+			if port.Name == "grpc" {
+				endpoints[i].Port = port.Port
+				break
+			}
+		}
+
 		endpoints[i] = manifestquery.Endpoint{
 			ServiceName: svc.GetName(),
 			Namespace:   svc.GetNamespace(),
