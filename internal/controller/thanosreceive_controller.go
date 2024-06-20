@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -28,16 +29,22 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -98,30 +105,56 @@ func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // buildController sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
+	// add a selector to watch for the endpointslices that are owned by the ThanosReceive ingest Service(s).
+	endpointSliceLS := metav1.LabelSelector{
+		MatchLabels: map[string]string{manifests.ComponentLabel: receive.IngestComponentName},
+	}
+	endpointSlicePredicate, err := predicate.LabelSelectorPredicate(endpointSliceLS)
+	if err != nil {
+		return err
+	}
+
 	bld.
 		For(&monitoringthanosiov1alpha1.ThanosReceive{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&appsv1.StatefulSet{})
+		Owns(&appsv1.StatefulSet{}).
+		Watches(
+			&discoveryv1.EndpointSlice{},
+			r.enqueueForEndpointSlice(r.Client),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}, endpointSlicePredicate),
+		)
 
 	return bld.Complete(r)
 }
 
 // syncResources syncs the resources for the ThanosReceive resource.
 // It creates or updates the resources for the hashrings and the router.
-func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receive monitoringthanosiov1alpha1.ThanosReceive) error {
+func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) error {
 	var objs []client.Object
 	logger := log.FromContext(ctx)
 
-	objs = append(objs, r.buildHashrings(receive)...)
+	objs = append(objs, r.buildHashrings(receiver)...)
+
+	hashringConf, err := r.buildHashringConfig(ctx, receiver)
+	if err != nil {
+		if !errors.Is(err, receive.ErrHashringsEmpty) {
+			return fmt.Errorf("failed to build hashring configuration: %w", err)
+		}
+		// we can create the config map even if there are no hashrings
+		objs = append(objs, hashringConf)
+	} else {
+		objs = append(objs, hashringConf)
+		// todo bring up the router components only if there are ready hashrings to avoid crash looping the router
+	}
 
 	var errCount int32
 	for _, obj := range objs {
 		if manifests.IsNamespacedResource(obj) {
-			obj.SetNamespace(receive.Namespace)
-			if err := ctrl.SetControllerReference(&receive, obj, r.Scheme); err != nil {
+			obj.SetNamespace(receiver.Namespace)
+			if err := ctrl.SetControllerReference(&receiver, obj, r.Scheme); err != nil {
 				logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
 				continue
@@ -184,11 +217,59 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			Retention:      string(*hashring.Retention),
 			StorageSize:    resource.MustParse(hashring.StorageSize),
 			ObjStoreSecret: objStoreSecret,
+			ExternalLabels: hashring.ExternalLabels,
 		}
 		opts = append(opts, opt)
 	}
 
 	return receive.BuildIngesters(opts)
+}
+
+// buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
+func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) (client.Object, error) {
+	logger := log.FromContext(ctx)
+
+	cm := &corev1.ConfigMap{}
+	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: receiver.GetName()}, cm)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to get config map for resource %s: %w", receiver.GetName(), err)
+		}
+	}
+
+	opts := receive.HashringOptions{
+		Options: manifests.Options{
+			Name:      receiver.GetName(),
+			Namespace: receiver.GetNamespace(),
+			Labels:    receiver.GetLabels(),
+		},
+		DesiredReplicationFactor: receiver.Spec.Router.ReplicationFactor,
+		HashringSettings:         make(map[string]receive.HashringMeta, len(receiver.Spec.Ingester.Hashrings)),
+	}
+
+	totalHashrings := len(receiver.Spec.Ingester.Hashrings)
+	for i, hashring := range receiver.Spec.Ingester.Hashrings {
+		labelValue := receive.IngesterNameFromParent(receiver.GetName(), hashring.Name)
+		// kubernetes sets this label on the endpoint slices - we want to match the generated name
+		selectorListOpt := client.MatchingLabels{discoveryv1.LabelServiceName: labelValue}
+
+		eps := discoveryv1.EndpointSliceList{}
+		if err = r.Client.List(ctx, &eps, selectorListOpt, client.InNamespace(receiver.GetNamespace())); err != nil {
+			return nil, fmt.Errorf("failed to list endpoint slices for resource %s: %w", receiver.GetName(), err)
+		}
+
+		opts.HashringSettings[labelValue] = receive.HashringMeta{
+			DesiredReplicasReplicas:  hashring.Replicas,
+			OriginalName:             hashring.Name,
+			Tenants:                  hashring.Tenants,
+			TenantMatcherType:        receive.TenantMatcher(hashring.TenantMatcherType),
+			AssociatedEndpointSlices: eps,
+			// set the priority by slice order for now
+			Priority: totalHashrings - i,
+		}
+	}
+
+	return receive.BuildHashrings(logger, cm, opts)
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(log logr.Logger, receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
@@ -201,4 +282,32 @@ func (r *ThanosReceiveReconciler) handleDeletionTimestamp(log logr.Logger, recei
 				receiveHashring.Namespace))
 	}
 	return ctrl.Result{}, nil
+}
+
+// enqueueForEndpointSlice enqueues requests for the ThanosReceive resource when an EndpointSlice event is triggered.
+func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+
+		if len(obj.GetOwnerReferences()) != 1 || obj.GetOwnerReferences()[0].Kind != "Service" {
+			return nil
+		}
+
+		svc := &corev1.Service{}
+		if err := c.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetOwnerReferences()[0].Name}, svc); err != nil {
+			return nil
+		}
+
+		if len(svc.GetOwnerReferences()) != 1 || svc.GetOwnerReferences()[0].Kind != "ThanosReceive" {
+			return nil
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: obj.GetNamespace(),
+					Name:      svc.GetOwnerReferences()[0].Name,
+				},
+			},
+		}
+	})
 }
