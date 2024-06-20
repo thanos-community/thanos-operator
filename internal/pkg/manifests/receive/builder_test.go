@@ -566,6 +566,7 @@ func TestBuildHashrings(t *testing.T) {
 					Options: baseOptions,
 					HashringSettings: map[string]HashringMeta{
 						"test": {
+							OriginalName:            "test",
 							DesiredReplicasReplicas: 2,
 							Tenants:                 []string{"foobar"},
 							AssociatedEndpointSlices: discoveryv1.EndpointSliceList{
@@ -616,6 +617,7 @@ func TestBuildHashrings(t *testing.T) {
 				Data: map[string]string{
 					HashringConfigKey: `[
     {
+        "hashring": "test",
         "tenants": [
             "foobar"
         ],
@@ -642,6 +644,7 @@ func TestBuildHashrings(t *testing.T) {
 					Options: baseOptions,
 					HashringSettings: map[string]HashringMeta{
 						"a": {
+							OriginalName:            "a",
 							DesiredReplicasReplicas: 2,
 							Tenants:                 []string{"foobar"},
 							Priority:                1,
@@ -678,6 +681,7 @@ func TestBuildHashrings(t *testing.T) {
 							},
 						},
 						"b": {
+							OriginalName:            "b",
 							DesiredReplicasReplicas: 2,
 							TenantMatcherType:       TenantMatcherGlob,
 							Tenants:                 []string{"baz*"},
@@ -729,6 +733,7 @@ func TestBuildHashrings(t *testing.T) {
 				Data: map[string]string{
 					HashringConfigKey: `[
     {
+        "hashring": "a",
         "tenants": [
             "foobar"
         ],
@@ -744,6 +749,7 @@ func TestBuildHashrings(t *testing.T) {
         ]
     },
     {
+        "hashring": "b",
         "tenants": [
             "baz*"
         ],
