@@ -36,6 +36,9 @@ type RouterSpec struct {
 	// +kubebuilder:validation:Enum=1;3;5
 	// +kubebuilder:validation:Required
 	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
+	// ExternalLabels set and forwarded by the router to the ingesters.
+	// +kubebuilder:default={receive: "true"}
+	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 }
 
 // IngesterSpec represents the configuration for the ingestor
@@ -68,6 +71,9 @@ type IngestorHashringSpec struct {
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
+	// ExternalLabels to add to the ingesters tsdb blocks.
+	// +kubebuilder:default={replica: "$(POD_NAME)"}
+	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 	// Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1

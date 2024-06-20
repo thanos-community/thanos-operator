@@ -103,6 +103,15 @@ spec:
                       description: IngestorHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
+                        externalLabels:
+                          additionalProperties:
+                            type: string
+                          default:
+                            replica: $(POD_NAME)
+                          description: ExternalLabels to add to the ingesters tsdb
+                            blocks.
+                          minProperties: 1
+                          type: object
                         labels:
                           additionalProperties:
                             type: string
@@ -210,6 +219,15 @@ spec:
               router:
                 description: Router is the configuration for the router.
                 properties:
+                  externalLabels:
+                    additionalProperties:
+                      type: string
+                    default:
+                      receive: "true"
+                    description: ExternalLabels set and forwarded by the router to
+                      the ingesters.
+                    minProperties: 1
+                    type: object
                   labels:
                     additionalProperties:
                       type: string
