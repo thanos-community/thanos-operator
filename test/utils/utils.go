@@ -25,6 +25,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	appsv1 "k8s.io/api/apps/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -201,6 +204,19 @@ func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, n
 		return false
 	}
 	return true
+}
+
+func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
+	cm := &corev1.ConfigMap{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}, cm); err != nil {
+		return false
+	}
+
+	data := cm.Data[key]
+	return data == expect
 }
 
 func minioTestData() string {

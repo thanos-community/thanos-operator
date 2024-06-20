@@ -16,6 +16,13 @@ type Duration string
 // See https://thanos.io/tip/thanos/storage.md/#supported-clients for relevant documentation.
 type ObjectStorageConfig corev1.SecretKeySelector
 
+// ExternalLabels are the labels to add to the metrics.
+// POD_NAME and POD_NAMESPACE are available via the downward API.
+// +kubebuilder:validation:MinProperties=1
+// +kubebuilder:validation:Required
+// https://thanos.io/tip/thanos/storage.md/#external-labels
+type ExternalLabels map[string]string
+
 // CommonThanosFields are the options available to all Thanos components.
 // +k8s:deepcopy-gen=true
 type CommonThanosFields struct {

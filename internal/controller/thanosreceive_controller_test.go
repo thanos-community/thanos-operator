@@ -18,20 +18,24 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
-
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosReceive Controller", func() {
@@ -170,48 +174,197 @@ config:
 					},
 				},
 			}
+
 			By("setting up the thanos receive ingest resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-				name := resourceName + "-test-hashring"
 
-				controllerReconciler := &ThanosReceiveReconciler{
-					Client: k8sClient,
-					Scheme: k8sClient.Scheme(),
+				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
+				Eventually(func() error {
+					return validateExistenceOfRequiredNamedResources(expectApiResourceStatefulSet, name, ns)
+				}, time.Minute*2, time.Second*10).Should(Succeed())
+
+			})
+
+			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
+			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
+				// we label below for verbosity in testing but via predicates we really should not need to deal
+				// with such events. we do however want to ensure we deal with them correctly in case someone
+				// was to add a label.
+				epSliceNotRelevant := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "no-onwer-ref",
+						Namespace: ns,
+						Labels:    map[string]string{manifests.ComponentLabel: receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
 				}
+				Expect(k8sClient.Create(context.Background(), epSliceNotRelevant)).Should(Succeed())
 
-				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespacedName,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				EventuallyWithOffset(1, func() error {
-					sa := &corev1.ServiceAccount{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
+				epSliceNotRelevantNotRelevantService := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ep-slice-1",
 						Namespace: ns,
-					}, sa); err != nil {
-						return err
-					}
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Name:       "svc",
+								Kind:       "Service",
+								APIVersion: "v1",
+								UID:        types.UID("1234"),
+							},
+						},
+						Labels: map[string]string{manifests.ComponentLabel: receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+				}
+				Expect(k8sClient.Create(context.Background(), epSliceNotRelevantNotRelevantService)).Should(Succeed())
+				// check via a poll that we have not updated the ConfigMap
+				Consistently(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
+				}, time.Second*10, time.Second*1).Should(BeTrue())
 
-					svc := &corev1.Service{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
+				epSliceRelevant := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ep-slice-2",
 						Namespace: ns,
-					}, svc); err != nil {
-						return err
-					}
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Name:       receive.IngesterNameFromParent(resourceName, "test-hashring"),
+								Kind:       "Service",
+								APIVersion: "v1",
+								UID:        types.UID("1234"),
+							},
+						},
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: receive.IngesterNameFromParent(resourceName, "test-hashring"),
+							manifests.ComponentLabel:     receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"8.8.8.8"},
+							Hostname:  ptr.To("some-hostname"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"1.1.1.1"},
+							Hostname:  ptr.To("some-hostname-b"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"2.2.2.2"},
+							Hostname:  ptr.To("some-hostname-c"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), epSliceRelevant)).Should(Succeed())
 
-					sts := &appsv1.StatefulSet{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
-						Namespace: ns,
-					}, sts); err != nil {
-						return err
-					}
-					return nil
+				expect := `[
+    {
+        "hashring": "test-hashring",
+        "tenants": [
+            "test-tenant"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "some-hostname-b.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "az": ""
+            },
+            {
+                "address": "some-hostname-c.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "az": ""
+            },
+            {
+                "address": "some-hostname.test-resource-test-hashring.default.svc.cluster.local:19291",
+                "az": ""
+            }
+        ]
+    }
+]`
 
-				}, time.Minute*1, time.Second*10).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
+				}, time.Minute*1, time.Second*2).Should(BeTrue())
+
 			})
 		})
+
 	})
 })
+
+type expectApiResource string
+
+const (
+	expectApiResourceDeployment  expectApiResource = "Deployment"
+	expectApiResourceStatefulSet expectApiResource = "StatefulSet"
+)
+
+func validateExistenceOfRequiredNamedResources(expectResource expectApiResource, name, ns string) error {
+	sa := &corev1.ServiceAccount{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{
+		Name:      name,
+		Namespace: ns,
+	}, sa); err != nil {
+		return err
+	}
+
+	svc := &corev1.Service{}
+	if err := k8sClient.Get(ctx, types.NamespacedName{
+		Name:      name,
+		Namespace: ns,
+	}, svc); err != nil {
+		return err
+	}
+
+	switch expectResource {
+	case expectApiResourceDeployment:
+		dep := &appsv1.Deployment{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name:      name,
+			Namespace: ns,
+		}, dep); err != nil {
+			return err
+		}
+	case expectApiResourceStatefulSet:
+		sts := &appsv1.StatefulSet{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name:      name,
+			Namespace: ns,
+		}, sts); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unexpected resource type")
+	}
+	return nil
+}

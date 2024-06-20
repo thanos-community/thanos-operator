@@ -34,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -111,6 +110,7 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	Context("Operator", func() {
+
 		It("should run successfully", func() {
 			var controllerPodName string
 			var err error
@@ -207,6 +207,25 @@ var _ = Describe("controller", Ordered, func() {
 			stsName := receive.IngesterNameFromParent(receiveName, hashringName)
 			Eventually(func() bool {
 				return utils.VerifyStsReplicasRunning(c, 1, stsName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+		})
+
+		It("should create a ConfigMap with the correct hashring configuration", func() {
+			//nolint:lll
+			expect := `[
+    {
+        "hashring": "default",
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:19291",
+                "az": ""
+            }
+        ]
+    }
+]`
+			Eventually(func() bool {
+				return utils.VerifyConfigMapContents(c, receiveName, namespace, receive.HashringConfigKey, expect)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 	})
