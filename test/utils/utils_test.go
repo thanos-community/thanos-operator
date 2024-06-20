@@ -3,6 +3,8 @@ package utils
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -48,5 +50,32 @@ func TestVerifyStsReplicasRunning(t *testing.T) {
 	ready = VerifyStsReplicasRunning(fake.NewClientBuilder().WithObjects(readySts).Build(), 3, name, ns)
 	if !ready {
 		t.Errorf("expected ready statefulset")
+	}
+}
+
+func TestVerifyConfigMapContents(t *testing.T) {
+	const (
+		name = "test"
+		ns   = "test"
+	)
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Data: map[string]string{
+			"key": "value",
+		},
+	}
+
+	ready := VerifyConfigMapContents(fake.NewClientBuilder().WithObjects(cm).Build(), name, ns, "key", "value")
+	if !ready {
+		t.Errorf("expected ready configmap")
+	}
+
+	ready = VerifyConfigMapContents(fake.NewClientBuilder().WithObjects(cm).Build(), name, ns, "key", "notvalue")
+	if ready {
+		t.Errorf("expected not ready configmap")
 	}
 }
