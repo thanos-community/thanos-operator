@@ -243,9 +243,9 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 	// sort the hashrings by priority or name
 	sort.Slice(hashrings, func(i, j int) bool {
 		if opts.HashringSettings[hashrings[i].Hashring].Priority == opts.HashringSettings[hashrings[j].Hashring].Priority {
-			return hashrings[i].Hashring < hashrings[j].Hashring
+			return hashrings[i].Hashring > hashrings[j].Hashring
 		}
-		return opts.HashringSettings[hashrings[i].Hashring].Priority < opts.HashringSettings[hashrings[j].Hashring].Priority
+		return opts.HashringSettings[hashrings[i].Hashring].Priority > opts.HashringSettings[hashrings[j].Hashring].Priority
 	})
 
 	conf, err := hashrings.toJson()

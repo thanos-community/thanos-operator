@@ -38,7 +38,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var _ = Describe("ThanosReceive Controller", func() {
+var _ = Describe("ThanosReceive Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
 		const (
 			resourceName = "test-resource"
