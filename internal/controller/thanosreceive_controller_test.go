@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,7 +28,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -188,16 +186,17 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
-				Eventually(func() error {
-					return validateExistenceOfRequiredNamedResources(expectApiResourceStatefulSet, name, ns)
-				}, time.Minute*2, time.Second*10).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceStatefulSet, name, ns)
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
 
 			})
 
 			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -242,7 +241,7 @@ config:
 				// check via a poll that we have not updated the ConfigMap
 				Consistently(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*5, time.Second*1).Should(BeTrue())
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
 					TypeMeta: metav1.TypeMeta{
@@ -306,15 +305,15 @@ config:
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -323,57 +322,17 @@ config:
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
-				}, time.Minute*1, time.Second*2).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 
+			})
+
+			By("creating the router components", func() {
+				Eventually(func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 		})
 
 	})
 })
-
-type expectApiResource string
-
-const (
-	expectApiResourceDeployment  expectApiResource = "Deployment"
-	expectApiResourceStatefulSet expectApiResource = "StatefulSet"
-)
-
-func validateExistenceOfRequiredNamedResources(expectResource expectApiResource, name, ns string) error {
-	sa := &corev1.ServiceAccount{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{
-		Name:      name,
-		Namespace: ns,
-	}, sa); err != nil {
-		return err
-	}
-
-	svc := &corev1.Service{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{
-		Name:      name,
-		Namespace: ns,
-	}, svc); err != nil {
-		return err
-	}
-
-	switch expectResource {
-	case expectApiResourceDeployment:
-		dep := &appsv1.Deployment{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      name,
-			Namespace: ns,
-		}, dep); err != nil {
-			return err
-		}
-	case expectApiResourceStatefulSet:
-		sts := &appsv1.StatefulSet{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      name,
-			Namespace: ns,
-		}, sts); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unexpected resource type")
-	}
-	return nil
-}

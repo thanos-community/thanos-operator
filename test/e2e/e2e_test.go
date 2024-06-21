@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -34,8 +35,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const (
@@ -54,6 +59,7 @@ var _ = Describe("controller", Ordered, func() {
 	var c client.Client
 
 	BeforeAll(func() {
+		logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
 
@@ -206,7 +212,7 @@ var _ = Describe("controller", Ordered, func() {
 
 			stsName := receive.IngesterNameFromParent(receiveName, hashringName)
 			Eventually(func() bool {
-				return utils.VerifyStsReplicasRunning(c, 1, stsName, namespace)
+				return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 
@@ -218,7 +224,7 @@ var _ = Describe("controller", Ordered, func() {
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:19291",
+                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -228,6 +234,34 @@ var _ = Describe("controller", Ordered, func() {
 				return utils.VerifyConfigMapContents(c, receiveName, namespace, receive.HashringConfigKey, expect)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
+	})
+
+	It("should bring up the router", func() {
+		Eventually(func() bool {
+			return utils.VerifyDeploymentReplicasRunning(c, 1, receiveName, namespace)
+		}, time.Minute*5, time.Second*10).Should(BeTrue())
+	})
+
+	It("should accept metrics over remote write", func() {
+		ctx := context.Background()
+		selector := client.MatchingLabels{
+			manifests.ComponentLabel: receive.RouterComponentName,
+		}
+		router := &corev1.PodList{}
+		err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
+		Expect(err).To(BeNil())
+		Expect(len(router.Items)).To(Equal(1))
+
+		pod := router.Items[0].Name
+		port := intstr.IntOrString{IntVal: receive.RemoteWritePort}
+		cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
+		Expect(err).To(BeNil())
+		defer cancelFn()
+
+		Eventually(func() error {
+			return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
+		}, time.Minute*1, time.Second*5).Should(Succeed())
+
 	})
 
 	Context("Thanos Query", func() {

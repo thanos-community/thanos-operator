@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -100,22 +99,11 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				EventuallyWithOffset(1, func() error {
-					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service account not found")
-					}
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
 
-					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service not found")
-					}
-
-					if !utils.VerifyDeploymentExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("deployment not found")
-					}
-
-					return nil
-
-				}, time.Minute*1, time.Second*10).Should(Succeed())
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
 			By("setting endpoints on the thanos query", func() {
@@ -146,31 +134,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				EventuallyWithOffset(1, func() error {
-					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service account not found")
-					}
-
-					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service not found")
-					}
-
-					deployment := &appsv1.Deployment{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
-						Namespace: ns,
-					}, deployment); err != nil {
-						return err
-					}
-
-					if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args,
-						"--endpoint=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local") {
-						return fmt.Errorf("endpoint not set: %v", deployment.Spec.Template.Spec.Containers[0].Args)
-					}
-
-					return nil
-
-				}, time.Minute*1, time.Second*10).Should(Succeed())
+				EventuallyWithOffset(1, func() bool {
+					args := "--endpoint=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
+					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, args)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
 			By("setting strict and ignoring services on the thanos query", func() {
@@ -223,14 +190,6 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				EventuallyWithOffset(1, func() error {
-					if !utils.VerifyServiceAccountExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service account not found")
-					}
-
-					if !utils.VerifyServiceExists(k8sClient, resourceName, ns) {
-						return fmt.Errorf("service not found")
-					}
-
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
 						Name:      resourceName,
@@ -245,9 +204,9 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
-					if !slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args,
-						"--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local") {
-						return fmt.Errorf("endpoint strict not set: %v", deployment.Spec.Template.Spec.Containers[0].Args)
+					arg := "--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
+					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, arg) == false {
+						return fmt.Errorf("expected arg %q", arg)
 					}
 
 					return nil

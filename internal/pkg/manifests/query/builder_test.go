@@ -25,7 +25,7 @@ func TestBuildQuerier(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		},
+		}.ApplyDefaults(),
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,

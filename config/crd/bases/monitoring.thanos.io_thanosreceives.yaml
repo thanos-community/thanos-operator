@@ -203,7 +203,6 @@ spec:
                 - json
                 type: string
               logLevel:
-                default: info
                 description: Log level for Thanos.
                 enum:
                 - debug
