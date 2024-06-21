@@ -36,8 +36,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build multi-platform image
+      - name: Build and push multi-platform image
         run: make docker-buildx
-
-      - name: Push multi-platform image
-        run: make docker-push
