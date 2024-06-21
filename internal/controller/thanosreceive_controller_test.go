@@ -190,14 +190,14 @@ config:
 				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
 				Eventually(func() error {
 					return validateExistenceOfRequiredNamedResources(expectApiResourceStatefulSet, name, ns)
-				}, time.Minute*2, time.Second*10).Should(Succeed())
+				}, time.Minute*1, time.Second*5).Should(Succeed())
 
 			})
 
 			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -306,15 +306,15 @@ config:
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:19291",
+                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -325,6 +325,12 @@ config:
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
 				}, time.Minute*1, time.Second*2).Should(BeTrue())
 
+			})
+
+			By("creating the router components", func() {
+				Eventually(func() error {
+					return validateExistenceOfRequiredNamedResources(expectApiResourceDeployment, resourceName, ns)
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 		})
 
