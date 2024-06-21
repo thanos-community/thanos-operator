@@ -270,10 +270,7 @@ func VerifyStatefulSetExists(c client.Client, name string, namespace string) boo
 		Name:      name,
 		Namespace: namespace,
 	}, sts)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
@@ -437,21 +434,21 @@ const (
 // VerifyExistenceOfRequiredNamedResources checks if the required resources exist in the cluster.
 // This is a named Service, ServiceAccount, and either a Deployment or StatefulSet.
 func VerifyExistenceOfRequiredNamedResources(c client.Client, expectResource ExpectApiResource, name, ns string) bool {
-	if VerifyServiceAccountExists(c, name, ns) == false {
+	if !VerifyServiceAccountExists(c, name, ns) {
 		return false
 	}
 
-	if VerifyServiceExists(c, name, ns) == false {
+	if !VerifyServiceExists(c, name, ns) {
 		return false
 	}
 
 	switch expectResource {
 	case ExpectApiResourceDeployment:
-		if VerifyDeploymentExists(c, name, ns) == false {
+		if !VerifyDeploymentExists(c, name, ns) {
 			return false
 		}
 	case ExpectApiResourceStatefulSet:
-		if VerifyStatefulSetExists(c, name, ns) == false {
+		if !VerifyStatefulSetExists(c, name, ns) {
 			return false
 		}
 	default:

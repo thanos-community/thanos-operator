@@ -186,9 +186,10 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
-				Eventually(func() error {
-					return validateExistenceOfRequiredNamedResources(expectApiResourceStatefulSet, name, ns)
-				}, time.Minute*1, time.Second*5).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceStatefulSet, name, ns)
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
 
 			})
 
@@ -326,9 +327,10 @@ config:
 			})
 
 			By("creating the router components", func() {
-				Eventually(func() error {
-					return validateExistenceOfRequiredNamedResources(expectApiResourceDeployment, resourceName, ns)
-				}, time.Minute*1, time.Second*1).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 		})
 
