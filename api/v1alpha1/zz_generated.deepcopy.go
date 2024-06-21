@@ -54,10 +54,30 @@ func (in *CommonThanosFields) DeepCopyInto(out *CommonThanosFields) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ImagePullPolicy != nil {
+		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
+		*out = new(corev1.PullPolicy)
+		**out = **in
+	}
 	if in.ImagePullSecrets != nil {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
 		*out = make([]corev1.LocalObjectReference, len(*in))
 		copy(*out, *in)
+	}
+	if in.Paused != nil {
+		in, out := &in.Paused, &out.Paused
+		*out = new(bool)
+		**out = **in
+	}
+	if in.LogLevel != nil {
+		in, out := &in.LogLevel, &out.LogLevel
+		*out = new(string)
+		**out = **in
+	}
+	if in.LogFormat != nil {
+		in, out := &in.LogFormat, &out.LogFormat
+		*out = new(string)
+		**out = **in
 	}
 }
 
@@ -182,11 +202,6 @@ func (in *IngestorHashringSpec) DeepCopyInto(out *IngestorHashringSpec) {
 		for key, val := range *in {
 			(*out)[key] = val
 		}
-	}
-	if in.Retention != nil {
-		in, out := &in.Retention, &out.Retention
-		*out = new(Duration)
-		**out = **in
 	}
 	if in.ObjectStorageConfig != nil {
 		in, out := &in.ObjectStorageConfig, &out.ObjectStorageConfig

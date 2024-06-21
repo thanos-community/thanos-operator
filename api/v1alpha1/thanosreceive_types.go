@@ -38,6 +38,7 @@ type RouterSpec struct {
 	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
 	// ExternalLabels set and forwarded by the router to the ingesters.
 	// +kubebuilder:default={receive: "true"}
+	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 }
 
@@ -73,6 +74,7 @@ type IngestorHashringSpec struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// ExternalLabels to add to the ingesters tsdb blocks.
 	// +kubebuilder:default={replica: "$(POD_NAME)"}
+	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 	// Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Minimum=1
@@ -81,8 +83,8 @@ type IngestorHashringSpec struct {
 	Replicas int32 `json:"replicas,omitempty"`
 	// Retention is the duration for which the Thanos Receive StatefulSet will retain data.
 	// +kubebuilder:default="2h"
-	// +kubebuilder:validation:Optional
-	Retention *Duration `json:"retention,omitempty"`
+	// +kubebuilder:validation:Required
+	Retention Duration `json:"retention,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for the hashring.
 	// +kubebuilder:validation:Optional
 	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
@@ -104,6 +106,7 @@ type IngestorHashringSpec struct {
 // +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
+	// +kubebuilder:validation:Optional
 	CommonThanosFields `json:",inline"`
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required
