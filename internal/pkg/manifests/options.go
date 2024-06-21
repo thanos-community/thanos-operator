@@ -47,7 +47,7 @@ func (o Options) ApplyDefaults() Options {
 	o.containerImage = fmt.Sprintf("%s:%s", *o.Image, *o.Version)
 
 	if o.LogLevel == nil || *o.LogLevel == "" {
-		o.LogLevel = ptr.To(defaultLogFormat)
+		o.LogLevel = ptr.To(defaultLogLevel)
 	}
 
 	if o.LogFormat == nil || *o.LogFormat == "" {

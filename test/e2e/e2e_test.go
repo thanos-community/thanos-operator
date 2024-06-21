@@ -36,8 +36,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const (
@@ -56,6 +59,7 @@ var _ = Describe("controller", Ordered, func() {
 	var c client.Client
 
 	BeforeAll(func() {
+		logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
 
@@ -248,14 +252,15 @@ var _ = Describe("controller", Ordered, func() {
 		Expect(err).To(BeNil())
 		Expect(len(router.Items)).To(Equal(1))
 
-		pod := router.Items[0]
-		cancelFn, err := utils.StartPortForward(ctx, "https", pod.Name, namespace, intstr.IntOrString{IntVal: receive.RemoteWritePort})
+		pod := router.Items[0].Name
+		port := intstr.IntOrString{IntVal: receive.RemoteWritePort}
+		cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
 		Expect(err).To(BeNil())
 		defer cancelFn()
 
-		Eventually(func() int {
-			return utils.RemoteWrite("", fmt.Sprintf("http://localhost:%d/api/v1/receive", receive.RemoteWritePort))
-		}, time.Minute*1, time.Second*5).Should(Equal(200))
+		Eventually(func() error {
+			return utils.RemoteWrite(utils.DefaultRemoteWriteRequest())
+		}, time.Minute*1, time.Second*5).Should(Succeed())
 
 	})
 

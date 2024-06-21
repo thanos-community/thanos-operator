@@ -30,9 +30,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
-	"github.com/prometheus/prometheus/prompb"
+	configutil "github.com/prometheus/common/config"
+	pconf "github.com/prometheus/common/config"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/storage/remote"
+	"github.com/prometheus/prometheus/util/fmtutil"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -279,7 +282,7 @@ func VerifyConfigMapContents(c client.Client, name, namespace, key, expect strin
 // stop the proxy server.
 // The function blocks until the port forwarding proxy server is ready to
 // receive connections or the context is canceled.
-func StartPortForward(ctx context.Context, scheme string, name string, ns string, port intstr.IntOrString) (func(), error) {
+func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name, ns string) (func(), error) {
 	conf, err := config.GetConfig()
 	if err != nil {
 		return nil, err
@@ -323,55 +326,91 @@ func StartPortForward(ctx context.Context, scheme string, name string, ns string
 	}
 }
 
-func RemoteWrite(tenant, url string) (status int) {
-	req := &prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{
-						Name:  "__name__",
-						Value: "test_metric",
-					},
-					{
-						Name:  "_id",
-						Value: "true",
-					},
-				},
-				Samples: []prompb.Sample{
-					{
-						Timestamp: time.Now().Unix(),
-						Value:     1.0,
-					},
-				},
-			},
-		},
-	}
-
-	data, err := proto.Marshal(req)
-	if err != nil {
-		return status
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	body := bytes.NewReader(snappy.Encode(nil, data))
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
-	if err != nil {
-		return status
-	}
-	request.Header.Set("Content-Type", "application/x-protobuf")
-	request.Header.Set("Content-Encoding", "snappy")
-	resp, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return status
-	}
-
-	_ = resp.Body.Close()
-
-	return resp.StatusCode
-}
-
 func minioTestData() string {
 	wd, _ := os.Getwd()
 	return wd + "/test/utils/testdata/minio.yaml"
+}
+
+// RemoteWrite sends a remote write request to the remote write endpoint which is running on localhost.
+func RemoteWrite(req RemoteWriteRequest, roundTripper http.RoundTripper, headers map[string]string) error {
+	url, err := url.Parse("http://localhost:19291/api/v1/receive")
+	if err != nil {
+		return err
+	}
+
+	rwClient, err := remote.NewWriteClient("test-client", &remote.ClientConfig{
+		Timeout: model.Duration(time.Second * 5),
+		URL:     &configutil.URL{URL: url},
+		HTTPClientConfig: pconf.HTTPClientConfig{
+			TLSConfig: pconf.TLSConfig{
+				InsecureSkipVerify: true,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	writeClient, ok := rwClient.(*remote.Client)
+	if !ok {
+		return fmt.Errorf("failed to cast remote write client")
+	}
+
+	if roundTripper == nil {
+		roundTripper = http.DefaultTransport
+	}
+
+	writeClient.Client.Transport = &setHeadersTransport{
+		RoundTripper: roundTripper,
+		headers:      headers,
+	}
+
+	data, err := fmtutil.MetricTextToWriteRequest(bytes.NewReader(req.Data), req.Labels)
+	if err != nil {
+		return err
+	}
+
+	raw, err := data.Marshal()
+	if err != nil {
+		return err
+	}
+
+	compressed := snappy.Encode(nil, raw)
+	err = writeClient.Store(context.Background(), compressed, 0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoteWriteRequest is a struct that represents the request to be sent to the remote write endpoint.
+type RemoteWriteRequest struct {
+	Data   []byte
+	Labels map[string]string
+}
+
+// DefaultRemoteWriteRequest returns a default RemoteWriteRequest.
+func DefaultRemoteWriteRequest() RemoteWriteRequest {
+	return RemoteWriteRequest{
+		Data: []byte(`
+	# HELP test_metric This is a test metric.
+	# TYPE test_metric gauge
+	test_metric{foo="bar"} 1 1
+	`),
+		Labels: map[string]string{
+			"job": "e2e-test",
+		},
+	}
+}
+
+type setHeadersTransport struct {
+	http.RoundTripper
+	headers map[string]string
+}
+
+func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for key, value := range s.headers {
+		req.Header.Set(key, value)
+	}
+	return s.RoundTripper.RoundTrip(req)
 }
