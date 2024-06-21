@@ -21,6 +21,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
@@ -42,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -56,6 +58,48 @@ type ThanosReceiveReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+
+	logger logr.Logger
+
+	reg                                 prometheus.Registerer
+	reconciliationsTotal                prometheus.Counter
+	reconciliationsFailedTotal          prometheus.Counter
+	hashringsConfigured                 *prometheus.GaugeVec
+	endpointWatchesReconciliationsTotal prometheus.Counter
+	clientErrorsTotal                   prometheus.Counter
+}
+
+// NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
+func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer) *ThanosReceiveReconciler {
+	return &ThanosReceiveReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		Recorder: recorder,
+
+		logger: logger,
+
+		reg: reg,
+		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_receive_reconciliations_total",
+			Help: "Total number of reconciliations for ThanosReceive resources",
+		}),
+		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_receive_reconciliations_failed_total",
+			Help: "Total number of failed reconciliations for ThanosReceive resources",
+		}),
+		hashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_receive_hashrings_configured",
+			Help: "Total number of configured hashrings for ThanosReceive resources",
+		}, []string{"resource", "namespace"}),
+		endpointWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
+			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
+		}),
+		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_receive_client_errors_total",
+			Help: "Total number of errors encountered during kube client calls of ThanosReceive resources",
+		}),
+	}
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -63,27 +107,30 @@ type ThanosReceiveReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	r.reconciliationsTotal.Inc()
 
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
+		r.clientErrorsTotal.Inc()
 		if apierrors.IsNotFound(err) {
-			logger.Info("thanos receive resource not found. ignoring since object may be deleted")
+			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
-		logger.Error(err, "failed to get ThanosReceive")
+		r.logger.Error(err, "failed to get ThanosReceive")
+		r.reconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
 	// handle object being deleted - inferred from the existence of DeletionTimestamp
 	if !receiver.GetDeletionTimestamp().IsZero() {
-		return r.handleDeletionTimestamp(logger, receiver)
+		return r.handleDeletionTimestamp(receiver)
 	}
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
+		r.reconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -134,8 +181,6 @@ func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 // It creates or updates the resources for the hashrings and the router.
 func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) error {
 	var objs []client.Object
-	logger := log.FromContext(ctx)
-
 	objs = append(objs, r.buildHashrings(receiver)...)
 
 	hashringConf, err := r.buildHashringConfig(ctx, receiver)
@@ -155,7 +200,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		if manifests.IsNamespacedResource(obj) {
 			obj.SetNamespace(receiver.Namespace)
 			if err := ctrl.SetControllerReference(&receiver, obj, r.Scheme); err != nil {
-				logger.Error(err, "failed to set controller owner reference to resource")
+				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
 				continue
 			}
@@ -166,7 +211,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 		op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
 		if err != nil {
-			logger.Error(
+			r.logger.Error(
 				err, "failed to create or update resource",
 				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
 				"resource", obj.GetName(),
@@ -176,7 +221,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 			continue
 		}
 
-		logger.V(1).Info(
+		r.logger.V(1).Info(
 			"resource configured",
 			"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
 			"resource", obj.GetName(), "namespace", obj.GetNamespace(),
@@ -184,6 +229,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
+		r.clientErrorsTotal.Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
 	}
 
@@ -227,8 +273,6 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
 func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) (client.Object, error) {
-	logger := log.FromContext(ctx)
-
 	cm := &corev1.ConfigMap{}
 	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: receiver.GetName()}, cm)
 	if err != nil {
@@ -269,12 +313,13 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
-	return receive.BuildHashrings(logger, cm, opts)
+	r.hashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
+	return receive.BuildHashrings(r.logger, cm, opts)
 }
 
-func (r *ThanosReceiveReconciler) handleDeletionTimestamp(log logr.Logger, receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
+func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
 	if controllerutil.ContainsFinalizer(receiveHashring, receiveFinalizer) {
-		log.Info("performing Finalizer Operations for ThanosReceiveHashring before delete CR")
+		r.logger.Info("performing Finalizer Operations for ThanosReceiveHashring before delete CR")
 
 		r.Recorder.Event(receiveHashring, "Warning", "Deleting",
 			fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
@@ -301,6 +346,7 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			return nil
 		}
 
+		r.endpointWatchesReconciliationsTotal.Inc()
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{

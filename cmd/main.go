@@ -19,7 +19,12 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"net/http"
+	"net/http/pprof"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus"
+	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
@@ -35,6 +40,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -101,6 +107,13 @@ func main() {
 			BindAddress:   metricsAddr,
 			SecureServing: secureMetrics,
 			TLSOpts:       tlsOpts,
+			ExtraHandlers: map[string]http.Handler{
+				"/debug/pprof/":        http.HandlerFunc(pprof.Index),
+				"/debug/pprof/cmdline": http.HandlerFunc(pprof.Cmdline),
+				"/debug/pprof/profile": http.HandlerFunc(pprof.Profile),
+				"/debug/pprof/symbol":  http.HandlerFunc(pprof.Symbol),
+				"/debug/pprof/trace":   http.HandlerFunc(pprof.Trace),
+			},
 		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
@@ -123,6 +136,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctrlmetrics.Registry.MustRegister(
+		versioncollector.NewCollector("thanos_operator"),
+	)
+	prometheus.DefaultRegisterer = ctrlmetrics.Registry
+
+	logger := ctrl.Log.WithName("thanos-operator")
+
 	if err = (&controller.ThanosServiceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -130,18 +150,24 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosService")
 		os.Exit(1)
 	}
-	if err = (&controller.ThanosQueryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+
+	if err = controller.NewThanosQueryReconciler(
+		logger.WithName("query"),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetEventRecorderFor("thanos-query-controller"),
+		ctrlmetrics.Registry,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
 	}
-	if err = (&controller.ThanosReceiveReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("thanos-receive-controller"),
-	}).SetupWithManager(mgr); err != nil {
+	if err = controller.NewThanosReceiveReconciler(
+		logger.WithName("query"),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetEventRecorderFor("thanos-receive-controller"),
+		ctrlmetrics.Registry,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
 	}
