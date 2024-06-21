@@ -1,7 +1,9 @@
 include .bingo/Variables.mk
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+DOCKER_IMAGE_REPO ?= quay.io/thanos/thanos-operator
+DOCKER_IMAGE_TAG  ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
+IMG ?= ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.29.0
 
