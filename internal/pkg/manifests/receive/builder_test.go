@@ -771,7 +771,7 @@ func TestBuildHashrings(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var cm *corev1.ConfigMap
+			cm := &corev1.ConfigMap{}
 			if tc.passedState != nil {
 				conf, err := tc.passedState.toJson()
 				if err != nil {

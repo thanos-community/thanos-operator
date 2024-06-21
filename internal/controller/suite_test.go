@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 
@@ -90,16 +91,25 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&ThanosReceiveReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	reg := prometheus.NewRegistry()
+	logger := ctrl.Log.WithName("suite-test")
+
+	err = NewThanosReceiveReconciler(
+		logger,
+		k8sManager.GetClient(),
+		k8sManager.GetScheme(),
+		nil,
+		reg,
+	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&ThanosQueryReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	err = NewThanosQueryReconciler(
+		logger,
+		k8sManager.GetClient(),
+		k8sManager.GetScheme(),
+		nil,
+		reg,
+	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
