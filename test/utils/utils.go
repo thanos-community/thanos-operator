@@ -17,21 +17,32 @@ limitations under the License.
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/prometheus/prometheus/prompb"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const (
@@ -261,6 +272,103 @@ func VerifyConfigMapContents(c client.Client, name, namespace, key, expect strin
 
 	data := cm.Data[key]
 	return data == expect
+}
+
+// StartPortForward initiates a port forwarding connection to a pod on the
+// localhost interface. It returns a closer function that should be invoked to
+// stop the proxy server.
+// The function blocks until the port forwarding proxy server is ready to
+// receive connections or the context is canceled.
+func StartPortForward(ctx context.Context, scheme string, name string, ns string, port intstr.IntOrString) (func(), error) {
+	conf, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	roundTripper, upgrader, err := spdy.RoundTripperFor(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", ns, name)
+	hostIP := strings.TrimLeft(conf.Host, "htps:/")
+	serverURL := url.URL{Scheme: scheme, Path: path, Host: hostIP}
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, &serverURL)
+
+	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
+	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
+	forwarder, err := portforward.New(dialer, []string{port.String()}, stopChan, readyChan, out, errOut)
+	if err != nil {
+		return nil, err
+	}
+
+	forwardErr := make(chan error, 1)
+	go func() {
+		if err := forwarder.ForwardPorts(); err != nil {
+			forwardErr <- err
+		}
+		close(forwardErr)
+	}()
+
+	select {
+	case <-readyChan:
+		return func() { close(stopChan) }, nil
+	case <-ctx.Done():
+		var err error
+		select {
+		case err = <-forwardErr:
+		default:
+		}
+		return nil, fmt.Errorf("%v: %v", ctx.Err(), err)
+	}
+}
+
+func RemoteWrite(tenant, url string) (status int) {
+	req := &prompb.WriteRequest{
+		Timeseries: []prompb.TimeSeries{
+			{
+				Labels: []prompb.Label{
+					{
+						Name:  "__name__",
+						Value: "test_metric",
+					},
+					{
+						Name:  "_id",
+						Value: "true",
+					},
+				},
+				Samples: []prompb.Sample{
+					{
+						Timestamp: time.Now().Unix(),
+						Value:     1.0,
+					},
+				},
+			},
+		},
+	}
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return status
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	body := bytes.NewReader(snappy.Encode(nil, data))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return status
+	}
+	request.Header.Set("Content-Type", "application/x-protobuf")
+	request.Header.Set("Content-Encoding", "snappy")
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return status
+	}
+
+	_ = resp.Body.Close()
+
+	return resp.StatusCode
 }
 
 func minioTestData() string {
