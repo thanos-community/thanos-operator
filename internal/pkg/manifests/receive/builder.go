@@ -29,25 +29,21 @@ const (
 
 	// RouterComponentName is the name of the Thanos Receive router component.
 	RouterComponentName = "thanos-receive-router"
-	// RouterHTTPPortName is the name of the HTTP port for the Thanos Receive router component.
-	RouterHTTPPortName = "http"
-	// RouterHTTPPort is the port number for the HTTP port for the Thanos Receive router component.
-	RouterHTTPPort = 10902
-
 	// IngestComponentName is the name of the Thanos Receive ingester component.
 	IngestComponentName = "thanos-receive-ingester"
-	// IngestGRPCPortName is the name of the gRPC port for the Thanos Receive ingester component.
-	IngestGRPCPortName = "grpc"
-	// IngestGRPCPort is the port number for the gRPC port for the Thanos Receive ingester component.
-	IngestGRPCPort = 10901
-	// IngestHTTPPortName is the name of the HTTP port for the Thanos Receive ingester component.
-	IngestHTTPPortName = "http"
-	// IngestHTTPPort is the port number for the HTTP port for the Thanos Receive ingester component.
-	IngestHTTPPort = 10902
-	// IngestRemoteWritePortName is the name of the remote write port for the Thanos Receive ingester component.
-	IngestRemoteWritePortName = "remote-write"
-	// IngestRemoteWritePort is the port number for the remote write port for the Thanos Receive ingester component.
-	IngestRemoteWritePort = 19291
+
+	// HTTPPortName is the name of the HTTP port for the Thanos Receive components.
+	HTTPPortName = "http"
+	// HTTPPort is the port number for the HTTP port for the Thanos Receive components.
+	HTTPPort = 10902
+	// GRPCPortName is the name of the gRPC port for the Thanos Receive components.
+	GRPCPortName = "grpc"
+	// GRPCPort is the port number for the gRPC port for the Thanos Receive components.
+	GRPCPort = 10901
+	// RemoteWritePortName is the name of the remote write port for the Thanos Receive components.
+	RemoteWritePortName = "remote-write"
+	// RemoteWritePort is the port number for the remote write port for the Thanos Receive components.
+	RemoteWritePort = 19291
 
 	// HashringConfigKey is the key in the ConfigMap for the hashring configuration.
 	HashringConfigKey = "hashrings.json"
@@ -190,7 +186,7 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 		}
 
 		// if this is the first time we have seen this hashring,
-		// we want to make sure it iss fully ready before we add it to the list of hashrings.
+		// we want to make sure it is fully ready before we add it to the list of hashrings.
 		var found bool
 		var currentHashring HashringConfig
 		for _, hr := range currentState {
@@ -304,6 +300,7 @@ const (
 	dataVolumeMountPath = "var/thanos/receive"
 )
 
+// NewIngestorStatefulSet creates a new StatefulSet for the Thanos Receive ingester.
 func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 	defaultLabels := labelsForIngestor(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
@@ -371,20 +368,20 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/-/ready",
-										Port: intstr.FromInt32(IngestHTTPPort),
+										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-								InitialDelaySeconds: 60,
+								InitialDelaySeconds: 20,
 								TimeoutSeconds:      1,
 								PeriodSeconds:       30,
 								SuccessThreshold:    1,
-								FailureThreshold:    8,
+								FailureThreshold:    15,
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/-/healthy",
-										Port: intstr.FromInt32(IngestHTTPPort),
+										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
 								InitialDelaySeconds: 60,
@@ -431,16 +428,16 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 							},
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: IngestGRPCPort,
-									Name:          IngestGRPCPortName,
+									ContainerPort: GRPCPort,
+									Name:          GRPCPortName,
 								},
 								{
-									ContainerPort: IngestHTTPPort,
-									Name:          IngestHTTPPortName,
+									ContainerPort: HTTPPort,
+									Name:          HTTPPortName,
 								},
 								{
-									ContainerPort: IngestRemoteWritePort,
-									Name:          IngestRemoteWritePortName,
+									ContainerPort: RemoteWritePort,
+									Name:          RemoteWritePortName,
 								},
 							},
 							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
@@ -455,26 +452,41 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 	return sts
 }
 
+// NewIngestorService creates a new Service for the Thanos Receive ingester.
 func NewIngestorService(opts IngesterOptions) *corev1.Service {
 	defaultLabels := labelsForIngestor(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
+	svc := newService(opts.Options, defaultLabels)
+	svc.Spec.ClusterIP = corev1.ClusterIPNone
+	return svc
+}
+
+// NewRouterService creates a new Service for the Thanos Receive router.
+func NewRouterService(opts RouterOptions) *corev1.Service {
+	defaultLabels := labelsForRouter(opts.Options)
+	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
+	return newService(opts.Options, defaultLabels)
+}
+
+// newService creates a new Service for the Thanos Receive components.
+func newService(opts manifests.Options, selectorLabels map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
-			Name:       IngestGRPCPortName,
-			Port:       IngestGRPCPort,
-			TargetPort: intstr.FromInt32(IngestGRPCPort),
+			Name:       GRPCPortName,
+			Port:       GRPCPort,
+			TargetPort: intstr.FromInt32(GRPCPort),
 			Protocol:   "TCP",
 		},
 		{
-			Name:       IngestHTTPPortName,
-			Port:       IngestHTTPPort,
-			TargetPort: intstr.FromInt32(IngestHTTPPort),
+			Name:       HTTPPortName,
+			Port:       HTTPPort,
+			TargetPort: intstr.FromInt32(HTTPPort),
 			Protocol:   "TCP",
 		},
 		{
-			Name:       IngestRemoteWritePortName,
-			Port:       IngestRemoteWritePort,
-			TargetPort: intstr.FromInt32(IngestRemoteWritePort),
+			Name:       RemoteWritePortName,
+			Port:       RemoteWritePort,
+			TargetPort: intstr.FromInt32(RemoteWritePort),
 			Protocol:   "TCP",
 		},
 	}
@@ -534,24 +546,45 @@ func IngesterNameFromParent(receiveName, ingesterName string) string {
 }
 
 func ingestorArgsFrom(opts IngesterOptions) []string {
+	opts.Options = opts.ApplyDefaults()
 	args := []string{
 		"receive",
-		fmt.Sprintf("--log.level=%s", opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", opts.LogFormat),
-		fmt.Sprintf("--grpc-address=0.0.0.0:%d", IngestGRPCPort),
-		fmt.Sprintf("--http-address=0.0.0.0:%d", IngestHTTPPort),
-		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", IngestRemoteWritePort),
+		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
+		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
+		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
+		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--tsdb.path=%s", dataVolumeMountPath),
 		fmt.Sprintf("--tsdb.retention=%s", opts.Retention),
 		fmt.Sprintf("--objstore.config=$(%s)", ingestObjectStoreEnvVarName),
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:%d",
-			opts.Name, IngestGRPCPort),
+			opts.Name, GRPCPort),
 		"--receive.grpc-compression=none",
 	}
 
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
 	}
+	return args
+}
+
+func routerArgsFrom(opts RouterOptions) []string {
+	opts.Options = opts.ApplyDefaults()
+	args := []string{
+		"receive",
+		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
+		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
+		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
+		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
+		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
+		fmt.Sprintf("--receive.hashrings-algorithm=%s", AlgorithmKetama),
+		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
+	}
+	for k, v := range opts.ExternalLabels {
+		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
+	}
+
 	return args
 }
 
@@ -598,7 +631,7 @@ func extractReadyEndpoints(epSlice discoveryv1.EndpointSlice, svcName string) []
 		}
 		readyEndpoints = append(
 			readyEndpoints,
-			fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, epSlice.GetNamespace(), IngestRemoteWritePort),
+			fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, epSlice.GetNamespace(), GRPCPort),
 		)
 	}
 	return readyEndpoints
