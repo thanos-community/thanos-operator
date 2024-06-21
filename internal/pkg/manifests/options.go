@@ -9,6 +9,9 @@ import (
 const (
 	DefaultThanosImage   = "quay.io/thanos/thanos"
 	DefaultThanosVersion = "v0.35.1"
+
+	defaultLogLevel  = "info"
+	defaultLogFormat = "logfmt"
 )
 
 // Options is a struct that holds the options for the common manifests
@@ -26,9 +29,9 @@ type Options struct {
 	// Version is the version of Thanos
 	Version *string
 	// LogLevel is the log level for the component
-	LogLevel string
+	LogLevel *string
 	// LogFormat is the log format for the component
-	LogFormat      string
+	LogFormat      *string
 	containerImage string
 }
 
@@ -43,12 +46,12 @@ func (o Options) ApplyDefaults() Options {
 	}
 	o.containerImage = fmt.Sprintf("%s:%s", *o.Image, *o.Version)
 
-	if o.LogLevel == "" {
-		o.LogLevel = "info"
+	if o.LogLevel == nil || *o.LogLevel == "" {
+		o.LogLevel = ptr.To(defaultLogFormat)
 	}
 
-	if o.LogFormat == "" {
-		o.LogFormat = "logfmt"
+	if o.LogFormat == nil || *o.LogFormat == "" {
+		o.LogFormat = ptr.To(defaultLogFormat)
 	}
 
 	return o
