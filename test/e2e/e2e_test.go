@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -34,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -218,7 +220,7 @@ var _ = Describe("controller", Ordered, func() {
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:19291",
+                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -228,6 +230,33 @@ var _ = Describe("controller", Ordered, func() {
 				return utils.VerifyConfigMapContents(c, receiveName, namespace, receive.HashringConfigKey, expect)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
+	})
+
+	It("should bring up the router", func() {
+		Eventually(func() bool {
+			return utils.VerifyDeploymentReplicasRunning(c, 1, receiveName, namespace)
+		}, time.Minute*5, time.Second*10).Should(BeTrue())
+	})
+
+	It("should accept metrics over remote write", func() {
+		ctx := context.Background()
+		selector := client.MatchingLabels{
+			manifests.ComponentLabel: receive.RouterComponentName,
+		}
+		router := &corev1.PodList{}
+		err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
+		Expect(err).To(BeNil())
+		Expect(len(router.Items)).To(Equal(1))
+
+		pod := router.Items[0]
+		cancelFn, err := utils.StartPortForward(ctx, "https", pod.Name, namespace, intstr.IntOrString{IntVal: receive.RemoteWritePort})
+		Expect(err).To(BeNil())
+		defer cancelFn()
+
+		Eventually(func() int {
+			return utils.RemoteWrite("", fmt.Sprintf("http://localhost:%d/api/v1/receive", receive.RemoteWritePort))
+		}, time.Minute*1, time.Second*5).Should(Equal(200))
+
 	})
 
 	Context("Thanos Query", func() {

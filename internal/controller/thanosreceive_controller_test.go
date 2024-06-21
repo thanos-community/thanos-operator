@@ -197,7 +197,7 @@ config:
 			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -242,7 +242,7 @@ config:
 				// check via a poll that we have not updated the ConfigMap
 				Consistently(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*5, time.Second*1).Should(BeTrue())
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
 					TypeMeta: metav1.TypeMeta{
@@ -323,14 +323,14 @@ config:
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
-				}, time.Minute*1, time.Second*2).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 
 			})
 
 			By("creating the router components", func() {
 				Eventually(func() error {
 					return validateExistenceOfRequiredNamedResources(expectApiResourceDeployment, resourceName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(Succeed())
 			})
 		})
 
