@@ -207,10 +207,11 @@ func NewQuerierService(opts QuerierOptions) *corev1.Service {
 }
 
 func querierArgs(opts QuerierOptions) []string {
+	opts.Options = opts.ApplyDefaults()
 	args := []string{
 		"query",
-		fmt.Sprintf("--log.level=%s", opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", opts.LogFormat),
+		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
+		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		"--web.prefix-header=X-Forwarded-Prefix",
