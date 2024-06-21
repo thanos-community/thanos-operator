@@ -192,7 +192,8 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		objs = append(objs, hashringConf)
 	} else {
 		objs = append(objs, hashringConf)
-		// todo bring up the router components only if there are ready hashrings to avoid crash looping the router
+		// bring up the router components only if there are ready hashrings to avoid crash looping the router
+		objs = append(objs, r.buildRouter(receiver)...)
 	}
 
 	var errCount int32
@@ -260,7 +261,7 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 
 		opt := receive.IngesterOptions{
 			Options:        metaOpts,
-			Retention:      string(*hashring.Retention),
+			Retention:      string(hashring.Retention),
 			StorageSize:    resource.MustParse(hashring.StorageSize),
 			ObjStoreSecret: objStoreSecret,
 			ExternalLabels: hashring.ExternalLabels,
@@ -315,6 +316,29 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 
 	r.hashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
 	return receive.BuildHashrings(r.logger, cm, opts)
+}
+
+// build hashring builds out the ingesters for the ThanosReceive resource.
+func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
+	baseLabels := receiver.GetLabels()
+
+	metaOpts := manifests.Options{
+		Name:      receiver.GetName(),
+		Namespace: receiver.GetNamespace(),
+		Replicas:  receiver.Spec.Router.Replicas,
+		Labels:    manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
+		Image:     receiver.Spec.Image,
+		LogLevel:  receiver.Spec.LogLevel,
+		LogFormat: receiver.Spec.LogFormat,
+	}.ApplyDefaults()
+
+	opts := receive.RouterOptions{
+		Options:           metaOpts,
+		ReplicationFactor: receiver.Spec.Router.ReplicationFactor,
+		ExternalLabels:    receiver.Spec.Router.ExternalLabels,
+	}
+
+	return receive.BuildRouter(opts)
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
