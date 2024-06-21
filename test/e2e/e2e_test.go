@@ -212,7 +212,7 @@ var _ = Describe("controller", Ordered, func() {
 
 			stsName := receive.IngesterNameFromParent(receiveName, hashringName)
 			Eventually(func() bool {
-				return utils.VerifyStsReplicasRunning(c, 1, stsName, namespace)
+				return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 
@@ -259,7 +259,7 @@ var _ = Describe("controller", Ordered, func() {
 		defer cancelFn()
 
 		Eventually(func() error {
-			return utils.RemoteWrite(utils.DefaultRemoteWriteRequest())
+			return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
 		}, time.Minute*1, time.Second*5).Should(Succeed())
 
 	})

@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,7 +28,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -336,50 +334,3 @@ config:
 
 	})
 })
-
-type expectApiResource string
-
-const (
-	expectApiResourceDeployment  expectApiResource = "Deployment"
-	expectApiResourceStatefulSet expectApiResource = "StatefulSet"
-)
-
-func validateExistenceOfRequiredNamedResources(expectResource expectApiResource, name, ns string) error {
-	sa := &corev1.ServiceAccount{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{
-		Name:      name,
-		Namespace: ns,
-	}, sa); err != nil {
-		return err
-	}
-
-	svc := &corev1.Service{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{
-		Name:      name,
-		Namespace: ns,
-	}, svc); err != nil {
-		return err
-	}
-
-	switch expectResource {
-	case expectApiResourceDeployment:
-		dep := &appsv1.Deployment{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      name,
-			Namespace: ns,
-		}, dep); err != nil {
-			return err
-		}
-	case expectApiResourceStatefulSet:
-		sts := &appsv1.StatefulSet{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      name,
-			Namespace: ns,
-		}, sts); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unexpected resource type")
-	}
-	return nil
-}

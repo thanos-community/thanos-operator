@@ -205,7 +205,7 @@ func VerifyServiceAccountExists(c client.Client, name string, namespace string) 
 	return err == nil
 }
 
-func VerifyStsReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
+func VerifyStatefulSetReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
 	sts := &appsv1.StatefulSet{}
 	err := c.Get(context.Background(), client.ObjectKey{
 		Name:      name,
@@ -262,6 +262,18 @@ func VerifyDeploymentArgs(c client.Client, name string, namespace string, contai
 	}
 
 	return slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args, containsArg)
+}
+
+func VerifyStatefulSetExists(c client.Client, name string, namespace string) bool {
+	sts := &appsv1.StatefulSet{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, sts)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
@@ -413,4 +425,37 @@ func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		req.Header.Set(key, value)
 	}
 	return s.RoundTripper.RoundTrip(req)
+}
+
+type ExpectApiResource string
+
+const (
+	ExpectApiResourceDeployment  ExpectApiResource = "Deployment"
+	ExpectApiResourceStatefulSet ExpectApiResource = "StatefulSet"
+)
+
+// VerifyExistenceOfRequiredNamedResources checks if the required resources exist in the cluster.
+// This is a named Service, ServiceAccount, and either a Deployment or StatefulSet.
+func VerifyExistenceOfRequiredNamedResources(c client.Client, expectResource ExpectApiResource, name, ns string) bool {
+	if VerifyServiceAccountExists(c, name, ns) == false {
+		return false
+	}
+
+	if VerifyServiceExists(c, name, ns) == false {
+		return false
+	}
+
+	switch expectResource {
+	case ExpectApiResourceDeployment:
+		if VerifyDeploymentExists(c, name, ns) == false {
+			return false
+		}
+	case ExpectApiResourceStatefulSet:
+		if VerifyStatefulSetExists(c, name, ns) == false {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
 }
