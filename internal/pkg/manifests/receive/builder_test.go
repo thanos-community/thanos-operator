@@ -34,7 +34,7 @@ func TestBuildIngesters(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		},
+		}.ApplyDefaults(),
 	}
 
 	expectSA := manifests.BuildServiceAccount(opts.Options)
@@ -59,6 +59,52 @@ func TestBuildIngesters(t *testing.T) {
 	}
 
 	wantLabels := labelsForIngestor(opts)
+	wantLabels["some-custom-label"] = someCustomLabelValue
+	wantLabels["some-other-label"] = someOtherLabelValue
+
+	for _, obj := range objs {
+		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
+			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
+		}
+	}
+}
+
+func TestBuildRouter(t *testing.T) {
+	opts := RouterOptions{
+		Options: manifests.Options{
+			Name:      "test",
+			Namespace: "ns",
+			Image:     ptr.To("some-custom-image"),
+			Labels: map[string]string{
+				"some-custom-label":      someCustomLabelValue,
+				"some-other-label":       someOtherLabelValue,
+				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+		}.ApplyDefaults(),
+	}
+
+	expectSA := manifests.BuildServiceAccount(opts.Options)
+	expectService := NewRouterService(opts)
+	expectDeployment := NewRouterDeployment(opts)
+
+	objs := BuildRouter(opts)
+	if len(objs) != 3 {
+		t.Fatalf("expected 3 objects, got %d", len(objs))
+	}
+
+	if !equality.Semantic.DeepEqual(objs[0], expectSA) {
+		t.Errorf("expected first object to be a service account, wanted \n%v\n got \n%v\n", expectSA, objs[0])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[1], expectService) {
+		t.Errorf("expected first object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[2], expectDeployment) {
+		t.Errorf("expected third object to be a deployment, wanted \n%v\n got \n%v\n", expectDeployment, objs[2])
+	}
+
+	wantLabels := labelsForRouter(opts.Options)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 
@@ -174,6 +220,82 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 	}
 }
 
+func TestNewRouterDeployment(t *testing.T) {
+	opts := RouterOptions{
+		Options: manifests.Options{
+			Name:      "test",
+			Namespace: "ns",
+			Image:     ptr.To("some-custom-image"),
+			Labels: map[string]string{
+				"some-custom-label":      someCustomLabelValue,
+				"some-other-label":       someOtherLabelValue,
+				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+		}.ApplyDefaults(),
+	}
+
+	for _, tc := range []struct {
+		name string
+		opts RouterOptions
+	}{
+		{
+			name: "test router deployment correctness",
+			opts: opts,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.opts.Options = tc.opts.ApplyDefaults()
+			router := NewRouterDeployment(tc.opts)
+			if router.GetName() != tc.opts.Name {
+				t.Errorf("expected router deployment name to be %s, got %s", tc.opts.Name, router.GetName())
+			}
+			if router.GetNamespace() != tc.opts.Namespace {
+				t.Errorf("expected router deployment namespace to be %s, got %s", tc.opts.Namespace, router.GetNamespace())
+			}
+			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
+			if len(router.GetLabels()) != 7 {
+				t.Errorf("expected router deployment to have 7 labels, got %d", len(router.GetLabels()))
+			}
+			// ensure custom labels are set
+			if router.GetLabels()["some-custom-label"] != someCustomLabelValue {
+				t.Errorf("expected router deployment to have label 'some-custom-label' with value 'xyz', got %s", router.GetLabels()["some-custom-label"])
+			}
+			if router.GetLabels()["some-other-label"] != someOtherLabelValue {
+				t.Errorf("expected router deployment to have label 'some-other-label' with value 'abc', got %s", router.GetLabels()["some-other-label"])
+			}
+			// ensure default labels are set
+			expect := labelsForRouter(tc.opts.Options)
+			for k, v := range expect {
+				if router.GetLabels()[k] != v {
+					t.Errorf("expected router deployment to have label %s with value %s, got %s", k, v, router.GetLabels()[k])
+				}
+			}
+
+			expectArgs := routerArgsFrom(opts)
+			var found bool
+			for _, c := range router.Spec.Template.Spec.Containers {
+				if c.Name == RouterComponentName {
+					found = true
+					if c.Image != tc.opts.GetContainerImage() {
+						t.Errorf("expected router deployment to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
+					}
+					if len(c.Args) != len(expectArgs) {
+						t.Errorf("expected router deployment to have %d args, got %d", len(expectArgs), len(c.Args))
+					}
+					for i, arg := range c.Args {
+						if arg != expectArgs[i] {
+							t.Errorf("expected router deployment to have arg %s, got %s", expectArgs[i], arg)
+						}
+					}
+				}
+			}
+			if !found {
+				t.Errorf("expected router deployment to have container named %s", RouterComponentName)
+			}
+		})
+	}
+}
+
 func TestNewIngestorService(t *testing.T) {
 	opts := IngesterOptions{
 		Options: manifests.Options{
@@ -280,7 +402,6 @@ func TestNewRouterService(t *testing.T) {
 					t.Errorf("expected router service to have label %s with value %s, got %s", k, v, router.GetLabels()[k])
 				}
 			}
-
 		})
 	}
 }
@@ -545,11 +666,11 @@ func TestBuildHashrings(t *testing.T) {
     {
         "endpoints": [
             {
-                "address": "a.test.test.svc.cluster.local:19291",
+                "address": "a.test.test.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "b.test.test.svc.cluster.local:19291",
+                "address": "b.test.test.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -623,11 +744,11 @@ func TestBuildHashrings(t *testing.T) {
         ],
         "endpoints": [
             {
-                "address": "a.test.test.svc.cluster.local:19291",
+                "address": "a.test.test.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "b.test.test.svc.cluster.local:19291",
+                "address": "b.test.test.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -739,11 +860,11 @@ func TestBuildHashrings(t *testing.T) {
         ],
         "endpoints": [
             {
-                "address": "a.a.test.svc.cluster.local:19291",
+                "address": "a.a.test.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "a1.a.test.svc.cluster.local:19291",
+                "address": "a1.a.test.svc.cluster.local:10901",
                 "az": ""
             }
         ]
@@ -756,11 +877,11 @@ func TestBuildHashrings(t *testing.T) {
         "tenant_matcher_type": "glob",
         "endpoints": [
             {
-                "address": "b.b.test.svc.cluster.local:19291",
+                "address": "b.b.test.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "b1.b.test.svc.cluster.local:19291",
+                "address": "b1.b.test.svc.cluster.local:10901",
                 "az": ""
             }
         ]

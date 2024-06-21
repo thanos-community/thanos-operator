@@ -256,6 +256,15 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 	return cm, nil
 }
 
+// BuildRouter builds the Thanos Receive router components
+func BuildRouter(opts RouterOptions) []client.Object {
+	return []client.Object{
+		manifests.BuildServiceAccount(opts.Options),
+		NewRouterService(opts),
+		NewRouterDeployment(opts),
+	}
+}
+
 // UnmarshalJSON unmarshals the endpoint from JSON.
 func (e *Endpoint) UnmarshalJSON(data []byte) error {
 	// First try to unmarshal as a string.
@@ -495,42 +504,158 @@ func newService(opts manifests.Options, selectorLabels map[string]string) *corev
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    opts.Labels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:  defaultLabels,
-			Ports:     servicePorts,
-			ClusterIP: corev1.ClusterIPNone,
+			Selector: selectorLabels,
+			Ports:    servicePorts,
 		},
 	}
 	return svc
 }
 
-// NewRouterService creates a new Service for the Thanos Receive router.
-func NewRouterService(opts RouterOptions) *corev1.Service {
+const (
+	hashringVolumeName = "hashring-config"
+	hashringMountPath  = "var/lib/thanos-receive"
+)
+
+// NewRouterDeployment creates a new Deployment for the Thanos Receive router.
+func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 	defaultLabels := labelsForRouter(opts.Options)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
-	servicePorts := []corev1.ServicePort{
-		{
-			Name:       RouterHTTPPortName,
-			Port:       RouterHTTPPort,
-			TargetPort: intstr.FromInt32(RouterHTTPPort),
-			Protocol:   "TCP",
-		},
-	}
 
-	svc := &corev1.Service{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
 			Labels:    aggregatedLabels,
 		},
-		Spec: corev1.ServiceSpec{
-			Selector: defaultLabels,
-			Ports:    servicePorts,
+		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(opts.Replicas),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: defaultLabels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      opts.Name,
+					Namespace: opts.Namespace,
+					Labels:    aggregatedLabels,
+				},
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{
+						{
+							Name: hashringVolumeName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: opts.Name,
+									},
+									DefaultMode: ptr.To(int32(420)),
+								},
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Image:           opts.GetContainerImage(),
+							Name:            RouterComponentName,
+							ImagePullPolicy: corev1.PullAlways,
+							// Ensure restrictive context for the container
+							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+							SecurityContext: &corev1.SecurityContext{
+								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								RunAsUser:                ptr.To(int64(10001)),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{
+										"ALL",
+									},
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/-/ready",
+										Port: intstr.FromInt32(HTTPPort),
+									},
+								},
+								InitialDelaySeconds: 5,
+								TimeoutSeconds:      1,
+								PeriodSeconds:       30,
+								SuccessThreshold:    1,
+								FailureThreshold:    8,
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/-/healthy",
+										Port: intstr.FromInt32(HTTPPort),
+									},
+								},
+								InitialDelaySeconds: 5,
+								TimeoutSeconds:      1,
+								PeriodSeconds:       30,
+								SuccessThreshold:    1,
+								FailureThreshold:    8,
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      hashringVolumeName,
+									MountPath: hashringMountPath,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: GRPCPort,
+									Name:          GRPCPortName,
+								},
+								{
+									ContainerPort: HTTPPort,
+									Name:          HTTPPortName,
+								},
+								{
+									ContainerPort: RemoteWritePort,
+									Name:          RemoteWritePortName,
+								},
+							},
+							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+							Args:                     routerArgsFrom(opts),
+						},
+					},
+					ServiceAccountName:           opts.Name,
+					AutomountServiceAccountToken: ptr.To(true),
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+					MaxSurge:       ptr.To(intstr.FromInt32(0)),
+				},
+			},
+			RevisionHistoryLimit: ptr.To(int32(10)),
 		},
 	}
-	return svc
+	return deployment
 }
 
 // IngesterNameFromParent returns a name for the ingester based on the parent and the ingester name.
