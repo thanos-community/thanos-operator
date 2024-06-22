@@ -1,6 +1,7 @@
 module github.com/thanos-community/thanos-operator
 
 go 1.21
+toolchain go1.22.4
 
 require (
 	github.com/go-logr/logr v1.4.2
@@ -12,9 +13,9 @@ require (
 	github.com/prometheus/common v0.54.0
 	github.com/prometheus/prometheus v0.53.0
 	github.com/stretchr/testify v1.9.0
-	k8s.io/api v0.29.3
-	k8s.io/apimachinery v0.29.3
-	k8s.io/client-go v0.29.3
+	k8s.io/api v0.30.2
+	k8s.io/apimachinery v0.30.2
+	k8s.io/client-go v0.30.2
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.17.0
 )
@@ -52,6 +53,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240528025155-186aa0362fba // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
