@@ -1,6 +1,7 @@
 module github.com/thanos-community/thanos-operator
 
 go 1.21
+toolchain go1.22.4
 
 require (
 	github.com/go-logr/logr v1.4.2
@@ -13,7 +14,7 @@ require (
 	github.com/prometheus/prometheus v0.53.0
 	github.com/stretchr/testify v1.9.0
 	k8s.io/api v0.29.3
-	k8s.io/apimachinery v0.29.3
+	k8s.io/apimachinery v0.30.2
 	k8s.io/client-go v0.29.3
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.17.0
