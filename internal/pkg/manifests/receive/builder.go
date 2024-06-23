@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	"github.com/go-logr/logr"
@@ -58,6 +59,7 @@ type IngesterOptions struct {
 	ObjStoreSecret corev1.SecretKeySelector
 	Retention      string
 	ExternalLabels map[string]string
+	Additional     monitoringthanosiov1alpha1.Additional
 }
 
 // RouterOptions for Thanos Receive router
@@ -65,6 +67,7 @@ type RouterOptions struct {
 	manifests.Options
 	ReplicationFactor int32
 	ExternalLabels    map[string]string
+	Additional        monitoringthanosiov1alpha1.Additional
 }
 
 // HashringOptions for Thanos Receive hashring
@@ -458,6 +461,37 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 			},
 		},
 	}
+
+	if opts.Additional.AdditionalVolumeMounts != nil {
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
+			opts.Additional.AdditionalVolumeMounts...)
+	}
+
+	if opts.Additional.AdditionalContainers != nil {
+		sts.Spec.Template.Spec.Containers = append(
+			sts.Spec.Template.Spec.Containers,
+			opts.Additional.AdditionalContainers...)
+	}
+
+	if opts.Additional.AdditionalVolumes != nil {
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
+			opts.Additional.AdditionalVolumes...)
+	}
+
+	if opts.Additional.AdditionalPorts != nil {
+		sts.Spec.Template.Spec.Containers[0].Ports = append(
+			sts.Spec.Template.Spec.Containers[0].Ports,
+			opts.Additional.AdditionalPorts...)
+	}
+
+	if opts.Additional.AdditionalEnv != nil {
+		sts.Spec.Template.Spec.Containers[0].Env = append(
+			sts.Spec.Template.Spec.Containers[0].Env,
+			opts.Additional.AdditionalEnv...)
+	}
+
 	return sts
 }
 
@@ -467,6 +501,11 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
 	svc := newService(opts.Options, defaultLabels)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
+
+	if opts.Additional.AdditionalServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.AdditionalServicePorts...)
+	}
+
 	return svc
 }
 
@@ -474,7 +513,13 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 func NewRouterService(opts RouterOptions) *corev1.Service {
 	defaultLabels := labelsForRouter(opts.Options)
 	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
-	return newService(opts.Options, defaultLabels)
+	svc := newService(opts.Options, defaultLabels)
+
+	if opts.Additional.AdditionalServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.AdditionalServicePorts...)
+	}
+
+	return svc
 }
 
 // newService creates a new Service for the Thanos Receive components.
@@ -655,6 +700,37 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 			RevisionHistoryLimit: ptr.To(int32(10)),
 		},
 	}
+
+	if opts.Additional.AdditionalVolumeMounts != nil {
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			opts.Additional.AdditionalVolumeMounts...)
+	}
+
+	if opts.Additional.AdditionalContainers != nil {
+		deployment.Spec.Template.Spec.Containers = append(
+			deployment.Spec.Template.Spec.Containers,
+			opts.Additional.AdditionalContainers...)
+	}
+
+	if opts.Additional.AdditionalVolumes != nil {
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			opts.Additional.AdditionalVolumes...)
+	}
+
+	if opts.Additional.AdditionalPorts != nil {
+		deployment.Spec.Template.Spec.Containers[0].Ports = append(
+			deployment.Spec.Template.Spec.Containers[0].Ports,
+			opts.Additional.AdditionalPorts...)
+	}
+
+	if opts.Additional.AdditionalEnv != nil {
+		deployment.Spec.Template.Spec.Containers[0].Env = append(
+			deployment.Spec.Template.Spec.Containers[0].Env,
+			opts.Additional.AdditionalEnv...)
+	}
+
 	return deployment
 }
 
@@ -690,6 +766,12 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
 	}
+
+	// TODO(saswatamcode): Add some validation.
+	if opts.Additional.AdditionalArgs != nil {
+		args = append(args, opts.Additional.AdditionalArgs...)
+	}
+
 	return args
 }
 
@@ -708,6 +790,11 @@ func routerArgsFrom(opts RouterOptions) []string {
 	}
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
+	}
+
+	// TODO(saswatamcode): Add some validation.
+	if opts.Additional.AdditionalArgs != nil {
+		args = append(args, opts.Additional.AdditionalArgs...)
 	}
 
 	return args
