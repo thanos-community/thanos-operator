@@ -265,7 +265,7 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			StorageSize:    resource.MustParse(hashring.StorageSize),
 			ObjStoreSecret: objStoreSecret,
 			ExternalLabels: hashring.ExternalLabels,
-			Additional:     receiver.Spec.Additional,
+			Additional:     receiver.Spec.Ingester.Additional,
 		}
 		opts = append(opts, opt)
 	}
@@ -333,12 +333,11 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		LogFormat: receiver.Spec.LogFormat,
 	}.ApplyDefaults()
 
-	// TODO(saswatamcode): Some way to differentiate additional for router and ingestor.
 	opts := receive.RouterOptions{
 		Options:           metaOpts,
 		ReplicationFactor: receiver.Spec.Router.ReplicationFactor,
 		ExternalLabels:    receiver.Spec.Router.ExternalLabels,
-		Additional:        receiver.Spec.Additional,
+		Additional:        receiver.Spec.Router.Additional,
 	}
 
 	return receive.BuildRouter(opts)

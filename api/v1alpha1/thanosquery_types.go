@@ -44,6 +44,11 @@ type ThanosQuerySpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/store-api": "true"}}
 	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
+	// Additional configuration for the Thanos components. Allows you to add
+	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
+	// and StatefulSets. Ideal to use for things like sidecars.
+	// +kubebuilder:validation:Optional
+	Additional Additional `json:"additional,omitempty"`
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery

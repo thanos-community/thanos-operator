@@ -58,11 +58,6 @@ type CommonThanosFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
-	// Additional configuration for the Thanos components. Allows you to add
-	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
-	// and StatefulSets. Ideal to use for things like sidecars.
-	// +kubebuilder:validation:Optional
-	Additional Additional `json:"additional,omitempty"`
 }
 
 type Additional struct {
