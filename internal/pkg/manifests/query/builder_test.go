@@ -3,8 +3,10 @@ package query
 import (
 	"testing"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
 )
@@ -64,29 +66,84 @@ func TestBuildQuerier(t *testing.T) {
 }
 
 func TestNewQuerierDeployment(t *testing.T) {
-	opts := QuerierOptions{
-		Options: manifests.Options{
-			Name:      "test",
-			Namespace: "ns",
-			Image:     ptr.To("some-custom-image"),
-			Labels: map[string]string{
-				"some-custom-label":      someCustomLabelValue,
-				"some-other-label":       someOtherLabelValue,
-				"app.kubernetes.io/name": "expect-to-be-discarded",
-			},
-		}.ApplyDefaults(),
-		Timeout:       "15m",
-		LookbackDelta: "5m",
-		MaxConcurrent: 20,
-	}
-
 	for _, tc := range []struct {
 		name string
 		opts QuerierOptions
 	}{
 		{
 			name: "test query deployment correctness",
-			opts: opts,
+			opts: QuerierOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
+			},
+		},
+		{
+			name: "test additional volumemount",
+			opts: QuerierOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
+				Additional: monitoringthanosiov1alpha1.Additional{
+					AdditionalVolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "test-sd",
+							MountPath: "/test-sd-file",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "test additional container",
+			opts: QuerierOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
+				Additional: monitoringthanosiov1alpha1.Additional{
+					AdditionalContainers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image:latest",
+							Args:  []string{"--test-arg"},
+							Env: []corev1.EnvVar{{
+								Name:  "TEST_ENV",
+								Value: "test",
+							}},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -117,7 +174,11 @@ func TestNewQuerierDeployment(t *testing.T) {
 				}
 			}
 
-			expectArgs := querierArgs(opts)
+			if tc.name == "test additional container" && len(query.Spec.Template.Spec.Containers) != 2 {
+				t.Errorf("expected query deployment to have 2 containers, got %d", len(query.Spec.Template.Spec.Containers))
+			}
+
+			expectArgs := querierArgs(tc.opts)
 			var found bool
 			for _, c := range query.Spec.Template.Spec.Containers {
 				if c.Name == Name {
@@ -131,6 +192,18 @@ func TestNewQuerierDeployment(t *testing.T) {
 					for i, arg := range c.Args {
 						if arg != expectArgs[i] {
 							t.Errorf("expected query deployment to have arg %s, got %s", expectArgs[i], arg)
+						}
+					}
+
+					if tc.name == "test additional volumemount" {
+						if len(c.VolumeMounts) != 1 {
+							t.Errorf("expected query deployment to have 1 volumemount, got %d", len(c.VolumeMounts))
+						}
+						if c.VolumeMounts[0].Name != "test-sd" {
+							t.Errorf("expected query deployment to have volumemount named test-sd, got %s", c.VolumeMounts[0].Name)
+						}
+						if c.VolumeMounts[0].MountPath != "/test-sd-file" {
+							t.Errorf("expected query deployment to have volumemount mounted at /test-sd-file, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}

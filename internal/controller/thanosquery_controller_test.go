@@ -87,6 +87,15 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 					}},
 					Labels: map[string]string{"some-label": "xyz"},
+					Additional: monitoringthanosiov1alpha1.Additional{
+						AdditionalContainers: []corev1.Container{
+							{
+								Name:  "jaeger-agent",
+								Image: "jaegertracing/jaeger-agent:1.22",
+								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+							},
+						},
+					},
 				},
 			}
 			By("setting up the thanos query resources", func() {
@@ -136,11 +145,11 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 				EventuallyWithOffset(1, func() bool {
 					args := "--endpoint=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
-					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, args)
+					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, args)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
-			By("setting strict and ignoring services on the thanos query", func() {
+			By("setting strict & ignoring services on the thanos query + additional container", func() {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "thanos-receive",
@@ -205,8 +214,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					}
 
 					arg := "--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
-					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, arg) == false {
+					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
+					}
+
+					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {
+						return fmt.Errorf("expected arg for additional container --reporter.grpc.host-port=jaeger-collector:14250")
 					}
 
 					return nil

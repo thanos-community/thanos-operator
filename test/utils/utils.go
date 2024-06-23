@@ -251,7 +251,7 @@ func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, n
 	return true
 }
 
-func VerifyDeploymentArgs(c client.Client, name string, namespace string, containsArg string) bool {
+func VerifyDeploymentArgs(c client.Client, name string, namespace string, containerIndex int, containsArg string) bool {
 	deployment := &appsv1.Deployment{}
 	err := c.Get(context.Background(), client.ObjectKey{
 		Name:      name,
@@ -261,7 +261,26 @@ func VerifyDeploymentArgs(c client.Client, name string, namespace string, contai
 		return false
 	}
 
-	return slices.Contains(deployment.Spec.Template.Spec.Containers[0].Args, containsArg)
+	return slices.Contains(deployment.Spec.Template.Spec.Containers[containerIndex].Args, containsArg)
+}
+
+func VerifyStatefulSetArgs(
+	c client.Client,
+	name string,
+	namespace string,
+	containerIndex int,
+	containsArg string,
+) bool {
+	statefulset := &appsv1.StatefulSet{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, statefulset)
+	if err != nil {
+		return false
+	}
+
+	return slices.Contains(statefulset.Spec.Template.Spec.Containers[containerIndex].Args, containsArg)
 }
 
 func VerifyStatefulSetExists(c client.Client, name string, namespace string) bool {
