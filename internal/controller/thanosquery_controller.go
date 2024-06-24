@@ -195,6 +195,7 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
 		Endpoints:     endpoints,
+		Additional:    query.Spec.Additional,
 	})
 }
 

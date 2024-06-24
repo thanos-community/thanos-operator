@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	"github.com/go-logr/logr/testr"
@@ -145,26 +146,75 @@ func TestIngesterNameFromParent(t *testing.T) {
 }
 
 func TestNewIngestorStatefulSet(t *testing.T) {
-	opts := IngesterOptions{
-		Options: manifests.Options{
-			Name:      "test",
-			Namespace: "ns",
-			Image:     ptr.To("some-custom-image"),
-			Labels: map[string]string{
-				"some-custom-label":      someCustomLabelValue,
-				"some-other-label":       someOtherLabelValue,
-				"app.kubernetes.io/name": "expect-to-be-discarded",
-			},
-		}.ApplyDefaults(),
-	}
-
 	for _, tc := range []struct {
 		name string
 		opts IngesterOptions
 	}{
 		{
 			name: "test ingester statefulset correctness",
-			opts: opts,
+			opts: IngesterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+			},
+		},
+		{
+			name: "test additional volumemount",
+			opts: IngesterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Additional: monitoringthanosiov1alpha1.Additional{
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "http-config",
+							MountPath: "/http-config",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "test additional container",
+			opts: IngesterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Additional: monitoringthanosiov1alpha1.Additional{
+					Containers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image:latest",
+							Args:  []string{"--test-arg"},
+							Env: []corev1.EnvVar{{
+								Name:  "TEST_ENV",
+								Value: "test",
+							}},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -195,7 +245,11 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 				}
 			}
 
-			expectArgs := ingestorArgsFrom(opts)
+			if tc.name == "test additional container" && len(ingester.Spec.Template.Spec.Containers) != 2 {
+				t.Errorf("expected ingester deployment to have 2 containers, got %d", len(ingester.Spec.Template.Spec.Containers))
+			}
+
+			expectArgs := ingestorArgsFrom(tc.opts)
 			var found bool
 			for _, c := range ingester.Spec.Template.Spec.Containers {
 				if c.Name == IngestComponentName {
@@ -211,6 +265,18 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 							t.Errorf("expected ingester statefulset to have arg %s, got %s", expectArgs[i], arg)
 						}
 					}
+
+					if tc.name == "test additional volumemount" {
+						if len(c.VolumeMounts) != 2 {
+							t.Errorf("expected ingester deployment to have 2 volumemount, got %d", len(c.VolumeMounts))
+						}
+						if c.VolumeMounts[1].Name != "http-config" {
+							t.Errorf("expected ingester deployment to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
+						}
+						if c.VolumeMounts[1].MountPath != "/http-config" {
+							t.Errorf("expected ingester deployment to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
+						}
+					}
 				}
 			}
 			if !found {
@@ -221,26 +287,75 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 }
 
 func TestNewRouterDeployment(t *testing.T) {
-	opts := RouterOptions{
-		Options: manifests.Options{
-			Name:      "test",
-			Namespace: "ns",
-			Image:     ptr.To("some-custom-image"),
-			Labels: map[string]string{
-				"some-custom-label":      someCustomLabelValue,
-				"some-other-label":       someOtherLabelValue,
-				"app.kubernetes.io/name": "expect-to-be-discarded",
-			},
-		}.ApplyDefaults(),
-	}
-
 	for _, tc := range []struct {
 		name string
 		opts RouterOptions
 	}{
 		{
 			name: "test router deployment correctness",
-			opts: opts,
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+			},
+		},
+		{
+			name: "test additional volumemount",
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Additional: monitoringthanosiov1alpha1.Additional{
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "http-config",
+							MountPath: "/http-config",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "test additional container",
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Name:      "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				}.ApplyDefaults(),
+				Additional: monitoringthanosiov1alpha1.Additional{
+					Containers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image:latest",
+							Args:  []string{"--test-arg"},
+							Env: []corev1.EnvVar{{
+								Name:  "TEST_ENV",
+								Value: "test",
+							}},
+						},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -271,7 +386,11 @@ func TestNewRouterDeployment(t *testing.T) {
 				}
 			}
 
-			expectArgs := routerArgsFrom(opts)
+			if tc.name == "test additional container" && len(router.Spec.Template.Spec.Containers) != 2 {
+				t.Errorf("expected router deployment to have 2 containers, got %d", len(router.Spec.Template.Spec.Containers))
+			}
+
+			expectArgs := routerArgsFrom(tc.opts)
 			var found bool
 			for _, c := range router.Spec.Template.Spec.Containers {
 				if c.Name == RouterComponentName {
@@ -285,6 +404,18 @@ func TestNewRouterDeployment(t *testing.T) {
 					for i, arg := range c.Args {
 						if arg != expectArgs[i] {
 							t.Errorf("expected router deployment to have arg %s, got %s", expectArgs[i], arg)
+						}
+					}
+
+					if tc.name == "test additional volumemount" {
+						if len(c.VolumeMounts) != 2 {
+							t.Errorf("expected router deployment to have 2 volumemount, got %d", len(c.VolumeMounts))
+						}
+						if c.VolumeMounts[1].Name != "http-config" {
+							t.Errorf("expected router deployment to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
+						}
+						if c.VolumeMounts[1].MountPath != "/http-config" {
+							t.Errorf("expected router deployment to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}

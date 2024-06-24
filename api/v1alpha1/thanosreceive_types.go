@@ -40,6 +40,11 @@ type RouterSpec struct {
 	// +kubebuilder:default={receive: "true"}
 	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
+	// Additional configuration for the Thanos components. Allows you to add
+	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
+	// and StatefulSets. Ideal to use for things like sidecars.
+	// +kubebuilder:validation:Optional
+	Additional `json:",inline"`
 }
 
 // IngesterSpec represents the configuration for the ingestor
@@ -54,6 +59,11 @@ type IngesterSpec struct {
 	// +listType=map
 	// +listMapKey=name
 	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
+	// Additional configuration for the Thanos components. Allows you to add
+	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
+	// and StatefulSets. Ideal to use for things like sidecars.
+	// +kubebuilder:validation:Optional
+	Additional `json:",inline"`
 }
 
 // IngestorHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.

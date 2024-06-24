@@ -241,12 +241,49 @@ func TestVerifyDeploymentArgs(t *testing.T) {
 		},
 	}
 
-	ok := VerifyDeploymentArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, "arg1")
+	ok := VerifyDeploymentArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, 0, "arg1")
 	if !ok {
 		t.Errorf("expected arg")
 	}
 
-	ok = VerifyDeploymentArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, "na")
+	ok = VerifyDeploymentArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, 0, "na")
+	if ok {
+		t.Errorf("unexpected arg")
+	}
+}
+
+func TestVerifyStatefulSetArgs(t *testing.T) {
+	const (
+		name = "test"
+		ns   = "test"
+	)
+
+	d := &v1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: v1.StatefulSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "test",
+							Image: "test",
+							Args:  []string{"arg1", "arg2"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ok := VerifyStatefulSetArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, 0, "arg1")
+	if !ok {
+		t.Errorf("expected arg")
+	}
+
+	ok = VerifyStatefulSetArgs(fake.NewClientBuilder().WithObjects(d).Build(), name, ns, 0, "na")
 	if ok {
 		t.Errorf("unexpected arg")
 	}

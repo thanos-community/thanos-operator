@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,7 +37,8 @@ type QuerierOptions struct {
 	LookbackDelta string
 	MaxConcurrent int
 
-	Endpoints []Endpoint
+	Endpoints  []Endpoint
+	Additional monitoringthanosiov1alpha1.Additional
 }
 
 type EndpointType string
@@ -173,6 +175,36 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		},
 	}
 
+	if opts.Additional.VolumeMounts != nil {
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			opts.Additional.VolumeMounts...)
+	}
+
+	if opts.Additional.Containers != nil {
+		deployment.Spec.Template.Spec.Containers = append(
+			deployment.Spec.Template.Spec.Containers,
+			opts.Additional.Containers...)
+	}
+
+	if opts.Additional.Volumes != nil {
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			opts.Additional.Volumes...)
+	}
+
+	if opts.Additional.Ports != nil {
+		deployment.Spec.Template.Spec.Containers[0].Ports = append(
+			deployment.Spec.Template.Spec.Containers[0].Ports,
+			opts.Additional.Ports...)
+	}
+
+	if opts.Additional.Env != nil {
+		deployment.Spec.Template.Spec.Containers[0].Env = append(
+			deployment.Spec.Template.Spec.Containers[0].Env,
+			opts.Additional.Env...)
+	}
+
 	return &deployment
 }
 
@@ -190,6 +222,10 @@ func NewQuerierService(opts QuerierOptions) *corev1.Service {
 			Port:       HTTPPort,
 			TargetPort: intstr.FromInt32(HTTPPort),
 		},
+	}
+
+	if opts.Additional.ServicePorts != nil {
+		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
 	return &corev1.Service{
@@ -241,6 +277,11 @@ func querierArgs(opts QuerierOptions) []string {
 		default:
 			panic("unknown endpoint type")
 		}
+	}
+
+	// TODO(saswatamcode): Add some validation.
+	if opts.Additional.Args != nil {
+		args = append(args, opts.Additional.Args...)
 	}
 
 	return args

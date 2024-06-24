@@ -301,6 +301,7 @@ var _ = Describe("controller", Ordered, func() {
 				return utils.VerifyDeploymentArgs(c,
 					deploymentName,
 					namespace,
+					0,
 					"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
 				)
 			}, time.Minute*1, time.Second*10).Should(BeTrue())
