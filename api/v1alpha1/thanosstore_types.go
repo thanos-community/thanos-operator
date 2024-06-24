@@ -34,7 +34,7 @@ type ThanosStoreSpec struct {
 	// file to mark after what duration the block should be deleted rather than deleting the block straight away.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="24h"
-	IgnoreDeletionMarksDelay Duration `json:"ignoreDeletionMarksDelay,omitempty"`
+	IgnoreDeletionMarksDelay *Duration `json:"ignoreDeletionMarksDelay,omitempty"`
 	// YAML file that contains index cache configuration. See format details: https://thanos.io/tip/components/store.md/#index-cache
 	// IN-MEMORY config is loaded by default if not specified.
 	// +kubebuilder:validation:Optional
@@ -48,11 +48,18 @@ type ThanosStoreSpec struct {
 	// +kubebuilder:validation:Required
 	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`
 	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
+	// If not set, will be set as zero value, so most recent blocks will be served.
 	// +kubebuilder:validation:Optional
-	MinTime Duration `json:"minTime,omitempty"`
+	MinTime *Duration `json:"minTime,omitempty"`
 	// Maximum time range to serve. Any data after this upper time range will be ignored.
+	// If not set, will be set as max value, so all blocks will be served.
 	// +kubebuilder:validation:Optional
-	MaxTime Duration `json:"maxTime,omitempty"`
+	MaxTime *Duration `json:"maxTime,omitempty"`
+	// Additional configuration for the Thanos components. Allows you to add
+	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
+	// and StatefulSets. Ideal to use for things like sidecars.
+	// +kubebuilder:validation:Optional
+	Additional `json:",inline"`
 }
 
 type ShardingStrategyType string
@@ -70,19 +77,19 @@ type ShardingStrategy struct {
 	// +kubebuilder:validation:Enum=block
 	Type ShardingStrategyType `json:"type,omitempty"`
 	// Shards is the number of shards to split the data into.
-	// +kubebuilder:validation:Minimum=3
-	// +kubebuilder:default=3
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
-	Shards int32 `json:"shards,omitempty"`
+	Shards *int32 `json:"shards,omitempty"`
 	// ReplicaPerShard is the number of replicas per shard.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
-	ReplicaPerShard int32 `json:"replicaPerShard,omitempty"`
+	ShardReplicas *int32 `json:"shardReplicas,omitempty"`
 	// BlockModulo is the modulo value to use for block based sharding strategy.
-	// +kubebuilder:validation:Minimum=6
+	// Will be inferred from the number of shards if not provided.
 	// +kubebuilder:validation:Optional
-	BlockModulo int32 `json:"blockModulo,omitempty"`
+	BlockModulo *int32 `json:"blockModulo,omitempty"`
 }
 
 // ThanosStoreStatus defines the observed state of ThanosStore
