@@ -155,3 +155,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosstores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosstores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosstores/status
+  verbs:
+  - get
+  - patch
+  - update
