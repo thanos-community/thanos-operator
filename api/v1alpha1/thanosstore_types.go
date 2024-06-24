@@ -47,13 +47,17 @@ type ThanosStoreSpec struct {
 	// ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks.
 	// +kubebuilder:validation:Required
 	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`
+	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
+	// +kubebuilder:validation:Optional
+	MinTime Duration `json:"minTime,omitempty"`
+	// Maximum time range to serve. Any data after this upper time range will be ignored.
+	// +kubebuilder:validation:Optional
+	MaxTime Duration `json:"maxTime,omitempty"`
 }
 
 type ShardingStrategyType string
 
 const (
-	// Time is the time-based sharding strategy for sharding Stores by time.
-	Time ShardingStrategyType = "time"
 	// Block is the block modulo sharding strategy for sharding Stores according to block ids.
 	Block ShardingStrategyType = "block"
 )
@@ -63,7 +67,7 @@ type ShardingStrategy struct {
 	// Type here is the type of sharding strategy.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default="block"
-	// +kubebuilder:validation:Enum=time;block
+	// +kubebuilder:validation:Enum=block
 	Type ShardingStrategyType `json:"type,omitempty"`
 	// Shards is the number of shards to split the data into.
 	// +kubebuilder:validation:Minimum=3
@@ -75,10 +79,6 @@ type ShardingStrategy struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
 	ReplicaPerShard int32 `json:"replicaPerShard,omitempty"`
-	// BlockRetention is the duration for which the blocks are retained.
-	// Useful for time based sharding strategy.
-	// +kubebuilder:validation:Optional
-	BlockRetention Duration `json:"rawRetention,omitempty"`
 	// BlockModulo is the modulo value to use for block based sharding strategy.
 	// +kubebuilder:validation:Minimum=6
 	// +kubebuilder:validation:Optional

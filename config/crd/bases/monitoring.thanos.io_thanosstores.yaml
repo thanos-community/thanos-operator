@@ -156,6 +156,16 @@ spec:
                 - warn
                 - error
                 type: string
+              maxTime:
+                description: Maximum time range to serve. Any data after this upper
+                  time range will be ignored.
+                pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                type: string
+              minTime:
+                description: Minimum time range to serve. Any data earlier than this
+                  lower time range will be ignored.
+                pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                type: string
               objectStorageConfig:
                 description: ObjectStorageConfig is the secret that contains the object
                   storage configuration for Store Gateways.
@@ -197,12 +207,6 @@ spec:
                     format: int32
                     minimum: 6
                     type: integer
-                  rawRetention:
-                    description: |-
-                      BlockRetention is the duration for which the blocks are retained.
-                      Useful for time based sharding strategy.
-                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
-                    type: string
                   replicaPerShard:
                     default: 1
                     description: ReplicaPerShard is the number of replicas per shard.
@@ -220,7 +224,6 @@ spec:
                     default: block
                     description: Type here is the type of sharding strategy.
                     enum:
-                    - time
                     - block
                     type: string
                 type: object
