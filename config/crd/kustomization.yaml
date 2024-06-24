@@ -6,6 +6,7 @@ resources:
 - bases/monitoring.thanos.io_thanosqueries.yaml
 - bases/monitoring.thanos.io_thanosreceives.yaml
 - bases/monitoring.thanos.io_thanoscompacts.yaml
+- bases/monitoring.thanos.io_thanosstores.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -13,6 +14,7 @@ patches:
 # patches here are for enabling the conversion webhook for each CRD
 #- path: patches/webhook_in_thanosservices.yaml
 #- path: patches/webhook_in_thanosqueries.yaml
+#- path: patches/webhook_in_thanosstores.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.
@@ -21,6 +23,7 @@ patches:
 #- path: patches/cainjection_in_thanosqueries.yaml
 #- path: patches/cainjection_in_thanosreceives.yaml
 #- path: patches/cainjection_in_thanoscompacts.yaml
+#- path: patches/cainjection_in_thanosstores.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section

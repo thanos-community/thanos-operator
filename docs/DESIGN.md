@@ -134,6 +134,31 @@ Same as prior implementation.
 
 Same as prior implementation.
 
+#### Proposed Design: Store
+
+<img src="img/ThanosStore.png" alt="Store Shard Management" width="800"/>
+
+We propose that there should be a single CRD for Thanos StoreGW, representing the long-term aspect of the metrics query path.
+
+ThanosStoreGW will be responsible for managing the lifecycle of Store GW shard deployments and handle automatically sharding StoreGWs for optimal querying. It will also provide sane defaults according to the caching implementation one would like to use.
+
+
+**_“As a developer, I want to be able to spin up Thanos Store Gateway shards to read all my data from objstore with minimal configuration.”_**
+
+This can be achieved by spinning up a ThanosStoreGW CR with minimal config and creating a Secret for objstore credentials in Thanos format, and ConfigMaps to connect custom caches (Otherwise we start In-memory caches by default).
+
+**_“As a developer, I want to be able to run Thanos Store Gateway shards with redis/memcached caches.”_**
+
+This can be achieved by deploying memcached/redis on your own and creating ConfigMaps which the ThanosStoreGW CR can refer to (or just providing type and address, which the operator can then use to create a default cache config). The remit of Thanos Operator is Thanos components only, so it does not set up these caches for you.
+
+**_“As an operator of a scalable metrics backend, I would like to shard my store gateway instances by time.”_**
+
+This is doable using the Sharding field of ThanosStoreGW CR. To shard by time, you can specify the raw block retention time and type as “time”. The controller will automatically set parameters on your Store shard StatefulSets so that each shard can read specific blocks split by time, and they don’t overlap. You can also set replicasPerShard so that each shard can be queried in HA fashion (by adding a query group label).
+
+**_“As an operator of a scalable metrics backend, I would like to shard my store gateway instances by blocks.”_**
+
+This is doable using the Sharding field of ThanosStoreGW CR. To shard by block, you can specify the type as “block” and blockModulo value (default is 6). The controller will automatically set parameters on your Store shard StatefulSets so that each shard has a hashmod selector based on block_id label. You can also set replicasPerShard so that each shard can be queried in HA fashion (by adding a query group label).
+
 ### Metrics Compaction
 
 #### Proposed Design: Compactor

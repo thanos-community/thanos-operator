@@ -1,0 +1,12 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosStore
+metadata:
+  labels:
+    app.kubernetes.io/name: thanosstore
+    app.kubernetes.io/instance: thanosstore-sample
+    app.kubernetes.io/part-of: thanos-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: thanos-operator
+  name: thanosstore-sample
+spec:
+  # TODO(user): Add fields here
