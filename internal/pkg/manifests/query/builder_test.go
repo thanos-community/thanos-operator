@@ -105,7 +105,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				LookbackDelta: "5m",
 				MaxConcurrent: 20,
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalVolumeMounts: []corev1.VolumeMount{
+					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "test-sd",
 							MountPath: "/test-sd-file",
@@ -131,7 +131,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				LookbackDelta: "5m",
 				MaxConcurrent: 20,
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
 							Image: "test-image:latest",

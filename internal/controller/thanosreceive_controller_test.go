@@ -164,7 +164,7 @@ config:
 						Labels:            map[string]string{"test": "my-router-test"},
 						ReplicationFactor: 3,
 						Additional: monitoringthanosiov1alpha1.Additional{
-							AdditionalContainers: []corev1.Container{
+							Containers: []corev1.Container{
 								{
 									Name:  "jaeger-agent",
 									Image: "jaegertracing/jaeger-agent:1.22",
@@ -188,7 +188,7 @@ config:
 							},
 						},
 						Additional: monitoringthanosiov1alpha1.Additional{
-							AdditionalContainers: []corev1.Container{
+							Containers: []corev1.Container{
 								{
 									Name:  "parca-agent",
 									Image: "parca/agent:latest",

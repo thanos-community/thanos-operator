@@ -179,7 +179,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 					},
 				}.ApplyDefaults(),
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalVolumeMounts: []corev1.VolumeMount{
+					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "http-config",
 							MountPath: "/http-config",
@@ -202,7 +202,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 					},
 				}.ApplyDefaults(),
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
 							Image: "test-image:latest",
@@ -320,7 +320,7 @@ func TestNewRouterDeployment(t *testing.T) {
 					},
 				}.ApplyDefaults(),
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalVolumeMounts: []corev1.VolumeMount{
+					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "http-config",
 							MountPath: "/http-config",
@@ -343,7 +343,7 @@ func TestNewRouterDeployment(t *testing.T) {
 					},
 				}.ApplyDefaults(),
 				Additional: monitoringthanosiov1alpha1.Additional{
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
 							Image: "test-image:latest",

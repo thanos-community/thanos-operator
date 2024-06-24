@@ -88,7 +88,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					}},
 					Labels: map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
-						AdditionalContainers: []corev1.Container{
+						Containers: []corev1.Container{
 							{
 								Name:  "jaeger-agent",
 								Image: "jaegertracing/jaeger-agent:1.22",

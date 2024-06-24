@@ -462,34 +462,34 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 		},
 	}
 
-	if opts.Additional.AdditionalVolumeMounts != nil {
+	if opts.Additional.VolumeMounts != nil {
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.AdditionalVolumeMounts...)
+			opts.Additional.VolumeMounts...)
 	}
 
-	if opts.Additional.AdditionalContainers != nil {
+	if opts.Additional.Containers != nil {
 		sts.Spec.Template.Spec.Containers = append(
 			sts.Spec.Template.Spec.Containers,
-			opts.Additional.AdditionalContainers...)
+			opts.Additional.Containers...)
 	}
 
-	if opts.Additional.AdditionalVolumes != nil {
+	if opts.Additional.Volumes != nil {
 		sts.Spec.Template.Spec.Volumes = append(
 			sts.Spec.Template.Spec.Volumes,
-			opts.Additional.AdditionalVolumes...)
+			opts.Additional.Volumes...)
 	}
 
-	if opts.Additional.AdditionalPorts != nil {
+	if opts.Additional.Ports != nil {
 		sts.Spec.Template.Spec.Containers[0].Ports = append(
 			sts.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.AdditionalPorts...)
+			opts.Additional.Ports...)
 	}
 
-	if opts.Additional.AdditionalEnv != nil {
+	if opts.Additional.Env != nil {
 		sts.Spec.Template.Spec.Containers[0].Env = append(
 			sts.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.AdditionalEnv...)
+			opts.Additional.Env...)
 	}
 
 	return sts
@@ -502,8 +502,8 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 	svc := newService(opts.Options, defaultLabels)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
-	if opts.Additional.AdditionalServicePorts != nil {
-		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.AdditionalServicePorts...)
+	if opts.Additional.ServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
 
 	return svc
@@ -515,8 +515,8 @@ func NewRouterService(opts RouterOptions) *corev1.Service {
 	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
 	svc := newService(opts.Options, defaultLabels)
 
-	if opts.Additional.AdditionalServicePorts != nil {
-		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.AdditionalServicePorts...)
+	if opts.Additional.ServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
 
 	return svc
@@ -701,34 +701,34 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 		},
 	}
 
-	if opts.Additional.AdditionalVolumeMounts != nil {
+	if opts.Additional.VolumeMounts != nil {
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.AdditionalVolumeMounts...)
+			opts.Additional.VolumeMounts...)
 	}
 
-	if opts.Additional.AdditionalContainers != nil {
+	if opts.Additional.Containers != nil {
 		deployment.Spec.Template.Spec.Containers = append(
 			deployment.Spec.Template.Spec.Containers,
-			opts.Additional.AdditionalContainers...)
+			opts.Additional.Containers...)
 	}
 
-	if opts.Additional.AdditionalVolumes != nil {
+	if opts.Additional.Volumes != nil {
 		deployment.Spec.Template.Spec.Volumes = append(
 			deployment.Spec.Template.Spec.Volumes,
-			opts.Additional.AdditionalVolumes...)
+			opts.Additional.Volumes...)
 	}
 
-	if opts.Additional.AdditionalPorts != nil {
+	if opts.Additional.Ports != nil {
 		deployment.Spec.Template.Spec.Containers[0].Ports = append(
 			deployment.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.AdditionalPorts...)
+			opts.Additional.Ports...)
 	}
 
-	if opts.Additional.AdditionalEnv != nil {
+	if opts.Additional.Env != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(
 			deployment.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.AdditionalEnv...)
+			opts.Additional.Env...)
 	}
 
 	return deployment
@@ -768,8 +768,8 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 	}
 
 	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.AdditionalArgs != nil {
-		args = append(args, opts.Additional.AdditionalArgs...)
+	if opts.Additional.Args != nil {
+		args = append(args, opts.Additional.Args...)
 	}
 
 	return args
@@ -793,8 +793,8 @@ func routerArgsFrom(opts RouterOptions) []string {
 	}
 
 	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.AdditionalArgs != nil {
-		args = append(args, opts.Additional.AdditionalArgs...)
+	if opts.Additional.Args != nil {
+		args = append(args, opts.Additional.Args...)
 	}
 
 	return args

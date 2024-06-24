@@ -175,34 +175,34 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		},
 	}
 
-	if opts.Additional.AdditionalVolumeMounts != nil {
+	if opts.Additional.VolumeMounts != nil {
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.AdditionalVolumeMounts...)
+			opts.Additional.VolumeMounts...)
 	}
 
-	if opts.Additional.AdditionalContainers != nil {
+	if opts.Additional.Containers != nil {
 		deployment.Spec.Template.Spec.Containers = append(
 			deployment.Spec.Template.Spec.Containers,
-			opts.Additional.AdditionalContainers...)
+			opts.Additional.Containers...)
 	}
 
-	if opts.Additional.AdditionalVolumes != nil {
+	if opts.Additional.Volumes != nil {
 		deployment.Spec.Template.Spec.Volumes = append(
 			deployment.Spec.Template.Spec.Volumes,
-			opts.Additional.AdditionalVolumes...)
+			opts.Additional.Volumes...)
 	}
 
-	if opts.Additional.AdditionalPorts != nil {
+	if opts.Additional.Ports != nil {
 		deployment.Spec.Template.Spec.Containers[0].Ports = append(
 			deployment.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.AdditionalPorts...)
+			opts.Additional.Ports...)
 	}
 
-	if opts.Additional.AdditionalEnv != nil {
+	if opts.Additional.Env != nil {
 		deployment.Spec.Template.Spec.Containers[0].Env = append(
 			deployment.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.AdditionalEnv...)
+			opts.Additional.Env...)
 	}
 
 	return &deployment
@@ -224,8 +224,8 @@ func NewQuerierService(opts QuerierOptions) *corev1.Service {
 		},
 	}
 
-	if opts.Additional.AdditionalServicePorts != nil {
-		servicePorts = append(servicePorts, opts.Additional.AdditionalServicePorts...)
+	if opts.Additional.ServicePorts != nil {
+		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
 	return &corev1.Service{
@@ -280,8 +280,8 @@ func querierArgs(opts QuerierOptions) []string {
 	}
 
 	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.AdditionalArgs != nil {
-		args = append(args, opts.Additional.AdditionalArgs...)
+	if opts.Additional.Args != nil {
+		args = append(args, opts.Additional.Args...)
 	}
 
 	return args
