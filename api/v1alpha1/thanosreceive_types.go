@@ -44,7 +44,7 @@ type RouterSpec struct {
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
-	Additional Additional `json:"additional,omitempty"`
+	Additional `json:",inline"`
 }
 
 // IngesterSpec represents the configuration for the ingestor
@@ -63,7 +63,7 @@ type IngesterSpec struct {
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
-	Additional Additional `json:"additional,omitempty"`
+	Additional `json:",inline"`
 }
 
 // IngestorHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.

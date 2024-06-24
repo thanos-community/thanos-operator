@@ -48,7 +48,7 @@ type ThanosQuerySpec struct {
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
-	Additional Additional `json:"additional,omitempty"`
+	Additional `json:",inline"`
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery
