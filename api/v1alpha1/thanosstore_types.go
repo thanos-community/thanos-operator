@@ -69,7 +69,8 @@ const (
 	Block ShardingStrategyType = "block"
 )
 
-// TODO(saswatamcode): Figure out sane default behaviour
+// ShardingStrategy controls the automatic deployment of multiple store gateways sharded by block ID
+// by hashmoding __block_id label value.
 type ShardingStrategy struct {
 	// Type here is the type of sharding strategy.
 	// +kubebuilder:validation:Required
