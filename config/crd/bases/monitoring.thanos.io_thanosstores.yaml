@@ -3703,12 +3703,6 @@ spec:
                 description: ShardingStrategy defines the sharding strategy for the
                   Store Gateways across object storage blocks.
                 properties:
-                  blockModulo:
-                    description: |-
-                      BlockModulo is the modulo value to use for block based sharding strategy.
-                      Will be inferred from the number of shards if not provided.
-                    format: int32
-                    type: integer
                   shardReplicas:
                     default: 1
                     description: ReplicaPerShard is the number of replicas per shard.

@@ -86,10 +86,6 @@ type ShardingStrategy struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
 	ShardReplicas *int32 `json:"shardReplicas,omitempty"`
-	// BlockModulo is the modulo value to use for block based sharding strategy.
-	// Will be inferred from the number of shards if not provided.
-	// +kubebuilder:validation:Optional
-	BlockModulo *int32 `json:"blockModulo,omitempty"`
 }
 
 // ThanosStoreStatus defines the observed state of ThanosStore
