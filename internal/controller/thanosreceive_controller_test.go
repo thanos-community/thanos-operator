@@ -163,6 +163,15 @@ config:
 					Router: monitoringthanosiov1alpha1.RouterSpec{
 						Labels:            map[string]string{"test": "my-router-test"},
 						ReplicationFactor: 3,
+						Additional: monitoringthanosiov1alpha1.Additional{
+							AdditionalContainers: []corev1.Container{
+								{
+									Name:  "jaeger-agent",
+									Image: "jaegertracing/jaeger-agent:1.22",
+									Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+								},
+							},
+						},
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -178,6 +187,15 @@ config:
 								Replicas:    3,
 							},
 						},
+						Additional: monitoringthanosiov1alpha1.Additional{
+							AdditionalContainers: []corev1.Container{
+								{
+									Name:  "parca-agent",
+									Image: "parca/agent:latest",
+									Args:  []string{"--config-path=/etc/parca-agent/parca-agent.yaml"},
+								},
+							},
+						},
 					},
 				},
 			}
@@ -190,7 +208,6 @@ config:
 					return utils.VerifyExistenceOfRequiredNamedResources(
 						k8sClient, utils.ExpectApiResourceStatefulSet, name, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
-
 			})
 
 			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
@@ -332,7 +349,21 @@ config:
 						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
-		})
 
+			By("creating the additional container for router", func() {
+				Eventually(func() bool {
+					return utils.VerifyDeploymentArgs(
+						k8sClient, resourceName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250")
+				}, time.Second*10, time.Second*1).Should(BeTrue())
+			})
+
+			By("creating the additional container for ingesters", func() {
+				Eventually(func() bool {
+					name := receive.IngesterNameFromParent(resourceName, "test-hashring")
+					return utils.VerifyStatefulSetArgs(
+						k8sClient, name, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
+				}, time.Second*10, time.Second*1).Should(BeTrue())
+			})
+		})
 	})
 })
