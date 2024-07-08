@@ -143,15 +143,7 @@ func BuildIngester(opts IngesterOptions) []client.Object {
 }
 
 // ErrHashringsEmpty is returned when one or more hashrings are empty
-const ErrHashringsEmpty = Error("One or more hashrings are empty")
-
-// Error represents an error that occurred during the build process.
-type Error string
-
-// Error returns the error message.
-func (e Error) Error() string {
-	return string(e)
-}
+var ErrHashringsEmpty = fmt.Errorf("one or more hashrings are empty")
 
 // BuildHashrings builds the hashrings for Thanos Receive from the provided configuration.
 func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts HashringOptions) (client.Object, error) {
