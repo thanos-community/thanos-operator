@@ -155,8 +155,8 @@ func TestNewQuerierDeployment(t *testing.T) {
 				t.Errorf("expected query deployment namespace to be %s, got %s", tc.opts.Namespace, query.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(query.GetLabels()) != 7 {
-				t.Errorf("expected query deployment to have 7 labels, got %d", len(query.GetLabels()))
+			if len(query.GetLabels()) != 8 {
+				t.Errorf("expected query deployment to have 8 labels, got %d", len(query.GetLabels()))
 			}
 			// ensure custom labels are set
 			if query.GetLabels()["some-custom-label"] != someCustomLabelValue {
@@ -250,8 +250,8 @@ func TestNewQuerierService(t *testing.T) {
 				t.Errorf("expected querier service namespace to be %s, got %s", tc.opts.Namespace, querier.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(querier.GetLabels()) != 7 {
-				t.Errorf("expected querier service to have 7 labels, got %d", len(querier.GetLabels()))
+			if len(querier.GetLabels()) != 8 {
+				t.Errorf("expected querier service to have 8 labels, got %d", len(querier.GetLabels()))
 			}
 			// ensure custom labels are set
 			if querier.GetLabels()["some-custom-label"] != someCustomLabelValue {

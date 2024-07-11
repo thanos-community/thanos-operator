@@ -1,12 +1,14 @@
-package query
+package ruler
 
 import (
 	"fmt"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -15,11 +17,11 @@ import (
 )
 
 const (
-	// Name is the name of the Thanos Query component.
-	Name = "thanos-query"
+	// Name is the name of the Thanos Ruler component.
+	Name = "thanos-ruler"
 
-	// ComponentName is the name of the Thanos Query component.
-	ComponentName = "query-layer"
+	// ComponentName is the name of the Thanos Ruler component.
+	ComponentName = "rule-evaluation-engine"
 
 	GRPCPort     = 10901
 	GRPCPortName = "grpc"
@@ -28,46 +30,45 @@ const (
 	HTTPPortName = "http"
 )
 
-// QuerierOptions for Thanos Querier
-type QuerierOptions struct {
+// RulerOptions for Thanos Ruler
+type RulerOptions struct {
 	manifests.Options
-	ReplicaLabels []string
-	Timeout       string
-	LookbackDelta string
-	MaxConcurrent int
-
-	Endpoints  []Endpoint
-	Additional manifests.Additional
+	Endpoints       []Endpoint
+	RuleFiles       []corev1.ConfigMapKeySelector
+	ObjStoreSecret  corev1.SecretKeySelector
+	Retention       monitoringthanosiov1alpha1.Duration
+	AlertmanagerURL string
+	ExternalLabels  map[string]string
+	AlertLabelDrop  []string
+	StorageSize     resource.Quantity
+	Additional      monitoringthanosiov1alpha1.Additional
 }
 
-type EndpointType string
-
-const (
-	RegularLabel     EndpointType = "operator.thanos.io/endpoint"
-	StrictLabel      EndpointType = "operator.thanos.io/endpoint-strict"
-	GroupLabel       EndpointType = "operator.thanos.io/endpoint-group"
-	GroupStrictLabel EndpointType = "operator.thanos.io/endpoint-group-strict"
-)
-
-// Endpoint represents a single StoreAPI DNS formatted address.
+// Endpoint represents a single QueryAPI DNS formatted address.
 // TODO(saswatamcode): Add validation.
 type Endpoint struct {
 	ServiceName string
 	Namespace   string
-	Type        EndpointType
 	Port        int32
 }
 
-func BuildQuerier(opts QuerierOptions) []client.Object {
+func BuildRuler(opts RulerOptions) []client.Object {
 	var objs []client.Object
 	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewQuerierDeployment(opts))
-	objs = append(objs, NewQuerierService(opts))
+	objs = append(objs, NewRulerStatefulSet(opts))
+	objs = append(objs, NewRulerService(opts))
 	return objs
 }
 
-func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
-	defaultLabels := labelsForQuerier(opts)
+const (
+	rulerObjectStoreEnvVarName = "OBJSTORE_CONFIG"
+
+	dataVolumeName      = "data"
+	dataVolumeMountPath = "var/thanos/rule"
+)
+
+func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
+	defaultLabels := labelsForRulers(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
@@ -88,7 +89,22 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		},
 	}
 
-	queryContainer := corev1.Container{
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      dataVolumeName,
+			MountPath: dataVolumeMountPath,
+		},
+	}
+
+	for _, ruleFile := range opts.RuleFiles {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      ruleFile.Name,
+			MountPath: fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Key),
+			SubPath:   ruleFile.Key,
+		})
+	}
+
+	rulerContainer := corev1.Container{
 		Image:           opts.GetContainerImage(),
 		Name:            Name,
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -131,6 +147,21 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 			SuccessThreshold:    1,
 			FailureThreshold:    4,
 		},
+		Env: []corev1.EnvVar{
+			{
+				Name: rulerObjectStoreEnvVarName,
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: opts.ObjStoreSecret.Name,
+						},
+						Key:      opts.ObjStoreSecret.Key,
+						Optional: ptr.To(false),
+					},
+				},
+			},
+		},
+		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
 			{
 				ContainerPort: GRPCPort,
@@ -143,12 +174,46 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-		Args:                     querierArgs(opts),
+		Args:                     rulerArgs(opts),
 	}
 
-	deployment := appsv1.Deployment{
+	vc := []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      dataVolumeName,
+				Namespace: opts.Namespace,
+				Labels:    aggregatedLabels,
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: opts.StorageSize,
+					},
+				},
+			},
+		},
+	}
+
+	volumes := []corev1.Volume{}
+	for _, ruleFile := range opts.RuleFiles {
+		volumes = append(volumes, corev1.Volume{
+			Name: ruleFile.Name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ruleFile.Name,
+					},
+				},
+			},
+		})
+	}
+
+	sts := appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
+			Kind:       "StatefulSet",
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -156,8 +221,9 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 			Namespace: opts.Namespace,
 			Labels:    aggregatedLabels,
 		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &opts.Replicas,
+		Spec: appsv1.StatefulSetSpec{
+			Replicas:             &opts.Replicas,
+			VolumeClaimTemplates: vc,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: defaultLabels,
 			},
@@ -167,48 +233,49 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
-					Containers:         []corev1.Container{queryContainer},
+					Containers:         []corev1.Container{rulerContainer},
 					ServiceAccountName: opts.Name,
+					Volumes:            volumes,
 				},
 			},
 		},
 	}
 
 	if opts.Additional.VolumeMounts != nil {
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
 			opts.Additional.VolumeMounts...)
 	}
 
 	if opts.Additional.Containers != nil {
-		deployment.Spec.Template.Spec.Containers = append(
-			deployment.Spec.Template.Spec.Containers,
+		sts.Spec.Template.Spec.Containers = append(
+			sts.Spec.Template.Spec.Containers,
 			opts.Additional.Containers...)
 	}
 
 	if opts.Additional.Volumes != nil {
-		deployment.Spec.Template.Spec.Volumes = append(
-			deployment.Spec.Template.Spec.Volumes,
+		sts.Spec.Template.Spec.Volumes = append(
+			sts.Spec.Template.Spec.Volumes,
 			opts.Additional.Volumes...)
 	}
 
 	if opts.Additional.Ports != nil {
-		deployment.Spec.Template.Spec.Containers[0].Ports = append(
-			deployment.Spec.Template.Spec.Containers[0].Ports,
+		sts.Spec.Template.Spec.Containers[0].Ports = append(
+			sts.Spec.Template.Spec.Containers[0].Ports,
 			opts.Additional.Ports...)
 	}
 
 	if opts.Additional.Env != nil {
-		deployment.Spec.Template.Spec.Containers[0].Env = append(
-			deployment.Spec.Template.Spec.Containers[0].Env,
+		sts.Spec.Template.Spec.Containers[0].Env = append(
+			sts.Spec.Template.Spec.Containers[0].Env,
 			opts.Additional.Env...)
 	}
 
-	return &deployment
+	return &sts
 }
 
-func NewQuerierService(opts QuerierOptions) *corev1.Service {
-	defaultLabels := labelsForQuerier(opts)
+func NewRulerService(opts RulerOptions) *corev1.Service {
+	defaultLabels := labelsForRulers(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
 	servicePorts := []corev1.ServicePort{
 		{
@@ -241,41 +308,28 @@ func NewQuerierService(opts QuerierOptions) *corev1.Service {
 	}
 }
 
-func querierArgs(opts QuerierOptions) []string {
+func rulerArgs(opts RulerOptions) []string {
 	opts.Options = opts.ApplyDefaults()
 	args := []string{
-		"query",
+		"rule",
 		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
 		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
-		"--web.prefix-header=X-Forwarded-Prefix",
-		fmt.Sprintf("--query.timeout=%s", opts.Timeout),
-		fmt.Sprintf("--query.lookback-delta=%s", opts.LookbackDelta),
-		"--query.auto-downsampling",
-		"--grpc.proxy-strategy=eager",
-		"--query.promql-engine=thanos",
-		fmt.Sprintf("--query.max-concurrent=%d", opts.MaxConcurrent),
+		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
+		"--data-dir=/var/thanos/rule",
+		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 	}
 
-	for _, label := range opts.ReplicaLabels {
-		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
+	for _, ruleFile := range opts.RuleFiles {
+		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Key)))
 	}
 
-	for _, ep := range opts.Endpoints {
-		switch ep.Type {
-		case RegularLabel:
-			// TODO(saswatamcode): For regular probably use SD file.
-			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case StrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		case GroupStrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		default:
-			panic("unknown endpoint type")
-		}
+	for _, endpoint := range opts.Endpoints {
+		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", endpoint.ServiceName, endpoint.Namespace))
+	}
+
+	for _, label := range opts.AlertLabelDrop {
+		args = append(args, fmt.Sprintf("---alert.label-drop=%s", label))
 	}
 
 	// TODO(saswatamcode): Add some validation.
@@ -283,16 +337,15 @@ func querierArgs(opts QuerierOptions) []string {
 		args = append(args, opts.Additional.Args...)
 	}
 
-	return manifests.PruneEmptyArgs(args)
+	return args
 }
 
-func labelsForQuerier(opts QuerierOptions) map[string]string {
+func labelsForRulers(opts RulerOptions) map[string]string {
 	return map[string]string{
-		manifests.NameLabel:            Name,
-		manifests.ComponentLabel:       ComponentName,
-		manifests.InstanceLabel:        opts.Name,
-		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
-		manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+		manifests.NameLabel:      Name,
+		manifests.ComponentLabel: ComponentName,
+		manifests.InstanceLabel:  opts.Name,
+		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
+		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
 }

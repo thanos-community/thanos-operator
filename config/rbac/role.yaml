@@ -45,6 +45,60 @@ rules:
   - thanoscompacts
   - thanosqueries
   - thanosreceives
+<<<<<<< HEAD
+=======
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+>>>>>>> f6da980 (Add Thanos Ruler CRD and deploy logic)
   - thanosservices
   - thanosstores
   verbs:
