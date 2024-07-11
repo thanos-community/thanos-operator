@@ -120,6 +120,13 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	if query.Spec.Paused != nil {
+		if *query.Spec.Paused {
+			r.logger.Info("reconciliation is paused for ThanosQuery resource")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	err = r.syncResources(ctx, *query)
 	if err != nil {
 		r.reconciliationsFailedTotal.Inc()

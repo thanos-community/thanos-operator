@@ -128,6 +128,13 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.handleDeletionTimestamp(receiver)
 	}
 
+	if receiver.Spec.Paused != nil {
+		if *receiver.Spec.Paused {
+			r.logger.Info("reconciliation is paused for ThanosReceive resource")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
 		r.reconciliationsFailedTotal.Inc()

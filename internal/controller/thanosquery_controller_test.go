@@ -227,6 +227,59 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(Succeed())
 			})
 
+			By("checking paused state", func() {
+				isPaused := true
+				resource.Spec.Paused = &isPaused
+
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				svcPaused := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "paused-svc",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultStoreAPILabel:    manifests.DefaultStoreAPIValue,
+							string(manifestquery.StrictLabel): manifests.DefaultStoreAPIValue,
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
+
+				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, prometheus.NewRegistry())
+
+				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespacedName,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				EventuallyWithOffset(1, func() error {
+					deployment := &appsv1.Deployment{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      resourceName,
+						Namespace: ns,
+					}, deployment); err != nil {
+						return err
+					}
+
+					// If not paused would end up with 15 args.
+					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 14 {
+						return fmt.Errorf("expected 14 args, got %d: %v",
+							len(deployment.Spec.Template.Spec.Containers[0].Args),
+							deployment.Spec.Template.Spec.Containers[0].Args)
+					}
+
+					return nil
+				}, time.Second*10, time.Second*10).Should(Succeed())
+			})
 		})
 	})
 })
