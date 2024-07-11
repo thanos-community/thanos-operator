@@ -3723,12 +3723,19 @@ spec:
                     - block
                     type: string
                 type: object
+              storageSize:
+                description: StorageSize is the size of the storage to be used by
+                  the Thanos Store StatefulSets.
+                pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                type: string
               version:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string
+            required:
+            - storageSize
             type: object
           status:
             description: ThanosStoreStatus defines the observed state of ThanosStore
