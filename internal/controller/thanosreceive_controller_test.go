@@ -364,6 +364,67 @@ config:
 						k8sClient, name, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
+
+			By("checking paused state", func() {
+				isPaused := true
+				resource.Spec.Paused = &isPaused
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				epSliceRelevant := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ep-slice-2",
+						Namespace: ns,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Name:       receive.IngesterNameFromParent(resourceName, "test-hashring"),
+								Kind:       "Service",
+								APIVersion: "v1",
+								UID:        types.UID("1234"),
+							},
+						},
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: receive.IngesterNameFromParent(resourceName, "test-hashring"),
+							manifests.ComponentLabel:     receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"7.7.7.7"},
+							Hostname:  ptr.To("some-paused"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Update(context.Background(), epSliceRelevant)).Should(Succeed())
+
+				expect := `[
+    {
+        "hashring": "test-hashring",
+        "tenants": [
+            "test-tenant"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "some-paused.test-resource-test-hashring.treceive.svc.cluster.local:10901",
+                "az": ""
+            },
+        ]
+    }
+]`
+
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
+				}, time.Second*10, time.Second*1).Should(BeFalse())
+			})
 		})
 	})
 })
