@@ -91,17 +91,15 @@ type IngestorHashringSpec struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Required
 	Replicas int32 `json:"replicas,omitempty"`
-	// Retention is the duration for which the Thanos Receive StatefulSet will retain data.
-	// +kubebuilder:default="2h"
+	// TSDB configuration for the ingestor.
 	// +kubebuilder:validation:Required
-	Retention Duration `json:"retention,omitempty"`
+	TSDBConfig TSDBConfig `json:"tsdbConfig,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for the hashring.
 	// +kubebuilder:validation:Optional
 	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
 	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
-	StorageSize string `json:"storageSize"`
+	StorageSize StorageSize `json:"storageSize"`
 	// Tenants is a list of tenants that should be matched by the hashring.
 	// An empty list matches all tenants.
 	// +kubebuilder:validation:Optional

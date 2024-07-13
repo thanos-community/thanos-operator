@@ -3691,12 +3691,6 @@ spec:
                           format: int32
                           minimum: 1
                           type: integer
-                        retention:
-                          default: 2h
-                          description: Retention is the duration for which the Thanos
-                            Receive StatefulSet will retain data.
-                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
-                          type: string
                         storageSize:
                           description: StorageSize is the size of the storage to be
                             used by the Thanos Receive StatefulSet.
@@ -3717,6 +3711,16 @@ spec:
                           items:
                             type: string
                           type: array
+                        tsdbConfig:
+                          description: TSDB configuration for the ingestor.
+                          properties:
+                            retention:
+                              default: 2h
+                              description: Retention is the duration for which a particular
+                                TSDB will retain data.
+                              pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                              type: string
+                          type: object
                       required:
                       - name
                       - storageSize

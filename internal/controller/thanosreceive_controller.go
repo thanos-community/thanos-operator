@@ -267,9 +267,11 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 		}.ApplyDefaults()
 
 		opt := receive.IngesterOptions{
-			Options:        metaOpts,
-			Retention:      string(hashring.Retention),
-			StorageSize:    resource.MustParse(hashring.StorageSize),
+			Options: metaOpts,
+			TSDBOpts: receive.TSDBOpts{
+				Retention: string(hashring.TSDBConfig.Retention),
+			},
+			StorageSize:    resource.MustParse(string(hashring.StorageSize)),
 			ObjStoreSecret: objStoreSecret,
 			ExternalLabels: hashring.ExternalLabels,
 			Additional:     receiver.Spec.Ingester.Additional,

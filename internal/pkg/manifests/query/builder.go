@@ -284,7 +284,7 @@ func querierArgs(opts QuerierOptions) []string {
 		args = append(args, opts.Additional.Args...)
 	}
 
-	return args
+	return manifests.PruneEmptyArgs(args)
 }
 
 func labelsForQuerier(opts QuerierOptions) map[string]string {
