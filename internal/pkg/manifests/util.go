@@ -1,6 +1,8 @@
 package manifests
 
 import (
+	"fmt"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -13,4 +15,14 @@ func IsNamespacedResource(obj client.Object) bool {
 	default:
 		return true
 	}
+}
+
+// OptionalToString returns the string representation of the given pointer
+// or an empty string if the pointer is nil. Helps avoid bunch of typecasts and nil-checks throughout.
+// Works only for basic types and not complex ones like slices, structs and maps.
+func OptionalToString[T any](ptr *T) string {
+	if ptr == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", *ptr)
 }
