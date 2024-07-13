@@ -23,6 +23,20 @@ type ObjectStorageConfig corev1.SecretKeySelector
 // https://thanos.io/tip/thanos/storage.md/#external-labels
 type ExternalLabels map[string]string
 
+// StorageSize is the size of the PV storage to be used by a Thanos component.
+// +kubebuilder:validation:Required
+// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
+type StorageSize string
+
+// TSDBConfig specifies configuration for any particular Thanos TSDB.
+// NOTE: Some of these options will not exist for all components, in which case, even if specified can be ignored.
+type TSDBConfig struct {
+	// Retention is the duration for which a particular TSDB will retain data.
+	// +kubebuilder:default="2h"
+	// +kubebuilder:validation:Required
+	Retention Duration `json:"retention,omitempty"`
+}
+
 // CommonThanosFields are the options available to all Thanos components.
 // +k8s:deepcopy-gen=true
 type CommonThanosFields struct {

@@ -2,6 +2,7 @@ package manifests
 
 import (
 	"fmt"
+	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,4 +26,15 @@ func OptionalToString[T any](ptr *T) string {
 		return ""
 	}
 	return fmt.Sprintf("%v", *ptr)
+}
+
+// PruneEmptyArgs removes empty or empty value arguments from the given slice.
+func PruneEmptyArgs(args []string) []string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "" || strings.HasSuffix(args[i], "=") {
+			args = append(args[:i], args[i+1:]...)
+		}
+	}
+
+	return args
 }

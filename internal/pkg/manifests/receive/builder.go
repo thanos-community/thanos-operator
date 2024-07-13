@@ -55,11 +55,15 @@ const (
 // IngesterOptions for Thanos Receive components
 type IngesterOptions struct {
 	manifests.Options
+	TSDBOpts
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
-	Retention      string
 	ExternalLabels map[string]string
 	Additional     monitoringthanosiov1alpha1.Additional
+}
+
+type TSDBOpts struct {
+	Retention string
 }
 
 // RouterOptions for Thanos Receive router
@@ -764,7 +768,7 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		args = append(args, opts.Additional.Args...)
 	}
 
-	return args
+	return manifests.PruneEmptyArgs(args)
 }
 
 func routerArgsFrom(opts RouterOptions) []string {
@@ -789,7 +793,7 @@ func routerArgsFrom(opts RouterOptions) []string {
 		args = append(args, opts.Additional.Args...)
 	}
 
-	return args
+	return manifests.PruneEmptyArgs(args)
 }
 
 // newHashringConfigMap creates a skeleton ConfigMap for the hashring configuration.
