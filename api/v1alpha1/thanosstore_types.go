@@ -27,6 +27,10 @@ type ThanosStoreSpec struct {
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways.
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	// StorageSize is the size of the storage to be used by the Thanos Store StatefulSets.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
+	StorageSize string `json:"storageSize"`
 	// Duration after which the blocks marked for deletion will be filtered out while fetching blocks.
 	// The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.
 	// This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.
