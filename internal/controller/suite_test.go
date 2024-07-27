@@ -112,6 +112,19 @@ var _ = BeforeSuite(func() {
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = NewConfigMapToDiskReconciler(
+		logger,
+		k8sManager.GetClient(),
+		k8sManager.GetScheme(),
+		reg,
+		ConfigMapOptions{
+			Name: "test-resource",
+			Key:  "test-key",
+			Path: "/test.txt",
+		},
+	).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	go func() {
 		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())
