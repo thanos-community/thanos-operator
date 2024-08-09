@@ -18,6 +18,14 @@ const (
 	// The following label is used to identify StoreAPIs and will be set on the resources created by the operator.
 	DefaultStoreAPILabel = "operator.thanos.io/store-api"
 	DefaultStoreAPIValue = "true"
+
+	// The following label is used to identify Query APIs and will be set on the resources created by the operator.
+	DefaultQueryAPILabel = "operator.thanos.io/query-api"
+	DefaultQueryAPIValue = "true"
+
+	// The following label is used to identify Rule Configs and will be set on the resources created by the operator.
+	DefaultRuleConfigLabel = "operator.thanos.io/rule-file"
+	DefaultRuleConfigValue = "true"
 )
 
 // MergeLabels merges the provided labels with the default labels for a component.
