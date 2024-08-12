@@ -176,7 +176,7 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 	opts := manifests.Options{
 		Name:      store.GetName(),
 		Namespace: store.GetNamespace(),
-		Replicas:  *store.Spec.ShardingStrategy.ShardReplicas,
+		Replicas:  store.Spec.ShardingStrategy.ShardReplicas,
 		Labels:    store.GetLabels(),
 		Image:     store.Spec.Image,
 		LogLevel:  store.Spec.LogLevel,
@@ -192,8 +192,8 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		Max:                      store.Spec.MaxTime,
 		IgnoreDeletionMarksDelay: store.Spec.IgnoreDeletionMarksDelay,
 		Additional:               store.Spec.Additional,
-		StorageSize:              resource.MustParse(store.Spec.StorageSize),
-		Shards:                   *store.Spec.ShardingStrategy.Shards,
+		StorageSize:              resource.MustParse(string(store.Spec.StorageSize)),
+		Shards:                   store.Spec.ShardingStrategy.Shards,
 	})
 }
 

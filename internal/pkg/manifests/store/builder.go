@@ -24,13 +24,13 @@ const (
 	// ComponentName is the name of the Thanos Store component.
 	ComponentName = "object-storage-gateway"
 
-	// HTTPPortName is the name of the HTTP port for the Thanos Receive components.
+	// HTTPPortName is the name of the HTTP port for the Thanos Store components.
 	HTTPPortName = "http"
-	// HTTPPort is the port number for the HTTP port for the Thanos Receive components.
+	// HTTPPort is the port number for the HTTP port for the Thanos Store components.
 	HTTPPort = 10902
-	// GRPCPortName is the name of the gRPC port for the Thanos Receive components.
+	// GRPCPortName is the name of the gRPC port for the Thanos Store components.
 	GRPCPortName = "grpc"
-	// GRPCPort is the port number for the gRPC port for the Thanos Receive components.
+	// GRPCPort is the port number for the gRPC port for the Thanos Store components.
 	GRPCPort = 10901
 )
 
@@ -39,9 +39,9 @@ type StoreOptions struct {
 	manifests.Options
 	StorageSize              resource.Quantity
 	ObjStoreSecret           corev1.SecretKeySelector
-	IndexCacheConfig         corev1.ConfigMapKeySelector
-	CachingBucketConfig      corev1.ConfigMapKeySelector
-	IgnoreDeletionMarksDelay *monitoringthanosiov1alpha1.Duration
+	IndexCacheConfig         *corev1.ConfigMapKeySelector
+	CachingBucketConfig      *corev1.ConfigMapKeySelector
+	IgnoreDeletionMarksDelay monitoringthanosiov1alpha1.Duration
 	Min, Max                 *monitoringthanosiov1alpha1.Duration
 	Shards                   int32
 	Additional               monitoringthanosiov1alpha1.Additional
@@ -53,6 +53,9 @@ func BuildStores(opts StoreOptions) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
 	objs = append(objs, NewStoreServices(opts)...)
 	objs = append(objs, NewStoreStatefulSets(opts)...)
+	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
+		objs = append(objs, NewStoreInMemoryConfigMap(opts))
+	}
 	return objs
 }
 
@@ -63,7 +66,26 @@ const (
 
 	dataVolumeName      = "data"
 	dataVolumeMountPath = "var/thanos/store"
+
+	defaultInMemoryConfigmapName = "thanos-store-inmemory-config"
+	defaultInMemoryConfigmapKey  = "config.yaml"
 )
+
+func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultInMemoryConfigmapName,
+			Namespace: opts.Namespace,
+			Labels:    opts.Labels,
+		},
+		Data: map[string]string{
+			defaultInMemoryConfigmapKey: `type: IN-MEMORY
+config:
+  max_size: 512MiB
+  max_item_size: 5MiB`,
+		},
+	}
+}
 
 // NewStoreStatefulSets creates a new StatefulSet for the Thanos Store.
 func NewStoreStatefulSets(opts StoreOptions) []client.Object {
@@ -98,6 +120,76 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 				},
 			},
 		},
+	}
+
+	envVars := []corev1.EnvVar{
+		{
+			Name: storeObjectStoreEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.ObjStoreSecret.Name,
+					},
+					Key:      opts.ObjStoreSecret.Key,
+					Optional: ptr.To(false),
+				},
+			},
+		},
+	}
+	if opts.IndexCacheConfig != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name: indexCacheConfigEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.IndexCacheConfig.Name,
+					},
+					Key:      opts.IndexCacheConfig.Key,
+					Optional: ptr.To(false),
+				},
+			},
+		})
+	} else {
+		envVars = append(envVars, corev1.EnvVar{
+			Name: indexCacheConfigEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: defaultInMemoryConfigmapName,
+					},
+					Key:      defaultInMemoryConfigmapKey,
+					Optional: ptr.To(false),
+				},
+			},
+		})
+	}
+
+	if opts.CachingBucketConfig != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name: cachingBucketConfigEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.CachingBucketConfig.Name,
+					},
+					Key:      opts.CachingBucketConfig.Key,
+					Optional: ptr.To(false),
+				},
+			},
+		})
+	} else {
+		envVars = append(envVars, corev1.EnvVar{
+			Name: cachingBucketConfigEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: defaultInMemoryConfigmapName,
+					},
+					Key:      defaultInMemoryConfigmapKey,
+					Optional: ptr.To(false),
+				},
+			},
+		})
 	}
 
 	sts := &appsv1.StatefulSet{
@@ -165,44 +257,7 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 								SuccessThreshold:    1,
 								FailureThreshold:    8,
 							},
-							Env: []corev1.EnvVar{
-								{
-									Name: storeObjectStoreEnvVarName,
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: opts.ObjStoreSecret.Name,
-											},
-											Key:      opts.ObjStoreSecret.Key,
-											Optional: ptr.To(false),
-										},
-									},
-								},
-								{
-									Name: indexCacheConfigEnvVarName,
-									ValueFrom: &corev1.EnvVarSource{
-										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: opts.IndexCacheConfig.Name,
-											},
-											Key:      opts.IndexCacheConfig.Key,
-											Optional: ptr.To(false),
-										},
-									},
-								},
-								{
-									Name: cachingBucketConfigEnvVarName,
-									ValueFrom: &corev1.EnvVarSource{
-										ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: opts.CachingBucketConfig.Name,
-											},
-											Key:      opts.CachingBucketConfig.Key,
-											Optional: ptr.To(false),
-										},
-									},
-								},
-							},
+							Env: envVars,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      dataVolumeName,
@@ -335,6 +390,7 @@ func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
 		fmt.Sprintf("--index-cache.config=$(%s)", indexCacheConfigEnvVarName),
 		fmt.Sprintf("--store.caching-bucket.config=$(%s)", cachingBucketConfigEnvVarName),
 		"--data-dir=/var/thanos/store",
+		fmt.Sprintf("--ignore-deletion-marks-delay=%s", string(opts.IgnoreDeletionMarksDelay)),
 		fmt.Sprintf(`--selector.relabel-config=
               - action: hashmod
                 source_labels: ["__block_id"]
@@ -343,18 +399,8 @@ func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
               - action: keep
                 source_labels: ["shard"]
                 regex: %d`, opts.Shards, shardIndex),
-	}
-
-	if opts.Min != nil {
-		args = append(args, fmt.Sprintf("--min-time=%s", string(*opts.Min)))
-	}
-
-	if opts.Max != nil {
-		args = append(args, fmt.Sprintf("--max-time=%s", string(*opts.Max)))
-	}
-
-	if opts.IgnoreDeletionMarksDelay != nil {
-		args = append(args, fmt.Sprintf("--ignore-deletion-marks-delay=%s", string(*opts.IgnoreDeletionMarksDelay)))
+		fmt.Sprintf("--min-time=%s", manifests.OptionalToString(opts.Min)),
+		fmt.Sprintf("--max-time=%s", manifests.OptionalToString(opts.Max)),
 	}
 
 	// TODO(saswatamcode): Add some validation.
@@ -362,7 +408,7 @@ func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
 		args = append(args, opts.Additional.Args...)
 	}
 
-	return args
+	return manifests.PruneEmptyArgs(args)
 }
 
 func labelsForStoreShard(opts StoreOptions) map[string]string {
