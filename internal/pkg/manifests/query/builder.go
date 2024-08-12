@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,7 +37,7 @@ type QuerierOptions struct {
 	MaxConcurrent int
 
 	Endpoints  []Endpoint
-	Additional monitoringthanosiov1alpha1.Additional
+	Additional manifests.Additional
 }
 
 type EndpointType string

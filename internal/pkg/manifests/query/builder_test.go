@@ -3,7 +3,6 @@ package query
 import (
 	"testing"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	corev1 "k8s.io/api/core/v1"
@@ -104,7 +103,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				Timeout:       "15m",
 				LookbackDelta: "5m",
 				MaxConcurrent: 20,
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "test-sd",
@@ -130,7 +129,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				Timeout:       "15m",
 				LookbackDelta: "5m",
 				MaxConcurrent: 20,
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					Containers: []corev1.Container{
 						{
 							Name:  "test-container",

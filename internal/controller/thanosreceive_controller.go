@@ -274,8 +274,18 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			StorageSize:    resource.MustParse(string(hashring.StorageSize)),
 			ObjStoreSecret: objStoreSecret,
 			ExternalLabels: hashring.ExternalLabels,
-			Additional:     receiver.Spec.Ingester.Additional,
 		}
+
+		opt.Additional = manifests.Additional{
+			Args:         receiver.Spec.Ingester.Additional.Args,
+			Containers:   receiver.Spec.Ingester.Additional.Containers,
+			Volumes:      receiver.Spec.Ingester.Additional.Volumes,
+			VolumeMounts: receiver.Spec.Ingester.Additional.VolumeMounts,
+			Ports:        receiver.Spec.Ingester.Additional.Ports,
+			Env:          receiver.Spec.Ingester.Additional.Env,
+			ServicePorts: receiver.Spec.Ingester.Additional.ServicePorts,
+		}
+
 		opts = append(opts, opt)
 	}
 
@@ -346,7 +356,16 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		Options:           metaOpts,
 		ReplicationFactor: receiver.Spec.Router.ReplicationFactor,
 		ExternalLabels:    receiver.Spec.Router.ExternalLabels,
-		Additional:        receiver.Spec.Router.Additional,
+	}
+
+	opts.Additional = manifests.Additional{
+		Args:         receiver.Spec.Router.Additional.Args,
+		Containers:   receiver.Spec.Router.Additional.Containers,
+		Volumes:      receiver.Spec.Router.Additional.Volumes,
+		VolumeMounts: receiver.Spec.Router.Additional.VolumeMounts,
+		Ports:        receiver.Spec.Router.Additional.Ports,
+		Env:          receiver.Spec.Router.Additional.Env,
+		ServicePorts: receiver.Spec.Router.Additional.ServicePorts,
 	}
 
 	return receive.BuildRouter(opts)
