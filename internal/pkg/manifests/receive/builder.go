@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	"github.com/go-logr/logr"
@@ -59,7 +58,7 @@ type IngesterOptions struct {
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
 	ExternalLabels map[string]string
-	Additional     monitoringthanosiov1alpha1.Additional
+	Additional     manifests.Additional
 }
 
 type TSDBOpts struct {
@@ -71,7 +70,7 @@ type RouterOptions struct {
 	manifests.Options
 	ReplicationFactor int32
 	ExternalLabels    map[string]string
-	Additional        monitoringthanosiov1alpha1.Additional
+	Additional        manifests.Additional
 }
 
 // HashringOptions for Thanos Receive hashring

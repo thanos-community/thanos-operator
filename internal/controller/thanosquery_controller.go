@@ -195,6 +195,17 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 	}.ApplyDefaults()
 
 	endpoints := r.getStoreAPIServiceEndpoints(ctx, query)
+
+	additional := manifests.Additional{
+		Args:         query.Spec.Additional.Args,
+		Containers:   query.Spec.Additional.Containers,
+		Volumes:      query.Spec.Additional.Volumes,
+		VolumeMounts: query.Spec.Additional.VolumeMounts,
+		Ports:        query.Spec.Additional.Ports,
+		Env:          query.Spec.Additional.Env,
+		ServicePorts: query.Spec.Additional.ServicePorts,
+	}
+
 	return manifestquery.BuildQuerier(manifestquery.QuerierOptions{
 		Options:       metaOpts,
 		ReplicaLabels: query.Spec.QuerierReplicaLabels,
@@ -202,7 +213,7 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
 		Endpoints:     endpoints,
-		Additional:    query.Spec.Additional,
+		Additional:    additional,
 	})
 }
 

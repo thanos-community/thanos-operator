@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	"github.com/go-logr/logr/testr"
@@ -178,7 +177,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 				}.ApplyDefaults(),
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "http-config",
@@ -201,7 +200,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 				}.ApplyDefaults(),
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
@@ -319,7 +318,7 @@ func TestNewRouterDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 				}.ApplyDefaults(),
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "http-config",
@@ -342,7 +341,7 @@ func TestNewRouterDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 				}.ApplyDefaults(),
-				Additional: monitoringthanosiov1alpha1.Additional{
+				Additional: manifests.Additional{
 					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
