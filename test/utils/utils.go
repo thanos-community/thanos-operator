@@ -404,7 +404,7 @@ func RemoteWrite(req RemoteWriteRequest, roundTripper http.RoundTripper, headers
 	}
 
 	compressed := snappy.Encode(nil, raw)
-	err = writeClient.Store(context.Background(), compressed, 0)
+	_, err = writeClient.Store(context.Background(), compressed, 0)
 	if err != nil {
 		return err
 	}
