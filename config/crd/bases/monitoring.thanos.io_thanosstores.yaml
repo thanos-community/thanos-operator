@@ -3641,6 +3641,11 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels are additional labels to add to the Store component.
+                type: object
               logFormat:
                 default: logfmt
                 description: Log format for Thanos.

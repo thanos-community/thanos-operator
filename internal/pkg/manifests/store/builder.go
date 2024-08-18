@@ -44,15 +44,16 @@ type StoreOptions struct {
 	IgnoreDeletionMarksDelay monitoringthanosiov1alpha1.Duration
 	Min, Max                 *monitoringthanosiov1alpha1.Duration
 	Shards                   int32
-	Additional               monitoringthanosiov1alpha1.Additional
+	Additional               manifests.Additional
 }
 
-// BuildStores builds a Thanos Store shards.
+// BuildStores builds Thanos Store shards.
 func BuildStores(opts StoreOptions) []client.Object {
 	var objs []client.Object
 	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
 	objs = append(objs, NewStoreServices(opts)...)
 	objs = append(objs, NewStoreStatefulSets(opts)...)
+
 	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
 		objs = append(objs, NewStoreInMemoryConfigMap(opts))
 	}
@@ -69,6 +70,14 @@ const (
 
 	defaultInMemoryConfigmapName = "thanos-store-inmemory-config"
 	defaultInMemoryConfigmapKey  = "config.yaml"
+
+	// InMemoryConfig is the default configuration for the in-memory cache.
+	// Only used if user does not provide an index cache or caching bucket configuration.
+	// Set to have conservative limits.
+	inMemoryConfig = `type: IN-MEMORY
+config:
+  max_size: 512MiB
+  max_item_size: 5MiB`
 )
 
 func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
@@ -79,10 +88,7 @@ func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
 			Labels:    opts.Labels,
 		},
 		Data: map[string]string{
-			defaultInMemoryConfigmapKey: `type: IN-MEMORY
-config:
-  max_size: 512MiB
-  max_item_size: 5MiB`,
+			defaultInMemoryConfigmapKey: inMemoryConfig,
 		},
 	}
 }
@@ -92,13 +98,14 @@ func NewStoreStatefulSets(opts StoreOptions) []client.Object {
 	defaultLabels := labelsForStoreShard(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
 
-	stss := make([]client.Object, opts.Shards)
+	shardSts := make([]client.Object, opts.Shards)
+	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
-		opts.Name = StoreShardName(opts.Name, i)
-		stss[i] = newStoreShardStatefulSet(opts, defaultLabels, aggregatedLabels, i)
+		opts.Name = StoreShardName(originalName, i)
+		shardSts[i] = newStoreShardStatefulSet(opts, defaultLabels, aggregatedLabels, i)
 	}
 
-	return stss
+	return shardSts
 }
 
 func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string, aggregatedLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
@@ -136,8 +143,21 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 			},
 		},
 	}
+
+	indexCacheEnv := corev1.EnvVar{
+		Name: indexCacheConfigEnvVarName,
+		ValueFrom: &corev1.EnvVarSource{
+			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: defaultInMemoryConfigmapName,
+				},
+				Key:      defaultInMemoryConfigmapKey,
+				Optional: ptr.To(false),
+			},
+		},
+	}
 	if opts.IndexCacheConfig != nil {
-		envVars = append(envVars, corev1.EnvVar{
+		indexCacheEnv = corev1.EnvVar{
 			Name: indexCacheConfigEnvVarName,
 			ValueFrom: &corev1.EnvVarSource{
 				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
@@ -148,24 +168,23 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 					Optional: ptr.To(false),
 				},
 			},
-		})
-	} else {
-		envVars = append(envVars, corev1.EnvVar{
-			Name: indexCacheConfigEnvVarName,
-			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: defaultInMemoryConfigmapName,
-					},
-					Key:      defaultInMemoryConfigmapKey,
-					Optional: ptr.To(false),
-				},
-			},
-		})
+		}
 	}
 
+	cachingBucketEnv := corev1.EnvVar{
+		Name: cachingBucketConfigEnvVarName,
+		ValueFrom: &corev1.EnvVarSource{
+			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: defaultInMemoryConfigmapName,
+				},
+				Key:      defaultInMemoryConfigmapKey,
+				Optional: ptr.To(false),
+			},
+		},
+	}
 	if opts.CachingBucketConfig != nil {
-		envVars = append(envVars, corev1.EnvVar{
+		cachingBucketEnv = corev1.EnvVar{
 			Name: cachingBucketConfigEnvVarName,
 			ValueFrom: &corev1.EnvVarSource{
 				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
@@ -176,21 +195,9 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 					Optional: ptr.To(false),
 				},
 			},
-		})
-	} else {
-		envVars = append(envVars, corev1.EnvVar{
-			Name: cachingBucketConfigEnvVarName,
-			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: defaultInMemoryConfigmapName,
-					},
-					Key:      defaultInMemoryConfigmapKey,
-					Optional: ptr.To(false),
-				},
-			},
-		})
+		}
 	}
+	envVars = append(envVars, indexCacheEnv, cachingBucketEnv)
 
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
@@ -319,22 +326,23 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 
 // NewStoreServices creates a new Services for each Thanos Store shard.
 func NewStoreServices(opts StoreOptions) []client.Object {
-	svcs := make([]client.Object, opts.Shards)
+	shardSvc := make([]client.Object, opts.Shards)
+	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
 		defaultLabels := labelsForStoreShard(opts)
 		opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
-		opts.Name = StoreShardName(opts.Name, i)
+		opts.Name = StoreShardName(originalName, i)
+
 		svc := newService(opts.Options, defaultLabels)
 		svc.Spec.ClusterIP = corev1.ClusterIPNone
-
 		if opts.Additional.ServicePorts != nil {
 			svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 		}
 
-		svcs[i] = svc
+		shardSvc[i] = svc
 	}
 
-	return svcs
+	return shardSvc
 }
 
 // newService creates a new Service for the Thanos Store shards.

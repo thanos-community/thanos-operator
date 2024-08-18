@@ -18,47 +18,63 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"k8s.io/utils/ptr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
-var _ = Describe("ThanosStore Controller", func() {
+var _ = Describe("ThanosStore Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const (
+			resourceName = "test-resource"
+			ns           = "test"
+		)
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: ns,
 		}
-		thanosstore := &monitoringthanosiov1alpha1.ThanosStore{}
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind ThanosStore")
-			err := k8sClient.Get(ctx, typeNamespacedName, thanosstore)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &monitoringthanosiov1alpha1.ThanosStore{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+		BeforeAll(func() {
+			By("creating the namespace and objstore secret")
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})).Should(Succeed())
+
+			Expect(k8sClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "thanos-objstore",
+					Namespace: ns,
+				},
+				StringData: map[string]string{
+					"thanos.yaml": `type: S3
+config:
+  bucket: test
+  endpoint: http://localhost:9000
+  access_key: Cheesecake
+  secret_key: supersecret
+  http_config:
+    insecure_skip_verify: false
+`,
+				},
+			})).Should(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &monitoringthanosiov1alpha1.ThanosStore{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
@@ -66,19 +82,156 @@ var _ = Describe("ThanosStore Controller", func() {
 			By("Cleanup the specific resource instance ThanosStore")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &ThanosStoreReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+
+		It("should reconcile correctly", func() {
+			resource := &monitoringthanosiov1alpha1.ThanosStore{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
+					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+					Labels:             map[string]string{"some-label": "xyz"},
+					ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
+						Type:          monitoringthanosiov1alpha1.Block,
+						Shards:        3,
+						ShardReplicas: 2,
+					},
+					StorageSize: "1Gi",
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					Additional: monitoringthanosiov1alpha1.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "jaeger-agent",
+								Image: "jaegertracing/jaeger-agent:1.22",
+								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+							},
+						},
+					},
+				},
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+			By("setting up the thanos store resources", func() {
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
+						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-0", ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
+						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-1", ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
+						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-2", ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, "thanos-store-inmemory-config", ns, "config.yaml", `type: IN-MEMORY
+config:
+  max_size: 512MiB
+  max_item_size: 5MiB`,
+					)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 2, resourceName+"-shard-2", ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			By("setting correct sharding arg on thanos store", func() {
+				EventuallyWithOffset(1, func() bool {
+					args := `--selector.relabel-config=
+              - action: hashmod
+                source_labels: ["__block_id"]
+                target_label: shard
+                modulus: 3
+              - action: keep
+                source_labels: ["shard"]
+                regex: 0`
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName+"-shard-0", ns, 0, args)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("checking additional container", func() {
+				EventuallyWithOffset(1, func() bool {
+					statefulSet := &appsv1.StatefulSet{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      resourceName + "-shard-0",
+						Namespace: ns,
+					}, statefulSet); err != nil {
+						return false
+					}
+
+					return len(statefulSet.Spec.Template.Spec.Containers) == 2
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("setting custom caches on thanos store", func() {
+				resource.Spec.IndexCacheConfig = &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "index-cache",
+					},
+					Key: "index-cache.yaml",
+				}
+				resource.Spec.CachingBucketConfig = &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "caching-bucket",
+					},
+					Key: "caching-bucket.yaml",
+				}
+
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					if !utils.VerifyCfgMapOrSecretEnvVarExists(
+						k8sClient,
+						utils.ExpectApiResourceStatefulSet,
+						resourceName+"-shard-0",
+						ns,
+						0,
+						"INDEX_CACHE_CONFIG",
+						"index-cache.yaml",
+						"index-cache") {
+						return false
+					}
+
+					if !utils.VerifyCfgMapOrSecretEnvVarExists(
+						k8sClient,
+						utils.ExpectApiResourceStatefulSet,
+						resourceName+"-shard-0",
+						ns,
+						0,
+						"CACHING_BUCKET_CONFIG",
+						"caching-bucket.yaml",
+						"caching-bucket") {
+						return false
+					}
+
+					return true
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("checking paused state", func() {
+				resource.Spec.Paused = ptr.To(true)
+				resource.Spec.ShardingStrategy.ShardReplicas = 4
+
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 2, resourceName+"-shard-0", ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
 		})
 	})
 })

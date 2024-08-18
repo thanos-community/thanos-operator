@@ -50,6 +50,7 @@ const (
 	objStoreSecretKey = "thanos.yaml"
 
 	receiveName  = "example-receive"
+	storeName    = "example-store"
 	hashringName = "default"
 
 	queryName = "example-query"
@@ -305,6 +306,64 @@ var _ = Describe("controller", Ordered, func() {
 					"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
 				)
 			}, time.Minute*1, time.Second*10).Should(BeTrue())
+		})
+	})
+
+	Context("Thanos Store", func() {
+		It("should bring up the store components", func() {
+			cr := &v1alpha1.ThanosStore{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      storeName,
+					Namespace: namespace,
+				},
+				Spec: v1alpha1.ThanosStoreSpec{
+					CommonThanosFields: v1alpha1.CommonThanosFields{},
+					Labels:             map[string]string{"some-label": "xyz"},
+					ShardingStrategy: v1alpha1.ShardingStrategy{
+						Type:          v1alpha1.Block,
+						Shards:        2,
+						ShardReplicas: 2,
+					},
+					StorageSize: "1Gi",
+					ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: objStoreSecret,
+						},
+						Key: objStoreSecretKey,
+					},
+				},
+			}
+
+			err := c.Create(context.Background(), cr, &client.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			Eventually(func() bool {
+				return utils.VerifyStatefulSetReplicasRunning(c, 2, storeName+"-shard-0", namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+			Eventually(func() bool {
+				expect := `--selector.relabel-config=
+              - action: hashmod
+                source_labels: ["__block_id"]
+                target_label: shard
+                modulus: 2
+              - action: keep
+                source_labels: ["shard"]
+                regex: 0`
+
+				return utils.VerifyStatefulSetArgs(c, storeName+"-shard-0", namespace, 0, expect)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+		})
+
+		It("should create a ConfigMap with the correct cache configuration", func() {
+			expect := `type: IN-MEMORY
+config:
+  max_size: 512MiB
+  max_item_size: 5MiB`
+
+			Eventually(func() bool {
+				return utils.VerifyConfigMapContents(c, storeName, namespace, "thanos-store-inmemory-config", expect)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 	})
 })
