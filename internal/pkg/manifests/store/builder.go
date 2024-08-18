@@ -74,7 +74,7 @@ const (
 	// InMemoryConfig is the default configuration for the in-memory cache.
 	// Only used if user does not provide an index cache or caching bucket configuration.
 	// Set to have conservative limits.
-	inMemoryConfig = `type: IN-MEMORY
+	InMemoryConfig = `type: IN-MEMORY
 config:
   max_size: 512MiB
   max_item_size: 5MiB`
@@ -88,7 +88,7 @@ func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
 			Labels:    opts.Labels,
 		},
 		Data: map[string]string{
-			defaultInMemoryConfigmapKey: inMemoryConfig,
+			defaultInMemoryConfigmapKey: InMemoryConfig,
 		},
 	}
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -356,13 +357,8 @@ var _ = Describe("controller", Ordered, func() {
 		})
 
 		It("should create a ConfigMap with the correct cache configuration", func() {
-			expect := `type: IN-MEMORY
-config:
-  max_size: 512MiB
-  max_item_size: 5MiB`
-
 			Eventually(func() bool {
-				return utils.VerifyConfigMapContents(c, storeName, namespace, "thanos-store-inmemory-config", expect)
+				return utils.VerifyConfigMapContents(c, "thanos-store-inmemory-config", namespace, "config.yaml", store.InMemoryConfig)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
 		})
 	})

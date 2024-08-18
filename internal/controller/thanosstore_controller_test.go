@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
@@ -135,11 +136,7 @@ config:
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, "thanos-store-inmemory-config", ns, "config.yaml", `type: IN-MEMORY
-config:
-  max_size: 512MiB
-  max_item_size: 5MiB`,
-					)
+					return utils.VerifyConfigMapContents(k8sClient, "thanos-store-inmemory-config", ns, "config.yaml", store.InMemoryConfig)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
