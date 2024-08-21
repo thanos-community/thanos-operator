@@ -31,7 +31,6 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
 	"github.com/golang/snappy"
-	configutil "github.com/prometheus/common/config"
 	pconf "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
@@ -223,6 +222,21 @@ func VerifyStatefulSetReplicasRunning(c client.Client, expect int, name string, 
 	return true
 }
 
+func VerifyStatefulSetReplicas(c client.Client, expect int, name string, namespace string) bool {
+	sts := &appsv1.StatefulSet{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, sts)
+	if err != nil {
+		return false
+	}
+	if *sts.Spec.Replicas != int32(expect) {
+		return false
+	}
+	return true
+}
+
 func VerifyDeploymentExists(c client.Client, name string, namespace string) bool {
 	deployment := &appsv1.Deployment{}
 	err := c.Get(context.Background(), client.ObjectKey{
@@ -368,7 +382,7 @@ func RemoteWrite(req RemoteWriteRequest, roundTripper http.RoundTripper, headers
 
 	rwClient, err := remote.NewWriteClient("test-client", &remote.ClientConfig{
 		Timeout: model.Duration(time.Second * 5),
-		URL:     &configutil.URL{URL: url},
+		URL:     &pconf.URL{URL: url},
 		HTTPClientConfig: pconf.HTTPClientConfig{
 			TLSConfig: pconf.TLSConfig{
 				InsecureSkipVerify: true,
@@ -474,4 +488,81 @@ func VerifyExistenceOfRequiredNamedResources(c client.Client, expectResource Exp
 		return false
 	}
 	return true
+}
+
+func VerifyExistenceOfNamedResourcesWithoutSA(c client.Client, expectResource ExpectApiResource, name, ns string) bool {
+	if !VerifyServiceExists(c, name, ns) {
+		return false
+	}
+
+	switch expectResource {
+	case ExpectApiResourceDeployment:
+		if !VerifyDeploymentExists(c, name, ns) {
+			return false
+		}
+	case ExpectApiResourceStatefulSet:
+		if !VerifyStatefulSetExists(c, name, ns) {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+func VerifyCfgMapOrSecretEnvVarExists(c client.Client, expectResource ExpectApiResource, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
+	switch expectResource {
+	case ExpectApiResourceDeployment:
+		deployment := &appsv1.Deployment{}
+		err := c.Get(context.Background(), client.ObjectKey{
+			Name:      name,
+			Namespace: ns,
+		}, deployment)
+		if err != nil {
+			return false
+		}
+
+		for _, e := range deployment.Spec.Template.Spec.Containers[containerIndex].Env {
+			if e.Name == envVarName {
+				if e.ValueFrom.SecretKeyRef != nil {
+					if e.ValueFrom.SecretKeyRef.Key == key && e.ValueFrom.SecretKeyRef.Name == cfgOrSecret {
+						return true
+					}
+				} else if e.ValueFrom.ConfigMapKeyRef != nil {
+					if e.ValueFrom.ConfigMapKeyRef.Key == key && e.ValueFrom.ConfigMapKeyRef.Name == cfgOrSecret {
+						return true
+					}
+				}
+				return false
+			}
+		}
+		return false
+	case ExpectApiResourceStatefulSet:
+		statefulSet := &appsv1.StatefulSet{}
+		err := c.Get(context.Background(), client.ObjectKey{
+			Name:      name,
+			Namespace: ns,
+		}, statefulSet)
+		if err != nil {
+			return false
+		}
+
+		for _, e := range statefulSet.Spec.Template.Spec.Containers[containerIndex].Env {
+			if e.Name == envVarName {
+				if e.ValueFrom.SecretKeyRef != nil {
+					if e.ValueFrom.SecretKeyRef.Key == key && e.ValueFrom.SecretKeyRef.Name == cfgOrSecret {
+						return true
+					}
+				} else if e.ValueFrom.ConfigMapKeyRef != nil {
+					if e.ValueFrom.ConfigMapKeyRef.Key == key && e.ValueFrom.ConfigMapKeyRef.Name == cfgOrSecret {
+						return true
+					}
+				}
+				return false
+			}
+		}
+		return false
+	default:
+		return false
+	}
 }

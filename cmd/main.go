@@ -161,6 +161,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
 	}
+
 	if err = controller.NewThanosReceiveReconciler(
 		logger.WithName("query"),
 		mgr.GetClient(),
@@ -171,6 +172,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
 	}
+
+	if err = controller.NewThanosStoreReconciler(
+		logger.WithName("store"),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetEventRecorderFor("thanos-store-controller"),
+		ctrlmetrics.Registry,
+	).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosStore")
+		os.Exit(1)
+	}
+
 	if err = (&controller.ThanosCompactReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),

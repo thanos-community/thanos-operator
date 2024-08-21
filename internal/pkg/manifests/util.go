@@ -30,7 +30,7 @@ func OptionalToString[T any](ptr *T) string {
 
 // PruneEmptyArgs removes empty or empty value arguments from the given slice.
 func PruneEmptyArgs(args []string) []string {
-	for i := 0; i < len(args); i++ {
+	for i := len(args) - 1; i >= 0; i-- {
 		if args[i] == "" || strings.HasSuffix(args[i], "=") {
 			args = append(args[:i], args[i+1:]...)
 		}
