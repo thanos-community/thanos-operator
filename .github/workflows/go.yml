@@ -10,7 +10,7 @@ on:
 
 env:
   golang-version: '1.22'
-  kind-version: 'v0.20.0'
+  kind-version: 'v0.24.0'
 
 jobs:
   lint:
@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         kind-image:
-          - 'kindest/node:v1.28.0'
+          - 'kindest/node:v1.31.0'
     steps:
       - uses: actions/checkout@v4
         with:
