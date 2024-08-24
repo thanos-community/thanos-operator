@@ -188,7 +188,7 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		Name:      query.GetName(),
 		Namespace: query.GetNamespace(),
 		Replicas:  query.Spec.Replicas,
-		Labels:    query.GetLabels(),
+		Labels:    manifests.MergeLabels(query.GetLabels(), query.Spec.Labels),
 		Image:     query.Spec.Image,
 		LogLevel:  query.Spec.LogLevel,
 		LogFormat: query.Spec.LogFormat,
