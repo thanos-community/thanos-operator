@@ -173,7 +173,7 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		Name:      store.GetName(),
 		Namespace: store.GetNamespace(),
 		Replicas:  store.Spec.ShardingStrategy.ShardReplicas,
-		Labels:    store.GetLabels(),
+		Labels:    manifests.MergeLabels(store.GetLabels(), store.Spec.Labels),
 		Image:     store.Spec.Image,
 		LogLevel:  store.Spec.LogLevel,
 		LogFormat: store.Spec.LogFormat,
