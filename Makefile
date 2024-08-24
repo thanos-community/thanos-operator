@@ -5,7 +5,7 @@ DOCKER_IMAGE_REPO ?= quay.io/thanos/thanos-operator
 DOCKER_IMAGE_TAG  ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
 IMG ?= ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.29.0
+ENVTEST_K8S_VERSION = 1.31.0
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -201,8 +201,8 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.3.0
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+KUSTOMIZE_VERSION ?= v5.4.3
+CONTROLLER_TOOLS_VERSION ?= v0.16.1
 ENVTEST_VERSION ?= latest
 
 .PHONY: kustomize

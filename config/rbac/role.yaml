@@ -22,30 +22,6 @@ rules:
   - apps
   resources:
   - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - statefulsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - statefulsets
   verbs:
   - create
@@ -67,109 +43,9 @@ rules:
   - monitoring.thanos.io
   resources:
   - thanoscompacts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanoscompacts/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanoscompacts/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
   - thanosqueries
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosqueries/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosqueries/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
   - thanosreceives
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosreceives/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosreceives/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
   - thanosservices
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosservices/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
-  - thanosservices/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - monitoring.thanos.io
-  resources:
   - thanosstores
   verbs:
   - create
@@ -182,12 +58,20 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
+  - thanoscompacts/finalizers
+  - thanosqueries/finalizers
+  - thanosreceives/finalizers
+  - thanosservices/finalizers
   - thanosstores/finalizers
   verbs:
   - update
 - apiGroups:
   - monitoring.thanos.io
   resources:
+  - thanoscompacts/status
+  - thanosqueries/status
+  - thanosreceives/status
+  - thanosservices/status
   - thanosstores/status
   verbs:
   - get

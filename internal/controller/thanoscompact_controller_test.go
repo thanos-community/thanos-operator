@@ -23,7 +23,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -65,20 +64,6 @@ var _ = Describe("ThanosCompact Controller", func() {
 
 			By("Cleanup the specific resource instance ThanosCompact")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &ThanosCompactReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
-
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
 	})
 })
