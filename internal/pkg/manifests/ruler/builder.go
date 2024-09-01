@@ -3,7 +3,6 @@ package ruler
 import (
 	"fmt"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,12 +35,12 @@ type RulerOptions struct {
 	Endpoints       []Endpoint
 	RuleFiles       []corev1.ConfigMapKeySelector
 	ObjStoreSecret  corev1.SecretKeySelector
-	Retention       monitoringthanosiov1alpha1.Duration
+	Retention       manifests.Duration
 	AlertmanagerURL string
 	ExternalLabels  map[string]string
 	AlertLabelDrop  []string
 	StorageSize     resource.Quantity
-	Additional      monitoringthanosiov1alpha1.Additional
+	Additional      manifests.Additional
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -149,6 +148,14 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 		},
 		Env: []corev1.EnvVar{
 			{
+				Name: "NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
 				Name: rulerObjectStoreEnvVarName,
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
@@ -177,24 +184,23 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 		Args:                     rulerArgs(opts),
 	}
 
-	vc := []corev1.PersistentVolumeClaim{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      dataVolumeName,
-				Namespace: opts.Namespace,
-				Labels:    aggregatedLabels,
+	vc := []corev1.PersistentVolumeClaim{{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dataVolumeName,
+			Namespace: opts.Namespace,
+			Labels:    aggregatedLabels,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
 			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					corev1.ReadWriteOnce,
-				},
-				Resources: corev1.VolumeResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: opts.StorageSize,
-					},
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: opts.StorageSize,
 				},
 			},
 		},
+	},
 	}
 
 	volumes := []corev1.Volume{}
@@ -318,6 +324,12 @@ func rulerArgs(opts RulerOptions) []string {
 		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		"--data-dir=/var/thanos/rule",
 		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
+		fmt.Sprintf("--label=%s=%s", "rule_replica", "$(NAME)"),
+	}
+
+	for _, label := range opts.ExternalLabels {
+		args = append(args, fmt.Sprintf("--label=%s=%s", label, opts.Name))
 	}
 
 	for _, ruleFile := range opts.RuleFiles {

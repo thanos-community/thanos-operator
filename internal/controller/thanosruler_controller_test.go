@@ -18,47 +18,64 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
-var _ = Describe("ThanosRuler Controller", func() {
+var _ = Describe("ThanosRuler Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const (
+			resourceName = "test-resource"
+			ns           = "test-ruler"
+		)
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: ns,
 		}
-		thanosruler := &monitoringthanosiov1alpha1.ThanosRuler{}
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind ThanosRuler")
-			err := k8sClient.Get(ctx, typeNamespacedName, thanosruler)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &monitoringthanosiov1alpha1.ThanosRuler{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+		BeforeAll(func() {
+			By("creating the namespace and objstore secret")
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})).Should(Succeed())
+
+			Expect(k8sClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "thanos-objstore",
+					Namespace: ns,
+				},
+				StringData: map[string]string{
+					"thanos.yaml": `type: S3
+config:
+  bucket: test
+  endpoint: http://localhost:9000
+  access_key: Cheesecake
+  secret_key: supersecret
+  http_config:
+    insecure_skip_verify: false
+`,
+				},
+			})).Should(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
@@ -66,19 +83,84 @@ var _ = Describe("ThanosRuler Controller", func() {
 			By("Cleanup the specific resource instance ThanosRuler")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &ThanosRulerReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+
+		It("should reconcile correctly", func() {
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					QueryLabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+						},
+					},
+					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+					StorageSize:        "1Gi",
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					Additional: monitoringthanosiov1alpha1.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "jaeger-agent",
+								Image: "jaegertracing/jaeger-agent:1.22",
+								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+							},
+						},
+					},
+				},
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
+			By("setting up the thanos ruler resources", func() {
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
+						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--labels=rule_replica=$(NAME)")
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 2, resourceName, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			By("updating with new query", func() {
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-query",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "thanos-query", ns)
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
+				}, time.Minute*5, time.Second*2).Should(BeTrue())
+			})
+
 		})
 	})
 })

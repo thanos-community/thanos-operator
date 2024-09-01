@@ -103,10 +103,6 @@ func NewThanosRulerReconciler(logger logr.Logger, client client.Client, scheme *
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ThanosRuler object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
@@ -196,28 +192,39 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	endpoints := r.getQueryAPIServiceEndpoints(ctx, ruler)
 	ruleFiles := r.getRuleConfigMaps(ctx, ruler)
 
+	additional := manifests.Additional{
+		Args:         ruler.Spec.Additional.Args,
+		Containers:   ruler.Spec.Additional.Containers,
+		Volumes:      ruler.Spec.Additional.Volumes,
+		VolumeMounts: ruler.Spec.Additional.VolumeMounts,
+		Ports:        ruler.Spec.Additional.Ports,
+		Env:          ruler.Spec.Additional.Env,
+		ServicePorts: ruler.Spec.Additional.ServicePorts,
+	}
 	return manifestruler.BuildRuler(manifestruler.RulerOptions{
 		Options:         metaOpts,
 		Endpoints:       endpoints,
 		RuleFiles:       ruleFiles,
 		ObjStoreSecret:  ruler.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:       ruler.Spec.Retention,
+		Retention:       manifests.Duration(ruler.Spec.Retention),
 		AlertmanagerURL: ruler.Spec.AlertmanagerURL,
 		ExternalLabels:  ruler.Spec.ExternalLabels,
 		AlertLabelDrop:  ruler.Spec.AlertLabelDrop,
 		StorageSize:     resource.MustParse(ruler.Spec.StorageSize),
-		Additional:      ruler.Spec.Additional,
+		Additional:      additional,
 	})
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.
 func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) []manifestruler.Endpoint {
 	services := &corev1.ServiceList{}
-	listOpts := []client.ListOption{
-		client.MatchingLabels(ruler.Spec.QueryLabelSelector.MatchLabels),
-		client.InNamespace(ruler.Namespace),
-	}
-	if err := r.List(ctx, services, listOpts...); err != nil {
+	if err := r.List(
+		ctx,
+		services,
+		[]client.ListOption{
+			client.MatchingLabels(ruler.Spec.QueryLabelSelector.MatchLabels),
+			client.InNamespace(ruler.Namespace),
+		}...); err != nil {
 		return []manifestruler.Endpoint{}
 	}
 
@@ -246,11 +253,13 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 // getRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
 func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) []corev1.ConfigMapKeySelector {
 	cfgmaps := &corev1.ConfigMapList{}
-	listOpts := []client.ListOption{
-		client.MatchingLabels(ruler.Spec.RuleConfigSelector.MatchLabels),
-		client.InNamespace(ruler.Namespace),
-	}
-	if err := r.List(ctx, cfgmaps, listOpts...); err != nil {
+	if err := r.List(
+		ctx,
+		cfgmaps,
+		[]client.ListOption{
+			client.MatchingLabels(ruler.Spec.RuleConfigSelector.MatchLabels),
+			client.InNamespace(ruler.Namespace),
+		}...); err != nil {
 		return []corev1.ConfigMapKeySelector{}
 	}
 
@@ -264,18 +273,15 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			continue
 		}
 
-		key := ""
-		for k := range cfgmap.Data {
-			key = k
+		for key := range cfgmap.Data {
+			ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: cfgmap.GetName(),
+				},
+				Key:      key,
+				Optional: ptr.To(true),
+			})
 		}
-
-		ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: cfgmap.GetName(),
-			},
-			Key:      key,
-			Optional: ptr.To(true),
-		})
 	}
 
 	return ruleFiles
@@ -329,12 +335,13 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 			return nil
 		}
 
-		listOpts := []client.ListOption{
-			client.InNamespace(obj.GetNamespace()),
-		}
-
 		rulers := &monitoringthanosiov1alpha1.ThanosRulerList{}
-		err := r.List(ctx, rulers, listOpts...)
+		err := r.List(
+			ctx,
+			rulers,
+			[]client.ListOption{
+				client.InNamespace(obj.GetNamespace()),
+			}...)
 		if err != nil {
 			return []reconcile.Request{}
 		}
@@ -364,12 +371,13 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 			return nil
 		}
 
-		listOpts := []client.ListOption{
-			client.InNamespace(obj.GetNamespace()),
-		}
-
 		rulers := &monitoringthanosiov1alpha1.ThanosRulerList{}
-		err := r.List(ctx, rulers, listOpts...)
+		err := r.List(
+			ctx,
+			rulers,
+			[]client.ListOption{
+				client.InNamespace(obj.GetNamespace()),
+			}...)
 		if err != nil {
 			return []reconcile.Request{}
 		}
