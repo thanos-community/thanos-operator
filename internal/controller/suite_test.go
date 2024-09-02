@@ -23,14 +23,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
@@ -94,7 +93,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reg := prometheus.NewRegistry()
-	controllerBaseMetrics := controllers_metrics.NewBaseMetrics(reg)
+	controllerBaseMetrics := controllermetrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
 	err = NewThanosReceiveReconciler(

@@ -20,13 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
-
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -45,10 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	queryComponent = "query"
-)
-
 // ThanosQueryReconciler reconciles a ThanosQuery object
 type ThanosQueryReconciler struct {
 	client.Client
@@ -58,12 +53,12 @@ type ThanosQueryReconciler struct {
 	logger logr.Logger
 
 	reg                   prometheus.Registerer
-	ControllerBaseMetrics *controllers_metrics.BaseMetrics
-	thanosQueryMetrics    controllers_metrics.ThanosQueryMetrics
+	ControllerBaseMetrics *controllermetrics.BaseMetrics
+	thanosQueryMetrics    controllermetrics.ThanosQueryMetrics
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
-func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllers_metrics.BaseMetrics) *ThanosQueryReconciler {
+func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosQueryReconciler {
 	return &ThanosQueryReconciler{
 		Client:   client,
 		Scheme:   scheme,
@@ -72,7 +67,7 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 		logger:                logger,
 		reg:                   reg,
 		ControllerBaseMetrics: controllerBaseMetrics,
-		thanosQueryMetrics:    controllers_metrics.NewThanosQueryMetrics(reg),
+		thanosQueryMetrics:    controllermetrics.NewThanosQueryMetrics(reg),
 	}
 }
 
@@ -88,18 +83,18 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(queryComponent).Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestquery.Name).Inc()
 
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(queryComponent).Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(queryComponent).Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -112,7 +107,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(queryComponent).Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -159,7 +154,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(queryComponent).Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 

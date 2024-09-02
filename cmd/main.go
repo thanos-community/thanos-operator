@@ -23,13 +23,12 @@ import (
 	"net/http/pprof"
 	"os"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
-
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -142,7 +141,7 @@ func main() {
 		versioncollector.NewCollector("thanos_operator"),
 	)
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
-	controllerBaseMetrics := controllers_metrics.NewBaseMetrics(ctrlmetrics.Registry)
+	controllerBaseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
 
 	logger := ctrl.Log.WithName("thanos-operator")
 
