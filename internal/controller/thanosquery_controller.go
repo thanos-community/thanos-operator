@@ -95,7 +95,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("query").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -155,7 +155,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("query").Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 
