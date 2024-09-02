@@ -7,12 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type Metrics interface {
-	IncReconciliationsTotal()
-	IncReconciliationsFailedTotal()
-	IncClientErrorsTotal()
-}
-
 type BaseMetrics struct {
 	ReconciliationsTotal       prometheus.Counter
 	ReconciliationsFailedTotal prometheus.Counter
