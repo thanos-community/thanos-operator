@@ -1,0 +1,12 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosQueryFrontend
+metadata:
+  labels:
+    app.kubernetes.io/name: thanosqueryfrontend
+    app.kubernetes.io/instance: thanosqueryfrontend-sample
+    app.kubernetes.io/part-of: thanos-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: thanos-operator
+  name: thanosqueryfrontend-sample
+spec:
+  # TODO(user): Add fields here
