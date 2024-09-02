@@ -320,6 +320,7 @@ func rulerArgs(opts RulerOptions) []string {
 		"rule",
 		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
 		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		"--data-dir=/var/thanos/rule",
@@ -328,7 +329,7 @@ func rulerArgs(opts RulerOptions) []string {
 	}
 
 	for key, val := range opts.ExternalLabels {
-		args = append(args, fmt.Sprintf("--label=%s=%s", key, val))
+		args = append(args, fmt.Sprintf("--label=%s=\"%s\"", key, val))
 	}
 
 	for _, ruleFile := range opts.RuleFiles {

@@ -127,7 +127,7 @@ config:
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--label=rule_replica=$(NAME)")
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--label=rule_replica=\"$(NAME)\"")
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
@@ -139,7 +139,7 @@ config:
 			By("updating with new query", func() {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "thanos-query",
+						Name:      "my-query",
 						Namespace: ns,
 						Labels: map[string]string{
 							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
@@ -157,8 +157,14 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
 
+				// Update the ThanosRuler resource to trigger reconciliation
+				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
+				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
+				updatedResource.Spec.Replicas = 3 // Change any field to trigger an update
+				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
+
 				EventuallyWithOffset(1, func() bool {
-					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "thanos-query", ns)
+					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
