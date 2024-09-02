@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
@@ -48,10 +48,8 @@ type ThanosStoreReconciler struct {
 
 	logger logr.Logger
 
-	reg                        prometheus.Registerer
-	reconciliationsTotal       prometheus.Counter
-	reconciliationsFailedTotal prometheus.Counter
-	clientErrorsTotal          prometheus.Counter
+	reg                prometheus.Registerer
+	thanosStoreMetrics controllers_metrics.ThanosStoreMetrics
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
@@ -61,20 +59,9 @@ func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *
 		Scheme:   scheme,
 		Recorder: recorder,
 
-		logger: logger,
-		reg:    reg,
-		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_store_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosStore resources",
-		}),
-		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_store_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for ThanosStore resources",
-		}),
-		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_store_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of ThanosStore resources",
-		}),
+		logger:             logger,
+		reg:                reg,
+		thanosStoreMetrics: controllers_metrics.NewThanosStoreMetrics(reg),
 	}
 }
 
@@ -90,18 +77,18 @@ func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.reconciliationsTotal.Inc()
+	r.thanosStoreMetrics.ReconciliationsTotal.Inc()
 
 	store := &monitoringthanosiov1alpha1.ThanosStore{}
 	err := r.Get(ctx, req.NamespacedName, store)
 	if err != nil {
-		r.clientErrorsTotal.Inc()
+		r.thanosStoreMetrics.ClientErrorsTotal.Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos store resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosStoreMetrics.ReconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -114,7 +101,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *store)
 	if err != nil {
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosStoreMetrics.ReconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -161,7 +148,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount > 0 {
-		r.clientErrorsTotal.Add(float64(errCount))
+		r.thanosStoreMetrics.ClientErrorsTotal.Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the store", errCount)
 	}
 

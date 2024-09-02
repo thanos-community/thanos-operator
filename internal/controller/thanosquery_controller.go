@@ -20,10 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
+
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
@@ -53,12 +53,8 @@ type ThanosQueryReconciler struct {
 
 	logger logr.Logger
 
-	reg                                prometheus.Registerer
-	reconciliationsTotal               prometheus.Counter
-	reconciliationsFailedTotal         prometheus.Counter
-	endpointsConfigured                *prometheus.GaugeVec
-	serviceWatchesReconciliationsTotal prometheus.Counter
-	clientErrorsTotal                  prometheus.Counter
+	reg                prometheus.Registerer
+	thanosQueryMetrics controllers_metrics.ThanosQueryMetrics
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
@@ -68,28 +64,9 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 		Scheme:   scheme,
 		Recorder: recorder,
 
-		logger: logger,
-		reg:    reg,
-		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_query_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosQuery resources",
-		}),
-		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_query_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for ThanosQuery resources",
-		}),
-		endpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
-			Name: "thanos_operator_query_endpoints_configured",
-			Help: "Number of configured endpoints for ThanosQuery resources",
-		}, []string{"type", "resource", "namespace"}),
-		serviceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_query_service_event_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosQuery resources due to Service events",
-		}),
-		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_query_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of ThanosQuery resources",
-		}),
+		logger:             logger,
+		reg:                reg,
+		thanosQueryMetrics: controllers_metrics.NewThanosQueryMetrics(reg),
 	}
 }
 
@@ -105,18 +82,18 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.reconciliationsTotal.Inc()
+	r.thanosQueryMetrics.BaseMetrics.ReconciliationsTotal.Inc()
 
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.clientErrorsTotal.Inc()
+		r.thanosQueryMetrics.BaseMetrics.ClientErrorsTotal.Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosQueryMetrics.BaseMetrics.ReconciliationsTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -129,7 +106,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosQueryMetrics.BaseMetrics.ReconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -176,7 +153,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		r.clientErrorsTotal.Add(float64(errCount))
+		r.thanosQueryMetrics.BaseMetrics.ReconciliationsFailedTotal.Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 
@@ -251,7 +228,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 			}
 		}
 
-		r.endpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
+		r.thanosQueryMetrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
 		endpoints[i] = manifestquery.Endpoint{
 			ServiceName: svc.GetName(),
 			Namespace:   svc.GetNamespace(),
@@ -318,7 +295,7 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 			}
 		}
 
-		r.serviceWatchesReconciliationsTotal.Add(float64(len(requests)))
+		r.thanosQueryMetrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }

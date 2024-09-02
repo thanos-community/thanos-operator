@@ -21,9 +21,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
 
+	"github.com/prometheus/client_golang/prometheus"
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
@@ -61,12 +61,8 @@ type ThanosReceiveReconciler struct {
 
 	logger logr.Logger
 
-	reg                                 prometheus.Registerer
-	reconciliationsTotal                prometheus.Counter
-	reconciliationsFailedTotal          prometheus.Counter
-	hashringsConfigured                 *prometheus.GaugeVec
-	endpointWatchesReconciliationsTotal prometheus.Counter
-	clientErrorsTotal                   prometheus.Counter
+	reg                  prometheus.Registerer
+	thanosReceiveMetrics controllers_metrics.ThanosReceiveMetrics
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
@@ -78,27 +74,8 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 
 		logger: logger,
 
-		reg: reg,
-		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosReceive resources",
-		}),
-		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for ThanosReceive resources",
-		}),
-		hashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
-			Name: "thanos_operator_receive_hashrings_configured",
-			Help: "Total number of configured hashrings for ThanosReceive resources",
-		}, []string{"resource", "namespace"}),
-		endpointWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
-		}),
-		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of ThanosReceive resources",
-		}),
+		reg:                  reg,
+		thanosReceiveMetrics: controllers_metrics.NewThanosReceiveMetrics(reg),
 	}
 }
 
@@ -107,19 +84,19 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.reconciliationsTotal.Inc()
+	r.thanosReceiveMetrics.ReconciliationsTotal.Inc()
 
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
-		r.clientErrorsTotal.Inc()
+		r.thanosReceiveMetrics.ClientErrorsTotal.Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosReceiveMetrics.ReconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -137,7 +114,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
-		r.reconciliationsFailedTotal.Inc()
+		r.thanosReceiveMetrics.ReconciliationsFailedTotal.Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -237,7 +214,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.clientErrorsTotal.Add(float64(errCount))
+		r.thanosReceiveMetrics.ClientErrorsTotal.Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
 	}
 
@@ -334,7 +311,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
-	r.hashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
+	r.thanosReceiveMetrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
 	return receive.BuildHashrings(r.logger, cm, opts)
 }
 
@@ -400,7 +377,7 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			return nil
 		}
 
-		r.endpointWatchesReconciliationsTotal.Inc()
+		r.thanosReceiveMetrics.EndpointWatchesReconciliationsTotal.Inc()
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
