@@ -40,6 +40,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	storeComponent = "thanosstore"
+)
+
 // ThanosStoreReconciler reconciles a ThanosStore object
 type ThanosStoreReconciler struct {
 	client.Client
@@ -77,18 +81,18 @@ func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("thanosstore").Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(storeComponent).Inc()
 
 	store := &monitoringthanosiov1alpha1.ThanosStore{}
 	err := r.Get(ctx, req.NamespacedName, store)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("thanosstore").Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(storeComponent).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos store resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("thanosstore").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(storeComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -101,7 +105,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *store)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("thanosstore").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(storeComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -148,7 +152,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("thanosstore").Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(storeComponent).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the store", errCount)
 	}
 

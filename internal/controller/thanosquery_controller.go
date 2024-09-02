@@ -45,6 +45,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	queryComponent = "query"
+)
+
 // ThanosQueryReconciler reconciles a ThanosQuery object
 type ThanosQueryReconciler struct {
 	client.Client
@@ -84,18 +88,18 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("query").Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(queryComponent).Inc()
 
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("query").Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(queryComponent).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(queryComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -108,7 +112,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(queryComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -155,7 +159,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("query").Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(queryComponent).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 

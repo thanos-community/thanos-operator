@@ -51,6 +51,7 @@ import (
 
 const (
 	receiveFinalizer = "monitoring.thanos.io/receive-finalizer"
+	receiveComponent = "receive"
 )
 
 // ThanosReceiveReconciler reconciles a ThanosReceive object
@@ -86,19 +87,19 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("receive").Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(receiveComponent).Inc()
 
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("receive").Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(receiveComponent).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("receive").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(receiveComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -116,7 +117,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("receive").Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(receiveComponent).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -216,7 +217,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("receive").Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(receiveComponent).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
 	}
 
