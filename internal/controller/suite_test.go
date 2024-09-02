@@ -132,6 +132,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

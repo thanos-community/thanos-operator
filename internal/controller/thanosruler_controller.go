@@ -22,11 +22,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -55,43 +55,22 @@ type ThanosRulerReconciler struct {
 
 	logger logr.Logger
 
-	reg                                 prometheus.Registerer
-	reconciliationsTotal                prometheus.Counter
-	reconciliationsFailedTotal          prometheus.Counter
-	serviceWatchesReconciliationsTotal  prometheus.Counter
-	configMapWatchesReconcilationsTotal prometheus.Counter
-	clientErrorsTotal                   prometheus.Counter
+	reg                   prometheus.Registerer
+	ControllerBaseMetrics *controllermetrics.BaseMetrics
+	thanosRulerMetrics    controllermetrics.ThanosRulerMetrics
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
-func NewThanosRulerReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer) *ThanosRulerReconciler {
+func NewThanosRulerReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosRulerReconciler {
 	return &ThanosRulerReconciler{
 		Client:   client,
 		Scheme:   scheme,
 		Recorder: recorder,
 
-		logger: logger,
-		reg:    reg,
-		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosRuler resources",
-		}),
-		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for ThanosRuler resources",
-		}),
-		serviceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_service_event_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosRuler resources due to Service events",
-		}),
-		configMapWatchesReconcilationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_cfgmap_event_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosRuler resources due to ConfigMap events",
-		}),
-		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of ThanosRuler resources",
-		}),
+		logger:                logger,
+		reg:                   reg,
+		ControllerBaseMetrics: controllerBaseMetrics,
+		thanosRulerMetrics:    controllermetrics.NewThanosRulerMetrics(reg),
 	}
 }
 
@@ -107,24 +86,24 @@ func NewThanosRulerReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.reconciliationsTotal.Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestruler.Name).Inc()
 
 	ruler := &monitoringthanosiov1alpha1.ThanosRuler{}
 	err := r.Get(ctx, req.NamespacedName, ruler)
 	if err != nil {
-		r.clientErrorsTotal.Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos ruler resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosRuler")
-		r.reconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
-		r.reconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -171,7 +150,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	}
 
 	if errCount > 0 {
-		r.clientErrorsTotal.Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
 
@@ -247,6 +226,8 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 		}
 	}
 
+	r.thanosRulerMetrics.EndpointsConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(endpoints)))
+
 	return endpoints
 }
 
@@ -283,6 +264,8 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			})
 		}
 	}
+
+	r.thanosRulerMetrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
 	return ruleFiles
 }
@@ -358,7 +341,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 			}
 		}
 
-		r.serviceWatchesReconciliationsTotal.Add(float64(len(requests)))
+		r.thanosRulerMetrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }
@@ -394,7 +377,7 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 			}
 		}
 
-		r.configMapWatchesReconcilationsTotal.Add(float64(len(requests)))
+		r.thanosRulerMetrics.ConfigMapWatchesReconcilationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }

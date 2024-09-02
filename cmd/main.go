@@ -203,6 +203,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-ruler-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosRuler")
 		os.Exit(1)
