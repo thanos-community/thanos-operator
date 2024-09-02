@@ -9,7 +9,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/imdario/mergo v0.3.16
 	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/gomega v1.34.2
 	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.57.0
 	github.com/prometheus/prometheus v0.54.0
