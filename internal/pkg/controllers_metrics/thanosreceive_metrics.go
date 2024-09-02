@@ -6,14 +6,12 @@ import (
 )
 
 type ThanosReceiveMetrics struct {
-	*BaseMetrics
 	HashringsConfigured                 *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal prometheus.Counter
 }
 
-func NewThanosReceiveMetrics(reg prometheus.Registerer) ThanosReceiveMetrics {
+func NewThanosReceiveMetrics(reg prometheus.Registerer, controlllerBasemetrics *BaseMetrics) ThanosReceiveMetrics {
 	return ThanosReceiveMetrics{
-		BaseMetrics: NewBaseMetrics(reg, "receive"),
 		HashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashrings_configured",
 			Help: "Number of configured hashrings for ThanosReceive resources",

@@ -61,12 +61,13 @@ type ThanosReceiveReconciler struct {
 
 	logger logr.Logger
 
-	reg                  prometheus.Registerer
-	thanosReceiveMetrics controllers_metrics.ThanosReceiveMetrics
+	reg                   prometheus.Registerer
+	ControllerBaseMetrics *controllers_metrics.BaseMetrics
+	thanosReceiveMetrics  controllers_metrics.ThanosReceiveMetrics
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
-func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer) *ThanosReceiveReconciler {
+func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllers_metrics.BaseMetrics) *ThanosReceiveReconciler {
 	return &ThanosReceiveReconciler{
 		Client:   client,
 		Scheme:   scheme,
@@ -74,8 +75,9 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 
 		logger: logger,
 
-		reg:                  reg,
-		thanosReceiveMetrics: controllers_metrics.NewThanosReceiveMetrics(reg),
+		reg:                   reg,
+		ControllerBaseMetrics: controllerBaseMetrics,
+		thanosReceiveMetrics:  controllers_metrics.NewThanosReceiveMetrics(reg, controllerBaseMetrics),
 	}
 }
 
@@ -84,19 +86,19 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.thanosReceiveMetrics.ReconciliationsTotal.Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("receive").Inc()
 
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
-		r.thanosReceiveMetrics.ClientErrorsTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("receive").Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.thanosReceiveMetrics.ReconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("receive").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -114,7 +116,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
-		r.thanosReceiveMetrics.ReconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("receive").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -214,7 +216,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.thanosReceiveMetrics.ClientErrorsTotal.Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("receive").Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
 	}
 

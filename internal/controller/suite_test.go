@@ -23,6 +23,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
@@ -92,6 +94,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reg := prometheus.NewRegistry()
+	collectorBaseMetrics := controllers_metrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
 	err = NewThanosReceiveReconciler(
@@ -100,6 +103,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		collectorBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -109,6 +113,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		collectorBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -118,6 +123,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		collectorBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

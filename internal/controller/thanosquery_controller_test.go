@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
@@ -100,8 +102,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			}
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, prometheus.NewRegistry())
+				reg := prometheus.NewRegistry()
+				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllers_metrics.NewBaseMetrics(reg))
 
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespacedName,
@@ -135,8 +137,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
-
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, prometheus.NewRegistry())
+				reg := prometheus.NewRegistry()
+				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllers_metrics.NewBaseMetrics(reg))
 
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespacedName,
@@ -190,8 +192,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svcToIgnore)).Should(Succeed())
-
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, prometheus.NewRegistry())
+				reg := prometheus.NewRegistry()
+				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllers_metrics.NewBaseMetrics(reg))
 
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespacedName,
@@ -253,8 +255,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
-
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, prometheus.NewRegistry())
+				reg := prometheus.NewRegistry()
+				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllers_metrics.NewBaseMetrics(reg))
 
 				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespacedName,

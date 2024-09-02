@@ -23,6 +23,8 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/controllers_metrics"
+
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 
@@ -140,6 +142,7 @@ func main() {
 		versioncollector.NewCollector("thanos_operator"),
 	)
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
+	controllerBaseMetrics := controllers_metrics.NewBaseMetrics(ctrlmetrics.Registry)
 
 	logger := ctrl.Log.WithName("thanos-operator")
 
@@ -157,6 +160,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-query-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
@@ -168,6 +172,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-receive-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
@@ -179,6 +184,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-store-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosStore")
 		os.Exit(1)

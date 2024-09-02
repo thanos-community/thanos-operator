@@ -6,14 +6,12 @@ import (
 )
 
 type ThanosQueryMetrics struct {
-	*BaseMetrics
 	EndpointsConfigured                *prometheus.GaugeVec
 	ServiceWatchesReconciliationsTotal prometheus.Counter
 }
 
 func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
 	return ThanosQueryMetrics{
-		BaseMetrics: NewBaseMetrics(reg, "query"),
 		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_query_endpoints_configured",
 			Help: "Number of configured endpoints for ThanosQuery resources",

@@ -53,20 +53,22 @@ type ThanosQueryReconciler struct {
 
 	logger logr.Logger
 
-	reg                prometheus.Registerer
-	thanosQueryMetrics controllers_metrics.ThanosQueryMetrics
+	reg                   prometheus.Registerer
+	ControllerBaseMetrics *controllers_metrics.BaseMetrics
+	thanosQueryMetrics    controllers_metrics.ThanosQueryMetrics
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
-func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer) *ThanosQueryReconciler {
+func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllers_metrics.BaseMetrics) *ThanosQueryReconciler {
 	return &ThanosQueryReconciler{
 		Client:   client,
 		Scheme:   scheme,
 		Recorder: recorder,
 
-		logger:             logger,
-		reg:                reg,
-		thanosQueryMetrics: controllers_metrics.NewThanosQueryMetrics(reg),
+		logger:                logger,
+		reg:                   reg,
+		ControllerBaseMetrics: controllerBaseMetrics,
+		thanosQueryMetrics:    controllers_metrics.NewThanosQueryMetrics(reg),
 	}
 }
 
@@ -82,18 +84,18 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.thanosQueryMetrics.BaseMetrics.ReconciliationsTotal.Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("query").Inc()
 
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.thanosQueryMetrics.BaseMetrics.ClientErrorsTotal.Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues("query").Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.thanosQueryMetrics.BaseMetrics.ReconciliationsTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues("query").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -106,7 +108,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.thanosQueryMetrics.BaseMetrics.ReconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -153,7 +155,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	}
 
 	if errCount > 0 {
-		r.thanosQueryMetrics.BaseMetrics.ReconciliationsFailedTotal.Add(float64(errCount))
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues("query").Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
 	}
 
