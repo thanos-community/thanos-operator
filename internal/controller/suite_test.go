@@ -29,6 +29,7 @@ import (
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
@@ -92,6 +93,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reg := prometheus.NewRegistry()
+	controllerBaseMetrics := controllermetrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
 	err = NewThanosReceiveReconciler(
@@ -100,6 +102,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -109,6 +112,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -118,6 +122,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

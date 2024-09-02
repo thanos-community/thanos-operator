@@ -28,6 +28,7 @@ import (
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -140,6 +141,7 @@ func main() {
 		versioncollector.NewCollector("thanos_operator"),
 	)
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
+	controllerBaseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
 
 	logger := ctrl.Log.WithName("thanos-operator")
 
@@ -157,6 +159,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-query-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
@@ -168,6 +171,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-receive-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
@@ -179,6 +183,7 @@ func main() {
 		mgr.GetScheme(),
 		mgr.GetEventRecorderFor("thanos-store-controller"),
 		ctrlmetrics.Registry,
+		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosStore")
 		os.Exit(1)

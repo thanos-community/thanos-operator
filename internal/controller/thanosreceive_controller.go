@@ -22,11 +22,10 @@ import (
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	"github.com/go-logr/logr"
 
@@ -61,16 +60,13 @@ type ThanosReceiveReconciler struct {
 
 	logger logr.Logger
 
-	reg                                 prometheus.Registerer
-	reconciliationsTotal                prometheus.Counter
-	reconciliationsFailedTotal          prometheus.Counter
-	hashringsConfigured                 *prometheus.GaugeVec
-	endpointWatchesReconciliationsTotal prometheus.Counter
-	clientErrorsTotal                   prometheus.Counter
+	reg                   prometheus.Registerer
+	ControllerBaseMetrics *controllermetrics.BaseMetrics
+	thanosReceiveMetrics  controllermetrics.ThanosReceiveMetrics
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
-func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer) *ThanosReceiveReconciler {
+func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosReceiveReconciler {
 	return &ThanosReceiveReconciler{
 		Client:   client,
 		Scheme:   scheme,
@@ -78,27 +74,9 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 
 		logger: logger,
 
-		reg: reg,
-		reconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosReceive resources",
-		}),
-		reconciliationsFailedTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for ThanosReceive resources",
-		}),
-		hashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
-			Name: "thanos_operator_receive_hashrings_configured",
-			Help: "Total number of configured hashrings for ThanosReceive resources",
-		}, []string{"resource", "namespace"}),
-		endpointWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
-			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
-		}),
-		clientErrorsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
-			Name: "thanos_operator_receive_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of ThanosReceive resources",
-		}),
+		reg:                   reg,
+		ControllerBaseMetrics: controllerBaseMetrics,
+		thanosReceiveMetrics:  controllermetrics.NewThanosReceiveMetrics(reg, controllerBaseMetrics),
 	}
 }
 
@@ -107,19 +85,19 @@ func NewThanosReceiveReconciler(logger logr.Logger, client client.Client, scheme
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.reconciliationsTotal.Inc()
+	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestreceive.Name).Inc()
 
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
-		r.clientErrorsTotal.Inc()
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.reconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -137,7 +115,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
-		r.reconciliationsFailedTotal.Inc()
+		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -161,7 +139,7 @@ func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 	// add a selector to watch for the endpointslices that are owned by the ThanosReceive ingest Service(s).
 	endpointSliceLS := metav1.LabelSelector{
-		MatchLabels: map[string]string{manifests.ComponentLabel: receive.IngestComponentName},
+		MatchLabels: map[string]string{manifests.ComponentLabel: manifestreceive.IngestComponentName},
 	}
 	endpointSlicePredicate, err := predicate.LabelSelectorPredicate(endpointSliceLS)
 	if err != nil {
@@ -192,7 +170,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 	hashringConf, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
-		if !errors.Is(err, receive.ErrHashringsEmpty) {
+		if !errors.Is(err, manifestreceive.ErrHashringsEmpty) {
 			return fmt.Errorf("failed to build hashring configuration: %w", err)
 		}
 		// we can create the config map even if there are no hashrings
@@ -237,7 +215,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.clientErrorsTotal.Add(float64(errCount))
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
 	}
 
@@ -246,7 +224,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 // build hashring builds out the ingesters for the ThanosReceive resource.
 func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
-	opts := make([]receive.IngesterOptions, 0)
+	opts := make([]manifestreceive.IngesterOptions, 0)
 	baseLabels := receiver.GetLabels()
 	baseSecret := receiver.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
 
@@ -257,7 +235,7 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 		}
 
 		metaOpts := manifests.Options{
-			Name:      receive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
+			Name:      manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
 			Namespace: receiver.GetNamespace(),
 			Replicas:  hashring.Replicas,
 			Labels:    manifests.MergeLabels(baseLabels, hashring.Labels),
@@ -266,9 +244,9 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			LogFormat: receiver.Spec.LogFormat,
 		}.ApplyDefaults()
 
-		opt := receive.IngesterOptions{
+		opt := manifestreceive.IngesterOptions{
 			Options: metaOpts,
-			TSDBOpts: receive.TSDBOpts{
+			TSDBOpts: manifestreceive.TSDBOpts{
 				Retention: string(hashring.TSDBConfig.Retention),
 			},
 			StorageSize:    resource.MustParse(string(hashring.StorageSize)),
@@ -289,7 +267,7 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 		opts = append(opts, opt)
 	}
 
-	return receive.BuildIngesters(opts)
+	return manifestreceive.BuildIngesters(opts)
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
@@ -302,19 +280,19 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
-	opts := receive.HashringOptions{
+	opts := manifestreceive.HashringOptions{
 		Options: manifests.Options{
 			Name:      receiver.GetName(),
 			Namespace: receiver.GetNamespace(),
 			Labels:    receiver.GetLabels(),
 		},
 		DesiredReplicationFactor: receiver.Spec.Router.ReplicationFactor,
-		HashringSettings:         make(map[string]receive.HashringMeta, len(receiver.Spec.Ingester.Hashrings)),
+		HashringSettings:         make(map[string]manifestreceive.HashringMeta, len(receiver.Spec.Ingester.Hashrings)),
 	}
 
 	totalHashrings := len(receiver.Spec.Ingester.Hashrings)
 	for i, hashring := range receiver.Spec.Ingester.Hashrings {
-		labelValue := receive.IngesterNameFromParent(receiver.GetName(), hashring.Name)
+		labelValue := manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name)
 		// kubernetes sets this label on the endpoint slices - we want to match the generated name
 		selectorListOpt := client.MatchingLabels{discoveryv1.LabelServiceName: labelValue}
 
@@ -323,19 +301,19 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			return nil, fmt.Errorf("failed to list endpoint slices for resource %s: %w", receiver.GetName(), err)
 		}
 
-		opts.HashringSettings[labelValue] = receive.HashringMeta{
+		opts.HashringSettings[labelValue] = manifestreceive.HashringMeta{
 			DesiredReplicasReplicas:  hashring.Replicas,
 			OriginalName:             hashring.Name,
 			Tenants:                  hashring.Tenants,
-			TenantMatcherType:        receive.TenantMatcher(hashring.TenantMatcherType),
+			TenantMatcherType:        manifestreceive.TenantMatcher(hashring.TenantMatcherType),
 			AssociatedEndpointSlices: eps,
 			// set the priority by slice order for now
 			Priority: totalHashrings - i,
 		}
 	}
 
-	r.hashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
-	return receive.BuildHashrings(r.logger, cm, opts)
+	r.thanosReceiveMetrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
+	return manifestreceive.BuildHashrings(r.logger, cm, opts)
 }
 
 // build hashring builds out the ingesters for the ThanosReceive resource.
@@ -352,7 +330,7 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		LogFormat: receiver.Spec.LogFormat,
 	}.ApplyDefaults()
 
-	opts := receive.RouterOptions{
+	opts := manifestreceive.RouterOptions{
 		Options:           metaOpts,
 		ReplicationFactor: receiver.Spec.Router.ReplicationFactor,
 		ExternalLabels:    receiver.Spec.Router.ExternalLabels,
@@ -368,7 +346,7 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		ServicePorts: receiver.Spec.Router.Additional.ServicePorts,
 	}
 
-	return receive.BuildRouter(opts)
+	return manifestreceive.BuildRouter(opts)
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
@@ -400,7 +378,7 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			return nil
 		}
 
-		r.endpointWatchesReconciliationsTotal.Inc()
+		r.thanosReceiveMetrics.EndpointWatchesReconciliationsTotal.Inc()
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
