@@ -94,7 +94,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	reg := prometheus.NewRegistry()
-	collectorBaseMetrics := controllers_metrics.NewBaseMetrics(reg)
+	controllerBaseMetrics := controllers_metrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
 	err = NewThanosReceiveReconciler(
@@ -103,7 +103,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
-		collectorBaseMetrics,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
-		collectorBaseMetrics,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetScheme(),
 		nil,
 		reg,
-		collectorBaseMetrics,
+		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
