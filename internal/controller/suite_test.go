@@ -126,6 +126,15 @@ var _ = BeforeSuite(func() {
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = NewThanosRulerReconciler(
+		logger,
+		k8sManager.GetClient(),
+		k8sManager.GetScheme(),
+		nil,
+		reg,
+	).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	go func() {
 		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())

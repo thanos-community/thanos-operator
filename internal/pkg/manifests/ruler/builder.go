@@ -325,11 +325,10 @@ func rulerArgs(opts RulerOptions) []string {
 		"--data-dir=/var/thanos/rule",
 		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
-		fmt.Sprintf("--label=%s=%s", "rule_replica", "$(NAME)"),
 	}
 
-	for _, label := range opts.ExternalLabels {
-		args = append(args, fmt.Sprintf("--label=%s=%s", label, opts.Name))
+	for key, val := range opts.ExternalLabels {
+		args = append(args, fmt.Sprintf("--label=%s=%s", key, val))
 	}
 
 	for _, ruleFile := range opts.RuleFiles {

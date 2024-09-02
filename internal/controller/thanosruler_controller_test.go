@@ -91,6 +91,7 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas: 2,
 					QueryLabelSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
@@ -104,6 +105,7 @@ config:
 						},
 						Key: "thanos.yaml",
 					},
+					AlertmanagerURL: "http://alertmanager:9093",
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -120,18 +122,18 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
+					return utils.VerifyExistenceOfRequiredNamedResources(
 						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--labels=rule_replica=$(NAME)")
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--label=rule_replica=$(NAME)")
+				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, resourceName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*30, time.Second*2).Should(BeTrue())
 			})
 
 			By("updating with new query", func() {
@@ -158,9 +160,37 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "thanos-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
-				}, time.Minute*5, time.Second*2).Should(BeTrue())
+				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
+			By("updating with new rule file", func() {
+				cfgmap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-rules",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+						},
+					},
+					Data: map[string]string{
+						"my-rules.yaml": `groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+	for: 10m
+	labels:
+	  severity: page
+`,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
 		})
 	})
 })
