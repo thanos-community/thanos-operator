@@ -32,15 +32,16 @@ const (
 // RulerOptions for Thanos Ruler
 type RulerOptions struct {
 	manifests.Options
-	Endpoints       []Endpoint
-	RuleFiles       []corev1.ConfigMapKeySelector
-	ObjStoreSecret  corev1.SecretKeySelector
-	Retention       manifests.Duration
-	AlertmanagerURL string
-	ExternalLabels  map[string]string
-	AlertLabelDrop  []string
-	StorageSize     resource.Quantity
-	Additional      manifests.Additional
+	Endpoints          []Endpoint
+	RuleFiles          []corev1.ConfigMapKeySelector
+	ObjStoreSecret     corev1.SecretKeySelector
+	Retention          manifests.Duration
+	AlertmanagerURL    string
+	ExternalLabels     map[string]string
+	AlertLabelDrop     []string
+	StorageSize        resource.Quantity
+	EvaluationInterval manifests.Duration
+	Additional         manifests.Additional
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -326,6 +327,10 @@ func rulerArgs(opts RulerOptions) []string {
 		"--data-dir=/var/thanos/rule",
 		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
+	}
+
+	if opts.EvaluationInterval != "" {
+		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))
 	}
 
 	for key, val := range opts.ExternalLabels {

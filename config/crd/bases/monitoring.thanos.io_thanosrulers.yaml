@@ -3531,8 +3531,11 @@ spec:
                   type: string
                 type: array
               alertmanagerURL:
-                description: AlertmanagerURL is the URL of the Alertmanager to which
-                  the Ruler will send alerts.
+                description: |-
+                  AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
+                  The scheme should not be empty e.g http might be used. The scheme may be prefixed with
+                  'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.
+                pattern: ^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$
                 type: string
               defaultObjectStorageConfig:
                 description: ObjectStorageConfig is the secret that contains the object
@@ -3558,6 +3561,12 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              evaluationInterval:
+                default: 1m
+                description: EvaluationInterval is the default interval at which rules
+                  are evaluated.
+                pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                type: string
               externalLabels:
                 additionalProperties:
                   type: string
@@ -3691,7 +3700,8 @@ spec:
                     operator.thanos.io/rule-file: "true"
                 description: |-
                   The operator will mount all ConfigMaps with the label operator.thanos.io/rule-file=true
-                  to the Ruler as rule file. You can optionally choose to override default Rule Config selector labels,
+                  to the Ruler as rule file. This field is set by default but you can choose to override
+                  the default Rule Config selector label.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.

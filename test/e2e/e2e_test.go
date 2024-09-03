@@ -336,7 +336,7 @@ var _ = Describe("controller", Ordered, func() {
 						},
 						Key: objStoreSecretKey,
 					},
-					AlertmanagerURL: "http://alertmanager:9093",
+					AlertmanagerURL: "http://alertmanager.com:9093",
 				},
 			}
 			err := c.Create(context.Background(), cr, &client.CreateOptions{})

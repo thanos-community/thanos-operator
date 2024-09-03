@@ -49,7 +49,7 @@ func TestBuildRuler(t *testing.T) {
 			Key: "thanos.yaml",
 		},
 		Retention:       "15d",
-		AlertmanagerURL: "http://test-alertmanager:9093",
+		AlertmanagerURL: "http://test-alertmanager.com:9093",
 		ExternalLabels: map[string]string{
 			"rule_replica": "0",
 		},
@@ -127,7 +127,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 					Key: "thanos.yaml",
 				},
 				Retention:       "15d",
-				AlertmanagerURL: "http://test-alertmanager:9093",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
 				},
@@ -168,7 +168,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 					Key: "thanos.yaml",
 				},
 				Retention:       "15d",
-				AlertmanagerURL: "http://test-alertmanager:9093",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
 				},
@@ -217,7 +217,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 					Key: "thanos.yaml",
 				},
 				Retention:       "15d",
-				AlertmanagerURL: "http://test-alertmanager:9093",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
 				},
@@ -342,7 +342,7 @@ func TestNewRulerService(t *testing.T) {
 			Key: "thanos.yaml",
 		},
 		Retention:       "15d",
-		AlertmanagerURL: "http://test-alertmanager:9093",
+		AlertmanagerURL: "http://test-alertmanager.com:9093",
 		ExternalLabels: map[string]string{
 			"rule_replica": "0",
 		},

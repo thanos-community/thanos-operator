@@ -181,16 +181,17 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		ServicePorts: ruler.Spec.Additional.ServicePorts,
 	}
 	return manifestruler.BuildRuler(manifestruler.RulerOptions{
-		Options:         metaOpts,
-		Endpoints:       endpoints,
-		RuleFiles:       ruleFiles,
-		ObjStoreSecret:  ruler.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:       manifests.Duration(ruler.Spec.Retention),
-		AlertmanagerURL: ruler.Spec.AlertmanagerURL,
-		ExternalLabels:  ruler.Spec.ExternalLabels,
-		AlertLabelDrop:  ruler.Spec.AlertLabelDrop,
-		StorageSize:     resource.MustParse(ruler.Spec.StorageSize),
-		Additional:      additional,
+		Options:            metaOpts,
+		Endpoints:          endpoints,
+		RuleFiles:          ruleFiles,
+		ObjStoreSecret:     ruler.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		Retention:          manifests.Duration(ruler.Spec.Retention),
+		AlertmanagerURL:    ruler.Spec.AlertmanagerURL,
+		ExternalLabels:     ruler.Spec.ExternalLabels,
+		AlertLabelDrop:     ruler.Spec.AlertLabelDrop,
+		StorageSize:        resource.MustParse(ruler.Spec.StorageSize),
+		EvaluationInterval: manifests.Duration(ruler.Spec.EvaluationInterval),
+		Additional:         additional,
 	})
 }
 
@@ -214,7 +215,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 	endpoints := make([]manifestruler.Endpoint, len(services.Items))
 	for i, svc := range services.Items {
 		for _, port := range svc.Spec.Ports {
-			if port.Name == "grpc" {
+			if port.Name == manifestruler.GRPCPortName {
 				endpoints[i].Port = port.Port
 				break
 			}

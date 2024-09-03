@@ -105,7 +105,7 @@ config:
 						},
 						Key: "thanos.yaml",
 					},
-					AlertmanagerURL: "http://alertmanager:9093",
+					AlertmanagerURL: "http://alertmanager.com:9093",
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{

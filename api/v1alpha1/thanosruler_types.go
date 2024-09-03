@@ -38,17 +38,24 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
 	// The operator will mount all ConfigMaps with the label operator.thanos.io/rule-file=true
-	// to the Ruler as rule file. You can optionally choose to override default Rule Config selector labels,
+	// to the Ruler as rule file. This field is set by default but you can choose to override
+	// the default Rule Config selector label.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/rule-file": "true"}}
 	RuleConfigSelector *metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
 	// AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
+	// The scheme should not be empty e.g http might be used. The scheme may be prefixed with
+	// 'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$`
 	AlertmanagerURL string `json:"alertmanagerURL,omitempty"`
 	// ExternalLabels set on Ruler TSDB, for query time deduplication.
 	// +kubebuilder:default={rule_replica: "$(NAME)"}
 	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
+	// EvaluationInterval is the default interval at which rules are evaluated.
+	// +kubebuilder:default="1m"
+	EvaluationInterval Duration `json:"evaluationInterval,omitempty"`
 	// Labels to drop before Ruler sends alerts to alertmanager.
 	// +kubebuilder:validation:Optional
 	AlertLabelDrop []string `json:"alertLabelDrop,omitempty"`
@@ -66,6 +73,8 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
 }
+
+// TODO(saswatamcode): Add stateless mode
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {
