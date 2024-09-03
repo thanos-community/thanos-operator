@@ -16,6 +16,10 @@ type ThanosQueryMetrics struct {
 	ServiceWatchesReconciliationsTotal prometheus.Counter
 }
 
+type ThanosQueryFrontendMetrics struct {
+	ServiceWatchesReconciliationsTotal prometheus.Counter
+}
+
 type ThanosReceiveMetrics struct {
 	HashringsConfigured                 *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal prometheus.Counter
@@ -54,6 +58,15 @@ func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
 		ServiceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "thanos_operator_query_service_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosQuery resources due to Service events",
+		}),
+	}
+}
+
+func NewThanosQueryFrontendMetrics(reg prometheus.Registerer) ThanosQueryFrontendMetrics {
+	return ThanosQueryFrontendMetrics{
+		ServiceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_query_frontend_service_event_reconciliations_total",
+			Help: "Total number of reconciliations for ThanosQueryFrontend resources due to Service events",
 		}),
 	}
 }
