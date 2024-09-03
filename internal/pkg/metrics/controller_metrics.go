@@ -21,6 +21,13 @@ type ThanosReceiveMetrics struct {
 	EndpointWatchesReconciliationsTotal prometheus.Counter
 }
 
+type ThanosRulerMetrics struct {
+	EndpointsConfigured                 *prometheus.GaugeVec
+	RuleFilesConfigured                 *prometheus.GaugeVec
+	ServiceWatchesReconciliationsTotal  prometheus.Counter
+	ConfigMapWatchesReconcilationsTotal prometheus.Counter
+}
+
 func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
 	return &BaseMetrics{
 		ReconciliationsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
@@ -60,6 +67,27 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer, controlllerBasemetrics *
 		EndpointWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
+		}),
+	}
+}
+
+func NewThanosRulerMetrics(reg prometheus.Registerer) ThanosRulerMetrics {
+	return ThanosRulerMetrics{
+		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_ruler_query_endpoints_configured",
+			Help: "Number of configured query endpoints for ThanosRuler resources",
+		}, []string{"resource", "namespace"}),
+		RuleFilesConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_ruler_rulefiles_configured",
+			Help: "Number of configured rulefiles for ThanosRuler resources",
+		}, []string{"resource", "namespace"}),
+		ServiceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_ruler_service_event_reconciliations_total",
+			Help: "Total number of reconciliations for ThanosRuler resources due to Service events",
+		}),
+		ConfigMapWatchesReconcilationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+			Name: "thanos_operator_ruler_cfgmap_event_reconciliations_total",
+			Help: "Total number of reconciliations for ThanosRuler resources due to ConfigMap events",
 		}),
 	}
 }

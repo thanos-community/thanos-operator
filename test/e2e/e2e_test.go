@@ -55,6 +55,8 @@ const (
 	hashringName = "default"
 
 	queryName = "example-query"
+
+	rulerName = "example-ruler"
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -305,6 +307,87 @@ var _ = Describe("controller", Ordered, func() {
 					namespace,
 					0,
 					"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
+		})
+	})
+
+	Context("Thanos Ruler", func() {
+		It("should bring up the ruler", func() {
+			cr := &v1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rulerName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+					},
+				},
+				Spec: v1alpha1.ThanosRulerSpec{
+					QueryLabelSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+						},
+					},
+					CommonThanosFields: v1alpha1.CommonThanosFields{},
+					StorageSize:        "1Gi",
+					ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: objStoreSecret,
+						},
+						Key: objStoreSecretKey,
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+				},
+			}
+			err := c.Create(context.Background(), cr, &client.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			statefulSetName := rulerName
+			Eventually(func() bool {
+				return utils.VerifyStatefulSetReplicasRunning(c, 1, statefulSetName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+			Eventually(func() bool {
+				return utils.VerifyStatefulSetArgs(c,
+					statefulSetName,
+					namespace,
+					0,
+					"--query=dnssrv+_http._tcp.example-query.thanos-operator-system.svc.cluster.local",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
+
+			cfgmap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-rules",
+					Namespace: namespace,
+					Labels: map[string]string{
+						manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+					},
+				},
+				Data: map[string]string{
+					"my-rules.yaml": `groups:
+  - name: example
+    rules:
+      - alert: HighRequestRate
+        expr: sum(rate(http_requests_total[5m])) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: High request rate
+`,
+				},
+			}
+
+			err = c.Create(context.Background(), cfgmap, &client.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			Eventually(func() bool {
+				return utils.VerifyStatefulSetArgs(c,
+					statefulSetName,
+					namespace,
+					0,
+					"--rule-file=/etc/thanos/rules/my-rules.yaml",
 				)
 			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})

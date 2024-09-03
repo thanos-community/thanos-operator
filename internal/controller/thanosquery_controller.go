@@ -223,7 +223,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 		}
 
 		for _, port := range svc.Spec.Ports {
-			if port.Name == "grpc" {
+			if port.Name == manifestquery.GRPCPortName {
 				endpoints[i].Port = port.Port
 				break
 			}

@@ -23,3 +23,5 @@ type Additional struct {
 	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
 	ServicePorts []corev1.ServicePort `json:"additionalServicePorts,omitempty"`
 }
+
+type Duration string

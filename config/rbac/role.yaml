@@ -45,6 +45,7 @@ rules:
   - thanoscompacts
   - thanosqueries
   - thanosreceives
+  - thanosrulers
   - thanosservices
   - thanosstores
   verbs:
@@ -61,6 +62,7 @@ rules:
   - thanoscompacts/finalizers
   - thanosqueries/finalizers
   - thanosreceives/finalizers
+  - thanosrulers/finalizers
   - thanosservices/finalizers
   - thanosstores/finalizers
   verbs:
@@ -71,6 +73,7 @@ rules:
   - thanoscompacts/status
   - thanosqueries/status
   - thanosreceives/status
+  - thanosrulers/status
   - thanosservices/status
   - thanosstores/status
   verbs:

@@ -5,4 +5,5 @@ resources:
 - v1alpha1_thanosreceive.yaml
 - v1alpha1_thanoscompact.yaml
 - _v1alpha1_thanosstore.yaml
+- _v1alpha1_thanosruler.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

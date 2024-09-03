@@ -196,6 +196,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosCompact")
 		os.Exit(1)
 	}
+
+	if err = controller.NewThanosRulerReconciler(
+		logger.WithName("ruler"),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetEventRecorderFor("thanos-ruler-controller"),
+		ctrlmetrics.Registry,
+		controllerBaseMetrics,
+	).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosRuler")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

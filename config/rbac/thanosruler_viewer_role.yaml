@@ -1,0 +1,27 @@
+# permissions for end users to view thanosrulers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: thanosruler-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/part-of: thanos-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: thanosruler-viewer-role
+rules:
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers/status
+  verbs:
+  - get
