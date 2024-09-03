@@ -25,6 +25,7 @@ import (
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +56,8 @@ type ThanosQueryReconciler struct {
 	reg                   prometheus.Registerer
 	ControllerBaseMetrics *controllermetrics.BaseMetrics
 	thanosQueryMetrics    controllermetrics.ThanosQueryMetrics
+	// Add QueryFrontend metrics
+	ThanosQueryFrontendMetrics controllermetrics.ThanosQueryFrontendMetrics
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
@@ -64,10 +67,11 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 		Scheme:   scheme,
 		Recorder: recorder,
 
-		logger:                logger,
-		reg:                   reg,
-		ControllerBaseMetrics: controllerBaseMetrics,
-		thanosQueryMetrics:    controllermetrics.NewThanosQueryMetrics(reg),
+		logger:                     logger,
+		reg:                        reg,
+		ControllerBaseMetrics:      controllerBaseMetrics,
+		thanosQueryMetrics:         controllermetrics.NewThanosQueryMetrics(reg),
+		ThanosQueryFrontendMetrics: controllermetrics.NewThanosQueryFrontendMetrics(reg),
 	}
 }
 
@@ -98,11 +102,9 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	if query.Spec.Paused != nil {
-		if *query.Spec.Paused {
-			r.logger.Info("reconciliation is paused for ThanosQuery resource")
-			return ctrl.Result{}, nil
-		}
+	if query.Spec.Paused != nil && *query.Spec.Paused {
+		r.logger.Info("reconciliation is paused for ThanosQuery resource")
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *query)
@@ -117,8 +119,18 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) error {
 	var objs []client.Object
 
-	desiredObjs := r.buildQuerier(ctx, query)
-	objs = append(objs, desiredObjs...)
+	// Build Querier resources
+	querierObjs := r.buildQuerier(ctx, query)
+	objs = append(objs, querierObjs...)
+
+	// Build Query Frontend resources if specified
+	if query.Spec.QueryFrontend != nil {
+		frontendObjs, err := r.buildQueryFrontend(query)
+		if err != nil {
+			return err
+		}
+		objs = append(objs, frontendObjs...)
+	}
 
 	var errCount int32
 	for _, obj := range objs {
@@ -155,7 +167,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	if errCount > 0 {
 		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
-		return fmt.Errorf("failed to create or update %d resources for the querier", errCount)
+		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
 	return nil
@@ -238,6 +250,44 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	return endpoints
+}
+
+func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
+	frontend := query.Spec.QueryFrontend
+	metaOpts := manifests.Options{
+		Name:      query.GetName() + "-frontend",
+		Namespace: query.GetNamespace(),
+		Replicas:  frontend.Replicas,
+		Labels:    query.GetLabels(),
+		Image:     frontend.Image,
+		LogLevel:  frontend.LogLevel,
+		LogFormat: frontend.LogFormat,
+	}.ApplyDefaults()
+
+	additional := manifests.Additional{
+		Args:         frontend.Additional.Args,
+		Containers:   frontend.Additional.Containers,
+		Volumes:      frontend.Additional.Volumes,
+		VolumeMounts: frontend.Additional.VolumeMounts,
+		Ports:        frontend.Additional.Ports,
+		Env:          frontend.Additional.Env,
+		ServicePorts: frontend.Additional.ServicePorts,
+	}
+
+	return manifestqueryfrontend.BuildQueryFrontend(manifestqueryfrontend.QueryFrontendOptions{
+		Options:                metaOpts,
+		QueryService:           query.GetName(),
+		QueryPort:              manifestquery.HTTPPort,
+		Additional:             additional,
+		LogQueriesLongerThan:   manifests.Duration(manifests.OptionalToString(frontend.LogQueriesLongerThan)),
+		CompressResponses:      frontend.CompressResponses,
+		ResponseCacheConfig:    frontend.QueryRangeResponseCacheConfig,
+		RangeSplitInterval:     manifests.Duration(manifests.OptionalToString(frontend.QueryRangeSplitInterval)),
+		LabelsSplitInterval:    manifests.Duration(manifests.OptionalToString(frontend.LabelsSplitInterval)),
+		RangeMaxRetries:        frontend.QueryRangeMaxRetries,
+		LabelsMaxRetries:       frontend.LabelsMaxRetries,
+		LabelsDefaultTimeRange: manifests.Duration(manifests.OptionalToString(frontend.LabelsDefaultTimeRange)),
+	}), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

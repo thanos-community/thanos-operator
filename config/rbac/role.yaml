@@ -44,7 +44,6 @@ rules:
   resources:
   - thanoscompacts
   - thanosqueries
-  - thanosqueryfrontends
   - thanosreceives
   - thanosrulers
   - thanosservices
@@ -62,7 +61,6 @@ rules:
   resources:
   - thanoscompacts/finalizers
   - thanosqueries/finalizers
-  - thanosqueryfrontends/finalizers
   - thanosreceives/finalizers
   - thanosrulers/finalizers
   - thanosservices/finalizers
@@ -74,7 +72,6 @@ rules:
   resources:
   - thanoscompacts/status
   - thanosqueries/status
-  - thanosqueryfrontends/status
   - thanosreceives/status
   - thanosrulers/status
   - thanosservices/status

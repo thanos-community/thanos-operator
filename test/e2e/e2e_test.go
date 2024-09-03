@@ -57,8 +57,6 @@ const (
 	queryName = "example-query"
 
 	rulerName = "example-ruler"
-
-	queryFrontendName = "example-query-frontend"
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -312,6 +310,69 @@ var _ = Describe("controller", Ordered, func() {
 				)
 			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})
+
+		It("should bring up the query frontend", func() {
+			tenSeconds := v1alpha1.Duration("10s")
+			updatedCR := &v1alpha1.ThanosQuery{}
+			err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, updatedCR)
+			Expect(err).To(BeNil())
+
+			updatedCR.Spec.QueryFrontend = &v1alpha1.QueryFrontendSpec{
+				Replicas:             2,
+				CompressResponses:    true,
+				LogQueriesLongerThan: &tenSeconds,
+				QueryRangeMaxRetries: 3,
+				LabelsMaxRetries:     3,
+				QueryLabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+					},
+				},
+			}
+			err = c.Update(context.Background(), updatedCR)
+			Expect(err).To(BeNil())
+
+			deploymentName := queryName + "-frontend"
+			Eventually(func() bool {
+				return utils.VerifyDeploymentReplicasRunning(c, 2, deploymentName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+			Eventually(func() bool {
+				return utils.VerifyDeploymentArgs(c,
+					deploymentName,
+					namespace,
+					0,
+					"--query-frontend.downstream-url=http://"+queryName+"."+namespace+".svc.cluster.local:9090",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
+		})
+
+		It("should update the deployment when the CR is modified", func() {
+			updatedCR := &v1alpha1.ThanosQuery{}
+			err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, updatedCR)
+			Expect(err).To(BeNil())
+			twentySeconds := v1alpha1.Duration("20s")
+
+			updatedCR.Spec.QueryFrontend.Replicas = 3
+			updatedCR.Spec.QueryFrontend.LogQueriesLongerThan = &twentySeconds
+
+			err = c.Update(context.Background(), updatedCR)
+			Expect(err).To(BeNil())
+
+			deploymentName := queryName + "-frontend"
+			Eventually(func() bool {
+				return utils.VerifyDeploymentReplicasRunning(c, 3, deploymentName, namespace)
+			}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+			Eventually(func() bool {
+				return utils.VerifyDeploymentArgs(c,
+					deploymentName,
+					namespace,
+					0,
+					"--query-frontend.log-queries-longer-than=20s",
+				)
+			}, time.Minute*1, time.Second*10).Should(BeTrue())
+		})
 	})
 
 	Context("Thanos Ruler", func() {
@@ -445,73 +506,6 @@ var _ = Describe("controller", Ordered, func() {
 			Eventually(func() bool {
 				return utils.VerifyConfigMapContents(c, "thanos-store-inmemory-config", namespace, "config.yaml", store.InMemoryConfig)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
-		})
-	})
-
-	Context("Thanos Query Frontend", func() {
-		It("should bring up the query frontend", func() {
-			tenSeconds := v1alpha1.Duration("10s")
-			cr := &v1alpha1.ThanosQueryFrontend{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      queryFrontendName,
-					Namespace: namespace,
-				},
-				Spec: v1alpha1.ThanosQueryFrontendSpec{
-					CommonThanosFields: v1alpha1.CommonThanosFields{},
-					Replicas:           2,
-					CompressResponses:  true,
-					QueryLabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-						},
-					},
-					LogQueriesLongerThan: &tenSeconds,
-					QueryRangeMaxRetries: 3,
-					LabelsMaxRetries:     3,
-				},
-			}
-			err := c.Create(context.Background(), cr, &client.CreateOptions{})
-			Expect(err).To(BeNil())
-
-			deploymentName := queryFrontendName
-			Eventually(func() bool {
-				return utils.VerifyDeploymentReplicasRunning(c, 2, deploymentName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
-
-			Eventually(func() bool {
-				return utils.VerifyDeploymentArgs(c,
-					deploymentName,
-					namespace,
-					0,
-					"--query-frontend.downstream-url=http://example-query."+namespace+".svc.cluster.local:9090",
-				)
-			}, time.Minute*1, time.Second*10).Should(BeTrue())
-		})
-
-		It("should update the deployment when the CR is modified", func() {
-			updatedCR := &v1alpha1.ThanosQueryFrontend{}
-			err := c.Get(context.Background(), client.ObjectKey{Name: queryFrontendName, Namespace: namespace}, updatedCR)
-			Expect(err).To(BeNil())
-			twentySeconds := v1alpha1.Duration("20s")
-
-			updatedCR.Spec.Replicas = 3
-			updatedCR.Spec.LogQueriesLongerThan = &twentySeconds
-
-			err = c.Update(context.Background(), updatedCR)
-			Expect(err).To(BeNil())
-
-			Eventually(func() bool {
-				return utils.VerifyDeploymentReplicasRunning(c, 3, queryFrontendName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
-
-			Eventually(func() bool {
-				return utils.VerifyDeploymentArgs(c,
-					queryFrontendName,
-					namespace,
-					0,
-					"--query-frontend.log-queries-longer-than=20s",
-				)
-			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})
 	})
 })

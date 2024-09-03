@@ -209,18 +209,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = controller.NewThanosQueryFrontendReconciler(
-		logger.WithName("query-frontend"),
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-query-frontend-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
-	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosQueryFrontend")
-		os.Exit(1)
-	}
-
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

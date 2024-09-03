@@ -228,6 +228,64 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(Succeed())
 			})
 
+			By("setting up the thanos query with query frontend", func() {
+				oneh := monitoringthanosiov1alpha1.Duration("1h")
+				thirtym := monitoringthanosiov1alpha1.Duration("30m")
+				resource.Spec.QueryFrontend = &monitoringthanosiov1alpha1.QueryFrontendSpec{
+
+					Replicas:          2,
+					CompressResponses: true,
+					QueryRangeResponseCacheConfig: &corev1.ConfigMapKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "cache-config",
+						},
+						Key: "config.yaml",
+					},
+					QueryRangeSplitInterval: &oneh,
+					LabelsSplitInterval:     &thirtym,
+					QueryRangeMaxRetries:    10,
+					LabelsMaxRetries:        5,
+				}
+
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyExistenceOfRequiredNamedResources(
+						k8sClient, utils.ExpectApiResourceDeployment, resourceName+"-frontend", ns)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("verifying the query frontend deployment configuration", func() {
+				EventuallyWithOffset(1, func() error {
+					expectedArgs := []string{
+						"--query-frontend.compress-responses",
+						"--query-range.response-cache-config=$(CACHE_CONFIG)",
+						"--query-range.split-interval=1h",
+						"--labels.split-interval=30m",
+						"--query-range.max-retries-per-request=10",
+						"--labels.max-retries-per-request=5",
+					}
+
+					for _, expectedArg := range expectedArgs {
+						if !utils.VerifyDeploymentArgs(k8sClient, resourceName+"-frontend", ns, 0, expectedArg) {
+							return fmt.Errorf("expected arg %q not found", expectedArg)
+						}
+					}
+
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
+			})
+
+			By("verifying query frontend is linked to query service", func() {
+				EventuallyWithOffset(1, func() error {
+					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.cluster.local:9090", resourceName, ns)
+					if !utils.VerifyDeploymentArgs(k8sClient, resourceName+"-frontend", ns, 0, expectedArg) {
+						return fmt.Errorf("expected arg %q not found", expectedArg)
+					}
+					return nil
+				}, time.Second*30, time.Second*10).Should(Succeed())
+			})
+
 			By("checking paused state", func() {
 				isPaused := true
 				resource.Spec.Paused = &isPaused
