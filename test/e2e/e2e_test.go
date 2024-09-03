@@ -483,7 +483,7 @@ var _ = Describe("controller", Ordered, func() {
 					deploymentName,
 					namespace,
 					0,
-					"--query=dnssrv+_http._tcp.example-query.thanos-operator-system.svc.cluster.local",
+					"--query-frontend.downstream-url=http://example-query."+namespace+".svc.cluster.local:9090",
 				)
 			}, time.Minute*1, time.Second*10).Should(BeTrue())
 		})
