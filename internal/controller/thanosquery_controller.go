@@ -125,10 +125,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	// Build Query Frontend resources if specified
 	if query.Spec.QueryFrontend != nil {
-		frontendObjs, err := r.buildQueryFrontend(query)
-		if err != nil {
-			return err
-		}
+		frontendObjs := r.buildQueryFrontend(query)
 		objs = append(objs, frontendObjs...)
 	}
 
@@ -252,7 +249,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	return endpoints
 }
 
-func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
+func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
 	frontend := query.Spec.QueryFrontend
 	metaOpts := manifests.Options{
 		Name:      query.GetName() + "-frontend",
@@ -287,7 +284,7 @@ func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alp
 		RangeMaxRetries:        frontend.QueryRangeMaxRetries,
 		LabelsMaxRetries:       frontend.LabelsMaxRetries,
 		LabelsDefaultTimeRange: manifests.Duration(manifests.OptionalToString(frontend.LabelsDefaultTimeRange)),
-	}), nil
+	})
 }
 
 // SetupWithManager sets up the controller with the Manager.
