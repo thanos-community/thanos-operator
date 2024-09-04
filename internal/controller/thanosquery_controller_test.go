@@ -23,12 +23,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
-	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,17 +35,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("ThanosQuery Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
 		const (
 			resourceName = "test-resource"
-			ns           = "tquery"
+			ns           = "thanos-query-test"
 		)
+
+		// we use a sample receive Service to test store discovery
+		const (
+			receiveSvcName = "thanos-receive"
+		)
+		receivePort := corev1.ServicePort{
+			Name:       receive.GRPCPortName,
+			Port:       receive.GRPCPort,
+			TargetPort: intstr.FromInt32(receive.GRPCPort),
+		}
 
 		ctx := context.Background()
 
@@ -54,7 +60,6 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			Name:      resourceName,
 			Namespace: ns,
 		}
-		logger := ctrl.Log.WithName("controller-test")
 
 		BeforeAll(func() {
 			By("creating the namespace")
@@ -84,10 +89,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					CommonThanosFields:   monitoringthanosiov1alpha1.CommonThanosFields{},
 					Replicas:             3,
 					QuerierReplicaLabels: []string{"replica"},
-					StoreLabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-					}},
-					Labels: map[string]string{"some-label": "xyz"},
+					Labels:               map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -101,14 +103,6 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			}
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-				reg := prometheus.NewRegistry()
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllermetrics.NewBaseMetrics(reg))
-
-				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespacedName,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyExistenceOfRequiredNamedResources(
 						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
@@ -117,88 +111,53 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("setting endpoints on the thanos query", func() {
+
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "thanos-receive",
+						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels: map[string]string{
-							manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-						},
+						Labels:    requiredStoreServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name:       "grpc",
-								Port:       10901,
-								TargetPort: intstr.FromInt(10901),
-							},
-						},
+						Ports: []corev1.ServicePort{receivePort},
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
-				reg := prometheus.NewRegistry()
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllermetrics.NewBaseMetrics(reg))
-
-				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespacedName,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
+				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
-					args := "--endpoint=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
-					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, args)
+					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
+				labels := requiredStoreServiceLabels
+				labels[string(manifestquery.StrictLabel)] = manifests.DefaultStoreAPIValue
+
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "thanos-receive",
+						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels: map[string]string{
-							manifests.DefaultStoreAPILabel:    manifests.DefaultStoreAPIValue,
-							string(manifestquery.StrictLabel): manifests.DefaultStoreAPIValue,
-						},
+						Labels:    labels,
 					},
 					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name:       "grpc",
-								Port:       10901,
-								TargetPort: intstr.FromInt(10901),
-							},
-						},
+						Ports: []corev1.ServicePort{receivePort},
 					},
 				}
 				Expect(k8sClient.Update(context.Background(), svc)).Should(Succeed())
 
 				svcToIgnore := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "some-svc",
+						Name:      "some-svc-to-ignore-at-event-handler",
 						Namespace: ns,
 						Labels: map[string]string{
 							"app": "nginx",
 						},
 					},
 					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name:       "grpc",
-								Port:       10901,
-								TargetPort: intstr.FromInt(10901),
-							},
-						},
+						Ports: []corev1.ServicePort{receivePort},
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svcToIgnore)).Should(Succeed())
-				reg := prometheus.NewRegistry()
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllermetrics.NewBaseMetrics(reg))
-
-				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespacedName,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
@@ -214,7 +173,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
-					arg := "--endpoint-strict=dnssrv+_grpc._tcp.thanos-receive.tquery.svc.cluster.local"
+					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
 					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
 					}
@@ -291,35 +250,19 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				resource.Spec.Paused = &isPaused
 
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
+				labels := requiredStoreServiceLabels
+				labels[string(manifestquery.StrictLabel)] = manifests.DefaultStoreAPIValue
 				svcPaused := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "paused-svc",
 						Namespace: ns,
-						Labels: map[string]string{
-							manifests.DefaultStoreAPILabel:    manifests.DefaultStoreAPIValue,
-							string(manifestquery.StrictLabel): manifests.DefaultStoreAPIValue,
-						},
+						Labels:    labels,
 					},
 					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Name:       "grpc",
-								Port:       10901,
-								TargetPort: intstr.FromInt(10901),
-							},
-						},
+						Ports: []corev1.ServicePort{receivePort},
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
-				reg := prometheus.NewRegistry()
-				controllerReconciler := NewThanosQueryReconciler(logger, k8sClient, k8sClient.Scheme(), nil, reg, controllermetrics.NewBaseMetrics(reg))
-
-				_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespacedName,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
