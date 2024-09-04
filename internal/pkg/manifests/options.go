@@ -40,7 +40,7 @@ type Options struct {
 	// LogFormat is the log format for the component
 	LogFormat *string
 	// EnableServiceMonitor is a flag to enable ServiceMonitor
-	EnableServiceMonitor *bool
+	EnableServiceMonitor bool
 }
 
 // ToFlags returns the flags for the Options

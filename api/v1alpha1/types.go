@@ -78,7 +78,7 @@ type CommonThanosFields struct {
 	// Enable self monitoring for the Thanos component.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=true
-	EnableSelfMonitor *bool `json:"enableSelfMonitor,omitempty"`
+	EnableSelfMonitor bool `json:"enableSelfMonitor,omitempty"`
 }
 
 type Additional struct {
