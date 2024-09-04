@@ -25,6 +25,7 @@ import (
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
@@ -285,16 +286,6 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	servicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-			manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
 	configMapPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
@@ -313,7 +304,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}, servicePredicate),
+			builder.WithPredicates(predicate.LabelChangedPredicate{}, predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&corev1.ConfigMap{},
@@ -334,8 +325,16 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // that matches the Service.
 func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if obj.GetLabels()[manifests.DefaultQueryAPILabel] != manifests.DefaultQueryAPIValue {
-			return nil
+		var found bool
+		svc := obj.(*corev1.Service)
+		for _, port := range svc.Spec.Ports {
+			if port.Name == manifestquery.GRPCPortName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return []reconcile.Request{}
 		}
 
 		rulers := &monitoringthanosiov1alpha1.ThanosRulerList{}
