@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
@@ -34,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 
@@ -208,7 +210,7 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) []manifestquery.Endpoint {
 	services := &corev1.ServiceList{}
 	listOpts := []client.ListOption{
-		client.MatchingLabels(query.Spec.StoreLabelSelector.MatchLabels),
+		client.MatchingLabelsSelector{Selector: r.buildStoreLabelSelector(query)},
 		client.InNamespace(query.Namespace),
 	}
 	if err := r.List(ctx, services, listOpts...); err != nil {
@@ -290,14 +292,15 @@ func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alp
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	servicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-			manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-		},
+		MatchLabels: requiredStoreServiceLabels,
 	})
 	if err != nil {
 		return err
 	}
+
+	withLabelChangedPredicate := predicate.And(servicePredicate, predicate.LabelChangedPredicate{})
+	withGenerationChangePredicate := predicate.And(servicePredicate, predicate.GenerationChangedPredicate{}, servicePredicate)
+	withPredicate := predicate.Or(withLabelChangedPredicate, withGenerationChangePredicate)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosQuery{}).
@@ -308,7 +311,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}, servicePredicate),
+			builder.WithPredicates(withPredicate),
 		).
 		Complete(r)
 }
@@ -317,8 +320,8 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // that matches the Service.
 func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if obj.GetLabels()[manifests.DefaultStoreAPILabel] != manifests.DefaultStoreAPIValue {
-			return nil
+		if !r.isQueueableStoreService(obj) {
+			return []reconcile.Request{}
 		}
 
 		listOpts := []client.ListOption{
@@ -333,7 +336,7 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 
 		requests := []reconcile.Request{}
 		for _, query := range queriers.Items {
-			if labels.SelectorFromSet(query.Spec.StoreLabelSelector.MatchLabels).Matches(labels.Set(obj.GetLabels())) {
+			if r.buildStoreLabelSelector(query).Matches(labels.Set(obj.GetLabels())) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      query.GetName(),
@@ -346,4 +349,54 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 		r.thanosQueryMetrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
+}
+
+// isQueueableStoreService returns true if the Service is a
+// StoreAPI service that is part of a ThanosQuery and has a gRPC port.
+func (r *ThanosQueryReconciler) isQueueableStoreService(obj client.Object) bool {
+	for k, v := range requiredStoreServiceLabels {
+		if obj.GetLabels()[k] != v {
+			return false
+		}
+	}
+
+	svc, ok := obj.(*corev1.Service)
+	if !ok {
+		return false
+	}
+
+	for _, port := range svc.Spec.Ports {
+		if port.Name == manifestquery.GRPCPortName {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *ThanosQueryReconciler) buildStoreLabelSelector(query monitoringthanosiov1alpha1.ThanosQuery) labels.Selector {
+	var labelSelector *metav1.LabelSelector
+	if query.Spec.StoreLabelSelector == nil {
+		labelSelector = &metav1.LabelSelector{MatchLabels: requiredStoreServiceLabels}
+	} else {
+		labelSelector = query.Spec.StoreLabelSelector.DeepCopy()
+		for k, v := range requiredStoreServiceLabels {
+			labelSelector.MatchLabels[k] = v
+		}
+	}
+
+	selector := labels.SelectorFromSet(labelSelector.MatchLabels)
+	for _, ls := range labelSelector.MatchExpressions {
+		req, err := labels.NewRequirement(ls.Key, selection.Operator(ls.Operator), ls.Values)
+		if err != nil {
+			r.logger.Error(err, "failed to create label requirement")
+			continue
+		}
+		selector.Add(*req)
+	}
+	return selector
+}
+
+var requiredStoreServiceLabels = map[string]string{
+	manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 }
