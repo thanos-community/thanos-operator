@@ -39,11 +39,10 @@ type ThanosQuerySpec struct {
 	// +kubebuilder:default:={"replica"}
 	// +kubebuilder:validation:Optional
 	QuerierReplicaLabels []string `json:"querierReplicaLabels,omitempty"`
-	// By default, the operator will add all discoverable StoreAPIs to the Querier,
-	// if they have store labels. You can optionally choose to override default
-	// StoreAPI selector labels, to select a subset of StoreAPIs to query.
+	// StoreLabelSelector enables adding additional labels to build a custom label selector
+	// for discoverable StoreAPIs. Values provided here will be appended to the default which are
+	// {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/store-api": "true"}}
 	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
 	// QueryFrontend is the configuration for the Query Frontend
 	// If you specify this, the operator will create a Query Frontend in front of your
