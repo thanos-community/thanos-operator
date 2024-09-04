@@ -3526,13 +3526,10 @@ spec:
                   type: object
                 type: array
               customStoreLabelSelector:
-                default:
-                  matchLabels:
-                    operator.thanos.io/store-api: "true"
                 description: |-
-                  By default, the operator will add all discoverable StoreAPIs to the Querier,
-                  if they have store labels. You can optionally choose to override default
-                  StoreAPI selector labels, to select a subset of StoreAPIs to query.
+                  StoreLabelSelector enables adding additional labels to build a custom label selector
+                  for discoverable StoreAPIs. Values provided here will be appended to the default which are
+                  {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
