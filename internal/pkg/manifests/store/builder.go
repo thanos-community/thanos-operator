@@ -3,7 +3,6 @@ package store
 import (
 	"fmt"
 
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,8 +40,8 @@ type StoreOptions struct {
 	ObjStoreSecret           corev1.SecretKeySelector
 	IndexCacheConfig         *corev1.ConfigMapKeySelector
 	CachingBucketConfig      *corev1.ConfigMapKeySelector
-	IgnoreDeletionMarksDelay monitoringthanosiov1alpha1.Duration
-	Min, Max                 *monitoringthanosiov1alpha1.Duration
+	IgnoreDeletionMarksDelay manifests.Duration
+	Min, Max                 manifests.Duration
 	Shards                   int32
 	Additional               manifests.Additional
 }
@@ -407,8 +406,8 @@ func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
               - action: keep
                 source_labels: ["shard"]
                 regex: %d`, opts.Shards, shardIndex),
-		fmt.Sprintf("--min-time=%s", manifests.OptionalToString(opts.Min)),
-		fmt.Sprintf("--max-time=%s", manifests.OptionalToString(opts.Max)),
+		fmt.Sprintf("--min-time=%s", string(opts.Min)),
+		fmt.Sprintf("--max-time=%s", string(opts.Max)),
 	}
 
 	// TODO(saswatamcode): Add some validation.
