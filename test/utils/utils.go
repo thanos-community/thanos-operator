@@ -28,6 +28,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
 	"github.com/golang/snappy"
@@ -527,4 +531,32 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 	default:
 		return false
 	}
+}
+
+func ApplyPrometheusCRD() error {
+	// Apply Prometheus CRD
+	wd, _ := os.Getwd()
+	promCmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/prometheus-crd.yaml")
+	if _, err := Run(promCmd); err != nil {
+		return fmt.Errorf("failed to apply Prometheus CRD: %v", err)
+	}
+	return nil
+}
+
+func VerifyServiceMonitor(c client.Client, name, ns string) bool {
+	sm := &monitoringv1.ServiceMonitor{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: ns,
+	}, sm)
+	return err == nil
+}
+
+func VerifyServiceMonitorDeleted(c client.Client, name, ns string) bool {
+	sm := &monitoringv1.ServiceMonitor{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: ns,
+	}, sm)
+	return errors.IsNotFound(err)
 }

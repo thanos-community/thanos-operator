@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/imdario/mergo"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,6 +24,7 @@ import (
 //   - ServiceAccount
 //   - Deployment
 //   - StatefulSet
+//   - ServiceMonitor
 func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 	return func() error {
 		existingAnnotations := existing.GetAnnotations()
@@ -72,6 +75,11 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 			sts := existing.(*appsv1.StatefulSet)
 			wantSts := desired.(*appsv1.StatefulSet)
 			mutateStatefulSet(sts, wantSts)
+
+		case *monitoringv1.ServiceMonitor:
+			sm := existing.(*monitoringv1.ServiceMonitor)
+			wantSm := desired.(*monitoringv1.ServiceMonitor)
+			mutateServiceMonitor(sm, wantSm)
 
 		default:
 			t := reflect.TypeOf(existing).String()
@@ -150,4 +158,11 @@ func mutatePodSpec(existing *corev1.PodSpec, desired *corev1.PodSpec) {
 	existing.Tolerations = desired.Tolerations
 	existing.TopologySpreadConstraints = desired.TopologySpreadConstraints
 	existing.Volumes = desired.Volumes
+}
+
+func mutateServiceMonitor(existing, desired *monitoringv1.ServiceMonitor) {\
+    existing.Labels = desired.Labels
+	existing.Spec.Selector.MatchLabels = desired.Spec.Selector.MatchLabels
+	existing.Spec.NamespaceSelector = desired.Spec.NamespaceSelector
+	existing.Spec.Endpoints = desired.Spec.Endpoints
 }

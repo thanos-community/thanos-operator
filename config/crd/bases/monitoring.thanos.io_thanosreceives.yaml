@@ -3571,6 +3571,10 @@ spec:
                     - key
                     type: object
                     x-kubernetes-map-type: atomic
+                  enableSelfMonitor:
+                    default: true
+                    description: Enable self monitoring for the Thanos component.
+                    type: boolean
                   hashrings:
                     description: Hashrings is a list of hashrings to route to.
                     items:
@@ -7309,6 +7313,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  enableSelfMonitor:
+                    default: true
+                    description: Enable self monitoring for the Thanos component.
+                    type: boolean
                   externalLabels:
                     additionalProperties:
                       type: string

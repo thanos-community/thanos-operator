@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: test-prometheus
+  namespace: default
+spec:
+  replicas: 1
+  serviceMonitorNamespaceSelector: {}
+  serviceMonitorSelector:
+    matchLabels:
+      service-monitor-selector: thanos
+  version: v2.54.0
+  retention: "10d"

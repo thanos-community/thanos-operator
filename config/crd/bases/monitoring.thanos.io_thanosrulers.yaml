@@ -3561,6 +3561,10 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              enableSelfMonitor:
+                default: true
+                description: Enable self monitoring for the Thanos component.
+                type: boolean
               evaluationInterval:
                 default: 1m
                 description: EvaluationInterval is the default interval at which rules

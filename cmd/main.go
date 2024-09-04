@@ -23,6 +23,8 @@ import (
 	"net/http/pprof"
 	"os"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 
@@ -57,6 +59,7 @@ func init() {
 
 	utilruntime.Must(monitoringthanosiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 }
 
 func main() {
