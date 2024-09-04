@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -142,6 +142,11 @@ func (in *CommonThanosFields) DeepCopyInto(out *CommonThanosFields) {
 	if in.LogFormat != nil {
 		in, out := &in.LogFormat, &out.LogFormat
 		*out = new(string)
+		**out = **in
+	}
+	if in.EnableSelfMonitor != nil {
+		in, out := &in.EnableSelfMonitor, &out.EnableSelfMonitor
+		*out = new(bool)
 		**out = **in
 	}
 }

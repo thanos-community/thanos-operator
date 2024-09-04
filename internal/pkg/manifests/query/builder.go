@@ -36,7 +36,8 @@ type Options struct {
 	LookbackDelta string
 	MaxConcurrent int
 
-	Endpoints []Endpoint
+	Endpoints            []Endpoint
+	EnableServiceMonitor bool
 }
 
 type EndpointType string
@@ -65,6 +66,9 @@ func BuildQuery(opts Options) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
+	if opts.EnableServiceMonitor {
+		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, fmt.Sprintf("%d", HTTPPort)))
+	}
 	return objs
 }
 
@@ -204,6 +208,10 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 
 	if opts.Additional.ServicePorts != nil {
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
+	}
+
+	if opts.EnableServiceMonitor {
+		objectMetaLabels["thanos-self-monitoring"] = opts.Name
 	}
 
 	return &corev1.Service{

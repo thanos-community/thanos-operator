@@ -75,6 +75,10 @@ type CommonThanosFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
+	// Enable self monitoring for the Thanos component.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=true
+	EnableSelfMonitor *bool `json:"enableSelfMonitor,omitempty"`
 }
 
 type Additional struct {

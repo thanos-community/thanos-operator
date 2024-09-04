@@ -3574,6 +3574,10 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              enableSelfMonitor:
+                default: true
+                description: Enable self monitoring for the Thanos component.
+                type: boolean
               image:
                 description: Container image to use for the Thanos components.
                 type: string

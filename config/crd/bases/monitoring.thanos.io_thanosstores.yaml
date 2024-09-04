@@ -3551,6 +3551,10 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              enableSelfMonitor:
+                default: true
+                description: Enable self monitoring for the Thanos component.
+                type: boolean
               ignoreDeletionMarksDelay:
                 default: 24h
                 description: |-
