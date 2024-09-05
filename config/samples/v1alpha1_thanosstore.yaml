@@ -1,0 +1,18 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosStore
+metadata:
+  name: example-store
+spec:
+  imagePullPolicy: IfNotPresent
+  logFormat: logfmt
+  objectStorageConfig:
+    name: thanos-object-storage
+    key: thanos.yaml
+  shardingStrategy:
+    shardReplicas: 2
+    shards: 2
+    type: block
+  storageSize: 1Gi
+  ignoreDeletionMarksDelay: 24h
+  labels:
+    some-label: xyz

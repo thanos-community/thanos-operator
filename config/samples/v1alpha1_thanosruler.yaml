@@ -1,0 +1,26 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosRuler
+metadata:
+  name: example-ruler
+spec:
+  replicas: 1
+  ruleConfigSelector:
+    matchLabels:
+      operator.thanos.io/rule-file: "true"
+  queryLabelSelector:
+    matchLabels:
+      operator.thanos.io/query-api: "true"
+      app.kubernetes.io/part-of: "thanos"
+  defaultObjectStorageConfig:
+    name: thanos-object-storage
+    key: thanos.yaml
+  alertmanagerURL: "http://alertmanager.example.com:9093"
+  externalLabels:
+    rule_replica: "$(NAME)"
+  evaluationInterval: 1m
+  retention: 2h
+  storageSize: 1Gi
+  logFormat: logfmt
+  imagePullPolicy: IfNotPresent
+
+
