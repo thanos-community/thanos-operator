@@ -151,7 +151,6 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
-			r.Recorder.Event(&ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 

@@ -97,7 +97,6 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
-			RunAsUser:                ptr.To(int64(10001)),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"ALL",
@@ -167,6 +166,7 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
+					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
 					ServiceAccountName: opts.Name,
 				},

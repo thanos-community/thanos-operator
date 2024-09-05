@@ -214,7 +214,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
-			r.Recorder.Event(&receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 

@@ -139,7 +139,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
-			r.Recorder.Event(&store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 

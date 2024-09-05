@@ -159,7 +159,6 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
-			r.Recorder.Event(&query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 
