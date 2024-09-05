@@ -1,9 +1,0 @@
-apiVersion: monitoring.thanos.io/v1alpha1
-kind: ThanosCompact
-metadata:
-  labels:
-    app.kubernetes.io/name: thanos-operator
-    app.kubernetes.io/managed-by: kustomize
-  name: thanoscompact-sample
-spec:
-  # TODO(user): Add fields here

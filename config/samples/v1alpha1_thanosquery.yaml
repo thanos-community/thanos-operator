@@ -1,0 +1,28 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosQuery
+metadata:
+  name: example-query
+spec:
+  customStoreLabelSelector:
+    matchLabels:
+      operator.thanos.io/store-api: "true"
+  imagePullPolicy: IfNotPresent
+  labels:
+    some-label: xyz
+  logFormat: logfmt
+  querierReplicaLabels:
+    - prometheus_replica
+    - replica
+    - rule_replica
+  queryFrontend:
+    compressResponses: true
+    imagePullPolicy: IfNotPresent
+    labelsMaxRetries: 3
+    logFormat: logfmt
+    logQueriesLongerThan: 10s
+    queryLabelSelector:
+      matchLabels:
+        operator.thanos.io/query-api: "true"
+    queryRangeMaxRetries: 3
+    replicas: 2
+  replicas: 1
