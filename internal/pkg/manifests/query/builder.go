@@ -166,6 +166,7 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
+					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
 					ServiceAccountName: opts.Name,
 				},

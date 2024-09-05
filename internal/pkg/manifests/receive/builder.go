@@ -583,6 +583,7 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 					Labels:    aggregatedLabels,
 				},
 				Spec: corev1.PodSpec{
+					SecurityContext: &corev1.PodSecurityContext{},
 					Volumes: []corev1.Volume{
 						{
 							Name: hashringVolumeName,
