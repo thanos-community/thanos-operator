@@ -101,13 +101,13 @@ func NewStoreStatefulSets(opts StoreOptions) []client.Object {
 	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
 		opts.Name = StoreShardName(originalName, i)
-		shardSts[i] = newStoreShardStatefulSet(opts, defaultLabels, aggregatedLabels, i)
+		shardSts[i] = newStoreShardStatefulSet(opts, originalName, defaultLabels, aggregatedLabels, i)
 	}
 
 	return shardSts
 }
 
-func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string, aggregatedLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
+func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels map[string]string, aggregatedLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -220,6 +220,7 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 					Labels: aggregatedLabels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: SAName,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
