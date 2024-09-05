@@ -98,12 +98,20 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		r.logger.Error(err, "failed to get ThanosRuler")
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
+		r.Recorder.Event(ruler, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosRuler resource")
 		return ctrl.Result{}, err
+	}
+
+	if ruler.Spec.Paused != nil && *ruler.Spec.Paused {
+		r.logger.Info("reconciliation is paused for ThanosRuler resource")
+		r.Recorder.Event(ruler, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosRuler resource")
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
+		r.Recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -139,6 +147,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
+			r.Recorder.Event(&ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 
@@ -169,6 +178,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}.ApplyDefaults()
 
 	endpoints := r.getQueryAPIServiceEndpoints(ctx, ruler)
+
 	ruleFiles := r.getRuleConfigMaps(ctx, ruler)
 
 	additional := manifests.Additional{
@@ -209,6 +219,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 	}
 
 	if len(services.Items) == 0 {
+		r.Recorder.Event(&ruler, corev1.EventTypeWarning, "NoEndpointsFound", "No QueryAPI services found")
 		return []manifestruler.Endpoint{}
 	}
 
@@ -246,6 +257,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 	}
 
 	if len(cfgmaps.Items) == 0 {
+		r.Recorder.Event(&ruler, corev1.EventTypeWarning, "NoRuleConfigsFound", "No rule ConfigMaps found")
 		return []corev1.ConfigMapKeySelector{}
 	}
 
@@ -292,7 +304,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosRuler{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
@@ -309,6 +321,13 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}, configMapPredicate),
 		).
 		Complete(r)
+
+	if err != nil {
+		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosRuler{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 // enqueueForService returns an EventHandler that will enqueue a request for the ThanosRuler instances

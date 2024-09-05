@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 		logger,
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		nil,
+		k8sManager.GetEventRecorderFor("thanosreceive-controller"),
 		reg,
 		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 		logger,
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		nil,
+		k8sManager.GetEventRecorderFor("thanosquery-controller"),
 		reg,
 		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
@@ -120,7 +120,7 @@ var _ = BeforeSuite(func() {
 		logger,
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		nil,
+		k8sManager.GetEventRecorderFor("thanosstore-controller"),
 		reg,
 		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
@@ -130,7 +130,7 @@ var _ = BeforeSuite(func() {
 		logger,
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		nil,
+		k8sManager.GetEventRecorderFor("thanosruler-controller"),
 		reg,
 		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)

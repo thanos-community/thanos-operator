@@ -88,12 +88,14 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
+		r.Recorder.Event(store, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosStore resource")
 		return ctrl.Result{}, err
 	}
 
 	if store.Spec.Paused != nil {
 		if *store.Spec.Paused {
 			r.logger.Info("reconciliation is paused for ThanosStore")
+			r.Recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
 			return ctrl.Result{}, nil
 		}
 	}
@@ -101,6 +103,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.syncResources(ctx, *store)
 	if err != nil {
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
+		r.Recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -136,6 +139,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
+			r.Recorder.Event(&store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 
@@ -191,11 +195,18 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosStore{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
 		Complete(r)
+
+	if err != nil {
+		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosStore{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		return err
+	}
+
+	return nil
 }

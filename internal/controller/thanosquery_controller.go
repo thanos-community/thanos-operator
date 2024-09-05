@@ -101,17 +101,20 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
+		r.Recorder.Event(query, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosQuery resource")
 		return ctrl.Result{}, err
 	}
 
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
+		r.Recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
 		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
+		r.Recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -121,12 +124,11 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) error {
 	var objs []client.Object
 
-	// Build Querier resources
 	querierObjs := r.buildQuerier(ctx, query)
 	objs = append(objs, querierObjs...)
 
-	// Build Query Frontend resources if specified
 	if query.Spec.QueryFrontend != nil {
+		r.Recorder.Event(&query, corev1.EventTypeNormal, "BuildingQueryFrontend", "Building Query Frontend resources")
 		frontendObjs := r.buildQueryFrontend(query)
 		objs = append(objs, frontendObjs...)
 	}
@@ -154,6 +156,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
+			r.Recorder.Event(&query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 
@@ -218,6 +221,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	if len(services.Items) == 0 {
+		r.Recorder.Event(&query, corev1.EventTypeWarning, "NoEndpointsFound", "No StoreAPI services found")
 		return []manifestquery.Endpoint{}
 	}
 
@@ -302,7 +306,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	withGenerationChangePredicate := predicate.And(servicePredicate, predicate.GenerationChangedPredicate{}, servicePredicate)
 	withPredicate := predicate.Or(withLabelChangedPredicate, withGenerationChangePredicate)
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosQuery{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
@@ -314,6 +318,13 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(withPredicate),
 		).
 		Complete(r)
+
+	if err != nil {
+		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 // enqueueForService returns an EventHandler that will enqueue a request for the ThanosQuery instances
