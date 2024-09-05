@@ -117,6 +117,7 @@ func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.Name,
+					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
 							Name:  Name,
@@ -130,6 +131,15 @@ func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
 								},
 							},
 							Env: []corev1.EnvVar{cacheConfigEnv},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								RunAsNonRoot:             ptr.To(true),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{
+										"ALL",
+									},
+								},
+							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
