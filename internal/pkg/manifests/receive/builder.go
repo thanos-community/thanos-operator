@@ -355,6 +355,7 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.Name,
+					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
