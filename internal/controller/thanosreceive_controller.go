@@ -98,6 +98,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
+		r.Recorder.Event(receiver, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosReceive resource")
 		return ctrl.Result{}, err
 	}
 
@@ -109,6 +110,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if receiver.Spec.Paused != nil {
 		if *receiver.Spec.Paused {
 			r.logger.Info("reconciliation is paused for ThanosReceive resource")
+			r.Recorder.Event(receiver, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosReceive resource")
 			return ctrl.Result{}, nil
 		}
 	}
@@ -116,9 +118,11 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
+		r.Recorder.Event(receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
+	r.Recorder.Event(receiver, corev1.EventTypeNormal, "Reconciled", "ThanosReceive resources have been reconciled successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -132,7 +136,13 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	bld := ctrl.NewControllerManagedBy(mgr)
-	return r.buildController(*bld)
+	err := r.buildController(*bld)
+	if err != nil {
+		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosReceive{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 // buildController sets up the controller with the Manager.
@@ -171,6 +181,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	hashringConf, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
 		if !errors.Is(err, manifestreceive.ErrHashringsEmpty) {
+			r.Recorder.Event(&receiver, corev1.EventTypeWarning, "HashringConfigBuildFailed", fmt.Sprintf("Failed to build hashring configuration: %v", err))
 			return fmt.Errorf("failed to build hashring configuration: %w", err)
 		}
 		// we can create the config map even if there are no hashrings
@@ -188,6 +199,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 			if err := ctrl.SetControllerReference(&receiver, obj, r.Scheme); err != nil {
 				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
+				r.Recorder.Event(&receiver, corev1.EventTypeWarning, "SetOwnerReferenceFailed", fmt.Sprintf("Failed to set owner reference for resource %s: %v", obj.GetName(), err))
 				continue
 			}
 		}
@@ -204,6 +216,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 				"namespace", obj.GetNamespace(),
 			)
 			errCount++
+			r.Recorder.Event(&receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resource %s: %v", obj.GetName(), err))
 			continue
 		}
 
@@ -313,6 +326,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 	}
 
 	r.thanosReceiveMetrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
+	r.Recorder.Event(&receiver, corev1.EventTypeNormal, "HashringConfigBuilt", fmt.Sprintf("Built hashring configuration with %d hashrings", totalHashrings))
 	return manifestreceive.BuildHashrings(r.logger, cm, opts)
 }
 
