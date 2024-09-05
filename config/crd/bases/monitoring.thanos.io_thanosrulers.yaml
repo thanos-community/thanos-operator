@@ -3631,13 +3631,11 @@ spec:
                   will be performed on the underlying objects.
                 type: boolean
               queryLabelSelector:
-                default:
-                  matchLabels:
-                    operator.thanos.io/query-api: "true"
                 description: |-
-                  By default, the operator will add all discoverable Queriers to the Ruler,
-                  if they have query labels. You can optionally choose to override default
-                  Query selector labels, to select a subset of Queries to query.
+                  QueryLabelSelector is the label selector to discover Queriers.
+                  It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.
+                  Values provided here will be appended to the default which are:
+                  {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -3695,13 +3693,11 @@ spec:
                 pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                 type: string
               ruleConfigSelector:
-                default:
-                  matchLabels:
-                    operator.thanos.io/rule-file: "true"
                 description: |-
-                  The operator will mount all ConfigMaps with the label operator.thanos.io/rule-file=true
-                  to the Ruler as rule file. This field is set by default but you can choose to override
-                  the default Rule Config selector label.
+                  RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
+                  It enables adding additional labels to build a custom label selector for discoverable rule files.
+                  Values provided here will be appended to the default which is:
+                  {"operator.thanos.io/rule-file": "true"}.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -3763,7 +3759,6 @@ spec:
             - externalLabels
             - replicas
             - retention
-            - ruleConfigSelector
             - storageSize
             type: object
           status:

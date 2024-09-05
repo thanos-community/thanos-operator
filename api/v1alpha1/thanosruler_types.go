@@ -28,20 +28,19 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Required
 	Replicas int32 `json:"replicas,omitempty"`
-	// By default, the operator will add all discoverable Queriers to the Ruler,
-	// if they have query labels. You can optionally choose to override default
-	// Query selector labels, to select a subset of Queries to query.
+	// QueryLabelSelector is the label selector to discover Queriers.
+	// It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.
+	// Values provided here will be appended to the default which are:
+	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/query-api": "true"}}
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
-	// The operator will mount all ConfigMaps with the label operator.thanos.io/rule-file=true
-	// to the Ruler as rule file. This field is set by default but you can choose to override
-	// the default Rule Config selector label.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/rule-file": "true"}}
+	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
+	// It enables adding additional labels to build a custom label selector for discoverable rule files.
+	// Values provided here will be appended to the default which is:
+	// {"operator.thanos.io/rule-file": "true"}.
 	RuleConfigSelector *metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
 	// AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
 	// The scheme should not be empty e.g http might be used. The scheme may be prefixed with

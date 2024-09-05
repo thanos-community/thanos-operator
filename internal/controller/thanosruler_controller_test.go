@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
@@ -91,12 +90,7 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
-					Replicas: 2,
-					QueryLabelSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-						},
-					},
+					Replicas:           2,
 					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 					StorageSize:        "1Gi",
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -141,16 +135,14 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-query",
 						Namespace: ns,
-						Labels: map[string]string{
-							manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-						},
+						Labels:    requiredQueryServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
 							{
 								Name:       "grpc",
 								Port:       10901,
-								TargetPort: intstr.FromInt(10901),
+								TargetPort: intstr.FromInt32(10901),
 							},
 						},
 					},
@@ -174,9 +166,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-rules",
 						Namespace: ns,
-						Labels: map[string]string{
-							manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
-						},
+						Labels:    requiredRuleConfigMapLabels,
 					},
 					Data: map[string]string{
 						"my-rules.yaml": `groups:
