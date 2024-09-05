@@ -240,6 +240,7 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
+					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{rulerContainer},
 					ServiceAccountName: opts.Name,
 					Volumes:            volumes,

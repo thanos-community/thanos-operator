@@ -220,6 +220,7 @@ func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels ma
 					Labels: aggregatedLabels,
 				},
 				Spec: corev1.PodSpec{
+					SecurityContext:    &corev1.PodSecurityContext{},
 					ServiceAccountName: SAName,
 					Containers: []corev1.Container{
 						{
