@@ -230,9 +230,8 @@ func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels ma
 							// Ensure restrictive context for the container
 							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 							SecurityContext: &corev1.SecurityContext{
-								RunAsNonRoot:             ptr.To(true),
 								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsUser:                ptr.To(int64(10001)),
+								RunAsNonRoot:             ptr.To(true),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",
