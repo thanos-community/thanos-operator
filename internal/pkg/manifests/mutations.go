@@ -103,7 +103,9 @@ func mutateSecret(existing, desired *corev1.Secret) {
 }
 
 func mutateServiceAccount(existing, desired *corev1.ServiceAccount) {
-	existing.Annotations = desired.Annotations
+	// Do not add annotations to ServiceAccount to avoid spawning Secrets
+	// Values in annotations will be injected by platforms like OCP
+	// https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#auto-generated-legacy-serviceaccount-token-clean-up
 	existing.Labels = desired.Labels
 }
 
