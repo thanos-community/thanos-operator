@@ -606,7 +606,6 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 							SecurityContext: &corev1.SecurityContext{
 								RunAsNonRoot:             ptr.To(true),
 								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsUser:                ptr.To(int64(10001)),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",

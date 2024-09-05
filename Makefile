@@ -192,7 +192,12 @@ install-example: manifests kustomize ## Install example definitions to K8s clust
 install-example: ## Installs minio and definitions of all components to be used with the operator.
 install-example: ## Ensure you run make install and make deploy in ns of choice before this command
 	$(KUBECTL) apply -f test/utils/testdata/
-	$(KUSTOMIZE) build config/samples | $(KUBECTL) apply -f - 
+	$(KUSTOMIZE) build config/samples | $(KUBECTL) apply -f -
+
+.PHONY: uninstall-example
+uninstall-example: manifests kustomize ## Uninstall example definitions from K8s cluster specified in ~/.kube/config.
+	$(KUBECTL) delete -f test/utils/testdata/
+	$(KUSTOMIZE) build config/samples | $(KUBECTL) delete -f -  
 
 ##@ Dependencies
 
