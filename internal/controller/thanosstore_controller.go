@@ -107,7 +107,6 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	r.Recorder.Event(store, corev1.EventTypeNormal, "Reconciled", "ThanosStore resources have been reconciled")
 	return ctrl.Result{}, nil
 }
 
@@ -124,7 +123,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 			if err := ctrl.SetControllerReference(&store, obj, r.Scheme); err != nil {
 				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
-				r.Recorder.Event(&store, corev1.EventTypeWarning, "SetOwnerReferenceFailed", fmt.Sprintf("Failed to set owner reference for resource %s: %v", obj.GetName(), err))
 				continue
 			}
 		}

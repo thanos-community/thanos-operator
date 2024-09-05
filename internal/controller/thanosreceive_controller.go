@@ -122,7 +122,6 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	r.Recorder.Event(receiver, corev1.EventTypeNormal, "Reconciled", "ThanosReceive resources have been reconciled successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -199,7 +198,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 			if err := ctrl.SetControllerReference(&receiver, obj, r.Scheme); err != nil {
 				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
-				r.Recorder.Event(&receiver, corev1.EventTypeWarning, "SetOwnerReferenceFailed", fmt.Sprintf("Failed to set owner reference for resource %s: %v", obj.GetName(), err))
 				continue
 			}
 		}

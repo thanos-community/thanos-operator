@@ -115,7 +115,6 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	r.Recorder.Event(ruler, corev1.EventTypeNormal, "Reconciled", "ThanosRuler resources have been reconciled")
 	return ctrl.Result{}, nil
 }
 
@@ -132,7 +131,6 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 			if err := ctrl.SetControllerReference(&ruler, obj, r.Scheme); err != nil {
 				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
-				r.Recorder.Event(&ruler, corev1.EventTypeWarning, "SetOwnerReferenceFailed", fmt.Sprintf("Failed to set owner reference for resource %s: %v", obj.GetName(), err))
 				continue
 			}
 		}
@@ -180,10 +178,8 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}.ApplyDefaults()
 
 	endpoints := r.getQueryAPIServiceEndpoints(ctx, ruler)
-	r.Recorder.Event(&ruler, corev1.EventTypeNormal, "EndpointsDiscovered", fmt.Sprintf("Discovered %d QueryAPI endpoints", len(endpoints)))
 
 	ruleFiles := r.getRuleConfigMaps(ctx, ruler)
-	r.Recorder.Event(&ruler, corev1.EventTypeNormal, "RuleFilesDiscovered", fmt.Sprintf("Discovered %d rule files", len(ruleFiles)))
 
 	additional := manifests.Additional{
 		Args:         ruler.Spec.Additional.Args,
@@ -219,7 +215,6 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 			client.MatchingLabels(ruler.Spec.QueryLabelSelector.MatchLabels),
 			client.InNamespace(ruler.Namespace),
 		}...); err != nil {
-		r.Recorder.Event(&ruler, corev1.EventTypeWarning, "EndpointDiscoveryFailed", fmt.Sprintf("Failed to list QueryAPI services: %v", err))
 		return []manifestruler.Endpoint{}
 	}
 
@@ -258,7 +253,6 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			client.MatchingLabels(ruler.Spec.RuleConfigSelector.MatchLabels),
 			client.InNamespace(ruler.Namespace),
 		}...); err != nil {
-		r.Recorder.Event(&ruler, corev1.EventTypeWarning, "RuleConfigDiscoveryFailed", fmt.Sprintf("Failed to list rule ConfigMaps: %v", err))
 		return []corev1.ConfigMapKeySelector{}
 	}
 

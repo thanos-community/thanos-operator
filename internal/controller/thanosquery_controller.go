@@ -118,7 +118,6 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	r.Recorder.Event(query, corev1.EventTypeNormal, "Reconciled", "ThanosQuery resources have been reconciled successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -141,7 +140,6 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 			if err := ctrl.SetControllerReference(&query, obj, r.Scheme); err != nil {
 				r.logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
-				r.Recorder.Event(&query, corev1.EventTypeWarning, "SetOwnerReferenceFailed", fmt.Sprintf("Failed to set owner reference for resource %s: %v", obj.GetName(), err))
 				continue
 			}
 		}
@@ -189,7 +187,6 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 	}.ApplyDefaults()
 
 	endpoints := r.getStoreAPIServiceEndpoints(ctx, query)
-	r.Recorder.Event(&query, corev1.EventTypeNormal, "EndpointsDiscovered", fmt.Sprintf("Discovered %d StoreAPI endpoints", len(endpoints)))
 
 	additional := manifests.Additional{
 		Args:         query.Spec.Additional.Args,
@@ -220,7 +217,6 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 		client.InNamespace(query.Namespace),
 	}
 	if err := r.List(ctx, services, listOpts...); err != nil {
-		r.Recorder.Event(&query, corev1.EventTypeWarning, "EndpointDiscoveryFailed", fmt.Sprintf("Failed to list StoreAPI services: %v", err))
 		return []manifestquery.Endpoint{}
 	}
 
