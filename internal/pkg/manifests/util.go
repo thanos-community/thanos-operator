@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,4 +39,36 @@ func PruneEmptyArgs(args []string) []string {
 	}
 
 	return args
+}
+
+// IsGrpcServiceWithLabels returns true if the given object is a gRPC service with required labels.
+// The requiredLabels map is used to match the labels of the object.
+// The function returns false if the object is not a service or if it does not have a gRPC port.
+// The function returns true, alongside the port if the object is a service with a gRPC port and has the required labels.
+func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string) (int32, bool) {
+	if !HasRequiredLabels(obj, requiredLabels) {
+		return 0, false
+	}
+
+	svc, ok := obj.(*corev1.Service)
+	if !ok {
+		return 0, false
+	}
+
+	for _, port := range svc.Spec.Ports {
+		if port.Name == "grpc" {
+			return port.Port, true
+		}
+	}
+	return 0, false
+}
+
+// HasRequiredLabels returns true if the given object has the required labels.
+func HasRequiredLabels(obj client.Object, requiredLabels map[string]string) bool {
+	for k, v := range requiredLabels {
+		if obj.GetLabels()[k] != v {
+			return false
+		}
+	}
+	return true
 }
