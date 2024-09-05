@@ -354,6 +354,7 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 					Labels: aggregatedLabels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: opts.Name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),

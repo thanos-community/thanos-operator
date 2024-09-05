@@ -220,6 +220,7 @@ func newStoreShardStatefulSet(opts StoreOptions, defaultLabels map[string]string
 					Labels: aggregatedLabels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName: opts.Name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
