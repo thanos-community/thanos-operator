@@ -159,13 +159,14 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 
 func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.ThanosStore) []client.Object {
 	opts := manifests.Options{
-		Name:      store.GetName(),
-		Namespace: store.GetNamespace(),
-		Replicas:  store.Spec.ShardingStrategy.ShardReplicas,
-		Labels:    manifests.MergeLabels(store.GetLabels(), store.Spec.Labels),
-		Image:     store.Spec.Image,
-		LogLevel:  store.Spec.LogLevel,
-		LogFormat: store.Spec.LogFormat,
+		Name:                 store.GetName(),
+		Namespace:            store.GetNamespace(),
+		Replicas:             store.Spec.ShardingStrategy.ShardReplicas,
+		Labels:               manifests.MergeLabels(store.GetLabels(), store.Spec.Labels),
+		Image:                store.Spec.Image,
+		LogLevel:             store.Spec.LogLevel,
+		LogFormat:            store.Spec.LogFormat,
+		ResourceRequirements: store.Spec.ResourceRequirements,
 	}.ApplyDefaults()
 
 	additional := manifests.Additional{

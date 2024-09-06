@@ -458,6 +458,10 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 		},
 	}
 
+	if opts.ResourceRequirements != nil {
+		sts.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
+	}
+
 	if opts.Additional.VolumeMounts != nil {
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
@@ -695,6 +699,10 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 			},
 			RevisionHistoryLimit: ptr.To(int32(10)),
 		},
+	}
+
+	if opts.ResourceRequirements != nil {
+		deployment.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
 	}
 
 	if opts.Additional.VolumeMounts != nil {

@@ -181,13 +181,14 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}
 
 	metaOpts := manifests.Options{
-		Name:      ruler.GetName(),
-		Namespace: ruler.GetNamespace(),
-		Replicas:  ruler.Spec.Replicas,
-		Labels:    ruler.GetLabels(),
-		Image:     ruler.Spec.Image,
-		LogLevel:  ruler.Spec.LogLevel,
-		LogFormat: ruler.Spec.LogFormat,
+		Name:                 ruler.GetName(),
+		Namespace:            ruler.GetNamespace(),
+		Replicas:             ruler.Spec.Replicas,
+		Labels:               ruler.GetLabels(),
+		Image:                ruler.Spec.Image,
+		LogLevel:             ruler.Spec.LogLevel,
+		LogFormat:            ruler.Spec.LogFormat,
+		ResourceRequirements: ruler.Spec.ResourceRequirements,
 	}.ApplyDefaults()
 
 	additional := manifests.Additional{

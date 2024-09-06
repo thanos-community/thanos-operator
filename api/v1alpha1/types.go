@@ -59,6 +59,9 @@ type CommonThanosFields struct {
 	// See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
 	// +kubebuilder:validation:Optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	// ResourceRequirements for the Thanos component container.
+	// +kubebuilder:validation:Optional
+	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

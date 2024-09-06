@@ -163,6 +163,10 @@ func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
 		},
 	}
 
+	if opts.ResourceRequirements != nil {
+		deployment.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
+	}
+
 	if opts.Additional.VolumeMounts != nil {
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,

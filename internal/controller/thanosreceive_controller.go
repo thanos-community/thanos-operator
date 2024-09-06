@@ -245,13 +245,14 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 		}
 
 		metaOpts := manifests.Options{
-			Name:      manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
-			Namespace: receiver.GetNamespace(),
-			Replicas:  hashring.Replicas,
-			Labels:    manifests.MergeLabels(baseLabels, hashring.Labels),
-			Image:     receiver.Spec.Image,
-			LogLevel:  receiver.Spec.LogLevel,
-			LogFormat: receiver.Spec.LogFormat,
+			Name:                 manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
+			Namespace:            receiver.GetNamespace(),
+			Replicas:             hashring.Replicas,
+			Labels:               manifests.MergeLabels(baseLabels, hashring.Labels),
+			Image:                receiver.Spec.Image,
+			LogLevel:             receiver.Spec.LogLevel,
+			LogFormat:            receiver.Spec.LogFormat,
+			ResourceRequirements: receiver.Spec.ResourceRequirements,
 		}.ApplyDefaults()
 
 		opt := manifestreceive.IngesterOptions{
@@ -332,13 +333,14 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 	baseLabels := receiver.GetLabels()
 
 	metaOpts := manifests.Options{
-		Name:      receiver.GetName(),
-		Namespace: receiver.GetNamespace(),
-		Replicas:  receiver.Spec.Router.Replicas,
-		Labels:    manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
-		Image:     receiver.Spec.Image,
-		LogLevel:  receiver.Spec.LogLevel,
-		LogFormat: receiver.Spec.LogFormat,
+		Name:                 receiver.GetName(),
+		Namespace:            receiver.GetNamespace(),
+		Replicas:             receiver.Spec.Router.Replicas,
+		Labels:               manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
+		Image:                receiver.Spec.Image,
+		LogLevel:             receiver.Spec.LogLevel,
+		LogFormat:            receiver.Spec.LogFormat,
+		ResourceRequirements: receiver.Spec.ResourceRequirements,
 	}.ApplyDefaults()
 
 	opts := manifestreceive.RouterOptions{
