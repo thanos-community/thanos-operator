@@ -105,12 +105,13 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						Labels:            map[string]string{"test": "my-router-test"},
-						ReplicationFactor: 3,
+						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+						Labels:             map[string]string{"test": "my-router-test"},
+						ReplicationFactor:  3,
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
+						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
 							Key:                  "test-key",
@@ -160,10 +161,10 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						Labels:            map[string]string{"test": "my-router-test"},
-						ReplicationFactor: 3,
+						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+						Labels:             map[string]string{"test": "my-router-test"},
+						ReplicationFactor:  3,
 						Additional: monitoringthanosiov1alpha1.Additional{
 							Containers: []corev1.Container{
 								{
@@ -175,6 +176,7 @@ config:
 						},
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
+						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
 							Key:                  "test-key",
@@ -368,7 +370,7 @@ config:
 
 			By("checking updates do not take effect when resource is paused", func() {
 				originalReplicas := resource.Spec.Router.Replicas
-				resource.Spec.Paused = ptr.To(true)
+				resource.Spec.Router.Paused = ptr.To(true)
 				resource.Spec.Router.Replicas = 20
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 

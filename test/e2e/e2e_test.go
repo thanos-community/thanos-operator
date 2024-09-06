@@ -194,8 +194,8 @@ var _ = Describe("controller", Ordered, func() {
 					Namespace: namespace,
 				},
 				Spec: v1alpha1.ThanosReceiveSpec{
-					CommonThanosFields: v1alpha1.CommonThanosFields{},
 					Ingester: v1alpha1.IngesterSpec{
+						CommonThanosFields: v1alpha1.CommonThanosFields{},
 						DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
