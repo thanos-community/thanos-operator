@@ -22,6 +22,9 @@ import (
 
 // RouterSpec represents the configuration for the router
 type RouterSpec struct {
+	// CommonThanosFields are the options available to all Thanos components.
+	// +kubebuilder:validation:Optional
+	CommonThanosFields `json:",inline"`
 	// Labels are additional labels to add to the router components.
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
 	// +kubebuilder:validation:Optional
@@ -49,6 +52,9 @@ type RouterSpec struct {
 
 // IngesterSpec represents the configuration for the ingestor
 type IngesterSpec struct {
+	// CommonThanosFields are the options available to all Thanos components.
+	// +kubebuilder:validation:Optional
+	CommonThanosFields `json:",inline"`
 	// DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
 	// Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec per hashring.
 	// +kubebuilder:validation:Required
@@ -113,9 +119,6 @@ type IngestorHashringSpec struct {
 // ThanosReceiveSpec defines the desired state of ThanosReceive
 // +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
-	// CommonThanosFields are the options available to all Thanos components.
-	// +kubebuilder:validation:Optional
-	CommonThanosFields `json:",inline"`
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required
 	Router RouterSpec `json:"router,omitempty"`

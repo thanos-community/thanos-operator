@@ -179,13 +179,14 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
 	metaOpts := manifests.Options{
-		Name:      query.GetName(),
-		Namespace: query.GetNamespace(),
-		Replicas:  query.Spec.Replicas,
-		Labels:    manifests.MergeLabels(query.GetLabels(), query.Spec.Labels),
-		Image:     query.Spec.Image,
-		LogLevel:  query.Spec.LogLevel,
-		LogFormat: query.Spec.LogFormat,
+		Name:                 query.GetName(),
+		Namespace:            query.GetNamespace(),
+		Replicas:             query.Spec.Replicas,
+		Labels:               manifests.MergeLabels(query.GetLabels(), query.Spec.Labels),
+		Image:                query.Spec.Image,
+		LogLevel:             query.Spec.LogLevel,
+		LogFormat:            query.Spec.LogFormat,
+		ResourceRequirements: query.Spec.ResourceRequirements,
 	}.ApplyDefaults()
 
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
@@ -263,13 +264,14 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
 	frontend := query.Spec.QueryFrontend
 	metaOpts := manifests.Options{
-		Name:      query.GetName() + "-frontend",
-		Namespace: query.GetNamespace(),
-		Replicas:  frontend.Replicas,
-		Labels:    query.GetLabels(),
-		Image:     frontend.Image,
-		LogLevel:  frontend.LogLevel,
-		LogFormat: frontend.LogFormat,
+		Name:                 query.GetName() + "-frontend",
+		Namespace:            query.GetNamespace(),
+		Replicas:             frontend.Replicas,
+		Labels:               query.GetLabels(),
+		Image:                frontend.Image,
+		LogLevel:             frontend.LogLevel,
+		LogFormat:            frontend.LogFormat,
+		ResourceRequirements: frontend.ResourceRequirements,
 	}.ApplyDefaults()
 
 	additional := manifests.Additional{

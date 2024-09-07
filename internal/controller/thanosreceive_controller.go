@@ -107,8 +107,16 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.handleDeletionTimestamp(receiver)
 	}
 
-	if receiver.Spec.Paused != nil {
-		if *receiver.Spec.Paused {
+	if receiver.Spec.Router.Paused != nil {
+		if *receiver.Spec.Router.Paused {
+			r.logger.Info("reconciliation is paused for ThanosReceive resource")
+			r.Recorder.Event(receiver, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosReceive resource")
+			return ctrl.Result{}, nil
+		}
+	}
+
+	if receiver.Spec.Ingester.Paused != nil {
+		if *receiver.Spec.Ingester.Paused {
 			r.logger.Info("reconciliation is paused for ThanosReceive resource")
 			r.Recorder.Event(receiver, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosReceive resource")
 			return ctrl.Result{}, nil
@@ -245,13 +253,14 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 		}
 
 		metaOpts := manifests.Options{
-			Name:      manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
-			Namespace: receiver.GetNamespace(),
-			Replicas:  hashring.Replicas,
-			Labels:    manifests.MergeLabels(baseLabels, hashring.Labels),
-			Image:     receiver.Spec.Image,
-			LogLevel:  receiver.Spec.LogLevel,
-			LogFormat: receiver.Spec.LogFormat,
+			Name:                 manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
+			Namespace:            receiver.GetNamespace(),
+			Replicas:             hashring.Replicas,
+			Labels:               manifests.MergeLabels(baseLabels, hashring.Labels),
+			Image:                receiver.Spec.Ingester.Image,
+			LogLevel:             receiver.Spec.Ingester.LogLevel,
+			LogFormat:            receiver.Spec.Ingester.LogFormat,
+			ResourceRequirements: receiver.Spec.Ingester.ResourceRequirements,
 		}.ApplyDefaults()
 
 		opt := manifestreceive.IngesterOptions{
@@ -332,13 +341,14 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 	baseLabels := receiver.GetLabels()
 
 	metaOpts := manifests.Options{
-		Name:      receiver.GetName(),
-		Namespace: receiver.GetNamespace(),
-		Replicas:  receiver.Spec.Router.Replicas,
-		Labels:    manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
-		Image:     receiver.Spec.Image,
-		LogLevel:  receiver.Spec.LogLevel,
-		LogFormat: receiver.Spec.LogFormat,
+		Name:                 receiver.GetName(),
+		Namespace:            receiver.GetNamespace(),
+		Replicas:             receiver.Spec.Router.Replicas,
+		Labels:               manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
+		Image:                receiver.Spec.Router.Image,
+		LogLevel:             receiver.Spec.Router.LogLevel,
+		LogFormat:            receiver.Spec.Router.LogFormat,
+		ResourceRequirements: receiver.Spec.Router.ResourceRequirements,
 	}.ApplyDefaults()
 
 	opts := manifestreceive.RouterOptions{

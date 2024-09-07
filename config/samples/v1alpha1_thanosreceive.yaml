@@ -3,9 +3,9 @@ kind: ThanosReceive
 metadata:
   name: example-receive
 spec:
-  imagePullPolicy: IfNotPresent
-  logFormat: logfmt
   ingestor:
+    logFormat: logfmt
+    imagePullPolicy: IfNotPresent
     defaultObjectStorageConfig:
       name: thanos-object-storage
       key: thanos.yaml
@@ -19,6 +19,8 @@ spec:
         externalLabels:
           replica: $(POD_NAME)
   router:
+    logFormat: logfmt
+    imagePullPolicy: IfNotPresent
     externalLabels:
       receive: "true"
     replicas: 1

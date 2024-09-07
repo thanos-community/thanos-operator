@@ -248,6 +248,10 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 		},
 	}
 
+	if opts.ResourceRequirements != nil {
+		sts.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
+	}
+
 	if opts.Additional.VolumeMounts != nil {
 		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			sts.Spec.Template.Spec.Containers[0].VolumeMounts,

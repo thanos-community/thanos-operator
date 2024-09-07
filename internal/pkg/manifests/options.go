@@ -3,6 +3,7 @@ package manifests
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -28,6 +29,8 @@ type Options struct {
 	Image *string
 	// Version is the version of Thanos
 	Version *string
+	// ResourceRequirements for the component
+	ResourceRequirements *corev1.ResourceRequirements
 	// LogLevel is the log level for the component
 	LogLevel *string
 	// LogFormat is the log format for the component
