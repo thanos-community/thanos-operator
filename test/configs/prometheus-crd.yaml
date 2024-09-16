@@ -4,10 +4,9 @@ metadata:
   name: test-prometheus
   namespace: default
 spec:
+  serviceAccountName: prometheus
   replicas: 1
   serviceMonitorNamespaceSelector: {}
-  serviceMonitorSelector:
-    matchLabels:
-      service-monitor-selector: thanos
+  serviceMonitorSelector: {}
   version: v2.54.0
   retention: "10d"

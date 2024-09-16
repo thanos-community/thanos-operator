@@ -160,8 +160,8 @@ func mutatePodSpec(existing *corev1.PodSpec, desired *corev1.PodSpec) {
 	existing.Volumes = desired.Volumes
 }
 
-func mutateServiceMonitor(existing, desired *monitoringv1.ServiceMonitor) {\
-    existing.Labels = desired.Labels
+func mutateServiceMonitor(existing, desired *monitoringv1.ServiceMonitor) {
+	existing.Labels = desired.Labels
 	existing.Spec.Selector.MatchLabels = desired.Spec.Selector.MatchLabels
 	existing.Spec.NamespaceSelector = desired.Spec.NamespaceSelector
 	existing.Spec.Endpoints = desired.Spec.Endpoints

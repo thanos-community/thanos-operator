@@ -19,6 +19,7 @@ package utils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -59,6 +60,17 @@ const (
 	certmanagerVersion = "v1.5.3"
 	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
 )
+
+type PrometheusResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Value  []interface{}     `json:"value"` // Use interface{} because value can be mixed types
+		} `json:"result"`
+	} `json:"data"`
+}
 
 func warnError(err error) {
 	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
@@ -534,11 +546,14 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 }
 
 func ApplyPrometheusCRD() error {
-	// Apply Prometheus CRD
 	wd, _ := os.Getwd()
-	promCmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/prometheus-crd.yaml")
+	promCmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/prometheus-crd.yaml", "--server-side")
 	if _, err := Run(promCmd); err != nil {
 		return fmt.Errorf("failed to apply Prometheus CRD: %v", err)
+	}
+	cmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/rbac.yaml", "--server-side")
+	if _, err := Run(cmd); err != nil {
+		return fmt.Errorf("failed to apply RBAC: %v for Prometheus", err)
 	}
 	return nil
 }
@@ -559,4 +574,18 @@ func VerifyServiceMonitorDeleted(c client.Client, name, ns string) bool {
 		Namespace: ns,
 	}, sm)
 	return errors.IsNotFound(err)
+}
+
+func QueryPrometheus(query string) (*PrometheusResponse, error) {
+	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", query)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var promResp PrometheusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&promResp); err != nil {
+		return nil, err
+	}
+	return &promResp, nil
 }

@@ -21,7 +21,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sm := BuildServiceMonitor(tc.opts, "9090")
+			sm := BuildServiceMonitor(tc.opts, "http")
 			if sm.GetName() != tc.opts.Name {
 				t.Errorf("expected service monitor name to be %s, got %s", tc.opts.Name, sm.GetName())
 			}
@@ -43,8 +43,8 @@ func TestBuildServiceMonitor(t *testing.T) {
 			if len(sm.Spec.Endpoints) != 1 {
 				t.Errorf("expected service monitor to have 1 endpoint, got %d", len(sm.Spec.Endpoints))
 			}
-			if sm.Spec.Endpoints[0].Port != "9090" {
-				t.Errorf("expected service monitor endpoint port to be 9090, got %s", sm.Spec.Endpoints[0].Port)
+			if sm.Spec.Endpoints[0].Port != "http" {
+				t.Errorf("expected service monitor endpoint port to be http, got %s", sm.Spec.Endpoints[0].Port)
 			}
 			if sm.Spec.Endpoints[0].Path != "/metrics" {
 				t.Errorf("expected service monitor endpoint path to be /metrics, got %s", sm.Spec.Endpoints[0].Path)

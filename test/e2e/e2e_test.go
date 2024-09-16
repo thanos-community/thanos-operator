@@ -31,15 +31,14 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -69,9 +68,6 @@ var _ = Describe("controller", Ordered, func() {
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
 
-		By("installing prometheus")
-		Expect(utils.ApplyPrometheusCRD()).To(Succeed())
-
 		By("installing the cert-manager")
 		Expect(utils.InstallCertManager()).To(Succeed())
 
@@ -87,7 +83,7 @@ var _ = Describe("controller", Ordered, func() {
 
 		scheme := runtime.NewScheme()
 		if err := v1alpha1.AddToScheme(scheme); err != nil {
-			fmt.Println("failed to add scheme ")
+			fmt.Println("failed to add scheme")
 			os.Exit(1)
 		}
 		if err := appsv1.AddToScheme(scheme); err != nil {
@@ -95,10 +91,6 @@ var _ = Describe("controller", Ordered, func() {
 			os.Exit(1)
 		}
 		if err := corev1.AddToScheme(scheme); err != nil {
-			fmt.Println("failed to add scheme")
-			os.Exit(1)
-		}
-		if err := monitoringv1.AddToScheme(scheme); err != nil {
 			fmt.Println("failed to add scheme")
 			os.Exit(1)
 		}
@@ -190,7 +182,7 @@ var _ = Describe("controller", Ordered, func() {
 				}
 				return nil
 			}
-			EventuallyWithOffset(1, verifyControllerUp, time.Minute*2, time.Second).Should(Succeed())
+			EventuallyWithOffset(1, verifyControllerUp, time.Minute, time.Second).Should(Succeed())
 
 		})
 	})
@@ -394,6 +386,26 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 		})
+		Context("Thanos Query Service Monitor", func() {
+			It("should remove service monitor when disabled", func() {
+				query := &v1alpha1.ThanosQuery{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, query)
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyServiceMonitor(c, queryName, namespace)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+				query.Spec.CommonThanosFields.EnableSelfMonitor = false
+				err = c.Update(context.Background(), query)
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyServiceMonitorDeleted(c, queryName, namespace)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+			})
+		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
@@ -531,27 +543,6 @@ var _ = Describe("controller", Ordered, func() {
 					return utils.VerifyConfigMapContents(c, "thanos-store-inmemory-config", namespace, "config.yaml", store.InMemoryConfig)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
-		})
-	})
-
-	Context("Thanos Query Service Monitor", func() {
-		It("should remove service monitor when disabled", func() {
-			query := &v1alpha1.ThanosQuery{}
-			err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, query)
-			Expect(err).To(BeNil())
-
-			Eventually(func() bool {
-				return utils.VerifyServiceMonitor(c, queryName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
-
-			query.Spec.CommonThanosFields.EnableSelfMonitor = false
-			err = c.Update(context.Background(), query)
-			Expect(err).To(BeNil())
-
-			Eventually(func() bool {
-				return utils.VerifyServiceMonitorDeleted(c, queryName, namespace)
-			}, time.Minute*5, time.Second*10).Should(BeTrue())
-
 		})
 	})
 })
