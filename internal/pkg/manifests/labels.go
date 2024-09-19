@@ -1,6 +1,8 @@
 package manifests
 
 import (
+	"maps"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -34,15 +36,18 @@ const (
 )
 
 // MergeLabels merges the provided labels with the default labels for a component.
+// Returns a new map with the merged labels leaving the original maps unchanged.
 func MergeLabels(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {
 	if baseLabels == nil {
-		return mergeWithPriority
+		labelCopy := make(map[string]string, len(mergeWithPriority))
+		maps.Copy(labelCopy, mergeWithPriority)
+		return labelCopy
 	}
 
-	for k, v := range mergeWithPriority {
-		baseLabels[k] = v
-	}
-	return baseLabels
+	mergedLabels := make(map[string]string, len(baseLabels)+len(mergeWithPriority))
+	maps.Copy(mergedLabels, baseLabels)
+	maps.Copy(mergedLabels, mergeWithPriority)
+	return mergedLabels
 }
 
 // BuildLabelSelectorFrom builds a label selector from the provided label selector and required labels.
