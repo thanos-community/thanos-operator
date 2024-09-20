@@ -1,0 +1,17 @@
+{
+	"ulid": "01J86WV6DHSNCB42755DG1SQMY",
+	"minTime": 1726807320000,
+	"maxTime": 1726807371231,
+	"stats": {
+		"numSamples": 18790,
+		"numSeries": 3647,
+		"numChunks": 3647
+	},
+	"compaction": {
+		"level": 1,
+		"sources": [
+			"01J86WV6DHSNCB42755DG1SQMY"
+		]
+	},
+	"version": 1
+}
