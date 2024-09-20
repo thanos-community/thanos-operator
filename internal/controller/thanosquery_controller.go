@@ -204,7 +204,7 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		ServicePorts: query.Spec.Additional.ServicePorts,
 	}
 
-	return manifestquery.BuildQuerier(manifestquery.QuerierOptions{
+	return manifestquery.BuildQuery(manifestquery.Options{
 		Options:       metaOpts,
 		ReplicaLabels: query.Spec.QuerierReplicaLabels,
 		Timeout:       "15m",
@@ -284,7 +284,7 @@ func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alp
 		ServicePorts: frontend.Additional.ServicePorts,
 	}
 
-	return manifestqueryfrontend.BuildQueryFrontend(manifestqueryfrontend.QueryFrontendOptions{
+	return manifestqueryfrontend.BuildQueryFrontend(manifestqueryfrontend.Options{
 		Options:                metaOpts,
 		QueryService:           query.GetName(),
 		QueryPort:              manifestquery.HTTPPort,

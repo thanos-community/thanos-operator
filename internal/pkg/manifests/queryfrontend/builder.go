@@ -34,8 +34,8 @@ config:
   max_item_size: 5MiB`
 )
 
-// QueryFrontendOptions for Thanos Query Frontend
-type QueryFrontendOptions struct {
+// Options for Thanos Query Frontend
+type Options struct {
 	manifests.Options
 	QueryService           string
 	QueryPort              int32
@@ -50,24 +50,31 @@ type QueryFrontendOptions struct {
 	Additional             manifests.Additional
 }
 
-func BuildQueryFrontend(opts QueryFrontendOptions) []client.Object {
+func BuildQueryFrontend(opts Options) []client.Object {
 	var objs []client.Object
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewQueryFrontendDeployment(opts))
-	objs = append(objs, NewQueryFrontendService(opts))
+	selectorLabels := labelsForQueryFrontend(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.ResponseCacheConfig == nil {
-		objs = append(objs, NewQueryFrontendInMemoryConfigMap(opts))
+		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, objectMetaLabels))
 	}
 	return objs
 }
 
-func NewQueryFrontendInMemoryConfigMap(opts QueryFrontendOptions) client.Object {
+func NewQueryFrontendInMemoryConfigMap(opts Options) client.Object {
+	return newQueryFrontendInMemoryConfigMap(opts, manifests.MergeLabels(opts.Labels, labelsForQueryFrontend(opts)))
+}
+
+func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultInMemoryConfigmapName,
 			Namespace: opts.Namespace,
-			Labels:    opts.Labels,
+			Labels:    labels,
 		},
 		Data: map[string]string{
 			defaultInMemoryConfigmapKey: InMemoryConfig,
@@ -75,10 +82,12 @@ func NewQueryFrontendInMemoryConfigMap(opts QueryFrontendOptions) client.Object 
 	}
 }
 
-func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
-	defaultLabels := labelsForQueryFrontend(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
+	selectorLabels := labelsForQueryFrontend(opts)
+	return newQueryFrontendDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
 
+func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	cacheConfigEnv := corev1.EnvVar{
 		Name: "CACHE_CONFIG",
 		ValueFrom: &corev1.EnvVarSource{
@@ -104,16 +113,16 @@ func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &opts.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: aggregatedLabels,
+					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.Name,
@@ -200,15 +209,17 @@ func NewQueryFrontendDeployment(opts QueryFrontendOptions) *appsv1.Deployment {
 	return deployment
 }
 
-func NewQueryFrontendService(opts QueryFrontendOptions) *corev1.Service {
-	defaultLabels := labelsForQueryFrontend(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func NewQueryFrontendService(opts Options) *corev1.Service {
+	selectorLabels := labelsForQueryFrontend(opts)
+	return newQueryFrontendService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
 
+func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -219,7 +230,7 @@ func NewQueryFrontendService(opts QueryFrontendOptions) *corev1.Service {
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Selector: defaultLabels,
+			Selector: selectorLabels,
 		},
 	}
 
@@ -230,7 +241,7 @@ func NewQueryFrontendService(opts QueryFrontendOptions) *corev1.Service {
 	return service
 }
 
-func queryFrontendArgs(opts QueryFrontendOptions) []string {
+func queryFrontendArgs(opts Options) []string {
 	args := []string{
 		"query-frontend",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
@@ -257,7 +268,7 @@ func queryFrontendArgs(opts QueryFrontendOptions) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForQueryFrontend(opts QueryFrontendOptions) map[string]string {
+func labelsForQueryFrontend(opts Options) map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
 		manifests.ComponentLabel: ComponentName,

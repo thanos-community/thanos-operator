@@ -9,16 +9,16 @@ import (
 )
 
 // BuildServiceAccount returns a new ServiceAccount from Options.
-func BuildServiceAccount(opts Options) client.Object {
+func BuildServiceAccount(name, namespace string, labels map[string]string) client.Object {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-			Labels:    opts.Labels,
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
 		},
 		AutomountServiceAccountToken: ptr.To(true),
 	}

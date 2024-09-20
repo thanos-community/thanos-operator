@@ -33,8 +33,8 @@ const (
 	GRPCPort = 10901
 )
 
-// StoreOptions for Thanos Store components
-type StoreOptions struct {
+// Options for Thanos Store components
+type Options struct {
 	manifests.Options
 	StorageSize              resource.Quantity
 	ObjStoreSecret           corev1.SecretKeySelector
@@ -47,14 +47,17 @@ type StoreOptions struct {
 }
 
 // BuildStores builds Thanos Store shards.
-func BuildStores(opts StoreOptions) []client.Object {
+func BuildStores(opts Options) []client.Object {
 	var objs []client.Object
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewStoreServices(opts)...)
-	objs = append(objs, NewStoreStatefulSets(opts)...)
+	selectorLabels := labelsForStoreShard(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
+	objs = append(objs, manifests.BuildServiceAccount(opts.Options.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newStoreServices(opts, selectorLabels, objectMetaLabels)...)
+	objs = append(objs, newStoreStatefulSets(opts)...)
 
 	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
-		objs = append(objs, NewStoreInMemoryConfigMap(opts))
+		objs = append(objs, newStoreInMemoryConfigMap(opts, objectMetaLabels))
 	}
 	return objs
 }
@@ -79,7 +82,7 @@ config:
   max_item_size: 5MiB`
 )
 
-func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
+func NewStoreInMemoryConfigMap(opts Options) client.Object {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultInMemoryConfigmapName,
@@ -92,28 +95,42 @@ func NewStoreInMemoryConfigMap(opts StoreOptions) client.Object {
 	}
 }
 
-// NewStoreStatefulSets creates a new StatefulSet for the Thanos Store.
-func NewStoreStatefulSets(opts StoreOptions) []client.Object {
-	defaultLabels := labelsForStoreShard(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func newStoreInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultInMemoryConfigmapName,
+			Namespace: opts.Namespace,
+			Labels:    labels,
+		},
+		Data: map[string]string{
+			defaultInMemoryConfigmapKey: InMemoryConfig,
+		},
+	}
+}
 
+// NewStoreStatefulSets creates a new StatefulSet for the Thanos Store.
+func NewStoreStatefulSets(opts Options) []client.Object {
+	return newStoreStatefulSets(opts)
+}
+func newStoreStatefulSets(opts Options) []client.Object {
+	selectorLabels := labelsForStoreShard(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	shardSts := make([]client.Object, opts.Shards)
 	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
 		opts.Name = StoreShardName(originalName, i)
-		shardSts[i] = newStoreShardStatefulSet(opts, originalName, defaultLabels, aggregatedLabels, i)
+		shardSts[i] = newStoreShardStatefulSet(opts, originalName, selectorLabels, objectMetaLabels, i)
 	}
-
 	return shardSts
 }
 
-func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels map[string]string, aggregatedLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
+func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objectMetaLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dataVolumeName,
 				Namespace: opts.Namespace,
-				Labels:    aggregatedLabels,
+				Labels:    objectMetaLabels,
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -206,18 +223,18 @@ func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels ma
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: opts.Name,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			VolumeClaimTemplates: vc,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: aggregatedLabels,
+					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
@@ -329,15 +346,18 @@ func newStoreShardStatefulSet(opts StoreOptions, SAName string, defaultLabels ma
 }
 
 // NewStoreServices creates a new Services for each Thanos Store shard.
-func NewStoreServices(opts StoreOptions) []client.Object {
+func NewStoreServices(opts Options) []client.Object {
+	selectorLabels := labelsForStoreShard(opts)
+	return newStoreServices(opts, labelsForStoreShard(opts), manifests.MergeLabels(opts.Labels, selectorLabels))
+}
+
+func newStoreServices(opts Options, selectorLabels, objectMetaLabels map[string]string) []client.Object {
 	shardSvc := make([]client.Object, opts.Shards)
 	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
-		defaultLabels := labelsForStoreShard(opts)
-		opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
 		opts.Name = StoreShardName(originalName, i)
 
-		svc := newService(opts.Options, defaultLabels)
+		svc := newService(opts.Options, selectorLabels, objectMetaLabels)
 		svc.Spec.ClusterIP = corev1.ClusterIPNone
 		if opts.Additional.ServicePorts != nil {
 			svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
@@ -350,7 +370,7 @@ func NewStoreServices(opts StoreOptions) []client.Object {
 }
 
 // newService creates a new Service for the Thanos Store shards.
-func newService(opts manifests.Options, selectorLabels map[string]string) *corev1.Service {
+func newService(opts manifests.Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -368,7 +388,7 @@ func newService(opts manifests.Options, selectorLabels map[string]string) *corev
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    opts.Labels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selectorLabels,
@@ -390,7 +410,7 @@ func StoreShardName(parentName string, shardIndex int) string {
 	return fmt.Sprintf("%s-%d", Name, shardIndex)
 }
 
-func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
+func storeArgsFrom(opts Options, shardIndex int) []string {
 	opts.Options = opts.ApplyDefaults()
 	args := []string{
 		"store",
@@ -423,7 +443,7 @@ func storeArgsFrom(opts StoreOptions, shardIndex int) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForStoreShard(opts StoreOptions) map[string]string {
+func labelsForStoreShard(opts Options) map[string]string {
 	return map[string]string{
 		manifests.NameLabel:            Name,
 		manifests.ComponentLabel:       ComponentName,

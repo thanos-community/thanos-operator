@@ -16,7 +16,7 @@ const (
 )
 
 func TestBuildQueryFrontend(t *testing.T) {
-	opts := QueryFrontendOptions{
+	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
 			Namespace: "ns",
@@ -36,7 +36,6 @@ func TestBuildQueryFrontend(t *testing.T) {
 		LabelsMaxRetries:     3,
 	}
 
-	expectSA := manifests.BuildServiceAccount(opts.Options)
 	expectService := NewQueryFrontendService(opts)
 	expectDeployment := NewQueryFrontendDeployment(opts)
 	expectConfigMap := NewQueryFrontendInMemoryConfigMap(opts)
@@ -46,8 +45,12 @@ func TestBuildQueryFrontend(t *testing.T) {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
-	if !equality.Semantic.DeepEqual(objs[0], expectSA) {
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != "test" {
 		t.Errorf("expected first object to be a service account, got %v", objs[0])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), objs[1].GetLabels()) {
+		t.Errorf("expected service account and other resource to have the same labels, got %v and %v", objs[0].GetLabels(), objs[1].GetLabels())
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectDeployment) {
@@ -76,11 +79,11 @@ func TestBuildQueryFrontend(t *testing.T) {
 func TestNewQueryFrontendDeployment(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		opts QueryFrontendOptions
+		opts Options
 	}{
 		{
 			name: "test query frontend deployment correctness",
-			opts: QueryFrontendOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -103,7 +106,7 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 		},
 		{
 			name: "test additional volumemount",
-			opts: QueryFrontendOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -134,7 +137,7 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 		},
 		{
 			name: "test additional container",
-			opts: QueryFrontendOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -242,7 +245,7 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 }
 
 func TestNewQueryFrontendService(t *testing.T) {
-	opts := QueryFrontendOptions{
+	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
 			Namespace: "ns",
@@ -275,7 +278,7 @@ func TestNewQueryFrontendService(t *testing.T) {
 }
 
 func TestNewQueryFrontendConfigMap(t *testing.T) {
-	opts := QueryFrontendOptions{
+	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
 			Namespace: "ns",

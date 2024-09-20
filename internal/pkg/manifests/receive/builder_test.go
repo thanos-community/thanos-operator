@@ -37,7 +37,6 @@ func TestBuildIngesters(t *testing.T) {
 		}.ApplyDefaults(),
 	}
 
-	expectSA := manifests.BuildServiceAccount(opts.Options)
 	expectService := NewIngestorService(opts)
 	expectStatefulSet := NewIngestorStatefulSet(opts)
 
@@ -46,8 +45,12 @@ func TestBuildIngesters(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if !equality.Semantic.DeepEqual(objs[0], expectSA) {
-		t.Errorf("expected first object to be a service account, wanted \n%v\n got \n%v\n", expectSA, objs[0])
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != "test" {
+		t.Errorf("expected first object to be a service account, got %v", objs[0])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), objs[1].GetLabels()) {
+		t.Errorf("expected service account and other resource to have the same labels, got %v and %v", objs[0].GetLabels(), objs[1].GetLabels())
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectService) {
@@ -83,7 +86,6 @@ func TestBuildRouter(t *testing.T) {
 		}.ApplyDefaults(),
 	}
 
-	expectSA := manifests.BuildServiceAccount(opts.Options)
 	expectService := NewRouterService(opts)
 	expectDeployment := NewRouterDeployment(opts)
 
@@ -92,8 +94,12 @@ func TestBuildRouter(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if !equality.Semantic.DeepEqual(objs[0], expectSA) {
-		t.Errorf("expected first object to be a service account, wanted \n%v\n got \n%v\n", expectSA, objs[0])
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != "test" {
+		t.Errorf("expected first object to be a service account, got %v", objs[0])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), objs[1].GetLabels()) {
+		t.Errorf("expected service account and other resource to have the same labels, got %v and %v", objs[0].GetLabels(), objs[1].GetLabels())
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectService) {

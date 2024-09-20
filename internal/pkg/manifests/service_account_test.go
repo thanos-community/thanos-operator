@@ -24,7 +24,7 @@ func TestBuildServiceAccount(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sa := BuildServiceAccount(tc.opts)
+			sa := BuildServiceAccount(tc.opts.Name, tc.opts.Namespace, tc.opts.Labels)
 			if sa.GetName() != tc.opts.Name {
 				t.Errorf("expected service account name to be %s, got %s", tc.opts.Name, sa.GetName())
 			}

@@ -200,7 +200,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		Env:          ruler.Spec.Additional.Env,
 		ServicePorts: ruler.Spec.Additional.ServicePorts,
 	}
-	return manifestruler.BuildRuler(manifestruler.RulerOptions{
+	return manifestruler.BuildRuler(manifestruler.Options{
 		Options:            metaOpts,
 		Endpoints:          endpoints,
 		RuleFiles:          ruleFiles,

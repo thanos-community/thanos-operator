@@ -28,8 +28,8 @@ const (
 	HTTPPortName = "http"
 )
 
-// QuerierOptions for Thanos Querier
-type QuerierOptions struct {
+// Options for Thanos Query
+type Options struct {
 	manifests.Options
 	ReplicaLabels []string
 	Timeout       string
@@ -58,17 +58,23 @@ type Endpoint struct {
 	Port        int32
 }
 
-func BuildQuerier(opts QuerierOptions) []client.Object {
+func BuildQuery(opts Options) []client.Object {
 	var objs []client.Object
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewQuerierDeployment(opts))
-	objs = append(objs, NewQuerierService(opts))
+	selectorLabels := labelsForQuery(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
 	return objs
 }
 
-func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
-	defaultLabels := labelsForQuerier(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func NewQueryDeployment(opts Options) *appsv1.Deployment {
+	selectorLabels := labelsForQuery(opts)
+	return newQueryDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
+
+func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -142,7 +148,7 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-		Args:                     querierArgs(opts),
+		Args:                     queryArgs(opts),
 	}
 
 	deployment := appsv1.Deployment{
@@ -153,16 +159,16 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &opts.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: aggregatedLabels,
+					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
@@ -211,9 +217,12 @@ func NewQuerierDeployment(opts QuerierOptions) *appsv1.Deployment {
 	return &deployment
 }
 
-func NewQuerierService(opts QuerierOptions) *corev1.Service {
-	defaultLabels := labelsForQuerier(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func NewQueryService(opts Options) *corev1.Service {
+	selectorLabels := labelsForQuery(opts)
+	return newQueryService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
+
+func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -235,17 +244,17 @@ func NewQuerierService(opts QuerierOptions) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:  defaultLabels,
+			Selector:  selectorLabels,
 			Ports:     servicePorts,
 			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
 }
 
-func querierArgs(opts QuerierOptions) []string {
+func queryArgs(opts Options) []string {
 	opts.Options = opts.ApplyDefaults()
 	args := []string{
 		"query",
@@ -290,7 +299,7 @@ func querierArgs(opts QuerierOptions) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForQuerier(opts QuerierOptions) map[string]string {
+func labelsForQuery(opts Options) map[string]string {
 	return map[string]string{
 		manifests.NameLabel:            Name,
 		manifests.ComponentLabel:       ComponentName,
