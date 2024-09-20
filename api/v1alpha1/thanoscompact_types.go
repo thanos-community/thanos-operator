@@ -37,21 +37,43 @@ const (
 type ThanosCompactSpec struct {
 	// CommonThanosFields are the options available to all Thanos components.
 	CommonThanosFields `json:",inline"`
+	// Labels are additional labels to add to the Compact component.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
 	// ObjectStorageConfig is the object storage configuration for the compact component.
 	// +kubebuilder:validation:Required
-	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig"`
+	// StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets.
+	// +kubebuilder:validation:Required
+	StorageSize StorageSize `json:"storageSize"`
 	// RetentionConfig is the retention configuration for the compact component.
 	// +kubebuilder:validation:Required
 	RetentionConfig RetentionResolutionConfig `json:"retentionConfig,omitempty"`
 	// BlockConfig defines settings for block handling.
 	// +kubebuilder:validation:Optional
-	BlockConfig BlockConfig `json:"blockConfig,omitempty"`
-	// GroupConfig defines settings for group handling.
-	// +kubebuilder:validation:Optional
-	GroupConfig GroupConfig `json:"groupConfig,omitempty"`
+	BlockConfig *BlockConfig `json:"blockConfig,omitempty"`
 	// ShardingConfig is the sharding configuration for the compact component.
 	// +kubebuilder:validation:Optional
 	ShardingConfig *ShardingConfig `json:"shardingConfig,omitempty"`
+	// CompactConfig is the configuration for the compact component.
+	// +kubebuilder:validation:Optional
+	CompactConfig *CompactConfig `json:"compactConfig,omitempty"`
+	// DownsamplingConfig is the downsampling configuration for the compact component.
+	// +kubebuilder:validation:Optional
+	DownsamplingConfig *DownsamplingConfig `json:"downsamplingConfig,omitempty"`
+	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
+	// If not set, will be set as zero value, so most recent blocks will be served.
+	// +kubebuilder:validation:Optional
+	MinTime *Duration `json:"minTime,omitempty"`
+	// Maximum time range to serve. Any data after this upper time range will be ignored.
+	// If not set, will be set as max value, so all blocks will be served.
+	// +kubebuilder:validation:Optional
+	MaxTime *Duration `json:"maxTime,omitempty"`
+	// Additional configuration for the Thanos components. Allows you to add
+	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
+	// and StatefulSets. Ideal to use for things like sidecars.
+	// +kubebuilder:validation:Optional
+	Additional `json:",inline"`
 }
 
 // ThanosCompactStatus defines the observed state of ThanosCompact
@@ -69,67 +91,51 @@ type BlockConfig struct {
 	// BlockFilesConcurrency is the number of goroutines to use when to use when
 	// fetching/uploading block files from object storage.
 	// +kubebuilder:default=1
-	BlockFilesConcurrency int32 `json:"blockFilesConcurrency,omitempty"`
+	// +kubebuilder:validation:Optional
+	BlockFilesConcurrency *int32 `json:"blockFilesConcurrency,omitempty"`
 	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
 	// +kubebuilder:default=32
-	BlockMetaFetchConcurrency int32 `json:"blockMetaFetchConcurrency,omitempty"`
+	// +kubebuilder:validation:Optional
+	BlockMetaFetchConcurrency *int32 `json:"blockMetaFetchConcurrency,omitempty"`
 	// BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI.
 	// +kubebuilder:default="1m"
-	BlockViewerGlobalSyncInterval Duration `json:"blockViewerGlobalSync,omitempty"`
+	// +kubebuilder:validation:Optional
+	BlockViewerGlobalSyncInterval *Duration `json:"blockViewerGlobalSync,omitempty"`
 	// BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks
 	// between local and remote view for /global Block Viewer UI.
 	// +kubebuilder:default="5m"
-	BlockViewerGlobalSyncTimeout Duration `json:"blockViewerGlobalSyncTimeout,omitempty"`
+	// +kubebuilder:validation:Optional
+	BlockViewerGlobalSyncTimeout *Duration `json:"blockViewerGlobalSyncTimeout,omitempty"`
+}
+
+type CompactConfig struct {
 	// BlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage.
 	// +kubebuilder:default=1
-	BlockFetchConcurrency int32 `json:"blockFetchConcurrency,omitempty"`
-	// BlockConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.
-	// Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed.
-	// +kubebuilder:default="30m"
-	BlockConsistencyDelay Duration `json:"blockConsistencyDelay,omitempty"`
-	// BlockCleanupInterval configures how often we should clean up partially uploaded blocks and blocks
+	// +kubebuilder:validation:Optional
+	BlockFetchConcurrency *int32 `json:"blockFetchConcurrency,omitempty"`
+	// CleanupInterval configures how often we should clean up partially uploaded blocks and blocks
 	// that are marked for deletion.
 	// Cleaning happens at the end of an iteration.
 	// Setting this to 0s disables the cleanup.
 	// +kubebuilder:default="5m"
-	BlockCleanupInterval Duration `json:"blockCleanupInterval,omitempty"`
-}
-
-// GroupConfig defines settings for group handling.
-type GroupConfig struct {
-	// BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.
-	// +kubebuilder:default="concurrent"
-	// +kubebuilder:validation:Enum=concurrent;recursive
-	BlockDiscoveryStrategy BlockDiscoveryStrategy `json:"blockDiscoveryStrategy,omitempty"`
-	// BlockFilesConcurrency is the number of goroutines to use when to use when
-	// fetching/uploading block files from object storage.
-	// +kubebuilder:default=1
-	BlockFilesConcurrency int32 `json:"blockFilesConcurrency,omitempty"`
-	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
-	// +kubebuilder:default=32
-	BlockMetaFetchConcurrency int32 `json:"blockMetaFetchConcurrency,omitempty"`
-	// BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI.
-	// +kubebuilder:default="1m"
-	BlockViewerGlobalSyncInterval Duration `json:"blockViewerGlobalSync,omitempty"`
-	// BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks
-	// between local and remote view for /global Block Viewer UI.
-	// +kubebuilder:default="5m"
-	BlockViewerGlobalSyncTimeout Duration `json:"blockViewerGlobalSyncTimeout,omitempty"`
-	// GroupConcurrency is the number of goroutines to use when compacting groups.
-	// +kubebuilder:default=1
-	GroupConcurrency int32 `json:"groupConcurrency,omitempty"`
+	// +kubebuilder:validation:Optional
+	CleanupInterval *Duration `json:"cleanupInterval,omitempty"`
+	// ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.
+	// Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed.
+	// +kubebuilder:default="30m"
+	// +kubebuilder:validation:Optional
+	ConsistencyDelay *Duration `json:"blockConsistencyDelay,omitempty"`
 }
 
 // DownsamplingConfig defines the downsampling configuration for the compact component.
 type DownsamplingConfig struct {
-	// Enabled is a flag to enable downsampling.
-	// +kubebuilder:default=true
-	// +kubebuilder:validation:Optional
-	Enabled bool `json:"enabled,omitempty"`
+	// Disable downsampling.
+	// +kubebuilder:default=false
+	Disable *bool `json:"downsamplingEnabled,omitempty"`
 	// Concurrency is the number of goroutines to use when downsampling blocks.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
-	Concurrency int32 `json:"concurrency,omitempty"`
+	Concurrency *int32 `json:"downsamplingConcurrency,omitempty"`
 }
 
 // RetentionResolutionConfig defines the retention configuration for the compact component.
@@ -158,13 +164,43 @@ type RetentionResolutionConfig struct {
 type ShardingConfig struct {
 	// ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.
 	// +kubebuilder:validation:Optional
-	ExternalLabelSharding ExternalLabelShardingConfig `json:"externalLabelSharding,omitempty"`
+	// +listType=map
+	// +listMapKey=shardName
+	ExternalLabelSharding []ExternalLabelShardingConfig `json:"externalLabelSharding,omitempty"`
 }
 
 // ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.
 // The keys are the external labels to shard on and the values are the values (as regular expressions) to shard on.
 // Each value will be a configured and deployed as a separate compact component.
-type ExternalLabelShardingConfig map[string]string
+// For example, if the 'label' is set to `tenant_id` with values `tenant-a` and `!tenant-a`
+// two compact components will be deployed.
+// The resulting compact StatefulSets will have an appropriate --selection.relabel-config flag set to the value of the external label sharding.
+// And named such that:
+//
+//		The first compact component will have the name {ThanosCompact.Name}-{shardName}-0 with the flag
+//	    --selector.relabel-config=
+//	       - source_labels:
+//	         - tenant_id
+//	         regex: 'tenant-a'
+//	         action: keep
+//
+//		The second compact component will have the name {ThanosCompact.Name}-{shardName}-1 with the flag
+//	    --selector.relabel-config=
+//	       - source_labels:
+//	         - tenant_id
+//	         regex: '!tenant-a'
+//	         action: keep
+type ExternalLabelShardingConfig struct {
+	// ShardName is the name of the shard.
+	// ShardName is used to identify the shard in the compact component.
+	// +kubebuilder:validation:Required
+	ShardName string `json:"shardName"`
+	// Label is the external label to shard on.
+	// +kubebuilder:validation:Required
+	Label string `json:"label"`
+	// Values are the values (as regular expressions) to shard on.
+	Values []string `json:"values"`
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
