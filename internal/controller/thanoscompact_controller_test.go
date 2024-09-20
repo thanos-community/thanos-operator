@@ -18,52 +18,188 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/test/utils"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("ThanosCompact Controller", func() {
+var _ = Describe("ThanosCompact Controller", Ordered, func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const (
+			ns           = "thanos-compact-test"
+			resourceName = "test-compact-resource"
+			shardName    = "test-shard"
+		)
 
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: ns,
 		}
-		thanoscompact := &monitoringthanosiov1alpha1.ThanosCompact{}
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind ThanosCompact")
-			err := k8sClient.Get(ctx, typeNamespacedName, thanoscompact)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &monitoringthanosiov1alpha1.ThanosCompact{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+		shardOne := CompactShardName(resourceName, shardName, 0)
+		shardTwo := CompactShardName(resourceName, shardName, 1)
+
+		BeforeAll(func() {
+			By("creating the namespace and objstore secret")
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ns,
+				},
+			})).Should(Succeed())
+
+			Expect(k8sClient.Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "thanos-objstore",
+					Namespace: ns,
+				},
+				StringData: map[string]string{
+					"thanos.yaml": `type: S3
+config:
+  bucket: test
+  endpoint: http://localhost:9000
+  access_key: Cheesecake
+  secret_key: supersecret
+  http_config:
+    insecure_skip_verify: false
+`,
+				},
+			})).Should(Succeed())
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Cleanup the specific resource instance ThanosCompact")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+		})
+
+		It("should reconcile correctly", func() {
+			resource := &monitoringthanosiov1alpha1.ThanosCompact{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
+					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+					Labels:             map[string]string{"some-label": "xyz"},
+					ShardingConfig: &monitoringthanosiov1alpha1.ShardingConfig{
+						ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
+							{
+								ShardName: shardName,
+								Label:     "tenant_id",
+								Values:    []string{"someone", "anyone-else"},
+							},
+						},
+					},
+					StorageSize: "1Gi",
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					Additional: monitoringthanosiov1alpha1.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "jaeger-agent",
+								Image: "jaegertracing/jaeger-agent:1.22",
+								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+							},
+						},
+					},
+				},
+			}
+
+			By("setting up the thanos compact resources", func() {
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyNamedServiceAndWorkloadExists(
+						k8sClient, &appsv1.StatefulSet{}, shardOne, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyNamedServiceAndWorkloadExists(
+						k8sClient, &appsv1.StatefulSet{}, shardTwo, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 1, shardOne, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 1, shardTwo, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("setting correct sharding arg on thanos compact", func() {
+				EventuallyWithOffset(1, func() bool {
+					args := `--selector.relabel-config=
+- action: keep
+  source_labels: ["tenant_id"]
+  regex: someone`
+					return utils.VerifyStatefulSetArgs(k8sClient, shardOne, ns, 0, args)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					args := `--selector.relabel-config=
+- action: keep
+  source_labels: ["tenant_id"]
+  regex: anyone-else`
+					return utils.VerifyStatefulSetArgs(k8sClient, shardTwo, ns, 0, args)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("checking additional container", func() {
+				EventuallyWithOffset(1, func() bool {
+					statefulSet := &appsv1.StatefulSet{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      shardOne,
+						Namespace: ns,
+					}, statefulSet); err != nil {
+						return false
+					}
+
+					return len(statefulSet.Spec.Template.Spec.Containers) == 2
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("ensuring old shards are cleaned up", func() {
+				resource.Spec.ShardingConfig = nil
+				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					for _, shard := range []string{shardOne, shardTwo} {
+						if utils.VerifyServiceExists(k8sClient, shard, ns) {
+							return false
+						}
+						if utils.VerifyStatefulSetExists(k8sClient, shard, ns) {
+							return false
+						}
+					}
+					return true
+				}, time.Second*100, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyNamedServiceAndWorkloadExists(
+						k8sClient, &appsv1.StatefulSet{}, CompactNameFromParent(resourceName), ns)
+				}, time.Second*100, time.Second*2).Should(BeTrue())
+			})
 		})
 	})
 })
