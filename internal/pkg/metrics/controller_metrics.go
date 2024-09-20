@@ -11,6 +11,9 @@ type BaseMetrics struct {
 	ClientErrorsTotal          *prometheus.CounterVec
 }
 
+type ThanosCompactMetrics struct {
+}
+
 type ThanosQueryMetrics struct {
 	EndpointsConfigured                *prometheus.GaugeVec
 	ServiceWatchesReconciliationsTotal prometheus.Counter
@@ -47,6 +50,10 @@ func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
 			Help: "Total number of errors encountered during kube client calls of Thanos resources",
 		}, []string{"component"}),
 	}
+}
+
+func NewThanosCompactMetrics(reg prometheus.Registerer) ThanosCompactMetrics {
+	return ThanosCompactMetrics{}
 }
 
 func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
