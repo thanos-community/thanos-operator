@@ -3,8 +3,11 @@ package manifests
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -17,6 +20,7 @@ const (
 
 // Options is a struct that holds the options for the common manifests
 type Options struct {
+	Additional
 	// Name is the name of the object
 	Name string
 	// Namespace is the namespace of the object
@@ -34,21 +38,11 @@ type Options struct {
 	// LogLevel is the log level for the component
 	LogLevel *string
 	// LogFormat is the log format for the component
-	LogFormat      *string
-	containerImage string
+	LogFormat *string
 }
 
-// ApplyDefaults applies the default values to the options
-func (o Options) ApplyDefaults() Options {
-	if o.Image == nil || *o.Image == "" {
-		o.Image = ptr.To(DefaultThanosImage)
-	}
-
-	if o.Version == nil || *o.Version == "" {
-		o.Version = ptr.To(DefaultThanosVersion)
-	}
-	o.containerImage = fmt.Sprintf("%s:%s", *o.Image, *o.Version)
-
+// ToFlags returns the flags for the Options
+func (o Options) ToFlags() []string {
 	if o.LogLevel == nil || *o.LogLevel == "" {
 		o.LogLevel = ptr.To(defaultLogLevel)
 	}
@@ -57,10 +51,101 @@ func (o Options) ApplyDefaults() Options {
 		o.LogFormat = ptr.To(defaultLogFormat)
 	}
 
-	return o
+	return []string{
+		fmt.Sprintf("--log.level=%s", *o.LogLevel),
+		fmt.Sprintf("--log.format=%s", *o.LogFormat),
+	}
 }
 
 // GetContainerImage for the Options
 func (o Options) GetContainerImage() string {
-	return o.containerImage
+	if o.Image == nil || *o.Image == "" {
+		o.Image = ptr.To(DefaultThanosImage)
+	}
+
+	if o.Version == nil || *o.Version == "" {
+		o.Version = ptr.To(DefaultThanosVersion)
+	}
+	return fmt.Sprintf("%s:%s", *o.Image, *o.Version)
+}
+
+// AugmentWithOptions augments the object with the options
+// Supported objects are Deployment and StatefulSet and ServiceAccount
+func AugmentWithOptions(obj client.Object, opts Options) {
+	switch o := obj.(type) {
+	case *appsv1.Deployment:
+		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
+
+		if opts.ResourceRequirements != nil {
+			o.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
+		}
+
+		if opts.Additional.VolumeMounts != nil {
+			o.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				o.Spec.Template.Spec.Containers[0].VolumeMounts,
+				opts.Additional.VolumeMounts...)
+		}
+
+		if opts.Additional.Containers != nil {
+			o.Spec.Template.Spec.Containers = append(
+				o.Spec.Template.Spec.Containers,
+				opts.Additional.Containers...)
+		}
+
+		if opts.Additional.Volumes != nil {
+			o.Spec.Template.Spec.Volumes = append(
+				o.Spec.Template.Spec.Volumes,
+				opts.Additional.Volumes...)
+		}
+
+		if opts.Additional.Ports != nil {
+			o.Spec.Template.Spec.Containers[0].Ports = append(
+				o.Spec.Template.Spec.Containers[0].Ports,
+				opts.Additional.Ports...)
+		}
+
+		if opts.Additional.Env != nil {
+			o.Spec.Template.Spec.Containers[0].Env = append(
+				o.Spec.Template.Spec.Containers[0].Env,
+				opts.Additional.Env...)
+		}
+	case *appsv1.StatefulSet:
+		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
+
+		if opts.ResourceRequirements != nil {
+			o.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
+		}
+
+		if opts.Additional.VolumeMounts != nil {
+			o.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				o.Spec.Template.Spec.Containers[0].VolumeMounts,
+				opts.Additional.VolumeMounts...)
+		}
+
+		if opts.Additional.Containers != nil {
+			o.Spec.Template.Spec.Containers = append(
+				o.Spec.Template.Spec.Containers,
+				opts.Additional.Containers...)
+		}
+
+		if opts.Additional.Volumes != nil {
+			o.Spec.Template.Spec.Volumes = append(
+				o.Spec.Template.Spec.Volumes,
+				opts.Additional.Volumes...)
+		}
+
+		if opts.Additional.Ports != nil {
+			o.Spec.Template.Spec.Containers[0].Ports = append(
+				o.Spec.Template.Spec.Containers[0].Ports,
+				opts.Additional.Ports...)
+		}
+
+		if opts.Additional.Env != nil {
+			o.Spec.Template.Spec.Containers[0].Env = append(
+				o.Spec.Template.Spec.Containers[0].Env,
+				opts.Additional.Env...)
+		}
+	default:
+		//no-op
+	}
 }

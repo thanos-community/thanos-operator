@@ -47,7 +47,6 @@ type Options struct {
 	RangeMaxRetries        int
 	LabelsMaxRetries       int
 	LabelsDefaultTimeRange manifests.Duration
-	Additional             manifests.Additional
 }
 
 func BuildQueryFrontend(opts Options) []client.Object {
@@ -171,41 +170,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 			},
 		},
 	}
-
-	if opts.ResourceRequirements != nil {
-		deployment.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		deployment.Spec.Template.Spec.Containers = append(
-			deployment.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		deployment.Spec.Template.Spec.Volumes = append(
-			deployment.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		deployment.Spec.Template.Spec.Containers[0].Ports = append(
-			deployment.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		deployment.Spec.Template.Spec.Containers[0].Env = append(
-			deployment.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
+	manifests.AugmentWithOptions(deployment, opts.Options)
 	return deployment
 }
 

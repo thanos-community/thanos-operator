@@ -27,7 +27,7 @@ func TestBuildStore(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 		Shards: 1,
 	}
 
@@ -87,7 +87,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+				},
 				Shards: 1,
 			},
 		},
@@ -103,16 +103,16 @@ func TestNewStoreStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Shards: 1,
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "test-sd",
-							MountPath: "/test-sd-file",
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "test-sd",
+								MountPath: "/test-sd-file",
+							},
 						},
 					},
 				},
+				Shards: 1,
 			},
 		},
 		{
@@ -127,21 +127,21 @@ func TestNewStoreStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Shards: 1,
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
 						},
 					},
 				},
+				Shards: 1,
 			},
 		},
 	} {

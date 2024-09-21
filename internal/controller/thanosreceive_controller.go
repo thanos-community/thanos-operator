@@ -261,7 +261,7 @@ func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1al
 			LogLevel:             receiver.Spec.Ingester.LogLevel,
 			LogFormat:            receiver.Spec.Ingester.LogFormat,
 			ResourceRequirements: receiver.Spec.Ingester.ResourceRequirements,
-		}.ApplyDefaults()
+		}
 
 		opt := manifestreceive.IngesterOptions{
 			Options: metaOpts,
@@ -349,7 +349,7 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		LogLevel:             receiver.Spec.Router.LogLevel,
 		LogFormat:            receiver.Spec.Router.LogFormat,
 		ResourceRequirements: receiver.Spec.Router.ResourceRequirements,
-	}.ApplyDefaults()
+	}
 
 	opts := manifestreceive.RouterOptions{
 		Options:           metaOpts,

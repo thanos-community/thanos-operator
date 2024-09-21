@@ -43,7 +43,6 @@ type Options struct {
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
 	Shards                   int32
-	Additional               manifests.Additional
 }
 
 // BuildStores builds Thanos Store shards.
@@ -114,12 +113,12 @@ func NewStoreStatefulSets(opts Options) []client.Object {
 }
 func newStoreStatefulSets(opts Options) []client.Object {
 	selectorLabels := labelsForStoreShard(opts)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
 	shardSts := make([]client.Object, opts.Shards)
 	originalName := opts.Name
 	for i := 0; i < int(opts.Shards); i++ {
 		opts.Name = StoreShardName(originalName, i)
-		shardSts[i] = newStoreShardStatefulSet(opts, originalName, selectorLabels, objectMetaLabels, i)
+		shardSts[i] = newStoreShardStatefulSet(opts, originalName, labelsForStoreShard(opts), manifests.MergeLabels(opts.Labels, selectorLabels), i)
 	}
 	return shardSts
 }
@@ -307,41 +306,7 @@ func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objec
 			},
 		},
 	}
-
-	if opts.ResourceRequirements != nil {
-		sts.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		sts.Spec.Template.Spec.Containers = append(
-			sts.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		sts.Spec.Template.Spec.Containers[0].Ports = append(
-			sts.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		sts.Spec.Template.Spec.Containers[0].Env = append(
-			sts.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
+	manifests.AugmentWithOptions(sts, opts.Options)
 	return sts
 }
 
@@ -411,11 +376,9 @@ func StoreShardName(parentName string, shardIndex int) string {
 }
 
 func storeArgsFrom(opts Options, shardIndex int) []string {
-	opts.Options = opts.ApplyDefaults()
-	args := []string{
-		"store",
-		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+	args := []string{"store"}
+	args = append(args, opts.ToFlags()...)
+	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--objstore.config=$(%s)", storeObjectStoreEnvVarName),
@@ -433,7 +396,7 @@ func storeArgsFrom(opts Options, shardIndex int) []string {
                 regex: %d`, opts.Shards, shardIndex),
 		fmt.Sprintf("--min-time=%s", string(opts.Min)),
 		fmt.Sprintf("--max-time=%s", string(opts.Max)),
-	}
+	)
 
 	// TODO(saswatamcode): Add some validation.
 	if opts.Additional.Args != nil {

@@ -26,7 +26,7 @@ func TestBuildQueryFrontend(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 		QueryService:         "thanos-query",
 		LogQueriesLongerThan: "5s",
 		CompressResponses:    true,
@@ -94,7 +94,7 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Replicas: 2,
-				}.ApplyDefaults(),
+				},
 				QueryService:         "thanos-query",
 				LogQueriesLongerThan: "5s",
 				CompressResponses:    true,
@@ -117,7 +117,15 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Replicas: 2,
-				}.ApplyDefaults(),
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "test-sd",
+								MountPath: "/test-sd-file",
+							},
+						},
+					},
+				},
 				QueryService:         "thanos-query",
 				LogQueriesLongerThan: "5s",
 				CompressResponses:    true,
@@ -125,14 +133,6 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 				LabelsSplitInterval:  "30m",
 				RangeMaxRetries:      5,
 				LabelsMaxRetries:     3,
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "test-sd",
-							MountPath: "/test-sd-file",
-						},
-					},
-				},
 			},
 		},
 		{
@@ -148,7 +148,20 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Replicas: 2,
-				}.ApplyDefaults(),
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
+						},
+					},
+				},
 				QueryService:         "thanos-query",
 				LogQueriesLongerThan: "5s",
 				CompressResponses:    true,
@@ -156,24 +169,10 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 				LabelsSplitInterval:  "30m",
 				RangeMaxRetries:      5,
 				LabelsMaxRetries:     3,
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
-						},
-					},
-				},
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			deployment := NewQueryFrontendDeployment(tc.opts)
 
 			if deployment.GetName() != tc.opts.Name {
@@ -254,7 +253,7 @@ func TestNewQueryFrontendService(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 	}
 
 	service := NewQueryFrontendService(opts)
@@ -287,7 +286,7 @@ func TestNewQueryFrontendConfigMap(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 	}
 
 	configMap := NewQueryFrontendInMemoryConfigMap(opts)

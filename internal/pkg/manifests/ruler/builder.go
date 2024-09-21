@@ -41,7 +41,6 @@ type Options struct {
 	AlertLabelDrop     []string
 	StorageSize        resource.Quantity
 	EvaluationInterval manifests.Duration
-	Additional         manifests.Additional
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -223,7 +222,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		})
 	}
 
-	sts := appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
 			APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -254,41 +253,8 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		},
 	}
 
-	if opts.ResourceRequirements != nil {
-		sts.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		sts.Spec.Template.Spec.Containers = append(
-			sts.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		sts.Spec.Template.Spec.Containers[0].Ports = append(
-			sts.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		sts.Spec.Template.Spec.Containers[0].Env = append(
-			sts.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
-	return &sts
+	manifests.AugmentWithOptions(sts, opts.Options)
+	return sts
 }
 
 func NewRulerService(opts Options) *corev1.Service {
@@ -358,18 +324,16 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 }
 
 func rulerArgs(opts Options) []string {
-	opts.Options = opts.ApplyDefaults()
-	args := []string{
-		"rule",
-		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+	args := []string{"rule"}
+	args = append(args, opts.ToFlags()...)
+	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		"--data-dir=/var/thanos/rule",
 		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
-	}
+	)
 
 	if opts.EvaluationInterval != "" {
 		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))

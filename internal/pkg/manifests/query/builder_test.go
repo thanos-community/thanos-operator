@@ -26,7 +26,7 @@ func TestBuildQuery(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
@@ -84,7 +84,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+				},
 				Timeout:       "15m",
 				LookbackDelta: "5m",
 				MaxConcurrent: 20,
@@ -102,18 +102,18 @@ func TestNewQuerierDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Timeout:       "15m",
-				LookbackDelta: "5m",
-				MaxConcurrent: 20,
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "test-sd",
-							MountPath: "/test-sd-file",
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "test-sd",
+								MountPath: "/test-sd-file",
+							},
 						},
 					},
 				},
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
 			},
 		},
 		{
@@ -128,28 +128,27 @@ func TestNewQuerierDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Timeout:       "15m",
-				LookbackDelta: "5m",
-				MaxConcurrent: 20,
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
 						},
 					},
 				},
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			query := NewQueryDeployment(tc.opts)
 			if query.GetName() != tc.opts.Name {
 				t.Errorf("expected query deployment name to be %s, got %s", tc.opts.Name, query.GetName())
@@ -244,7 +243,6 @@ func TestNewQuerierService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			querier := NewQueryService(tc.opts)
 			if querier.GetName() != tc.opts.Name {
 				t.Errorf("expected querier service name to be %s, got %s", tc.opts.Name, querier.GetName())

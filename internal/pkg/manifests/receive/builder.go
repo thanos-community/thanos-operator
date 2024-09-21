@@ -58,7 +58,6 @@ type IngesterOptions struct {
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
 	ExternalLabels map[string]string
-	Additional     manifests.Additional
 }
 
 type TSDBOpts struct {
@@ -70,7 +69,6 @@ type RouterOptions struct {
 	manifests.Options
 	ReplicationFactor int32
 	ExternalLabels    map[string]string
-	Additional        manifests.Additional
 }
 
 // HashringOptions for Thanos Receive hashring
@@ -465,41 +463,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			},
 		},
 	}
-
-	if opts.ResourceRequirements != nil {
-		sts.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		sts.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			sts.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		sts.Spec.Template.Spec.Containers = append(
-			sts.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		sts.Spec.Template.Spec.Volumes = append(
-			sts.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		sts.Spec.Template.Spec.Containers[0].Ports = append(
-			sts.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		sts.Spec.Template.Spec.Containers[0].Env = append(
-			sts.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
+	manifests.AugmentWithOptions(sts, opts.Options)
 	return sts
 }
 
@@ -720,41 +684,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 			RevisionHistoryLimit: ptr.To(int32(10)),
 		},
 	}
-
-	if opts.ResourceRequirements != nil {
-		deployment.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		deployment.Spec.Template.Spec.Containers = append(
-			deployment.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		deployment.Spec.Template.Spec.Volumes = append(
-			deployment.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		deployment.Spec.Template.Spec.Containers[0].Ports = append(
-			deployment.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		deployment.Spec.Template.Spec.Containers[0].Env = append(
-			deployment.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
+	manifests.AugmentWithOptions(deployment, opts.Options)
 	return deployment
 }
 
@@ -771,11 +701,10 @@ func IngesterNameFromParent(receiveName, ingesterName string) string {
 }
 
 func ingestorArgsFrom(opts IngesterOptions) []string {
-	opts.Options = opts.ApplyDefaults()
-	args := []string{
-		"receive",
-		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+	args := []string{"receive"}
+	args = append(args, opts.ToFlags()...)
+
+	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
@@ -785,7 +714,7 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:%d",
 			opts.Name, GRPCPort),
 		"--receive.grpc-compression=none",
-	}
+	)
 
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
@@ -800,18 +729,16 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 }
 
 func routerArgsFrom(opts RouterOptions) []string {
-	opts.Options = opts.ApplyDefaults()
-	args := []string{
-		"receive",
-		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+	args := []string{"receive"}
+	args = append(args, opts.ToFlags()...)
+	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
 		fmt.Sprintf("--receive.hashrings-algorithm=%s", AlgorithmKetama),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
-	}
+	)
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
 	}

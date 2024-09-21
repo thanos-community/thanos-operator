@@ -36,8 +36,7 @@ type Options struct {
 	LookbackDelta string
 	MaxConcurrent int
 
-	Endpoints  []Endpoint
-	Additional manifests.Additional
+	Endpoints []Endpoint
 }
 
 type EndpointType string
@@ -151,7 +150,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 		Args:                     queryArgs(opts),
 	}
 
-	deployment := appsv1.Deployment{
+	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -180,41 +179,8 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 		},
 	}
 
-	if opts.ResourceRequirements != nil {
-		deployment.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-	}
-
-	if opts.Additional.VolumeMounts != nil {
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			opts.Additional.VolumeMounts...)
-	}
-
-	if opts.Additional.Containers != nil {
-		deployment.Spec.Template.Spec.Containers = append(
-			deployment.Spec.Template.Spec.Containers,
-			opts.Additional.Containers...)
-	}
-
-	if opts.Additional.Volumes != nil {
-		deployment.Spec.Template.Spec.Volumes = append(
-			deployment.Spec.Template.Spec.Volumes,
-			opts.Additional.Volumes...)
-	}
-
-	if opts.Additional.Ports != nil {
-		deployment.Spec.Template.Spec.Containers[0].Ports = append(
-			deployment.Spec.Template.Spec.Containers[0].Ports,
-			opts.Additional.Ports...)
-	}
-
-	if opts.Additional.Env != nil {
-		deployment.Spec.Template.Spec.Containers[0].Env = append(
-			deployment.Spec.Template.Spec.Containers[0].Env,
-			opts.Additional.Env...)
-	}
-
-	return &deployment
+	manifests.AugmentWithOptions(deployment, opts.Options)
+	return deployment
 }
 
 func NewQueryService(opts Options) *corev1.Service {
@@ -255,11 +221,9 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 }
 
 func queryArgs(opts Options) []string {
-	opts.Options = opts.ApplyDefaults()
-	args := []string{
-		"query",
-		fmt.Sprintf("--log.level=%s", *opts.LogLevel),
-		fmt.Sprintf("--log.format=%s", *opts.LogFormat),
+	args := []string{"query"}
+	args = append(args, opts.ToFlags()...)
+	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		"--web.prefix-header=X-Forwarded-Prefix",
@@ -269,7 +233,7 @@ func queryArgs(opts Options) []string {
 		"--grpc.proxy-strategy=eager",
 		"--query.promql-engine=thanos",
 		fmt.Sprintf("--query.max-concurrent=%d", opts.MaxConcurrent),
-	}
+	)
 
 	for _, label := range opts.ReplicaLabels {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))

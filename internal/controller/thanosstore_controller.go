@@ -167,16 +167,15 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		LogLevel:             store.Spec.LogLevel,
 		LogFormat:            store.Spec.LogFormat,
 		ResourceRequirements: store.Spec.ResourceRequirements,
-	}.ApplyDefaults()
-
-	additional := manifests.Additional{
-		Args:         store.Spec.Args,
-		Containers:   store.Spec.Containers,
-		Env:          store.Spec.Env,
-		Volumes:      store.Spec.Volumes,
-		VolumeMounts: store.Spec.VolumeMounts,
-		Ports:        store.Spec.Ports,
-		ServicePorts: store.Spec.ServicePorts,
+		Additional: manifests.Additional{
+			Args:         store.Spec.Args,
+			Containers:   store.Spec.Containers,
+			Env:          store.Spec.Env,
+			Volumes:      store.Spec.Volumes,
+			VolumeMounts: store.Spec.VolumeMounts,
+			Ports:        store.Spec.Ports,
+			ServicePorts: store.Spec.ServicePorts,
+		},
 	}
 
 	return manifestsstore.BuildStores(manifestsstore.Options{
@@ -187,7 +186,6 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		Min:                      manifests.Duration(manifests.OptionalToString(store.Spec.MinTime)),
 		Max:                      manifests.Duration(manifests.OptionalToString(store.Spec.MaxTime)),
 		IgnoreDeletionMarksDelay: manifests.Duration(store.Spec.IgnoreDeletionMarksDelay),
-		Additional:               additional,
 		StorageSize:              resource.MustParse(string(store.Spec.StorageSize)),
 		Shards:                   store.Spec.ShardingStrategy.Shards,
 	})

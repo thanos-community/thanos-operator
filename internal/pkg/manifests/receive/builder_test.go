@@ -34,7 +34,7 @@ func TestBuildIngesters(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 	}
 
 	expectService := NewIngestorService(opts)
@@ -83,7 +83,7 @@ func TestBuildRouter(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 	}
 
 	expectService := NewRouterService(opts)
@@ -167,7 +167,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+				},
 			},
 		},
 		{
@@ -182,12 +182,12 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "http-config",
-							MountPath: "/http-config",
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "http-config",
+								MountPath: "/http-config",
+							},
 						},
 					},
 				},
@@ -205,17 +205,17 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
 						},
 					},
 				},
@@ -223,7 +223,6 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			ingester := NewIngestorStatefulSet(tc.opts)
 			if ingester.GetName() != tc.opts.Name {
 				t.Errorf("expected ingester statefulset name to be %s, got %s", tc.opts.Name, ingester.GetName())
@@ -308,7 +307,7 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+				},
 			},
 		},
 		{
@@ -323,12 +322,12 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "http-config",
-							MountPath: "/http-config",
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "http-config",
+								MountPath: "/http-config",
+							},
 						},
 					},
 				},
@@ -346,17 +345,17 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
 						},
 					},
 				},
@@ -364,7 +363,6 @@ func TestNewRouterDeployment(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			router := NewRouterDeployment(tc.opts)
 			if router.GetName() != tc.opts.Name {
 				t.Errorf("expected router deployment name to be %s, got %s", tc.opts.Name, router.GetName())
@@ -455,7 +453,6 @@ func TestNewIngestorService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			ingester := NewIngestorService(tc.opts)
 			if ingester.GetName() != tc.opts.Name {
 				t.Errorf("expected ingester service name to be %s, got %s", tc.opts.Name, ingester.GetName())
@@ -512,7 +509,6 @@ func TestNewRouterService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			router := NewRouterService(tc.opts)
 			if router.GetName() != tc.opts.Name {
 				t.Errorf("expected router service name to be %s, got %s", tc.opts.Name, router.GetName())
