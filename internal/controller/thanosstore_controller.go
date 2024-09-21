@@ -179,7 +179,7 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		ServicePorts: store.Spec.ServicePorts,
 	}
 
-	return manifestsstore.BuildStores(manifestsstore.StoreOptions{
+	return manifestsstore.BuildStores(manifestsstore.Options{
 		Options:                  opts,
 		ObjStoreSecret:           store.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         store.Spec.IndexCacheConfig,

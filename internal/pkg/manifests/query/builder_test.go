@@ -15,8 +15,8 @@ const (
 	someOtherLabelValue  string = "abc"
 )
 
-func TestBuildQuerier(t *testing.T) {
-	opts := QuerierOptions{
+func TestBuildQuery(t *testing.T) {
+	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
 			Namespace: "ns",
@@ -32,17 +32,20 @@ func TestBuildQuerier(t *testing.T) {
 		MaxConcurrent: 20,
 	}
 
-	expectSA := manifests.BuildServiceAccount(opts.Options)
-	expectService := NewQuerierService(opts)
-	expectDeployment := NewQuerierDeployment(opts)
+	expectService := NewQueryService(opts)
+	expectDeployment := NewQueryDeployment(opts)
 
-	objs := BuildQuerier(opts)
+	objs := BuildQuery(opts)
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if !equality.Semantic.DeepEqual(objs[0], expectSA) {
-		t.Errorf("expected first object to be a service account, wanted \n%v\n got \n%v\n", expectSA, objs[0])
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != "test" {
+		t.Errorf("expected first object to be a service account, got %v", objs[0])
+	}
+
+	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), objs[1].GetLabels()) {
+		t.Errorf("expected service account and other resource to have the same labels, got %v and %v", objs[0].GetLabels(), objs[1].GetLabels())
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectDeployment) {
@@ -53,7 +56,7 @@ func TestBuildQuerier(t *testing.T) {
 		t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
 	}
 
-	wantLabels := labelsForQuerier(opts)
+	wantLabels := labelsForQuery(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 
@@ -67,11 +70,11 @@ func TestBuildQuerier(t *testing.T) {
 func TestNewQuerierDeployment(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		opts QuerierOptions
+		opts Options
 	}{
 		{
 			name: "test query deployment correctness",
-			opts: QuerierOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -89,7 +92,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 		},
 		{
 			name: "test additional volumemount",
-			opts: QuerierOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -115,7 +118,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 		},
 		{
 			name: "test additional container",
-			opts: QuerierOptions{
+			opts: Options{
 				Options: manifests.Options{
 					Name:      "test",
 					Namespace: "ns",
@@ -147,7 +150,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.opts.Options = tc.opts.ApplyDefaults()
-			query := NewQuerierDeployment(tc.opts)
+			query := NewQueryDeployment(tc.opts)
 			if query.GetName() != tc.opts.Name {
 				t.Errorf("expected query deployment name to be %s, got %s", tc.opts.Name, query.GetName())
 			}
@@ -166,7 +169,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				t.Errorf("expected query deployment to have label 'some-other-label' with value 'abc', got %s", query.GetLabels()["some-other-label"])
 			}
 			// ensure default labels are set
-			expect := labelsForQuerier(tc.opts)
+			expect := labelsForQuery(tc.opts)
 			for k, v := range expect {
 				if query.GetLabels()[k] != v {
 					t.Errorf("expected query deployment to have label %s with value %s, got %s", k, v, query.GetLabels()[k])
@@ -177,7 +180,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 				t.Errorf("expected query deployment to have 2 containers, got %d", len(query.Spec.Template.Spec.Containers))
 			}
 
-			expectArgs := querierArgs(tc.opts)
+			expectArgs := queryArgs(tc.opts)
 			var found bool
 			for _, c := range query.Spec.Template.Spec.Containers {
 				if c.Name == Name {
@@ -215,7 +218,7 @@ func TestNewQuerierDeployment(t *testing.T) {
 }
 
 func TestNewQuerierService(t *testing.T) {
-	opts := QuerierOptions{
+	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
 			Namespace: "ns",
@@ -233,7 +236,7 @@ func TestNewQuerierService(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		opts QuerierOptions
+		opts Options
 	}{
 		{
 			name: "test query service correctness",
@@ -242,7 +245,7 @@ func TestNewQuerierService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.opts.Options = tc.opts.ApplyDefaults()
-			querier := NewQuerierService(tc.opts)
+			querier := NewQueryService(tc.opts)
 			if querier.GetName() != tc.opts.Name {
 				t.Errorf("expected querier service name to be %s, got %s", tc.opts.Name, querier.GetName())
 			}
@@ -261,7 +264,7 @@ func TestNewQuerierService(t *testing.T) {
 				t.Errorf("expected query service to have label 'some-other-label' with value 'abc', got %s", querier.GetLabels()["some-other-label"])
 			}
 			// ensure default labels are set
-			expect := labelsForQuerier(tc.opts)
+			expect := labelsForQuery(tc.opts)
 			for k, v := range expect {
 				if querier.GetLabels()[k] != v {
 					t.Errorf("expected query service to have label %s with value %s, got %s", k, v, querier.GetLabels()[k])

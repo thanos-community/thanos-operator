@@ -29,8 +29,8 @@ const (
 	HTTPPortName = "http"
 )
 
-// RulerOptions for Thanos Ruler
-type RulerOptions struct {
+// Options for Thanos Ruler
+type Options struct {
 	manifests.Options
 	Endpoints          []Endpoint
 	RuleFiles          []corev1.ConfigMapKeySelector
@@ -52,11 +52,14 @@ type Endpoint struct {
 	Port        int32
 }
 
-func BuildRuler(opts RulerOptions) []client.Object {
+func BuildRuler(opts Options) []client.Object {
 	var objs []client.Object
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewRulerStatefulSet(opts))
-	objs = append(objs, NewRulerService(opts))
+	selectorLabels := labelsForRulers(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 	return objs
 }
 
@@ -67,9 +70,12 @@ const (
 	dataVolumeMountPath = "var/thanos/rule"
 )
 
-func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
-	defaultLabels := labelsForRulers(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
+	selectorLabels := labelsForRulers(opts)
+	return newRulerStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
+
+func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -188,7 +194,7 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dataVolumeName,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -225,17 +231,17 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:             &opts.Replicas,
 			VolumeClaimTemplates: vc,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: aggregatedLabels,
+					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
@@ -285,7 +291,7 @@ func NewRulerStatefulSet(opts RulerOptions) *appsv1.StatefulSet {
 	return &sts
 }
 
-func NewRulerService(opts RulerOptions) *corev1.Service {
+func NewRulerService(opts Options) *corev1.Service {
 	defaultLabels := labelsForRulers(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
 	servicePorts := []corev1.ServicePort{
@@ -319,7 +325,39 @@ func NewRulerService(opts RulerOptions) *corev1.Service {
 	}
 }
 
-func rulerArgs(opts RulerOptions) []string {
+func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+	servicePorts := []corev1.ServicePort{
+		{
+			Name:       GRPCPortName,
+			Port:       GRPCPort,
+			TargetPort: intstr.FromInt32(GRPCPort),
+		},
+		{
+			Name:       HTTPPortName,
+			Port:       HTTPPort,
+			TargetPort: intstr.FromInt32(HTTPPort),
+		},
+	}
+
+	if opts.Additional.ServicePorts != nil {
+		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
+	}
+
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
+			Labels:    objectMetaLabels,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector:  selectorLabels,
+			Ports:     servicePorts,
+			ClusterIP: corev1.ClusterIPNone,
+		},
+	}
+}
+
+func rulerArgs(opts Options) []string {
 	opts.Options = opts.ApplyDefaults()
 	args := []string{
 		"rule",
@@ -361,7 +399,7 @@ func rulerArgs(opts RulerOptions) []string {
 	return args
 }
 
-func labelsForRulers(opts RulerOptions) map[string]string {
+func labelsForRulers(opts Options) map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
 		manifests.ComponentLabel: ComponentName,

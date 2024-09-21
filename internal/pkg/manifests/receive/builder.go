@@ -139,9 +139,12 @@ func BuildIngesters(opts []IngesterOptions) []client.Object {
 // BuildIngester builds the ingester for Thanos Receive
 func BuildIngester(opts IngesterOptions) []client.Object {
 	var objs []client.Object
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options))
-	objs = append(objs, NewIngestorService(opts))
-	objs = append(objs, NewIngestorStatefulSet(opts))
+	selectorLabels := labelsForIngestor(opts)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
 	return objs
 }
 
@@ -256,8 +259,11 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 
 // BuildRouter builds the Thanos Receive router components
 func BuildRouter(opts RouterOptions) []client.Object {
+	selectorLabels := labelsForRouter(opts.Options)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+
 	return []client.Object{
-		manifests.BuildServiceAccount(opts.Options),
+		manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels),
 		NewRouterService(opts),
 		NewRouterDeployment(opts),
 	}
@@ -309,15 +315,17 @@ const (
 
 // NewIngestorStatefulSet creates a new StatefulSet for the Thanos Receive ingester.
 func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
-	defaultLabels := labelsForIngestor(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+	selectorLabels := labelsForIngestor(opts)
+	return newIngestorStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
 
+func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dataVolumeName,
 				Namespace: opts.Namespace,
-				Labels:    aggregatedLabels,
+				Labels:    objectMetaLabels,
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -340,18 +348,18 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: opts.Name,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			VolumeClaimTemplates: vc,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: aggregatedLabels,
+					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: opts.Name,
@@ -497,9 +505,19 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 
 // NewIngestorService creates a new Service for the Thanos Receive ingester.
 func NewIngestorService(opts IngesterOptions) *corev1.Service {
-	defaultLabels := labelsForIngestor(opts)
-	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
-	svc := newService(opts.Options, defaultLabels)
+	selectorLabels := labelsForIngestor(opts)
+	svc := newService(opts.Name, opts.Namespace, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	svc.Spec.ClusterIP = corev1.ClusterIPNone
+
+	if opts.Additional.ServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
+	}
+
+	return svc
+}
+
+func newIngestorService(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+	svc := newService(opts.Name, opts.Namespace, selectorLabels, objectMetaLabels)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
 	if opts.Additional.ServicePorts != nil {
@@ -511,19 +529,19 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 
 // NewRouterService creates a new Service for the Thanos Receive router.
 func NewRouterService(opts RouterOptions) *corev1.Service {
-	defaultLabels := labelsForRouter(opts.Options)
-	opts.Labels = manifests.MergeLabels(opts.Labels, defaultLabels)
-	svc := newService(opts.Options, defaultLabels)
-
+	selectorLabels := labelsForRouter(opts.Options)
+	return newRouterService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
+func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+	svc := newService(opts.Name, opts.Namespace, selectorLabels, objectMetaLabels)
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
-
 	return svc
 }
 
 // newService creates a new Service for the Thanos Receive components.
-func newService(opts manifests.Options, selectorLabels map[string]string) *corev1.Service {
+func newService(name, namespace string, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -547,9 +565,9 @@ func newService(opts manifests.Options, selectorLabels map[string]string) *corev
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-			Labels:    opts.Labels,
+			Name:      name,
+			Namespace: namespace,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selectorLabels,
@@ -566,25 +584,27 @@ const (
 
 // NewRouterDeployment creates a new Deployment for the Thanos Receive router.
 func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
-	defaultLabels := labelsForRouter(opts.Options)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+	selectorLabels := labelsForRouter(opts.Options)
+	return newRouterDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+}
 
+func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: defaultLabels,
+				MatchLabels: selectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      opts.Name,
 					Namespace: opts.Namespace,
-					Labels:    aggregatedLabels,
+					Labels:    objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{},
