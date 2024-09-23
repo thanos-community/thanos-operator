@@ -54,12 +54,12 @@ func Build(opts Options) []client.Object {
 	selectorLabels := labelsForStoreShard(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	name := opts.Name
+	saName := opts.Name
 	if opts.ShardName != "" {
-		name = opts.ShardName
+		saName = opts.ShardName
 	}
 
-	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(saName, opts.Namespace, objectMetaLabels))
 	objs = append(objs, newStoreService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 
@@ -216,7 +216,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: opts.Name,
+			ServiceName: name,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
