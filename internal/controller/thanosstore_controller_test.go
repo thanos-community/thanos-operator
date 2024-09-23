@@ -120,20 +120,12 @@ config:
 			By("setting up the thanos store resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
-						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-0", ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
-						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-1", ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfNamedResourcesWithoutSA(
-						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName+"-shard-2", ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				expect := []string{resourceName + "-shard-0", resourceName + "-shard-1", resourceName + "-shard-2"}
+				for _, shard := range expect {
+					EventuallyWithOffset(1, func() bool {
+						return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, shard, ns)
+					}, time.Second*10, time.Second*2).Should(BeTrue())
+				}
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, "thanos-store-inmemory-config", ns, "config.yaml", store.InMemoryConfig)
@@ -192,7 +184,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
-						utils.ExpectApiResourceStatefulSet,
+						&appsv1.StatefulSet{},
 						resourceName+"-shard-0",
 						ns,
 						0,
@@ -204,7 +196,7 @@ config:
 
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
-						utils.ExpectApiResourceStatefulSet,
+						&appsv1.StatefulSet{},
 						resourceName+"-shard-0",
 						ns,
 						0,

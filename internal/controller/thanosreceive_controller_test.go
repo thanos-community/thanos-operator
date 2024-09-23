@@ -208,8 +208,7 @@ config:
 
 				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
 				Eventually(func() bool {
-					return utils.VerifyExistenceOfRequiredNamedResources(
-						k8sClient, utils.ExpectApiResourceStatefulSet, name, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, name, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
@@ -348,8 +347,7 @@ config:
 
 			By("creating the router components", func() {
 				Eventually(func() bool {
-					return utils.VerifyExistenceOfRequiredNamedResources(
-						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName, ns)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
