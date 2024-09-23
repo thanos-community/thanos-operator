@@ -187,21 +187,20 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		LogLevel:             query.Spec.LogLevel,
 		LogFormat:            query.Spec.LogFormat,
 		ResourceRequirements: query.Spec.ResourceRequirements,
-	}.ApplyDefaults()
+		Additional: manifests.Additional{
+			Args:         query.Spec.Additional.Args,
+			Containers:   query.Spec.Additional.Containers,
+			Volumes:      query.Spec.Additional.Volumes,
+			VolumeMounts: query.Spec.Additional.VolumeMounts,
+			Ports:        query.Spec.Additional.Ports,
+			Env:          query.Spec.Additional.Env,
+			ServicePorts: query.Spec.Additional.ServicePorts,
+		},
+	}
 
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
 		return []client.Object{}, err
-	}
-
-	additional := manifests.Additional{
-		Args:         query.Spec.Additional.Args,
-		Containers:   query.Spec.Additional.Containers,
-		Volumes:      query.Spec.Additional.Volumes,
-		VolumeMounts: query.Spec.Additional.VolumeMounts,
-		Ports:        query.Spec.Additional.Ports,
-		Env:          query.Spec.Additional.Env,
-		ServicePorts: query.Spec.Additional.ServicePorts,
 	}
 
 	return manifestquery.BuildQuery(manifestquery.Options{
@@ -211,7 +210,6 @@ func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitori
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
 		Endpoints:     endpoints,
-		Additional:    additional,
 	}), nil
 }
 
@@ -272,23 +270,21 @@ func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alp
 		LogLevel:             frontend.LogLevel,
 		LogFormat:            frontend.LogFormat,
 		ResourceRequirements: frontend.ResourceRequirements,
-	}.ApplyDefaults()
-
-	additional := manifests.Additional{
-		Args:         frontend.Additional.Args,
-		Containers:   frontend.Additional.Containers,
-		Volumes:      frontend.Additional.Volumes,
-		VolumeMounts: frontend.Additional.VolumeMounts,
-		Ports:        frontend.Additional.Ports,
-		Env:          frontend.Additional.Env,
-		ServicePorts: frontend.Additional.ServicePorts,
+		Additional: manifests.Additional{
+			Args:         frontend.Additional.Args,
+			Containers:   frontend.Additional.Containers,
+			Volumes:      frontend.Additional.Volumes,
+			VolumeMounts: frontend.Additional.VolumeMounts,
+			Ports:        frontend.Additional.Ports,
+			Env:          frontend.Additional.Env,
+			ServicePorts: frontend.Additional.ServicePorts,
+		},
 	}
 
 	return manifestqueryfrontend.BuildQueryFrontend(manifestqueryfrontend.Options{
 		Options:                metaOpts,
 		QueryService:           query.GetName(),
 		QueryPort:              manifestquery.HTTPPort,
-		Additional:             additional,
 		LogQueriesLongerThan:   manifests.Duration(manifests.OptionalToString(frontend.LogQueriesLongerThan)),
 		CompressResponses:      frontend.CompressResponses,
 		ResponseCacheConfig:    frontend.QueryRangeResponseCacheConfig,

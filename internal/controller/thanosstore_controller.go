@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
-
-	"github.com/go-logr/logr"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -111,54 +111,117 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) error {
-	var objs []client.Object
-
-	desiredObjs := r.buildStore(store)
-	objs = append(objs, desiredObjs...)
-
 	var errCount int32
-	for _, obj := range objs {
-		if manifests.IsNamespacedResource(obj) {
-			obj.SetNamespace(store.Namespace)
-			if err := ctrl.SetControllerReference(&store, obj, r.Scheme); err != nil {
-				r.logger.Error(err, "failed to set controller owner reference to resource")
+	shardedObjects := r.buildStore(store)
+
+	// todo - we need to prune any orphaned resources here at this point
+
+	for _, shardObjs := range shardedObjects {
+		for _, obj := range shardObjs {
+			if manifests.IsNamespacedResource(obj) {
+				obj.SetNamespace(store.GetNamespace())
+				if err := ctrl.SetControllerReference(&store, obj, r.Scheme); err != nil {
+					r.logger.Error(err, "failed to set controller owner reference to resource")
+					errCount++
+					continue
+				}
+			}
+
+			desired := obj.DeepCopyObject().(client.Object)
+			mutateFn := manifests.MutateFuncFor(obj, desired)
+
+			op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
+			if err != nil {
+				r.logger.Error(
+					err, "failed to create or update resource",
+					"gvk", obj.GetObjectKind().GroupVersionKind().String(),
+					"resource", obj.GetName(),
+					"namespace", obj.GetNamespace(),
+				)
 				errCount++
 				continue
 			}
-		}
 
-		desired := obj.DeepCopyObject().(client.Object)
-		mutateFn := manifests.MutateFuncFor(obj, desired)
-
-		op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
-		if err != nil {
-			r.logger.Error(
-				err, "failed to create or update resource",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
+			r.logger.V(1).Info(
+				"resource configured",
+				"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
+				"resource", obj.GetName(), "namespace", obj.GetNamespace(),
 			)
-			errCount++
-			continue
 		}
-
-		r.logger.V(1).Info(
-			"resource configured",
-			"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
-			"resource", obj.GetName(), "namespace", obj.GetNamespace(),
-		)
 	}
 
 	if errCount > 0 {
 		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
-		return fmt.Errorf("failed to create or update %d resources for the store", errCount)
+		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
 	return nil
 }
 
-func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.ThanosStore) []client.Object {
-	opts := manifests.Options{
+// buildStore returns a map of slices of client.Object that represents the desired state of the Thanos Store resources.
+// each key represents a named shard and each slice value represents the resources for that shard.
+func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.ThanosStore) map[string][]client.Object {
+	opts := r.specToOptions(store)
+	shardedObjects := make(map[string][]client.Object, len(opts))
+
+	for i, opt := range opts {
+		storeObjs := manifestsstore.Build(opt)
+		shardedObjects[i] = append(shardedObjects[i], storeObjs...)
+	}
+	return shardedObjects
+}
+
+func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) map[string]manifestsstore.Options {
+	// build the shared options
+	opts := r.specToManifestOptions(store)
+
+	// buildOpts returns the Options for a Thanos Store.
+	buildOpts := func() manifestsstore.Options {
+		return manifestsstore.Options{
+			ObjStoreSecret:           store.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+			IndexCacheConfig:         store.Spec.IndexCacheConfig,
+			CachingBucketConfig:      store.Spec.CachingBucketConfig,
+			Min:                      manifests.Duration(manifests.OptionalToString(store.Spec.MinTime)),
+			Max:                      manifests.Duration(manifests.OptionalToString(store.Spec.MaxTime)),
+			IgnoreDeletionMarksDelay: manifests.Duration(store.Spec.IgnoreDeletionMarksDelay),
+			StorageSize:              resource.MustParse(string(store.Spec.StorageSize)),
+			Options:                  opts,
+		}
+	}
+	// no sharding strategy, or sharding strategy with 1 shard, return a single store
+	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
+		return map[string]manifestsstore.Options{
+			store.GetName(): buildOpts(),
+		}
+	}
+
+	shardCount := int(store.Spec.ShardingStrategy.Shards)
+	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
+
+	for i := range store.Spec.ShardingStrategy.Shards {
+		shardName := storeShardName(store.GetName(), i)
+		storeShardOpts := buildOpts()
+		storeShardOpts.ShardName = shardName
+		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
+			{
+				Action:      "hashmod",
+				SourceLabel: "__block_id",
+				TargetLabel: "shard",
+				Modulus:     shardCount,
+			},
+			{
+				Action:      "keep",
+				SourceLabel: "shard",
+				Regex:       fmt.Sprintf("%d", i),
+			},
+		}
+		shardedOptions[shardName] = storeShardOpts
+	}
+	return shardedOptions
+}
+
+func (r *ThanosStoreReconciler) specToManifestOptions(store monitoringthanosiov1alpha1.ThanosStore) manifests.Options {
+	return manifests.Options{
 		Name:                 store.GetName(),
 		Namespace:            store.GetNamespace(),
 		Replicas:             store.Spec.ShardingStrategy.ShardReplicas,
@@ -167,30 +230,16 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 		LogLevel:             store.Spec.LogLevel,
 		LogFormat:            store.Spec.LogFormat,
 		ResourceRequirements: store.Spec.ResourceRequirements,
-	}.ApplyDefaults()
-
-	additional := manifests.Additional{
-		Args:         store.Spec.Args,
-		Containers:   store.Spec.Containers,
-		Env:          store.Spec.Env,
-		Volumes:      store.Spec.Volumes,
-		VolumeMounts: store.Spec.VolumeMounts,
-		Ports:        store.Spec.Ports,
-		ServicePorts: store.Spec.ServicePorts,
+		Additional: manifests.Additional{
+			Args:         store.Spec.Args,
+			Containers:   store.Spec.Containers,
+			Env:          store.Spec.Env,
+			Volumes:      store.Spec.Volumes,
+			VolumeMounts: store.Spec.VolumeMounts,
+			Ports:        store.Spec.Ports,
+			ServicePorts: store.Spec.ServicePorts,
+		},
 	}
-
-	return manifestsstore.BuildStores(manifestsstore.Options{
-		Options:                  opts,
-		ObjStoreSecret:           store.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		IndexCacheConfig:         store.Spec.IndexCacheConfig,
-		CachingBucketConfig:      store.Spec.CachingBucketConfig,
-		Min:                      manifests.Duration(manifests.OptionalToString(store.Spec.MinTime)),
-		Max:                      manifests.Duration(manifests.OptionalToString(store.Spec.MaxTime)),
-		IgnoreDeletionMarksDelay: manifests.Duration(store.Spec.IgnoreDeletionMarksDelay),
-		Additional:               additional,
-		StorageSize:              resource.MustParse(string(store.Spec.StorageSize)),
-		Shards:                   store.Spec.ShardingStrategy.Shards,
-	})
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -209,4 +258,11 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return nil
+}
+
+// storeShardName generates name for a Thanos Store shard.
+func storeShardName(parentName string, shardIndex int32) string {
+	name := fmt.Sprintf("%s-shard-%d", parentName, shardIndex)
+	// todo - figure out a strategy for global naming for all resources
+	return name
 }

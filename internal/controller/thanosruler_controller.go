@@ -189,17 +189,17 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		LogLevel:             ruler.Spec.LogLevel,
 		LogFormat:            ruler.Spec.LogFormat,
 		ResourceRequirements: ruler.Spec.ResourceRequirements,
-	}.ApplyDefaults()
-
-	additional := manifests.Additional{
-		Args:         ruler.Spec.Additional.Args,
-		Containers:   ruler.Spec.Additional.Containers,
-		Volumes:      ruler.Spec.Additional.Volumes,
-		VolumeMounts: ruler.Spec.Additional.VolumeMounts,
-		Ports:        ruler.Spec.Additional.Ports,
-		Env:          ruler.Spec.Additional.Env,
-		ServicePorts: ruler.Spec.Additional.ServicePorts,
+		Additional: manifests.Additional{
+			Args:         ruler.Spec.Additional.Args,
+			Containers:   ruler.Spec.Additional.Containers,
+			Volumes:      ruler.Spec.Additional.Volumes,
+			VolumeMounts: ruler.Spec.Additional.VolumeMounts,
+			Ports:        ruler.Spec.Additional.Ports,
+			Env:          ruler.Spec.Additional.Env,
+			ServicePorts: ruler.Spec.Additional.ServicePorts,
+		},
 	}
+
 	return manifestruler.BuildRuler(manifestruler.Options{
 		Options:            metaOpts,
 		Endpoints:          endpoints,
@@ -211,7 +211,6 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		AlertLabelDrop:     ruler.Spec.AlertLabelDrop,
 		StorageSize:        resource.MustParse(ruler.Spec.StorageSize),
 		EvaluationInterval: manifests.Duration(ruler.Spec.EvaluationInterval),
-		Additional:         additional,
 	}), nil
 }
 

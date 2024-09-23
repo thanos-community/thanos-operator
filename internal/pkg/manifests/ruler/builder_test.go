@@ -26,7 +26,7 @@ func TestBuildRuler(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 		Endpoints: []Endpoint{
 			{
 				ServiceName: "test-query",
@@ -107,7 +107,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+				},
 				Endpoints: []Endpoint{
 					{
 						ServiceName: "test-query",
@@ -148,7 +148,15 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+					Additional: manifests.Additional{
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "some-rule",
+								MountPath: "/some-rule",
+							},
+						},
+					},
+				},
 				Endpoints: []Endpoint{
 					{
 						ServiceName: "test-query",
@@ -174,14 +182,6 @@ func TestNewRulerStatefulSet(t *testing.T) {
 				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
-				},
-				Additional: manifests.Additional{
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "some-rule",
-							MountPath: "/some-rule",
-						},
-					},
 				},
 			},
 		},
@@ -197,7 +197,20 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
-				}.ApplyDefaults(),
+					Additional: manifests.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image:latest",
+								Args:  []string{"--test-arg"},
+								Env: []corev1.EnvVar{{
+									Name:  "TEST_ENV",
+									Value: "test",
+								}},
+							},
+						},
+					},
+				},
 				Endpoints: []Endpoint{
 					{
 						ServiceName: "test-query",
@@ -224,24 +237,10 @@ func TestNewRulerStatefulSet(t *testing.T) {
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
 				},
-				Additional: manifests.Additional{
-					Containers: []corev1.Container{
-						{
-							Name:  "test-container",
-							Image: "test-image:latest",
-							Args:  []string{"--test-arg"},
-							Env: []corev1.EnvVar{{
-								Name:  "TEST_ENV",
-								Value: "test",
-							}},
-						},
-					},
-				},
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			ruler := NewRulerStatefulSet(tc.opts)
 			if ruler.GetName() != tc.opts.Name {
 				t.Errorf("expected ruler statefuleset name to be %s, got %s", tc.opts.Name, ruler.GetName())
@@ -322,7 +321,7 @@ func TestNewRulerService(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
-		}.ApplyDefaults(),
+		},
 		Endpoints: []Endpoint{
 			{
 				ServiceName: "test-query",
@@ -361,7 +360,6 @@ func TestNewRulerService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.opts.Options = tc.opts.ApplyDefaults()
 			ruler := NewRulerService(tc.opts)
 			if ruler.GetName() != tc.opts.Name {
 				t.Errorf("expected ruler service name to be %s, got %s", tc.opts.Name, ruler.GetName())
