@@ -54,7 +54,7 @@ func BuildQueryFrontend(opts Options) []client.Object {
 	selectorLabels := labelsForQueryFrontend(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
@@ -124,7 +124,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: Name,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -233,12 +233,19 @@ func queryFrontendArgs(opts Options) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForQueryFrontend(opts Options) map[string]string {
+// GetRequiredLabels returns a map of labels that can be used to look up qfe resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
 		manifests.ComponentLabel: ComponentName,
-		manifests.InstanceLabel:  opts.Name,
 		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
+}
+
+func labelsForQueryFrontend(opts Options) map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	return labels
 }

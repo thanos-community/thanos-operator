@@ -140,7 +140,7 @@ func BuildIngester(opts IngesterOptions) []client.Object {
 	selectorLabels := labelsForIngestor(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -257,11 +257,8 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 
 // BuildRouter builds the Thanos Receive router components
 func BuildRouter(opts RouterOptions) []client.Object {
-	selectorLabels := labelsForRouter(opts.Options)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
-
 	return []client.Object{
-		manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels),
+		manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()),
 		NewRouterService(opts),
 		NewRouterDeployment(opts),
 	}
@@ -360,7 +357,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: Name,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -670,7 +667,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 							Args:                     routerArgsFrom(opts),
 						},
 					},
-					ServiceAccountName:           opts.Name,
+					ServiceAccountName:           Name,
 					AutomountServiceAccountToken: ptr.To(true),
 				},
 			},
@@ -800,25 +797,43 @@ func extractReadyEndpoints(epSlice discoveryv1.EndpointSlice, svcName string) []
 	return readyEndpoints
 }
 
-func labelsForIngestor(opts IngesterOptions) map[string]string {
-	return map[string]string{
-		manifests.NameLabel:            Name,
-		manifests.ComponentLabel:       IngestComponentName,
-		manifests.InstanceLabel:        opts.Name,
-		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
-		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-	}
-}
-
-func labelsForRouter(opts manifests.Options) map[string]string {
+// GetRequiredLabels returns a map of labels that can be used to look up thanos receive resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
-		manifests.ComponentLabel: RouterComponentName,
-		manifests.InstanceLabel:  opts.Name,
 		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
+}
+
+// GetRequiredIngestorLabels returns a map of labels that can be used to look up thanos receive ingest resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredIngestorLabels() map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.ComponentLabel] = IngestComponentName
+	labels[manifests.DefaultStoreAPILabel] = manifests.DefaultStoreAPIValue
+	return labels
+}
+
+func labelsForIngestor(opts IngesterOptions) map[string]string {
+	labels := GetRequiredIngestorLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	return labels
+}
+
+// GetRequiredRouterLabels returns a map of labels that can be used to look up thanos receive router resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredRouterLabels() map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.ComponentLabel] = RouterComponentName
+	return labels
+}
+
+func labelsForRouter(opts manifests.Options) map[string]string {
+	labels := GetRequiredRouterLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	return labels
 }
 
 func (h Hashrings) toJson() (string, error) {

@@ -54,12 +54,7 @@ func Build(opts Options) []client.Object {
 	selectorLabels := labelsForStoreShard(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	saName := opts.Name
-	if opts.ShardName != "" {
-		saName = opts.ShardName
-	}
-
-	objs = append(objs, manifests.BuildServiceAccount(saName, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newStoreService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 
@@ -110,9 +105,9 @@ func NewStoreStatefulSet(opts Options) client.Object {
 }
 
 func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
-	name := opts.Name
+	shardName := opts.Name
 	if opts.ShardName != "" {
-		name = opts.ShardName
+		shardName = opts.ShardName
 	}
 
 	vc := []corev1.PersistentVolumeClaim{
@@ -211,12 +206,12 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      shardName,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: name,
+			ServiceName: shardName,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
@@ -228,7 +223,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
-					ServiceAccountName: name,
+					ServiceAccountName: Name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -379,6 +374,7 @@ func storeArgsFrom(opts Options) []string {
 }
 
 // GetRequiredLabels returns a map of labels that can be used to look up store resources.
+// These labels are guaranteed to be present on all resources created by this package.
 func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:            Name,

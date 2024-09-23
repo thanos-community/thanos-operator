@@ -62,7 +62,7 @@ func BuildQuery(opts Options) []client.Object {
 	selectorLabels := labelsForQuery(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -173,7 +173,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: Name,
 				},
 			},
 		},
@@ -263,13 +263,20 @@ func queryArgs(opts Options) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForQuery(opts Options) map[string]string {
+// GetRequiredLabels returns a map of labels that can be used to look up query resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:            Name,
 		manifests.ComponentLabel:       ComponentName,
-		manifests.InstanceLabel:        opts.Name,
 		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
 		manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
 	}
+}
+
+func labelsForQuery(opts Options) map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	return labels
 }
