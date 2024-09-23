@@ -148,13 +148,13 @@ config:
 			By("setting correct sharding arg on thanos store", func() {
 				EventuallyWithOffset(1, func() bool {
 					args := `--selector.relabel-config=
-              - action: hashmod
-                source_labels: ["__block_id"]
-                target_label: shard
-                modulus: 3
-              - action: keep
-                source_labels: ["shard"]
-                regex: 0`
+- action: hashmod
+  source_labels: ["__block_id"]
+  target_label: shard
+  modulus: 3
+- action: keep
+  source_labels: ["shard"]
+  regex: 0`
 					return utils.VerifyStatefulSetArgs(k8sClient, resourceName+"-shard-0", ns, 0, args)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})

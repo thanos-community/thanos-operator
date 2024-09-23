@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,9 +30,12 @@ const (
 	GRPCPortName = "grpc"
 	// GRPCPort is the port number for the gRPC port for the Thanos Store components.
 	GRPCPort = 10901
+
+	ShardLabel = "operator.thanos.io/store-shard"
 )
 
 // Options for Thanos Store components
+// Name is the name of the Thanos Store component
 type Options struct {
 	manifests.Options
 	StorageSize              resource.Quantity
@@ -42,23 +44,42 @@ type Options struct {
 	CachingBucketConfig      *corev1.ConfigMapKeySelector
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
-	Shards                   int32
+	ShardName                string
+	RelabelConfigs           manifests.RelabelConfigs
 }
 
-// BuildStores builds Thanos Store shards.
-func BuildStores(opts Options) []client.Object {
+// Build builds Thanos Store shards.
+func Build(opts Options) []client.Object {
 	var objs []client.Object
 	selectorLabels := labelsForStoreShard(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Options.Name, opts.Namespace, objectMetaLabels))
-	objs = append(objs, newStoreServices(opts, selectorLabels, objectMetaLabels)...)
-	objs = append(objs, newStoreStatefulSets(opts)...)
+	name := opts.Name
+	if opts.ShardName != "" {
+		name = opts.ShardName
+	}
+
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, newStoreService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 
 	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
 		objs = append(objs, newStoreInMemoryConfigMap(opts, objectMetaLabels))
 	}
 	return objs
+}
+
+func newStoreInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultInMemoryConfigmapName,
+			Namespace: opts.Namespace,
+			Labels:    labels,
+		},
+		Data: map[string]string{
+			defaultInMemoryConfigmapKey: InMemoryConfig,
+		},
+	}
 }
 
 const (
@@ -81,49 +102,19 @@ config:
   max_item_size: 5MiB`
 )
 
-func NewStoreInMemoryConfigMap(opts Options) client.Object {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultInMemoryConfigmapName,
-			Namespace: opts.Namespace,
-			Labels:    opts.Labels,
-		},
-		Data: map[string]string{
-			defaultInMemoryConfigmapKey: InMemoryConfig,
-		},
-	}
-}
-
-func newStoreInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultInMemoryConfigmapName,
-			Namespace: opts.Namespace,
-			Labels:    labels,
-		},
-		Data: map[string]string{
-			defaultInMemoryConfigmapKey: InMemoryConfig,
-		},
-	}
-}
-
-// NewStoreStatefulSets creates a new StatefulSet for the Thanos Store.
-func NewStoreStatefulSets(opts Options) []client.Object {
-	return newStoreStatefulSets(opts)
-}
-func newStoreStatefulSets(opts Options) []client.Object {
+// NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
+func NewStoreStatefulSet(opts Options) client.Object {
 	selectorLabels := labelsForStoreShard(opts)
 
-	shardSts := make([]client.Object, opts.Shards)
-	originalName := opts.Name
-	for i := 0; i < int(opts.Shards); i++ {
-		opts.Name = StoreShardName(originalName, i)
-		shardSts[i] = newStoreShardStatefulSet(opts, originalName, labelsForStoreShard(opts), manifests.MergeLabels(opts.Labels, selectorLabels), i)
-	}
-	return shardSts
+	return newStoreShardStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
-func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objectMetaLabels map[string]string, shardIndex int) *appsv1.StatefulSet {
+func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
+	name := opts.Name
+	if opts.ShardName != "" {
+		name = opts.ShardName
+	}
+
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -220,7 +211,7 @@ func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objec
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -237,7 +228,7 @@ func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objec
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
-					ServiceAccountName: SAName,
+					ServiceAccountName: name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -299,7 +290,7 @@ func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objec
 							},
 							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-							Args:                     storeArgsFrom(opts, shardIndex),
+							Args:                     storeArgsFrom(opts),
 						},
 					},
 				},
@@ -310,32 +301,24 @@ func newStoreShardStatefulSet(opts Options, SAName string, selectorLabels, objec
 	return sts
 }
 
-// NewStoreServices creates a new Services for each Thanos Store shard.
-func NewStoreServices(opts Options) []client.Object {
+// NewStoreService creates a new Service for Thanos Store shard.
+func NewStoreService(opts Options) client.Object {
 	selectorLabels := labelsForStoreShard(opts)
-	return newStoreServices(opts, labelsForStoreShard(opts), manifests.MergeLabels(opts.Labels, selectorLabels))
+	return newStoreService(opts, labelsForStoreShard(opts), manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
-func newStoreServices(opts Options, selectorLabels, objectMetaLabels map[string]string) []client.Object {
-	shardSvc := make([]client.Object, opts.Shards)
-	originalName := opts.Name
-	for i := 0; i < int(opts.Shards); i++ {
-		opts.Name = StoreShardName(originalName, i)
-
-		svc := newService(opts.Options, selectorLabels, objectMetaLabels)
-		svc.Spec.ClusterIP = corev1.ClusterIPNone
-		if opts.Additional.ServicePorts != nil {
-			svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
-		}
-
-		shardSvc[i] = svc
+func newStoreService(opts Options, selectorLabels, objectMetaLabels map[string]string) client.Object {
+	svc := newService(opts, selectorLabels, objectMetaLabels)
+	svc.Spec.ClusterIP = corev1.ClusterIPNone
+	if opts.Additional.ServicePorts != nil {
+		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
 
-	return shardSvc
+	return svc
 }
 
 // newService creates a new Service for the Thanos Store shards.
-func newService(opts manifests.Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+func newService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -349,9 +332,14 @@ func newService(opts manifests.Options, selectorLabels, objectMetaLabels map[str
 		},
 	}
 
+	name := opts.Name
+	if opts.ShardName != "" {
+		name = opts.ShardName
+	}
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -363,19 +351,7 @@ func newService(opts manifests.Options, selectorLabels, objectMetaLabels map[str
 	return svc
 }
 
-// StoreShardName generates name for a Thanos Store shard.
-func StoreShardName(parentName string, shardIndex int) string {
-	name := fmt.Sprintf("%s-shard-%d", parentName, shardIndex)
-	// check if the name is a valid DNS-1123 subdomain
-	if len(validation.IsDNS1123Subdomain(name)) == 0 {
-		return name
-	}
-
-	// default to standard simple shard name.
-	return fmt.Sprintf("%s-%d", Name, shardIndex)
-}
-
-func storeArgsFrom(opts Options, shardIndex int) []string {
+func storeArgsFrom(opts Options) []string {
 	args := []string{"store"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
@@ -386,17 +362,13 @@ func storeArgsFrom(opts Options, shardIndex int) []string {
 		fmt.Sprintf("--store.caching-bucket.config=$(%s)", cachingBucketConfigEnvVarName),
 		"--data-dir=/var/thanos/store",
 		fmt.Sprintf("--ignore-deletion-marks-delay=%s", string(opts.IgnoreDeletionMarksDelay)),
-		fmt.Sprintf(`--selector.relabel-config=
-              - action: hashmod
-                source_labels: ["__block_id"]
-                target_label: shard
-                modulus: %d
-              - action: keep
-                source_labels: ["shard"]
-                regex: %d`, opts.Shards, shardIndex),
 		fmt.Sprintf("--min-time=%s", string(opts.Min)),
 		fmt.Sprintf("--max-time=%s", string(opts.Max)),
 	)
+
+	if len(opts.RelabelConfigs) > 0 {
+		args = append(args, opts.RelabelConfigs.ToFlags())
+	}
 
 	// TODO(saswatamcode): Add some validation.
 	if opts.Additional.Args != nil {
@@ -406,13 +378,20 @@ func storeArgsFrom(opts Options, shardIndex int) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
-func labelsForStoreShard(opts Options) map[string]string {
+// GetRequiredLabels returns a map of labels that can be used to look up store resources.
+func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:            Name,
 		manifests.ComponentLabel:       ComponentName,
-		manifests.InstanceLabel:        opts.Name,
 		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
 		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 	}
+}
+
+func labelsForStoreShard(opts Options) map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	labels[ShardLabel] = opts.ShardName
+	return labels
 }

@@ -28,13 +28,12 @@ func TestBuildStore(t *testing.T) {
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
 		},
-		Shards: 1,
 	}
 
-	expectServices := NewStoreServices(opts)
-	expectStatefulsets := NewStoreStatefulSets(opts)
+	expectService := NewStoreService(opts)
+	expectStatefulSet := NewStoreStatefulSet(opts)
 
-	objs := BuildStores(opts)
+	objs := Build(opts)
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
@@ -47,16 +46,12 @@ func TestBuildStore(t *testing.T) {
 		t.Errorf("expected service account and other resource to have the same labels, got %v and %v", objs[0].GetLabels(), objs[1].GetLabels())
 	}
 
-	for _, sts := range expectStatefulsets {
-		if !equality.Semantic.DeepEqual(objs[2], sts) {
-			t.Errorf("expected second object to be a statefulset, wanted \n%v\n got \n%v\n", sts, objs[2])
-		}
+	if !equality.Semantic.DeepEqual(objs[2], expectStatefulSet) {
+		t.Errorf("expected second object to be a statefulset, wanted \n%v\n got \n%v\n", expectStatefulSet, objs[2])
 	}
 
-	for _, svc := range expectServices {
-		if !equality.Semantic.DeepEqual(objs[1], svc) {
-			t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", svc, objs[1])
-		}
+	if !equality.Semantic.DeepEqual(objs[1], expectService) {
+		t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
 	}
 
 	wantLabels := labelsForStoreShard(opts)
@@ -71,119 +66,112 @@ func TestBuildStore(t *testing.T) {
 }
 
 func TestNewStoreStatefulSet(t *testing.T) {
+	const (
+		name = "test"
+		ns   = "ns"
+	)
+
+	buildDefaultOpts := func() Options {
+		return Options{
+			Options: manifests.Options{
+				Name:      name,
+				Namespace: ns,
+				Image:     ptr.To("some-custom-image"),
+				Labels: map[string]string{
+					"some-custom-label":      someCustomLabelValue,
+					"some-other-label":       someOtherLabelValue,
+					"app.kubernetes.io/name": "expect-to-be-discarded",
+				},
+			},
+		}
+	}
+
 	for _, tc := range []struct {
-		name string
-		opts Options
+		name       string
+		opts       func() Options
+		expectName string
 	}{
 		{
 			name: "test store stateful correctness",
-			opts: Options{
-				Options: manifests.Options{
-					Name:      "test",
-					Namespace: "ns",
-					Image:     ptr.To("some-custom-image"),
-					Labels: map[string]string{
-						"some-custom-label":      someCustomLabelValue,
-						"some-other-label":       someOtherLabelValue,
-						"app.kubernetes.io/name": "expect-to-be-discarded",
-					},
-				},
-				Shards: 1,
+			opts: func() Options {
+				return buildDefaultOpts()
 			},
+			expectName: name,
 		},
 		{
 			name: "test additional volumemount",
-			opts: Options{
-				Options: manifests.Options{
-					Name:      "test",
-					Namespace: "ns",
-					Image:     ptr.To("some-custom-image"),
-					Labels: map[string]string{
-						"some-custom-label":      someCustomLabelValue,
-						"some-other-label":       someOtherLabelValue,
-						"app.kubernetes.io/name": "expect-to-be-discarded",
+			opts: func() Options {
+				opts := buildDefaultOpts()
+				opts.Additional.VolumeMounts = []corev1.VolumeMount{
+					{
+						Name:      "test-sd",
+						MountPath: "/test-sd-file",
 					},
-					Additional: manifests.Additional{
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      "test-sd",
-								MountPath: "/test-sd-file",
-							},
-						},
-					},
-				},
-				Shards: 1,
+				}
+				return opts
 			},
+			expectName: name,
 		},
 		{
 			name: "test additional container",
-			opts: Options{
-				Options: manifests.Options{
-					Name:      "test",
-					Namespace: "ns",
-					Image:     ptr.To("some-custom-image"),
-					Labels: map[string]string{
-						"some-custom-label":      someCustomLabelValue,
-						"some-other-label":       someOtherLabelValue,
-						"app.kubernetes.io/name": "expect-to-be-discarded",
+			opts: func() Options {
+				opts := buildDefaultOpts()
+				opts.Additional.Containers = []corev1.Container{
+					{
+						Name:  "test-container",
+						Image: "test-image:latest",
+						Args:  []string{"--test-arg"},
+						Env: []corev1.EnvVar{{
+							Name:  "TEST_ENV",
+							Value: "test",
+						}},
 					},
-					Additional: manifests.Additional{
-						Containers: []corev1.Container{
-							{
-								Name:  "test-container",
-								Image: "test-image:latest",
-								Args:  []string{"--test-arg"},
-								Env: []corev1.EnvVar{{
-									Name:  "TEST_ENV",
-									Value: "test",
-								}},
-							},
-						},
-					},
-				},
-				Shards: 1,
+				}
+				return opts
 			},
+			expectName: name,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			store := NewStoreStatefulSets(tc.opts)
-			if store[0].GetName() != (tc.opts.Name + "-shard-0") {
-				t.Errorf("expected store statefulset name to be %s, got %s", tc.opts.Name, store[0].GetName())
+			builtOpts := tc.opts()
+			store := NewStoreStatefulSet(builtOpts)
+			if store.GetName() != (tc.expectName) {
+				t.Errorf("expected store statefulset name to be %s, got %s", tc.expectName, store.GetName())
 			}
-			if store[0].GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected store statefulset namespace to be %s, got %s", tc.opts.Namespace, store[0].GetNamespace())
+			if store.GetNamespace() != ns {
+				t.Errorf("expected store statefulset namespace to be %s, got %s", ns, store.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(store[0].GetLabels()) != 8 {
-				t.Errorf("expected store statefulset to have 8 labels, got %d", len(store[0].GetLabels()))
+			if len(store.GetLabels()) != 9 {
+				t.Errorf("expected store statefulset to have 8 labels, got %d", len(store.GetLabels()))
 			}
 			// ensure custom labels are set
-			if store[0].GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected store statefulset to have label 'some-custom-label' with value 'xyz', got %s", store[0].GetLabels()["some-custom-label"])
+			if store.GetLabels()["some-custom-label"] != someCustomLabelValue {
+				t.Errorf("expected store statefulset to have label 'some-custom-label' with value 'xyz', got %s", store.GetLabels()["some-custom-label"])
 			}
-			if store[0].GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected store statefulset to have label 'some-other-label' with value 'abc', got %s", store[0].GetLabels()["some-other-label"])
+			if store.GetLabels()["some-other-label"] != someOtherLabelValue {
+				t.Errorf("expected store statefulset to have label 'some-other-label' with value 'abc', got %s", store.GetLabels()["some-other-label"])
 			}
 			// ensure default labels are set
-			expect := labelsForStoreShard(tc.opts)
+			expect := labelsForStoreShard(builtOpts)
 			for k, v := range expect {
-				if store[0].GetLabels()[k] != v {
-					t.Errorf("expected store statefulset to have label %s with value %s, got %s", k, v, store[0].GetLabels()[k])
+				if store.GetLabels()[k] != v {
+					t.Errorf("expected store statefulset to have label %s with value %s, got %s", k, v, store.GetLabels()[k])
 				}
 			}
 
-			storeSts := store[0].(*appsv1.StatefulSet)
+			storeSts := store.(*appsv1.StatefulSet)
 			if tc.name == "test additional container" && len(storeSts.Spec.Template.Spec.Containers) != 2 {
 				t.Errorf("expected query deployment to have 2 containers, got %d", len(storeSts.Spec.Template.Spec.Containers))
 			}
 
-			expectArgs := storeArgsFrom(tc.opts, 0)
+			expectArgs := storeArgsFrom(builtOpts)
 			var found bool
 			for _, c := range storeSts.Spec.Template.Spec.Containers {
 				if c.Name == Name {
 					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected store statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
+					if c.Image != builtOpts.GetContainerImage() {
+						t.Errorf("expected store statefulset to have image %s, got %s", builtOpts.GetContainerImage(), c.Image)
 					}
 					if len(c.Args) != len(expectArgs) {
 						t.Errorf("expected store statefulset to have %d args, got %d", len(expectArgs), len(c.Args))
@@ -215,10 +203,15 @@ func TestNewStoreStatefulSet(t *testing.T) {
 }
 
 func TestNewStoreService(t *testing.T) {
+	const (
+		name = "test"
+		ns   = "ns"
+	)
+
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
-			Namespace: "ns",
+			Name:      name,
+			Namespace: ns,
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -226,46 +219,58 @@ func TestNewStoreService(t *testing.T) {
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
 		},
-		Shards: 1,
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts Options
+		name       string
+		opts       func() Options
+		expectName string
 	}{
 		{
 			name: "test store service correctness",
-			opts: opts,
+			opts: func() Options {
+				return opts
+			},
+			expectName: name,
+		},
+		{
+			name: "test store service correctness",
+			opts: func() Options {
+				opts.ShardName = "test-shard"
+				return opts
+			},
+			expectName: "test-shard",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			storeSvcs := NewStoreServices(tc.opts)
-			if storeSvcs[0].GetName() != (tc.opts.Name + "-shard-0") {
-				t.Errorf("expected store service name to be %s, got %s", tc.opts.Name, storeSvcs[0].GetName())
+			builtOpts := tc.opts()
+			storeSvc := NewStoreService(builtOpts)
+			if storeSvc.GetName() != tc.expectName {
+				t.Errorf("expected store service name to be %s, got %s", tc.expectName, storeSvc.GetName())
 			}
-			if storeSvcs[0].GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected store service namespace to be %s, got %s", tc.opts.Namespace, storeSvcs[0].GetNamespace())
+			if storeSvc.GetNamespace() != ns {
+				t.Errorf("expected store service namespace to be %s, got %s", ns, storeSvc.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(storeSvcs[0].GetLabels()) != 8 {
-				t.Errorf("expected store service to have 8 labels, got %d", len(storeSvcs[0].GetLabels()))
+			if len(storeSvc.GetLabels()) != 9 {
+				t.Errorf("expected store service to have 8 labels, got %d", len(storeSvc.GetLabels()))
 			}
 			// ensure custom labels are set
-			if storeSvcs[0].GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected store service to have label 'some-custom-label' with value 'xyz', got %s", storeSvcs[0].GetLabels()["some-custom-label"])
+			if storeSvc.GetLabels()["some-custom-label"] != someCustomLabelValue {
+				t.Errorf("expected store service to have label 'some-custom-label' with value 'xyz', got %s", storeSvc.GetLabels()["some-custom-label"])
 			}
-			if storeSvcs[0].GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected store service to have label 'some-other-label' with value 'abc', got %s", storeSvcs[0].GetLabels()["some-other-label"])
+			if storeSvc.GetLabels()["some-other-label"] != someOtherLabelValue {
+				t.Errorf("expected store service to have label 'some-other-label' with value 'abc', got %s", storeSvc.GetLabels()["some-other-label"])
 			}
 			// ensure default labels are set
-			expect := labelsForStoreShard(tc.opts)
+			expect := labelsForStoreShard(builtOpts)
 			for k, v := range expect {
-				if storeSvcs[0].GetLabels()[k] != v {
-					t.Errorf("expected store service to have label %s with value %s, got %s", k, v, storeSvcs[0].GetLabels()[k])
+				if storeSvc.GetLabels()[k] != v {
+					t.Errorf("expected store service to have label %s with value %s, got %s", k, v, storeSvc.GetLabels()[k])
 				}
 			}
 
-			svc := storeSvcs[0].(*corev1.Service)
+			svc := storeSvc.(*corev1.Service)
 			if svc.Spec.ClusterIP != "None" {
 				t.Errorf("expected store service to have ClusterIP 'None', got %s", svc.Spec.ClusterIP)
 			}
