@@ -490,13 +490,13 @@ var _ = Describe("controller", Ordered, func() {
 
 			Eventually(func() bool {
 				expect := `--selector.relabel-config=
-              - action: hashmod
-                source_labels: ["__block_id"]
-                target_label: shard
-                modulus: 2
-              - action: keep
-                source_labels: ["shard"]
-                regex: 0`
+- action: hashmod
+  source_labels: ["__block_id"]
+  target_label: shard
+  modulus: 2
+- action: keep
+  source_labels: ["shard"]
+  regex: 0`
 
 				return utils.VerifyStatefulSetArgs(c, storeName+"-shard-0", namespace, 0, expect)
 			}, time.Minute*5, time.Second*10).Should(BeTrue())
