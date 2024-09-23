@@ -149,3 +149,77 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		//no-op
 	}
 }
+
+type Additional struct {
+	// Additional arguments to pass to the Thanos components.
+	Args []string
+	// Additional containers to add to the Thanos components.
+	Containers []corev1.Container
+	// Additional volumes to add to the Thanos components.
+	Volumes []corev1.Volume
+	// Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet
+	// controlled by the operator.
+	VolumeMounts []corev1.VolumeMount
+	// Additional ports to expose on the Thanos component container in a Deployment or StatefulSet
+	// controlled by the operator.
+	Ports []corev1.ContainerPort
+	// Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet
+	// controlled by the operator.
+	Env []corev1.EnvVar
+	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
+	ServicePorts []corev1.ServicePort
+}
+
+// RelabelConfig is a struct that holds the relabel configuration
+type RelabelConfig struct {
+	Action      string
+	SourceLabel string
+	TargetLabel string
+	// Modulus is relevant for the hashmod action.
+	Modulus int
+	// Regex is relevant for non-hashmod actions.
+	Regex string
+}
+
+// RelabelConfigs is a slice of RelabelConfig
+type RelabelConfigs []RelabelConfig
+
+// String returns the string representation of the RelabelConfig
+func (r RelabelConfig) String() string {
+	if r.Action == "hashmod" {
+		return fmt.Sprintf(`
+- action: hashmod
+  source_labels: ["%s"]
+  target_label: %s
+  modulus: %d`, r.SourceLabel, r.TargetLabel, r.Modulus)
+	}
+
+	if r.TargetLabel == "" {
+		return fmt.Sprintf(`
+- action: %s
+  source_labels: ["%s"]
+  regex: %s`, r.Action, r.SourceLabel, r.Regex)
+	}
+
+	return fmt.Sprintf(`
+- action: %s
+  source_labels: ["%s"]
+  target_label: %s
+  regex: %s`, r.Action, r.SourceLabel, r.TargetLabel, r.Regex)
+}
+
+// String returns the string representation of the RelabelConfigs
+func (rc RelabelConfigs) String() string {
+	var result string
+	for _, r := range rc {
+		result += r.String()
+	}
+	return result
+}
+
+// ToFlags returns the flags for the RelabelConfigs
+func (rc RelabelConfigs) ToFlags() string {
+	return fmt.Sprintf("--selector.relabel-config=%s", rc.String())
+}
+
+type Duration string
