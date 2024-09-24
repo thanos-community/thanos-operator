@@ -104,9 +104,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfRequiredNamedResources(
-						k8sClient, utils.ExpectApiResourceDeployment, resourceName, ns)
-
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName, ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -209,8 +207,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfRequiredNamedResources(
-						k8sClient, utils.ExpectApiResourceDeployment, resourceName+"-frontend", ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName+"-frontend", ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 

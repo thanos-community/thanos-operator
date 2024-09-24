@@ -23,6 +23,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -116,8 +118,7 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyExistenceOfRequiredNamedResources(
-						k8sClient, utils.ExpectApiResourceStatefulSet, resourceName, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, resourceName, ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {

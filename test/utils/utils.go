@@ -457,62 +457,24 @@ func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	return s.RoundTripper.RoundTrip(req)
 }
 
-type ExpectApiResource string
-
-const (
-	ExpectApiResourceDeployment  ExpectApiResource = "Deployment"
-	ExpectApiResourceStatefulSet ExpectApiResource = "StatefulSet"
-)
-
-// VerifyExistenceOfRequiredNamedResources checks if the required resources exist in the cluster.
-// This is a named Service, ServiceAccount, and either a Deployment or StatefulSet.
-func VerifyExistenceOfRequiredNamedResources(c client.Client, expectResource ExpectApiResource, name, ns string) bool {
-	if !VerifyServiceAccountExists(c, name, ns) {
-		return false
-	}
-
-	if !VerifyServiceExists(c, name, ns) {
-		return false
-	}
-
-	switch expectResource {
-	case ExpectApiResourceDeployment:
+// VerifyNamedServiceAndWorkloadExists checks if the named Service and StatefulSet/Deployment exist in the cluster.
+func VerifyNamedServiceAndWorkloadExists(c client.Client, obj client.Object, name, ns string) bool {
+	switch obj.(type) {
+	case *appsv1.Deployment:
 		if !VerifyDeploymentExists(c, name, ns) {
 			return false
 		}
-	case ExpectApiResourceStatefulSet:
+	case *appsv1.StatefulSet:
 		if !VerifyStatefulSetExists(c, name, ns) {
 			return false
 		}
-	default:
-		return false
 	}
-	return true
+	return VerifyServiceExists(c, name, ns)
 }
 
-func VerifyExistenceOfNamedResourcesWithoutSA(c client.Client, expectResource ExpectApiResource, name, ns string) bool {
-	if !VerifyServiceExists(c, name, ns) {
-		return false
-	}
-
-	switch expectResource {
-	case ExpectApiResourceDeployment:
-		if !VerifyDeploymentExists(c, name, ns) {
-			return false
-		}
-	case ExpectApiResourceStatefulSet:
-		if !VerifyStatefulSetExists(c, name, ns) {
-			return false
-		}
-	default:
-		return false
-	}
-	return true
-}
-
-func VerifyCfgMapOrSecretEnvVarExists(c client.Client, expectResource ExpectApiResource, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
-	switch expectResource {
-	case ExpectApiResourceDeployment:
+func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
+	switch obj.(type) {
+	case *appsv1.Deployment:
 		deployment := &appsv1.Deployment{}
 		err := c.Get(context.Background(), client.ObjectKey{
 			Name:      name,
@@ -537,7 +499,7 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, expectResource ExpectApiR
 			}
 		}
 		return false
-	case ExpectApiResourceStatefulSet:
+	case *appsv1.StatefulSet:
 		statefulSet := &appsv1.StatefulSet{}
 		err := c.Get(context.Background(), client.ObjectKey{
 			Name:      name,

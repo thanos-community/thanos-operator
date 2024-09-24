@@ -56,7 +56,7 @@ func BuildRuler(opts Options) []client.Object {
 	selectorLabels := labelsForRulers(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, objectMetaLabels))
+	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -246,7 +246,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{rulerContainer},
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: Name,
 					Volumes:            volumes,
 				},
 			},
@@ -363,12 +363,19 @@ func rulerArgs(opts Options) []string {
 	return args
 }
 
-func labelsForRulers(opts Options) map[string]string {
+// GetRequiredLabels returns a map of labels that can be used to look up thanos ruler resources.
+// These labels are guaranteed to be present on all resources created by this package.
+func GetRequiredLabels() map[string]string {
 	return map[string]string{
 		manifests.NameLabel:      Name,
 		manifests.ComponentLabel: ComponentName,
-		manifests.InstanceLabel:  opts.Name,
 		manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
 		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
+}
+
+func labelsForRulers(opts Options) map[string]string {
+	labels := GetRequiredLabels()
+	labels[manifests.InstanceLabel] = opts.Name
+	return labels
 }

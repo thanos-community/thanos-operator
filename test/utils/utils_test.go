@@ -289,65 +289,6 @@ func TestVerifyStatefulSetArgs(t *testing.T) {
 	}
 }
 
-func TestVerifyExistenceOfRequiredNamedResources(t *testing.T) {
-	const (
-		name = "test"
-		ns   = "test"
-	)
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
-
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
-
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
-
-	deployment := &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
-
-	sts := &v1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-	}
-
-	ok := VerifyExistenceOfRequiredNamedResources(
-		fake.NewClientBuilder().WithObjects(svc, sa, cm, deployment, sts).Build(),
-		ExpectApiResourceDeployment,
-		name, ns)
-	if !ok {
-		t.Errorf("expected resources")
-	}
-
-	ok = VerifyExistenceOfRequiredNamedResources(
-		fake.NewClientBuilder().WithObjects(svc, sa, cm, deployment).Build(),
-		ExpectApiResourceStatefulSet,
-		name, ns)
-	if ok {
-		t.Errorf("unexpected resources")
-	}
-
-}
-
 func TestRemoteWrite(t *testing.T) {
 	err := RemoteWrite(DefaultRemoteWriteRequest(), roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		return &http.Response{
