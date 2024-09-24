@@ -148,17 +148,17 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
 		return map[string]manifestsstore.Options{
-			store.GetName(): storeAlphaV1ToOptions(store),
+			store.GetName(): storeV1Alpha1ToOptions(store),
 		}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
-	parentName := storeV1AlphaV1NameFromSpec(store)
+	parentName := storeV1Alpha1NameFromParent(store.GetName())
 
 	for i := range store.Spec.ShardingStrategy.Shards {
 		shardName := storeShardName(parentName, i)
-		storeShardOpts := storeAlphaV1ToOptions(store)
+		storeShardOpts := storeV1Alpha1ToOptions(store)
 		storeShardOpts.ShardName = shardName
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{

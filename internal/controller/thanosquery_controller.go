@@ -153,7 +153,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return []client.Object{}, err
 	}
 
-	opts := queryAlphaV1ToOptions(query)
+	opts := queryV1Alpha1ToOptions(query)
 	opts.Endpoints = endpoints
 
 	return manifestquery.BuildQuery(opts), nil
@@ -206,7 +206,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
-	options := queryAlphaV1ToQueryFrontEndOptions(query)
+	options := queryV1Alpha1ToQueryFrontEndOptions(query)
 	return manifestqueryfrontend.BuildQueryFrontend(options)
 }
 

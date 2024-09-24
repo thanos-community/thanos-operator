@@ -149,7 +149,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		return []client.Object{}, err
 	}
 
-	opts := rulerAlphaV1ToOptions(ruler)
+	opts := rulerV1Alpha1ToOptions(ruler)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

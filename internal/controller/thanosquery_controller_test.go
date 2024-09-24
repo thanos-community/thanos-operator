@@ -104,7 +104,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, queryV1Alpha1NameFromParent(resourceName), ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -123,7 +123,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
 				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, expectArg)
+					return utils.VerifyDeploymentArgs(k8sClient, queryV1Alpha1NameFromParent(resourceName), ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -159,7 +159,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
+						Name:      queryV1Alpha1NameFromParent(resourceName),
 						Namespace: ns,
 					}, deployment); err != nil {
 						return err
@@ -172,11 +172,11 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					}
 
 					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
-					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 0, arg) == false {
+					if utils.VerifyDeploymentArgs(k8sClient, queryV1Alpha1NameFromParent(resourceName), ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
 					}
 
-					if utils.VerifyDeploymentArgs(k8sClient, resourceName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {
+					if utils.VerifyDeploymentArgs(k8sClient, queryV1Alpha1NameFromParent(resourceName), ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {
 						return fmt.Errorf("expected arg for additional container --reporter.grpc.host-port=jaeger-collector:14250")
 					}
 
@@ -207,7 +207,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName+"-frontend", ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, queryFrontendV1Alpha1NameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -223,7 +223,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					}
 
 					for _, expectedArg := range expectedArgs {
-						if !utils.VerifyDeploymentArgs(k8sClient, resourceName+"-frontend", ns, 0, expectedArg) {
+						if !utils.VerifyDeploymentArgs(k8sClient, queryFrontendV1Alpha1NameFromParent(resourceName), ns, 0, expectedArg) {
 							return fmt.Errorf("expected arg %q not found", expectedArg)
 						}
 					}
@@ -234,8 +234,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 			By("verifying query frontend is linked to query service", func() {
 				EventuallyWithOffset(1, func() error {
-					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.cluster.local:9090", resourceName, ns)
-					if !utils.VerifyDeploymentArgs(k8sClient, resourceName+"-frontend", ns, 0, expectedArg) {
+					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.cluster.local:9090", queryV1Alpha1NameFromParent(resourceName), ns)
+					if !utils.VerifyDeploymentArgs(k8sClient, queryFrontendV1Alpha1NameFromParent(resourceName), ns, 0, expectedArg) {
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}
 					return nil
@@ -263,7 +263,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      resourceName,
+						Name:      queryV1Alpha1NameFromParent(resourceName),
 						Namespace: ns,
 					}, deployment); err != nil {
 						return err
