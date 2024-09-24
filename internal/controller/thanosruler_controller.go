@@ -32,7 +32,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -150,38 +149,11 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		return []client.Object{}, err
 	}
 
-	metaOpts := manifests.Options{
-		Name:                 ruler.GetName(),
-		Namespace:            ruler.GetNamespace(),
-		Replicas:             ruler.Spec.Replicas,
-		Labels:               ruler.GetLabels(),
-		Image:                ruler.Spec.Image,
-		LogLevel:             ruler.Spec.LogLevel,
-		LogFormat:            ruler.Spec.LogFormat,
-		ResourceRequirements: ruler.Spec.ResourceRequirements,
-		Additional: manifests.Additional{
-			Args:         ruler.Spec.Additional.Args,
-			Containers:   ruler.Spec.Additional.Containers,
-			Volumes:      ruler.Spec.Additional.Volumes,
-			VolumeMounts: ruler.Spec.Additional.VolumeMounts,
-			Ports:        ruler.Spec.Additional.Ports,
-			Env:          ruler.Spec.Additional.Env,
-			ServicePorts: ruler.Spec.Additional.ServicePorts,
-		},
-	}
+	opts := rulerAlphaV1ToOptions(ruler)
+	opts.Endpoints = endpoints
+	opts.RuleFiles = ruleFiles
 
-	return manifestruler.BuildRuler(manifestruler.Options{
-		Options:            metaOpts,
-		Endpoints:          endpoints,
-		RuleFiles:          ruleFiles,
-		ObjStoreSecret:     ruler.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:          manifests.Duration(ruler.Spec.Retention),
-		AlertmanagerURL:    ruler.Spec.AlertmanagerURL,
-		ExternalLabels:     ruler.Spec.ExternalLabels,
-		AlertLabelDrop:     ruler.Spec.AlertLabelDrop,
-		StorageSize:        resource.MustParse(ruler.Spec.StorageSize),
-		EvaluationInterval: manifests.Duration(ruler.Spec.EvaluationInterval),
-	}), nil
+	return manifestruler.BuildRuler(opts), nil
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.

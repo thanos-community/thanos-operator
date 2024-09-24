@@ -126,7 +126,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) error {
 	var objs []client.Object
 
-	querierObjs, err := r.buildQuerier(ctx, query)
+	querierObjs, err := r.buildQuery(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -147,40 +147,16 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	return nil
 }
 
-func (r *ThanosQueryReconciler) buildQuerier(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
-	metaOpts := manifests.Options{
-		Name:                 query.GetName(),
-		Namespace:            query.GetNamespace(),
-		Replicas:             query.Spec.Replicas,
-		Labels:               manifests.MergeLabels(query.GetLabels(), query.Spec.Labels),
-		Image:                query.Spec.Image,
-		LogLevel:             query.Spec.LogLevel,
-		LogFormat:            query.Spec.LogFormat,
-		ResourceRequirements: query.Spec.ResourceRequirements,
-		Additional: manifests.Additional{
-			Args:         query.Spec.Additional.Args,
-			Containers:   query.Spec.Additional.Containers,
-			Volumes:      query.Spec.Additional.Volumes,
-			VolumeMounts: query.Spec.Additional.VolumeMounts,
-			Ports:        query.Spec.Additional.Ports,
-			Env:          query.Spec.Additional.Env,
-			ServicePorts: query.Spec.Additional.ServicePorts,
-		},
-	}
-
+func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
 		return []client.Object{}, err
 	}
 
-	return manifestquery.BuildQuery(manifestquery.Options{
-		Options:       metaOpts,
-		ReplicaLabels: query.Spec.QuerierReplicaLabels,
-		Timeout:       "15m",
-		LookbackDelta: "5m",
-		MaxConcurrent: 20,
-		Endpoints:     endpoints,
-	}), nil
+	opts := queryAlphaV1ToOptions(query)
+	opts.Endpoints = endpoints
+
+	return manifestquery.BuildQuery(opts), nil
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the StoreAPI services that match the ThanosQuery storeLabelSelector.
@@ -230,40 +206,8 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
-	frontend := query.Spec.QueryFrontend
-	metaOpts := manifests.Options{
-		Name:                 query.GetName() + "-frontend",
-		Namespace:            query.GetNamespace(),
-		Replicas:             frontend.Replicas,
-		Labels:               query.GetLabels(),
-		Image:                frontend.Image,
-		LogLevel:             frontend.LogLevel,
-		LogFormat:            frontend.LogFormat,
-		ResourceRequirements: frontend.ResourceRequirements,
-		Additional: manifests.Additional{
-			Args:         frontend.Additional.Args,
-			Containers:   frontend.Additional.Containers,
-			Volumes:      frontend.Additional.Volumes,
-			VolumeMounts: frontend.Additional.VolumeMounts,
-			Ports:        frontend.Additional.Ports,
-			Env:          frontend.Additional.Env,
-			ServicePorts: frontend.Additional.ServicePorts,
-		},
-	}
-
-	return manifestqueryfrontend.BuildQueryFrontend(manifestqueryfrontend.Options{
-		Options:                metaOpts,
-		QueryService:           query.GetName(),
-		QueryPort:              manifestquery.HTTPPort,
-		LogQueriesLongerThan:   manifests.Duration(manifests.OptionalToString(frontend.LogQueriesLongerThan)),
-		CompressResponses:      frontend.CompressResponses,
-		ResponseCacheConfig:    frontend.QueryRangeResponseCacheConfig,
-		RangeSplitInterval:     manifests.Duration(manifests.OptionalToString(frontend.QueryRangeSplitInterval)),
-		LabelsSplitInterval:    manifests.Duration(manifests.OptionalToString(frontend.LabelsSplitInterval)),
-		RangeMaxRetries:        frontend.QueryRangeMaxRetries,
-		LabelsMaxRetries:       frontend.LabelsMaxRetries,
-		LabelsDefaultTimeRange: manifests.Duration(manifests.OptionalToString(frontend.LabelsDefaultTimeRange)),
-	})
+	options := queryAlphaV1ToQueryFrontEndOptions(query)
+	return manifestqueryfrontend.BuildQueryFrontend(options)
 }
 
 // SetupWithManager sets up the controller with the Manager.
