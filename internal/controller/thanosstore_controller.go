@@ -154,10 +154,9 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
-	parentName := storeV1Alpha1NameFromParent(store.GetName())
 
 	for i := range store.Spec.ShardingStrategy.Shards {
-		shardName := storeShardName(parentName, i)
+		shardName := StoreShardName(store.GetName(), i)
 		storeShardOpts := storeV1Alpha1ToOptions(store)
 		storeShardOpts.ShardName = shardName
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
@@ -194,10 +193,4 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return nil
-}
-
-// storeShardName generates name for a Thanos Store shard.
-func storeShardName(parentName string, shardIndex int32) string {
-	name := fmt.Sprintf("%s-shard-%d", parentName, shardIndex)
-	return name
 }

@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
@@ -305,7 +306,7 @@ var _ = Describe("controller", Ordered, func() {
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
-				deploymentName := queryName
+				deploymentName := controller.QueryNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
@@ -341,8 +342,8 @@ var _ = Describe("controller", Ordered, func() {
 				}
 				err = c.Update(context.Background(), updatedCR)
 				Expect(err).To(BeNil())
-
-				deploymentName := queryName + "-frontend"
+				svcName := controller.QueryNameFromParent(queryName)
+				deploymentName := controller.QueryFrontendNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 2, deploymentName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
@@ -352,13 +353,14 @@ var _ = Describe("controller", Ordered, func() {
 						deploymentName,
 						namespace,
 						0,
-						"--query-frontend.downstream-url=http://"+queryName+"."+namespace+".svc.cluster.local:9090",
+						"--query-frontend.downstream-url=http://"+svcName+"."+namespace+".svc.cluster.local:9090",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 		})
 		Context("When a client changes the ThanosQuery CR", func() {
 			It("should update the Deployment", func() {
+
 				updatedCR := &v1alpha1.ThanosQuery{}
 				err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, updatedCR)
 				Expect(err).To(BeNil())
@@ -370,7 +372,7 @@ var _ = Describe("controller", Ordered, func() {
 				err = c.Update(context.Background(), updatedCR)
 				Expect(err).To(BeNil())
 
-				deploymentName := queryName + "-frontend"
+				deploymentName := controller.QueryFrontendNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 3, deploymentName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
@@ -418,17 +420,18 @@ var _ = Describe("controller", Ordered, func() {
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
-				statefulSetName := rulerName
+				statefulSetName := controller.RulerNameFromParent(rulerName)
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, statefulSetName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 
+				svcName := controller.QueryNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
 						namespace,
 						0,
-						"--query=dnssrv+_http._tcp.example-query.thanos-operator-system.svc.cluster.local",
+						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 
@@ -498,9 +501,9 @@ var _ = Describe("controller", Ordered, func() {
 
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
-
+				firstShard := controller.StoreShardName(storeName, 0)
 				Eventually(func() bool {
-					return utils.VerifyStatefulSetReplicasRunning(c, 2, storeName+"-shard-0", namespace)
+					return utils.VerifyStatefulSetReplicasRunning(c, 2, firstShard, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 
 				Eventually(func() bool {
@@ -513,7 +516,7 @@ var _ = Describe("controller", Ordered, func() {
   source_labels: ["shard"]
   regex: 0`
 
-					return utils.VerifyStatefulSetArgs(c, storeName+"-shard-0", namespace, 0, expect)
+					return utils.VerifyStatefulSetArgs(c, firstShard, namespace, 0, expect)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 			It("should create a ConfigMap with the correct cache configuration", func() {

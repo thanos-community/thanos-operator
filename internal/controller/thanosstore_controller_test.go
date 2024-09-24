@@ -119,8 +119,7 @@ config:
 
 			By("setting up the thanos store resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-				name := storeV1Alpha1NameFromParent(resourceName)
-				expect := []string{storeShardName(name, 0), storeShardName(name, 1), storeShardName(name, 2)}
+				expect := []string{StoreShardName(resourceName, 0), StoreShardName(resourceName, 1), StoreShardName(resourceName, 2)}
 				for _, shard := range expect {
 					EventuallyWithOffset(1, func() bool {
 						return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, shard, ns)
@@ -133,7 +132,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, storeShardName(name, 2), ns)
+						k8sClient, 2, StoreShardName(resourceName, 2), ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
@@ -147,7 +146,7 @@ config:
 - action: keep
   source_labels: ["shard"]
   regex: 0`
-					return utils.VerifyStatefulSetArgs(k8sClient, storeShardName(storeV1Alpha1NameFromParent(resourceName), 0), ns, 0, args)
+					return utils.VerifyStatefulSetArgs(k8sClient, StoreShardName(resourceName, 0), ns, 0, args)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
@@ -155,7 +154,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					statefulSet := &appsv1.StatefulSet{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      storeShardName(storeV1Alpha1NameFromParent(resourceName), 0),
+						Name:      StoreShardName(resourceName, 0),
 						Namespace: ns,
 					}, statefulSet); err != nil {
 						return false
@@ -185,7 +184,7 @@ config:
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
 						&appsv1.StatefulSet{},
-						storeShardName(storeV1Alpha1NameFromParent(resourceName), 0),
+						StoreShardName(resourceName, 0),
 						ns,
 						0,
 						"INDEX_CACHE_CONFIG",
@@ -197,7 +196,7 @@ config:
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
 						&appsv1.StatefulSet{},
-						storeShardName(storeV1Alpha1NameFromParent(resourceName), 0),
+						StoreShardName(resourceName, 0),
 						ns,
 						0,
 						"CACHING_BUCKET_CONFIG",
@@ -218,7 +217,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, storeShardName(storeV1Alpha1NameFromParent(resourceName), 0), ns)
+						k8sClient, 2, StoreShardName(resourceName, 0), ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 		})
