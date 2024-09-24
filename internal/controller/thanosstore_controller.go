@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
@@ -45,6 +46,8 @@ type ThanosStoreReconciler struct {
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 
+	handler *handlers.Handler
+
 	logger logr.Logger
 
 	reg                   prometheus.Registerer
@@ -57,6 +60,7 @@ func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *
 		Client:   client,
 		Scheme:   scheme,
 		Recorder: recorder,
+		handler:  handlers.NewHandler(client, scheme, logger),
 
 		logger:                logger,
 		reg:                   reg,
@@ -111,43 +115,13 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) error {
-	var errCount int32
+	var errCount int
 	shardedObjects := r.buildStore(store)
 
 	// todo - we need to prune any orphaned resources here at this point
 
 	for _, shardObjs := range shardedObjects {
-		for _, obj := range shardObjs {
-			if manifests.IsNamespacedResource(obj) {
-				obj.SetNamespace(store.GetNamespace())
-				if err := ctrl.SetControllerReference(&store, obj, r.Scheme); err != nil {
-					r.logger.Error(err, "failed to set controller owner reference to resource")
-					errCount++
-					continue
-				}
-			}
-
-			desired := obj.DeepCopyObject().(client.Object)
-			mutateFn := manifests.MutateFuncFor(obj, desired)
-
-			op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
-			if err != nil {
-				r.logger.Error(
-					err, "failed to create or update resource",
-					"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-					"resource", obj.GetName(),
-					"namespace", obj.GetNamespace(),
-				)
-				errCount++
-				continue
-			}
-
-			r.logger.V(1).Info(
-				"resource configured",
-				"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(), "namespace", obj.GetNamespace(),
-			)
-		}
+		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, shardObjs)
 	}
 
 	if errCount > 0 {

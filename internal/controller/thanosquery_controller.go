@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
@@ -52,6 +53,8 @@ type ThanosQueryReconciler struct {
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 
+	handler *handlers.Handler
+
 	logger logr.Logger
 
 	reg                   prometheus.Registerer
@@ -64,10 +67,10 @@ type ThanosQueryReconciler struct {
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
 func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosQueryReconciler {
 	return &ThanosQueryReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		Recorder: recorder,
-
+		Client:                     client,
+		Scheme:                     scheme,
+		Recorder:                   recorder,
+		handler:                    handlers.NewHandler(client, scheme, logger),
 		logger:                     logger,
 		reg:                        reg,
 		ControllerBaseMetrics:      controllerBaseMetrics,
@@ -136,40 +139,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontendObjs...)
 	}
 
-	var errCount int32
-	for _, obj := range objs {
-		if manifests.IsNamespacedResource(obj) {
-			obj.SetNamespace(query.Namespace)
-			if err := ctrl.SetControllerReference(&query, obj, r.Scheme); err != nil {
-				r.logger.Error(err, "failed to set controller owner reference to resource")
-				errCount++
-				continue
-			}
-		}
-
-		desired := obj.DeepCopyObject().(client.Object)
-		mutateFn := manifests.MutateFuncFor(obj, desired)
-
-		op, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, mutateFn)
-		if err != nil {
-			r.logger.Error(
-				err, "failed to create or update resource",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
-			)
-			errCount++
-			continue
-		}
-
-		r.logger.V(1).Info(
-			"resource configured",
-			"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
-			"resource", obj.GetName(), "namespace", obj.GetNamespace(),
-		)
-	}
-
-	if errCount > 0 {
+	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
