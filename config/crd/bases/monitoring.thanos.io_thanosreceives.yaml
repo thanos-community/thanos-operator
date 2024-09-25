@@ -39,7 +39,7 @@ spec:
           spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
-              ingestor:
+              ingestorSpec:
                 description: Ingester is the configuration for the ingestor.
                 properties:
                   additionalArgs:
@@ -3548,7 +3548,7 @@ spec:
                   defaultObjectStorageConfig:
                     description: |-
                       DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
-                      Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec per hashring.
+                      Can be overridden by the ObjectStorageConfig in the IngesterHashringSpec per hashring.
                     properties:
                       key:
                         description: The key of the secret to select from.  Must be
@@ -3574,7 +3574,7 @@ spec:
                   hashrings:
                     description: Hashrings is a list of hashrings to route to.
                     items:
-                      description: IngestorHashringSpec represents the configuration
+                      description: IngesterHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
                         externalLabels:
@@ -3586,20 +3586,67 @@ spec:
                             blocks.
                           minProperties: 1
                           type: object
+                        image:
+                          description: Container image to use for the Thanos components.
+                          type: string
+                        imagePullPolicy:
+                          default: IfNotPresent
+                          description: |-
+                            Image pull policy for the Thanos containers.
+                            See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
+                          enum:
+                          - Always
+                          - Never
+                          - IfNotPresent
+                          type: string
+                        imagePullSecrets:
+                          description: |-
+                            An optional list of references to Secrets in the same namespace
+                            to use for pulling images from registries.
+                            See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+                          items:
+                            description: |-
+                              LocalObjectReference contains enough information to let you locate the
+                              referenced object inside the same namespace.
+                            properties:
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
                         labels:
                           additionalProperties:
                             type: string
                           description: |-
-                            Labels are additional labels to add to the hashring components.
+                            Labels are additional labels to add to the ingester components.
                             Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
                           type: object
+                        logFormat:
+                          default: logfmt
+                          description: Log format for Thanos.
+                          enum:
+                          - logfmt
+                          - json
+                          type: string
+                        logLevel:
+                          description: Log level for Thanos.
+                          enum:
+                          - debug
+                          - info
+                          - warn
+                          - error
+                          type: string
                         name:
                           description: |-
                             Name is the name of the hashring.
                             Name will be used to generate the names for the resources created for the hashring.
-                            By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
-                            In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
-                            the Name will be used as is and must be unique within the namespace.
                           maxLength: 253
                           minLength: 1
                           pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -3629,6 +3676,11 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
+                        paused:
+                          description: |-
+                            When a resource is paused, no actions except for deletion
+                            will be performed on the underlying objects.
+                          type: boolean
                         replicas:
                           default: 1
                           description: Replicas is the number of replicas/members
@@ -3636,6 +3688,67 @@ spec:
                           format: int32
                           minimum: 1
                           type: integer
+                        resourceRequirements:
+                          description: ResourceRequirements for the Thanos component
+                            container.
+                          properties:
+                            claims:
+                              description: |-
+                                Claims lists the names of resources, defined in spec.resourceClaims,
+                                that are used by this container.
+
+                                This is an alpha field and requires enabling the
+                                DynamicResourceAllocation feature gate.
+
+                                This field is immutable. It can only be set for containers.
+                              items:
+                                description: ResourceClaim references one entry in
+                                  PodSpec.ResourceClaims.
+                                properties:
+                                  name:
+                                    description: |-
+                                      Name must match the name of one entry in pod.spec.resourceClaims of
+                                      the Pod where this field is used. It makes that resource available
+                                      inside a container.
+                                    type: string
+                                  request:
+                                    description: |-
+                                      Request is the name chosen for a request in the referenced claim.
+                                      If empty, everything from the claim is made available, otherwise
+                                      only the result of this request.
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - name
+                              x-kubernetes-list-type: map
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: |-
+                                Limits describes the maximum amount of compute resources allowed.
+                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: |-
+                                Requests describes the minimum amount of compute resources required.
+                                If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                                otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                                More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                              type: object
+                          type: object
                         storageSize:
                           description: StorageSize is the size of the storage to be
                             used by the Thanos Receive StatefulSet.
@@ -3668,6 +3781,12 @@ spec:
                           required:
                           - retention
                           type: object
+                        version:
+                          description: |-
+                            Version of Thanos to be deployed.
+                            If not specified, the operator assumes the latest upstream version of
+                            Thanos available at the time when the version of the operator was released.
+                          type: string
                       required:
                       - externalLabels
                       - name
@@ -3680,131 +3799,11 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
-                  image:
-                    description: Container image to use for the Thanos components.
-                    type: string
-                  imagePullPolicy:
-                    default: IfNotPresent
-                    description: |-
-                      Image pull policy for the Thanos containers.
-                      See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
-                    enum:
-                    - Always
-                    - Never
-                    - IfNotPresent
-                    type: string
-                  imagePullSecrets:
-                    description: |-
-                      An optional list of references to Secrets in the same namespace
-                      to use for pulling images from registries.
-                      See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
-                    items:
-                      description: |-
-                        LocalObjectReference contains enough information to let you locate the
-                        referenced object inside the same namespace.
-                      properties:
-                        name:
-                          default: ""
-                          description: |-
-                            Name of the referent.
-                            This field is effectively required, but due to backwards compatibility is
-                            allowed to be empty. Instances of this type with an empty value here are
-                            almost certainly wrong.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          type: string
-                      type: object
-                      x-kubernetes-map-type: atomic
-                    type: array
-                  logFormat:
-                    default: logfmt
-                    description: Log format for Thanos.
-                    enum:
-                    - logfmt
-                    - json
-                    type: string
-                  logLevel:
-                    description: Log level for Thanos.
-                    enum:
-                    - debug
-                    - info
-                    - warn
-                    - error
-                    type: string
-                  paused:
-                    description: |-
-                      When a resource is paused, no actions except for deletion
-                      will be performed on the underlying objects.
-                    type: boolean
-                  resourceRequirements:
-                    description: ResourceRequirements for the Thanos component container.
-                    properties:
-                      claims:
-                        description: |-
-                          Claims lists the names of resources, defined in spec.resourceClaims,
-                          that are used by this container.
-
-                          This is an alpha field and requires enabling the
-                          DynamicResourceAllocation feature gate.
-
-                          This field is immutable. It can only be set for containers.
-                        items:
-                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
-                          properties:
-                            name:
-                              description: |-
-                                Name must match the name of one entry in pod.spec.resourceClaims of
-                                the Pod where this field is used. It makes that resource available
-                                inside a container.
-                              type: string
-                            request:
-                              description: |-
-                                Request is the name chosen for a request in the referenced claim.
-                                If empty, everything from the claim is made available, otherwise
-                                only the result of this request.
-                              type: string
-                          required:
-                          - name
-                          type: object
-                        type: array
-                        x-kubernetes-list-map-keys:
-                        - name
-                        x-kubernetes-list-type: map
-                      limits:
-                        additionalProperties:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
-                        description: |-
-                          Limits describes the maximum amount of compute resources allowed.
-                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-                        type: object
-                      requests:
-                        additionalProperties:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
-                        description: |-
-                          Requests describes the minimum amount of compute resources required.
-                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-                        type: object
-                    type: object
-                  version:
-                    description: |-
-                      Version of Thanos to be deployed.
-                      If not specified, the operator assumes the latest upstream version of
-                      Thanos available at the time when the version of the operator was released.
-                    type: string
                 required:
                 - defaultObjectStorageConfig
                 - hashrings
                 type: object
-              router:
+              routerSpec:
                 description: Router is the configuration for the router.
                 properties:
                   additionalArgs:
@@ -7468,13 +7467,13 @@ spec:
                 - replicationFactor
                 type: object
             required:
-            - ingestor
-            - router
+            - ingestorSpec
+            - routerSpec
             type: object
             x-kubernetes-validations:
             - message: ' Ingester replicas must be greater than or equal to the Router
                 replicas'
-              rule: self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor
+              rule: self.ingestorSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor
                 )
           status:
             description: Status defines the observed state of ThanosReceive

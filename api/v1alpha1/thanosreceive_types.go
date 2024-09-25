@@ -52,11 +52,8 @@ type RouterSpec struct {
 
 // IngesterSpec represents the configuration for the ingestor
 type IngesterSpec struct {
-	// CommonThanosFields are the options available to all Thanos components.
-	// +kubebuilder:validation:Optional
-	CommonThanosFields `json:",inline"`
 	// DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
-	// Can be overridden by the ObjectStorageConfig in the IngestorHashringSpec per hashring.
+	// Can be overridden by the ObjectStorageConfig in the IngesterHashringSpec per hashring.
 	// +kubebuilder:validation:Required
 	DefaultObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
 	// Hashrings is a list of hashrings to route to.
@@ -64,7 +61,7 @@ type IngesterSpec struct {
 	// +kubebuilder:validation:Required
 	// +listType=map
 	// +listMapKey=name
-	Hashrings []IngestorHashringSpec `json:"hashrings,omitempty"`
+	Hashrings []IngesterHashringSpec `json:"hashrings,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
@@ -72,19 +69,19 @@ type IngesterSpec struct {
 	Additional `json:",inline"`
 }
 
-// IngestorHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.
-type IngestorHashringSpec struct {
+// IngesterHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.
+type IngesterHashringSpec struct {
+	// CommonThanosFields are the options available to all Thanos components.
+	// +kubebuilder:validation:Optional
+	CommonThanosFields `json:",inline"`
 	// Name is the name of the hashring.
 	// Name will be used to generate the names for the resources created for the hashring.
-	// By default, Name will be used as a prefix with the ThanosReceive name as a suffix separated by a hyphen.
-	// In cases where that name does not match the pattern below, i.e. the name is not a valid DNS-1123 subdomain,
-	// the Name will be used as is and must be unique within the namespace.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Name string `json:"name"`
-	// Labels are additional labels to add to the hashring components.
+	// Labels are additional labels to add to the ingester components.
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
@@ -117,14 +114,14 @@ type IngestorHashringSpec struct {
 }
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive
-// +kubebuilder:validation:XValidation:rule="self.ingestor.hashrings.all(h, h.replicas >= self.router.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
+// +kubebuilder:validation:XValidation:rule="self.ingestorSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required
-	Router RouterSpec `json:"router,omitempty"`
+	Router RouterSpec `json:"routerSpec,omitempty"`
 	// Ingester is the configuration for the ingestor.
 	// +kubebuilder:validation:Required
-	Ingester IngesterSpec `json:"ingestor,omitempty"`
+	Ingester IngesterSpec `json:"ingestorSpec,omitempty"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive

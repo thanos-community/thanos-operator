@@ -28,13 +28,13 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -110,22 +110,6 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.handleDeletionTimestamp(receiver)
 	}
 
-	if receiver.Spec.Router.Paused != nil {
-		if *receiver.Spec.Router.Paused {
-			r.logger.Info("reconciliation is paused for ThanosReceive resource")
-			r.Recorder.Event(receiver, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosReceive resource")
-			return ctrl.Result{}, nil
-		}
-	}
-
-	if receiver.Spec.Ingester.Paused != nil {
-		if *receiver.Spec.Ingester.Paused {
-			r.logger.Info("reconciliation is paused for ThanosReceive resource")
-			r.Recorder.Event(receiver, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosReceive resource")
-			return ctrl.Result{}, nil
-		}
-	}
-
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
 		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
@@ -185,9 +169,21 @@ func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 // syncResources syncs the resources for the ThanosReceive resource.
 // It creates or updates the resources for the hashrings and the router.
 func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) error {
-	var objs []client.Object
-	objs = append(objs, r.buildHashrings(receiver)...)
+	var errCount int
+	shardedObjects := r.buildIngesterHashrings(receiver)
 
+	// todo - we need to prune any orphaned resources here at this point
+
+	for _, shardObjs := range shardedObjects {
+		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, shardObjs)
+	}
+
+	if errCount > 0 {
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
+	}
+
+	var objs []client.Object
 	hashringConf, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
 		if !errors.Is(err, manifestreceive.ErrHashringsEmpty) {
@@ -202,76 +198,59 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		objs = append(objs, r.buildRouter(receiver)...)
 	}
 
-	if errCount := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objs); errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
-		return fmt.Errorf("failed to create or update %d resources for the hashrings", errCount)
+	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objs); errs > 0 {
+		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errs))
+		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
 
 	return nil
 }
 
-// build hashring builds out the ingesters for the ThanosReceive resource.
-func (r *ThanosReceiveReconciler) buildHashrings(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
-	opts := make([]manifestreceive.IngesterOptions, 0)
-	baseLabels := receiver.GetLabels()
-	baseSecret := receiver.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
+// buildIngesterHashrings builds the ingesters for the ThanosReceive resource.
+// It returns a map of slices of client.Object that represents the desired state of the Thanos Ingester resources.
+// Each key represents a named ingester and each slice value represents the resources for that ingester.
+func (r *ThanosReceiveReconciler) buildIngesterHashrings(receiver monitoringthanosiov1alpha1.ThanosReceive) map[string][]client.Object {
+	opts := r.specToIngestOptions(receiver)
+	shardedObjects := make(map[string][]client.Object, len(opts))
 
-	for _, hashring := range receiver.Spec.Ingester.Hashrings {
-		objStoreSecret := baseSecret
-		if hashring.ObjectStorageConfig != nil {
-			objStoreSecret = hashring.ObjectStorageConfig.ToSecretKeySelector()
+	for hashring, opt := range opts {
+		for _, ingester := range receiver.Spec.Ingester.Hashrings {
+			if ingester.Paused != nil && *ingester.Paused && hashring == ingester.Name {
+				r.logger.Info("ingester is paused", "ingester", hashring)
+				r.Recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
+					"Reconciliation is paused for ThanosReceive resource - hashring "+hashring)
+				continue
+			}
 		}
 
-		metaOpts := manifests.Options{
-			Name:                 manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name),
-			Namespace:            receiver.GetNamespace(),
-			Replicas:             hashring.Replicas,
-			Labels:               manifests.MergeLabels(baseLabels, hashring.Labels),
-			Image:                receiver.Spec.Ingester.Image,
-			LogLevel:             receiver.Spec.Ingester.LogLevel,
-			LogFormat:            receiver.Spec.Ingester.LogFormat,
-			ResourceRequirements: receiver.Spec.Ingester.ResourceRequirements,
-		}
-
-		opt := manifestreceive.IngesterOptions{
-			Options: metaOpts,
-			TSDBOpts: manifestreceive.TSDBOpts{
-				Retention: string(hashring.TSDBConfig.Retention),
-			},
-			StorageSize:    resource.MustParse(string(hashring.StorageSize)),
-			ObjStoreSecret: objStoreSecret,
-			ExternalLabels: hashring.ExternalLabels,
-		}
-
-		opt.Additional = manifests.Additional{
-			Args:         receiver.Spec.Ingester.Additional.Args,
-			Containers:   receiver.Spec.Ingester.Additional.Containers,
-			Volumes:      receiver.Spec.Ingester.Additional.Volumes,
-			VolumeMounts: receiver.Spec.Ingester.Additional.VolumeMounts,
-			Ports:        receiver.Spec.Ingester.Additional.Ports,
-			Env:          receiver.Spec.Ingester.Additional.Env,
-			ServicePorts: receiver.Spec.Ingester.Additional.ServicePorts,
-		}
-
-		opts = append(opts, opt)
+		storeObjs := manifestreceive.BuildIngester(opt)
+		shardedObjects[hashring] = append(shardedObjects[hashring], storeObjs...)
 	}
+	return shardedObjects
+}
 
-	return manifestreceive.BuildIngesters(opts)
+func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) map[string]manifestreceive.IngesterOptions {
+	opts := make(map[string]manifestreceive.IngesterOptions, len(receiver.Spec.Ingester.Hashrings))
+	for _, v := range receiver.Spec.Ingester.Hashrings {
+		opts[v.Name] = receiverV1Alpha1ToIngesterOptions(receiver, v)
+	}
+	return opts
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
 func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) (client.Object, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: receiver.GetName()}, cm)
+	name := ReceiveRouterNameFromParent(receiver.GetName())
+	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: name}, cm)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to get config map for resource %s: %w", receiver.GetName(), err)
+			return nil, fmt.Errorf("failed to get config map for resource %s: %w", name, err)
 		}
 	}
 
 	opts := manifestreceive.HashringOptions{
 		Options: manifests.Options{
-			Name:      receiver.GetName(),
+			Name:      name,
 			Namespace: receiver.GetNamespace(),
 			Labels:    receiver.GetLabels(),
 		},
@@ -281,7 +260,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 
 	totalHashrings := len(receiver.Spec.Ingester.Hashrings)
 	for i, hashring := range receiver.Spec.Ingester.Hashrings {
-		labelValue := manifestreceive.IngesterNameFromParent(receiver.GetName(), hashring.Name)
+		labelValue := ReceiveIngesterNameFromParent(receiver.GetName(), hashring.Name)
 		// kubernetes sets this label on the endpoint slices - we want to match the generated name
 		selectorListOpt := client.MatchingLabels{discoveryv1.LabelServiceName: labelValue}
 
@@ -308,35 +287,13 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 
 // build hashring builds out the ingesters for the ThanosReceive resource.
 func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
-	baseLabels := receiver.GetLabels()
-
-	metaOpts := manifests.Options{
-		Name:                 receiver.GetName(),
-		Namespace:            receiver.GetNamespace(),
-		Replicas:             receiver.Spec.Router.Replicas,
-		Labels:               manifests.MergeLabels(baseLabels, receiver.Spec.Router.Labels),
-		Image:                receiver.Spec.Router.Image,
-		LogLevel:             receiver.Spec.Router.LogLevel,
-		LogFormat:            receiver.Spec.Router.LogFormat,
-		ResourceRequirements: receiver.Spec.Router.ResourceRequirements,
+	if receiver.Spec.Router.Paused != nil && *receiver.Spec.Router.Paused {
+		r.logger.Info("router is paused")
+		r.Recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
+			"Reconciliation is paused for ThanosReceive resource - router")
+		return nil
 	}
-
-	opts := manifestreceive.RouterOptions{
-		Options:           metaOpts,
-		ReplicationFactor: receiver.Spec.Router.ReplicationFactor,
-		ExternalLabels:    receiver.Spec.Router.ExternalLabels,
-	}
-
-	opts.Additional = manifests.Additional{
-		Args:         receiver.Spec.Router.Additional.Args,
-		Containers:   receiver.Spec.Router.Additional.Containers,
-		Volumes:      receiver.Spec.Router.Additional.Volumes,
-		VolumeMounts: receiver.Spec.Router.Additional.VolumeMounts,
-		Ports:        receiver.Spec.Router.Additional.Ports,
-		Env:          receiver.Spec.Router.Additional.Env,
-		ServicePorts: receiver.Spec.Router.Additional.ServicePorts,
-	}
-
+	opts := receiverV1Alpha1ToRouterOptions(receiver)
 	return manifestreceive.BuildRouter(opts)
 }
 

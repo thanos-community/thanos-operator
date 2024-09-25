@@ -188,6 +188,8 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	Describe("Thanos Receive", Ordered, func() {
+		routerName := controller.ReceiveRouterNameFromParent(receiveName)
+		ingesterName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
 
 		Context("When ThanosReceive is created with hashrings", func() {
 			It("should bring up the ingest components", func() {
@@ -198,14 +200,13 @@ var _ = Describe("controller", Ordered, func() {
 					},
 					Spec: v1alpha1.ThanosReceiveSpec{
 						Ingester: v1alpha1.IngesterSpec{
-							CommonThanosFields: v1alpha1.CommonThanosFields{},
 							DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: objStoreSecret,
 								},
 								Key: objStoreSecretKey,
 							},
-							Hashrings: []v1alpha1.IngestorHashringSpec{
+							Hashrings: []v1alpha1.IngesterHashringSpec{
 								{
 									Name:        hashringName,
 									StorageSize: "100Mi",
@@ -216,29 +217,27 @@ var _ = Describe("controller", Ordered, func() {
 				}
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
-
-				stsName := receive.IngesterNameFromParent(receiveName, hashringName)
 				Eventually(func() bool {
-					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, ingesterName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 
 			It("should create a ConfigMap with the correct hashring configuration", func() {
 				//nolint:lll
-				expect := `[
+				expect := fmt.Sprintf(`[
     {
         "hashring": "default",
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "example-receive-default-0.example-receive-default.thanos-operator-system.svc.cluster.local:10901",
+                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
                 "az": ""
             }
         ]
     }
-]`
+]`, ingesterName, ingesterName)
 				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(c, receiveName, namespace, receive.HashringConfigKey, expect)
+					return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 		})
@@ -246,7 +245,7 @@ var _ = Describe("controller", Ordered, func() {
 		Context("When the hashring configuration exists", func() {
 			It("should bring up the router components", func() {
 				Eventually(func() bool {
-					return utils.VerifyDeploymentReplicasRunning(c, 1, receiveName, namespace)
+					return utils.VerifyDeploymentReplicasRunning(c, 1, routerName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 		})
@@ -310,13 +309,13 @@ var _ = Describe("controller", Ordered, func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
-
+				svcName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(c,
 						deploymentName,
 						namespace,
 						0,
-						"--endpoint=dnssrv+_grpc._tcp.example-receive-default.thanos-operator-system.svc.cluster.local",
+						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})

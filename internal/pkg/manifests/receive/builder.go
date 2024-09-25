@@ -49,6 +49,8 @@ const (
 	HashringConfigKey = "hashrings.json"
 	// EmptyHashringConfig is the empty hashring configuration.
 	EmptyHashringConfig = "[{}]"
+
+	ShardLabel = "operator.thanos.io/receive-ingester"
 )
 
 // IngesterOptions for Thanos Receive components
@@ -58,6 +60,7 @@ type IngesterOptions struct {
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
 	ExternalLabels map[string]string
+	Instance       string
 }
 
 type TSDBOpts struct {
@@ -124,15 +127,6 @@ type HashringConfig struct {
 
 // Hashrings is a list of hashrings.
 type Hashrings []HashringConfig
-
-// BuildIngesters builds the ingesters for Thanos Receive
-func BuildIngesters(opts []IngesterOptions) []client.Object {
-	var objs []client.Object
-	for _, opt := range opts {
-		objs = append(objs, BuildIngester(opt)...)
-	}
-	return objs
-}
 
 // BuildIngester builds the ingester for Thanos Receive
 func BuildIngester(opts IngesterOptions) []client.Object {
@@ -818,7 +812,8 @@ func GetRequiredIngestorLabels() map[string]string {
 
 func labelsForIngestor(opts IngesterOptions) map[string]string {
 	labels := GetRequiredIngestorLabels()
-	labels[manifests.InstanceLabel] = opts.Name
+	labels[manifests.InstanceLabel] = opts.Instance
+	labels[ShardLabel] = opts.Name
 	return labels
 }
 

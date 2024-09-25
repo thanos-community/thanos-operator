@@ -7,8 +7,10 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
+	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -76,6 +78,53 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 // RulerNameFromParent returns the name of the Thanos Ruler component.
 func RulerNameFromParent(resourceName string) string {
 	return fmt.Sprintf("thanos-ruler-%s", resourceName)
+}
+
+func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec) manifestreceive.IngesterOptions {
+	labels := manifests.MergeLabels(in.GetLabels(), spec.Labels)
+	name := ReceiveIngesterNameFromParent(in.GetName(), spec.Name)
+	common := spec.CommonThanosFields
+	additional := in.Spec.Ingester.Additional
+	secret := in.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
+	if spec.ObjectStorageConfig != nil {
+		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
+	}
+
+	opts := commonToOpts(name, in.GetNamespace(), spec.Replicas, labels, common, additional)
+	return manifestreceive.IngesterOptions{
+		Options:        opts,
+		ObjStoreSecret: secret,
+		TSDBOpts: manifestreceive.TSDBOpts{
+			Retention: string(spec.TSDBConfig.Retention),
+		},
+		StorageSize:    resource.MustParse(string(spec.StorageSize)),
+		Instance:       in.GetName(),
+		ExternalLabels: spec.ExternalLabels,
+	}
+}
+
+func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.RouterOptions {
+	router := in.Spec.Router
+	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
+	name := ReceiveRouterNameFromParent(in.GetName())
+
+	opts := commonToOpts(name, in.GetNamespace(), router.Replicas, labels, router.CommonThanosFields, router.Additional)
+
+	return manifestreceive.RouterOptions{
+		Options:           opts,
+		ReplicationFactor: router.ReplicationFactor,
+		ExternalLabels:    router.ExternalLabels,
+	}
+}
+
+// ReceiveIngesterNameFromParent returns the name of the Thanos Receive Ingester component.
+func ReceiveIngesterNameFromParent(resourceName, hashringName string) string {
+	return fmt.Sprintf("thanos-receive-hashring-%s-%s", resourceName, hashringName)
+}
+
+// ReceiveRouterNameFromParent returns the name of the Thanos Receive Router component.
+func ReceiveRouterNameFromParent(resourceName string) string {
+	return fmt.Sprintf("thanos-receive-router-%s", resourceName)
 }
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
