@@ -40,7 +40,7 @@ func TestBuildIngesters(t *testing.T) {
 	expectService := NewIngestorService(opts)
 	expectStatefulSet := NewIngestorStatefulSet(opts)
 
-	objs := BuildIngesters([]IngesterOptions{opts})
+	objs := BuildIngester(opts)
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
@@ -235,7 +235,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 				t.Errorf("expected ingester statefulset namespace to be %s, got %s", tc.opts.Namespace, ingester.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ingester.GetLabels()) != 8 {
+			if len(ingester.GetLabels()) != 9 {
 				t.Errorf("expected ingester statefulset to have 8 labels, got %d", len(ingester.GetLabels()))
 			}
 			// ensure custom labels are set
@@ -465,7 +465,7 @@ func TestNewIngestorService(t *testing.T) {
 				t.Errorf("expected ingester service namespace to be %s, got %s", tc.opts.Namespace, ingester.GetNamespace())
 			}
 			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ingester.GetLabels()) != 8 {
+			if len(ingester.GetLabels()) != 9 {
 				t.Errorf("expected ingester service to have 8 labels, got %d", len(ingester.GetLabels()))
 			}
 			// ensure custom labels are set

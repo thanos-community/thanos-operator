@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -45,6 +46,8 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 
 			objStoreSecretName = "test-secret"
 			objStoreSecretKey  = "test-key.yaml"
+
+			hashringName = "test-hashring"
 		)
 
 		ctx := context.Background()
@@ -53,6 +56,9 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 			Name:      resourceName,
 			Namespace: ns,
 		}
+
+		routerName := ReceiveRouterNameFromParent(resourceName)
+		ingesterName := ReceiveIngesterNameFromParent(resourceName, hashringName)
 
 		BeforeAll(func() {
 			By("creating the namespace")
@@ -111,14 +117,13 @@ config:
 						ReplicationFactor:  3,
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
-						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
 							Key:                  "test-key",
 						},
-						Hashrings: []monitoringthanosiov1alpha1.IngestorHashringSpec{
+						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        "test-hashring",
+								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
 								Tenants:     []string{"test-tenant"},
@@ -140,8 +145,8 @@ config:
 				Expect(err).NotTo(HaveOccurred())
 				resource.Spec.Ingester.Hashrings = append(
 					resource.Spec.Ingester.Hashrings,
-					monitoringthanosiov1alpha1.IngestorHashringSpec{
-						Name:        "test-hashring",
+					monitoringthanosiov1alpha1.IngesterHashringSpec{
+						Name:        hashringName,
 						Labels:      map[string]string{"test": "my-ingester-test"},
 						StorageSize: "100Mi",
 						Tenants:     []string{"test-tenant"},
@@ -176,14 +181,13 @@ config:
 						},
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
-						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
 							Key:                  "test-key",
 						},
-						Hashrings: []monitoringthanosiov1alpha1.IngestorHashringSpec{
+						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        "test-hashring",
+								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
 								Tenants:     []string{"test-tenant"},
@@ -205,16 +209,14 @@ config:
 
 			By("setting up the thanos receive ingest resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-
-				name := receive.IngesterNameFromParent(resourceName, "test-hashring")
 				Eventually(func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, name, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, ingesterName, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
 			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
 				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
+					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
@@ -259,7 +261,7 @@ config:
 				Expect(k8sClient.Create(context.Background(), epSliceNotRelevantNotRelevantService)).Should(Succeed())
 				// check via a poll that we have not updated the ConfigMap
 				Consistently(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
+					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
 				}, time.Second*5, time.Second*1).Should(BeTrue())
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
@@ -272,14 +274,14 @@ config:
 						Namespace: ns,
 						OwnerReferences: []metav1.OwnerReference{
 							{
-								Name:       receive.IngesterNameFromParent(resourceName, "test-hashring"),
+								Name:       ingesterName,
 								Kind:       "Service",
 								APIVersion: "v1",
 								UID:        types.UID("1234"),
 							},
 						},
 						Labels: map[string]string{
-							discoveryv1.LabelServiceName: receive.IngesterNameFromParent(resourceName, "test-hashring"),
+							discoveryv1.LabelServiceName: ingesterName,
 							manifests.ComponentLabel:     receive.IngestComponentName},
 					},
 					AddressType: discoveryv1.AddressTypeIPv4,
@@ -314,8 +316,8 @@ config:
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), epSliceRelevant)).Should(Succeed())
-
-				expect := `[
+				svcName := ingesterName
+				expect := fmt.Sprintf(`[
     {
         "hashring": "test-hashring",
         "tenants": [
@@ -324,45 +326,43 @@ config:
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "some-hostname-b.test-resource-test-hashring.treceive.svc.cluster.local:10901",
+                "address": "some-hostname-b.%s.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname-c.test-resource-test-hashring.treceive.svc.cluster.local:10901",
+                "address": "some-hostname-c.%s.treceive.svc.cluster.local:10901",
                 "az": ""
             },
             {
-                "address": "some-hostname.test-resource-test-hashring.treceive.svc.cluster.local:10901",
+                "address": "some-hostname.%s.treceive.svc.cluster.local:10901",
                 "az": ""
             }
         ]
     }
-]`
-
+]`, svcName, svcName, svcName)
 				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, resourceName, ns, receive.HashringConfigKey, expect)
+					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 
 			})
 
 			By("creating the router components", func() {
 				Eventually(func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, resourceName, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, routerName, ns)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
 			By("creating the additional container for router", func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(
-						k8sClient, resourceName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250")
+						k8sClient, routerName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250")
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
 			By("creating the additional container for ingesters", func() {
 				Eventually(func() bool {
-					name := receive.IngesterNameFromParent(resourceName, "test-hashring")
 					return utils.VerifyStatefulSetArgs(
-						k8sClient, name, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
+						k8sClient, ingesterName, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
@@ -374,7 +374,7 @@ config:
 
 				Consistently(func() bool {
 					deployment := &appsv1.Deployment{}
-					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: resourceName, Namespace: ns}, deployment)
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: routerName, Namespace: ns}, deployment)
 					if err != nil {
 						return false
 					}
