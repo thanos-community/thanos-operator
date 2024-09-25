@@ -60,15 +60,6 @@ func (o Options) ToFlags() []string {
 		fmt.Sprintf("--log.level=%s", *o.LogLevel),
 		fmt.Sprintf("--log.format=%s", *o.LogFormat),
 	}
-	if o.ServiceMonitorConfig == nil || o.ServiceMonitorConfig.Enabled == nil {
-		o.ServiceMonitorConfig.Enabled = ptr.To(true)
-
-	}
-	if o.ServiceMonitorConfig == nil || *o.ServiceMonitorConfig.Namespace == "" {
-		o.ServiceMonitorConfig.Namespace = ptr.To(o.Namespace)
-	}
-
-	return o
 }
 
 // GetContainerImage for the Options

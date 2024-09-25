@@ -549,19 +549,6 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 	}
 }
 
-func ApplyPrometheusCRD() error {
-	wd, _ := os.Getwd()
-	promCmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/prometheus-crd.yaml", "--server-side")
-	if _, err := Run(promCmd); err != nil {
-		return fmt.Errorf("failed to apply Prometheus CRD: %v", err)
-	}
-	cmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/rbac.yaml", "--server-side")
-	if _, err := Run(cmd); err != nil {
-		return fmt.Errorf("failed to apply RBAC: %v for Prometheus", err)
-	}
-	return nil
-}
-
 func SetUpPrometheus(c client.Client) error {
 	if err := CreateServiceAccount(c); err != nil {
 		return err

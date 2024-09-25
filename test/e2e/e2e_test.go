@@ -19,10 +19,11 @@ package e2e
 import (
 	"context"
 	"fmt"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"os"
 	"os/exec"
 	"time"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -441,7 +442,8 @@ var _ = Describe("controller", Ordered, func() {
 					return utils.VerifyServiceMonitor(c, queryName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 
-				query.Spec.CommonThanosFields.EnableSelfMonitor = false
+				enable := false
+				query.Spec.CommonThanosFields.EnableSelfMonitor = &enable
 				err = c.Update(context.Background(), query)
 				Expect(err).To(BeNil())
 
