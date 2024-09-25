@@ -32,7 +32,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
@@ -146,26 +145,10 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 }
 
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) map[string]manifestsstore.Options {
-	// build the shared options
-	opts := r.specToManifestOptions(store)
-
-	// buildOpts returns the Options for a Thanos Store.
-	buildOpts := func() manifestsstore.Options {
-		return manifestsstore.Options{
-			ObjStoreSecret:           store.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-			IndexCacheConfig:         store.Spec.IndexCacheConfig,
-			CachingBucketConfig:      store.Spec.CachingBucketConfig,
-			Min:                      manifests.Duration(manifests.OptionalToString(store.Spec.MinTime)),
-			Max:                      manifests.Duration(manifests.OptionalToString(store.Spec.MaxTime)),
-			IgnoreDeletionMarksDelay: manifests.Duration(store.Spec.IgnoreDeletionMarksDelay),
-			StorageSize:              resource.MustParse(string(store.Spec.StorageSize)),
-			Options:                  opts,
-		}
-	}
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
 		return map[string]manifestsstore.Options{
-			store.GetName(): buildOpts(),
+			store.GetName(): storeV1Alpha1ToOptions(store),
 		}
 	}
 
@@ -173,8 +156,8 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
 
 	for i := range store.Spec.ShardingStrategy.Shards {
-		shardName := storeShardName(store.GetName(), i)
-		storeShardOpts := buildOpts()
+		shardName := StoreShardName(store.GetName(), i)
+		storeShardOpts := storeV1Alpha1ToOptions(store)
 		storeShardOpts.ShardName = shardName
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
@@ -194,28 +177,6 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	return shardedOptions
 }
 
-func (r *ThanosStoreReconciler) specToManifestOptions(store monitoringthanosiov1alpha1.ThanosStore) manifests.Options {
-	return manifests.Options{
-		Name:                 store.GetName(),
-		Namespace:            store.GetNamespace(),
-		Replicas:             store.Spec.ShardingStrategy.ShardReplicas,
-		Labels:               manifests.MergeLabels(store.GetLabels(), store.Spec.Labels),
-		Image:                store.Spec.Image,
-		LogLevel:             store.Spec.LogLevel,
-		LogFormat:            store.Spec.LogFormat,
-		ResourceRequirements: store.Spec.ResourceRequirements,
-		Additional: manifests.Additional{
-			Args:         store.Spec.Args,
-			Containers:   store.Spec.Containers,
-			Env:          store.Spec.Env,
-			Volumes:      store.Spec.Volumes,
-			VolumeMounts: store.Spec.VolumeMounts,
-			Ports:        store.Spec.Ports,
-			ServicePorts: store.Spec.ServicePorts,
-		},
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
@@ -232,11 +193,4 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return nil
-}
-
-// storeShardName generates name for a Thanos Store shard.
-func storeShardName(parentName string, shardIndex int32) string {
-	name := fmt.Sprintf("%s-shard-%d", parentName, shardIndex)
-	// todo - figure out a strategy for global naming for all resources
-	return name
 }

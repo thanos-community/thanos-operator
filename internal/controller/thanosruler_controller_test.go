@@ -118,16 +118,16 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, resourceName, ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, RulerNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, "--label=rule_replica=\"$(NAME)\"")
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, resourceName, ns)
+						k8sClient, 2, RulerNameFromParent(resourceName), ns)
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 			})
 
@@ -158,7 +158,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "my-query", ns)
-					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -185,7 +185,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
-					return utils.VerifyStatefulSetArgs(k8sClient, resourceName, ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 		})
