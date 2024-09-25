@@ -3577,10 +3577,6 @@ spec:
                       description: IngesterHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
-                        enableSelfMonitor:
-                          default: true
-                          description: Enable self monitoring for the Thanos component.
-                          type: boolean
                         externalLabels:
                           additionalProperties:
                             type: string
@@ -7331,10 +7327,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  enableSelfMonitor:
-                    default: true
-                    description: Enable self monitoring for the Thanos component.
-                    type: boolean
                   externalLabels:
                     additionalProperties:
                       type: string

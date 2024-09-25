@@ -19,6 +19,7 @@ func BuildServiceMonitor(opts Options, port string) *monitoringv1.ServiceMonitor
 	for k, v := range opts.ServiceMonitorConfig.Labels {
 		labels[k] = v
 	}
+	labels["thanos-self-monitoring"] = opts.Name
 	return &monitoringv1.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceMonitor",

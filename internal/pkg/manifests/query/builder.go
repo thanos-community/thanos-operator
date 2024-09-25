@@ -210,7 +210,7 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
-	if opts.EnableServiceMonitor {
+	if opts.ServiceMonitorConfig.Enabled != nil && *opts.ServiceMonitorConfig.Enabled {
 		objectMetaLabels["thanos-self-monitoring"] = opts.Name
 	}
 

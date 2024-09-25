@@ -40,8 +40,6 @@ type Options struct {
 	LogLevel *string
 	// LogFormat is the log format for the component
 	LogFormat *string
-	// EnableServiceMonitor is a flag to enable ServiceMonitor
-	EnableServiceMonitor bool
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
 	ServiceMonitorConfig *v1alpha1.ServiceMonitorConfig
 }

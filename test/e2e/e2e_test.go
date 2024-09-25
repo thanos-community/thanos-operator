@@ -443,7 +443,7 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 
 				enable := false
-				query.Spec.CommonThanosFields.EnableSelfMonitor = &enable
+				query.Spec.CommonThanosFields.ServiceMonitorConfig.Enabled = &enable
 				err = c.Update(context.Background(), query)
 				Expect(err).To(BeNil())
 

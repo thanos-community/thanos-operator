@@ -170,6 +170,7 @@ func commonToOpts(
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
+		ServiceMonitorConfig: common.ServiceMonitorConfig,
 	}
 }
 

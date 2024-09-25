@@ -75,10 +75,6 @@ type CommonThanosFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
-	// Enable self monitoring for the Thanos component.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=true
-	EnableSelfMonitor *bool `json:"enableSelfMonitor,omitempty"`
 	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
 	// +kubebuilder:validation:Optional
 	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`

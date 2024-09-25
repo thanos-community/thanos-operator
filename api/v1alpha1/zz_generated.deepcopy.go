@@ -144,11 +144,6 @@ func (in *CommonThanosFields) DeepCopyInto(out *CommonThanosFields) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.EnableSelfMonitor != nil {
-		in, out := &in.EnableSelfMonitor, &out.EnableSelfMonitor
-		*out = new(bool)
-		**out = **in
-	}
 	if in.ServiceMonitorConfig != nil {
 		in, out := &in.ServiceMonitorConfig, &out.ServiceMonitorConfig
 		*out = new(ServiceMonitorConfig)
