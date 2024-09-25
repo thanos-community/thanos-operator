@@ -7392,6 +7392,23 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
+                  serviceMonitor:
+                    description: ServiceMonitorConfig is the configuration for the
+                      ServiceMonitor.
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                      namespace:
+                        description: Namespace to deploy the ServiceMonitor in.
+                        type: string
+                    type: object
                   version:
                     description: |-
                       Version of Thanos to be deployed.
@@ -7463,6 +7480,22 @@ spec:
                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
+                type: object
+              serviceMonitor:
+                description: ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled
+                    type: boolean
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels to add to the ServiceMonitor.
+                    type: object
+                  namespace:
+                    description: Namespace to deploy the ServiceMonitor in.
+                    type: string
                 type: object
               version:
                 description: |-

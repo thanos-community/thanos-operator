@@ -243,18 +243,6 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				}, time.Second*30, time.Second*10).Should(Succeed())
 			})
 
-			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitor(k8sClient, resourceName, ns)).To(BeTrue())
-
-				enableSelfMonitor := false
-				resource.Spec.EnableSelfMonitor = &enableSelfMonitor
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(k8sClient, resourceName, ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
-			})
-
 			By("checking paused state", func() {
 				isPaused := true
 				resource.Spec.Paused = &isPaused

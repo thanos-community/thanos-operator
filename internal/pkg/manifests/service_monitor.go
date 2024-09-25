@@ -16,7 +16,9 @@ func BuildServiceMonitor(opts Options, port string) *monitoringv1.ServiceMonitor
 	for k, v := range opts.Labels {
 		labels[k] = v
 	}
-	labels["service-monitor-selector"] = "thanos"
+	for k, v := range opts.ServiceMonitorConfig.Labels {
+		labels[k] = v
+	}
 	return &monitoringv1.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceMonitor",
@@ -24,7 +26,7 @@ func BuildServiceMonitor(opts Options, port string) *monitoringv1.ServiceMonitor
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
-			Namespace: opts.Namespace,
+			Namespace: *opts.ServiceMonitorConfig.Namespace,
 			Labels:    labels,
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{

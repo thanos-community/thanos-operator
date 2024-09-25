@@ -3803,6 +3803,143 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
+                  image:
+                    description: Container image to use for the Thanos components.
+                    type: string
+                  imagePullPolicy:
+                    default: IfNotPresent
+                    description: |-
+                      Image pull policy for the Thanos containers.
+                      See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
+                    enum:
+                    - Always
+                    - Never
+                    - IfNotPresent
+                    type: string
+                  imagePullSecrets:
+                    description: |-
+                      An optional list of references to Secrets in the same namespace
+                      to use for pulling images from registries.
+                      See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+                    items:
+                      description: |-
+                        LocalObjectReference contains enough information to let you locate the
+                        referenced object inside the same namespace.
+                      properties:
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    type: array
+                  logFormat:
+                    default: logfmt
+                    description: Log format for Thanos.
+                    enum:
+                    - logfmt
+                    - json
+                    type: string
+                  logLevel:
+                    description: Log level for Thanos.
+                    enum:
+                    - debug
+                    - info
+                    - warn
+                    - error
+                    type: string
+                  paused:
+                    description: |-
+                      When a resource is paused, no actions except for deletion
+                      will be performed on the underlying objects.
+                    type: boolean
+                  resourceRequirements:
+                    description: ResourceRequirements for the Thanos component container.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This is an alpha field and requires enabling the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                  serviceMonitor:
+                    description: ServiceMonitorConfig is the configuration for the
+                      ServiceMonitor.
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                      namespace:
+                        description: Namespace to deploy the ServiceMonitor in.
+                        type: string
+                    type: object
+                  version:
+                    description: |-
+                      Version of Thanos to be deployed.
+                      If not specified, the operator assumes the latest upstream version of
+                      Thanos available at the time when the version of the operator was released.
+                    type: string
                 required:
                 - defaultObjectStorageConfig
                 - hashrings
@@ -7462,6 +7599,23 @@ spec:
                           otherwise to an implementation-defined value. Requests cannot exceed Limits.
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
+                    type: object
+                  serviceMonitor:
+                    description: ServiceMonitorConfig is the configuration for the
+                      ServiceMonitor.
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                      namespace:
+                        description: Namespace to deploy the ServiceMonitor in.
+                        type: string
                     type: object
                   version:
                     description: |-

@@ -29,6 +29,10 @@ import (
 	"strings"
 	"time"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -554,6 +558,115 @@ func ApplyPrometheusCRD() error {
 	cmd := exec.Command("kubectl", "apply", "-f", wd+"/test/configs/rbac.yaml", "--server-side")
 	if _, err := Run(cmd); err != nil {
 		return fmt.Errorf("failed to apply RBAC: %v for Prometheus", err)
+	}
+	return nil
+}
+
+func SetUpPrometheus(c client.Client) error {
+	if err := CreateServiceAccount(c); err != nil {
+		return err
+	}
+	if err := CreateClusterRole(c); err != nil {
+		return err
+	}
+	if err := CreateClusterRoleBinding(c); err != nil {
+		return err
+	}
+	if err := CreatePrometheus(c); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreatePrometheus(c client.Client) error {
+	promRes := &monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-prometheus",
+			Namespace: "default",
+		},
+		Spec: monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				ServiceAccountName:              "prometheus",
+				Replicas:                        pointer.Int32(1),
+				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
+				ServiceMonitorSelector:          &metav1.LabelSelector{},
+				Version:                         "v2.54.0",
+			},
+			Retention: "10d",
+		},
+	}
+	if err := c.Create(context.Background(), promRes); err != nil {
+		return err
+	}
+	return nil
+}
+
+// create service account for prometheus
+func CreateServiceAccount(c client.Client) error {
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus",
+			Namespace: "default",
+		},
+	}
+	if err := c.Create(context.Background(), sa); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateClusterRole(c client.Client) error {
+	cr := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheus",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes", "nodes/proxy", "services", "endpoints", "pods"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get"},
+			},
+			{
+				NonResourceURLs: []string{"/metrics"},
+				Verbs:           []string{"get"},
+			},
+		},
+	}
+	if err := c.Create(context.Background(), cr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateClusterRoleBinding(c client.Client) error {
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheus",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus",
+				Namespace: "default",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind: "ClusterRole",
+			Name: "prometheus",
+		},
+	}
+	if err := c.Create(context.Background(), crb); err != nil {
+		return err
 	}
 	return nil
 }

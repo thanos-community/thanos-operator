@@ -19,26 +19,29 @@ package e2e
 import (
 	"context"
 	"fmt"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"os"
 	"os/exec"
 	"time"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -58,6 +61,8 @@ const (
 	queryName = "example-query"
 
 	rulerName = "example-ruler"
+
+	prometheusPort = 9090
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -94,6 +99,14 @@ var _ = Describe("controller", Ordered, func() {
 			fmt.Println("failed to add scheme")
 			os.Exit(1)
 		}
+		if err := monitoringv1.AddToScheme(scheme); err != nil {
+			fmt.Println("failed to add scheme")
+			os.Exit(1)
+		}
+		if err := rbacv1.AddToScheme(scheme); err != nil {
+			fmt.Println("failed to add scheme")
+			os.Exit(1)
+		}
 
 		cl, err := client.New(config.GetConfigOrDie(), client.Options{
 			Scheme: scheme,
@@ -103,6 +116,9 @@ var _ = Describe("controller", Ordered, func() {
 			os.Exit(1)
 		}
 		c = cl
+
+		By("Setup prometheus")
+		Expect(utils.SetUpPrometheus(c)).To(Succeed())
 	})
 
 	AfterAll(func() {
@@ -386,6 +402,35 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 		})
+		Context("Discover Thanos Query as a target", func() {
+			It("Prometheus should discover Thanos Query as a target", func() {
+				pods := &corev1.PodList{}
+				selector := client.MatchingLabels{
+					"prometheus": "test-prometheus",
+				}
+				err := c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
+				Expect(err).To(BeNil())
+				Expect(len(pods.Items)).To(Equal(1))
+
+				pod := pods.Items[0].Name
+				port := intstr.IntOrString{IntVal: prometheusPort}
+				cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					promResp, err := utils.QueryPrometheus("up{service=\"" + queryName + "\"}")
+					if err != nil {
+						return err
+					}
+					if len(promResp.Data.Result) > 0 && promResp.Data.Result[0].Metric["service"] != queryName {
+						return fmt.Errorf("query service is not up in Prometheus")
+					}
+					return nil
+				}, time.Minute*1, time.Second*5).Should(Succeed())
+			})
+		})
+
 		Context("Thanos Query Service Monitor", func() {
 			It("should remove service monitor when disabled", func() {
 				query := &v1alpha1.ThanosQuery{}

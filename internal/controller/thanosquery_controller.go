@@ -239,6 +239,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Complete(r)
 
+	// if servicemonitor CRD exists in the cluster, watch for changes to ServiceMonitor resources
 	if err != nil {
 		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
 		return err

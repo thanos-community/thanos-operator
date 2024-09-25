@@ -3,6 +3,7 @@ package manifests
 import (
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -41,6 +42,8 @@ type Options struct {
 	LogFormat *string
 	// EnableServiceMonitor is a flag to enable ServiceMonitor
 	EnableServiceMonitor bool
+	//ServiceMonitorConfig is the configuration for the ServiceMonitor
+	ServiceMonitorConfig *v1alpha1.ServiceMonitorConfig
 }
 
 // ToFlags returns the flags for the Options
@@ -57,6 +60,15 @@ func (o Options) ToFlags() []string {
 		fmt.Sprintf("--log.level=%s", *o.LogLevel),
 		fmt.Sprintf("--log.format=%s", *o.LogFormat),
 	}
+	if o.ServiceMonitorConfig == nil || o.ServiceMonitorConfig.Enabled == nil {
+		o.ServiceMonitorConfig.Enabled = ptr.To(true)
+
+	}
+	if o.ServiceMonitorConfig == nil || *o.ServiceMonitorConfig.Namespace == "" {
+		o.ServiceMonitorConfig.Namespace = ptr.To(o.Namespace)
+	}
+
+	return o
 }
 
 // GetContainerImage for the Options
