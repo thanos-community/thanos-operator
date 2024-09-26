@@ -10,17 +10,9 @@ func TestBuildServiceMonitor(t *testing.T) {
 	opts := Options{
 		Name:      "thanos-stack",
 		Namespace: "ns",
-		Labels: map[string]string{
-			"app.kubernetes.io/name":     "thanos",
-			"app.kubernetes.io/instance": "thanos-stack",
-		},
 		ServiceMonitorConfig: ServiceMonitorConfig{
-			Enabled: ptr.To(true),
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "thanos-operator",
-				"test":                         "test",
-			},
-			Namespace: ptr.To("monitoring"),
+			Enabled:   ptr.To(true),
+			Namespace: ptr.To("ns"),
 		},
 	}
 	for _, tc := range []struct {
