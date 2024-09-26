@@ -15,7 +15,6 @@ import (
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 )
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {

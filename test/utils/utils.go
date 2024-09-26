@@ -29,9 +29,10 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -574,7 +575,7 @@ func CreatePrometheus(c client.Client) error {
 		Spec: monitoringv1.PrometheusSpec{
 			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
 				ServiceAccountName:              "prometheus",
-				Replicas:                        pointer.Int32(1),
+				Replicas:                        ptr.To(int32(1)),
 				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
 				ServiceMonitorSelector:          &metav1.LabelSelector{},
 				Version:                         "v2.54.0",

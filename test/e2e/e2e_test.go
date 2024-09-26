@@ -62,7 +62,7 @@ const (
 	compactName = "example-compact"
 
 	prometheusPort = 9090
-  
+
 	hashringName = "default"
 )
 
