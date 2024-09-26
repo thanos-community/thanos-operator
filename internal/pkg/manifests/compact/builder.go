@@ -124,6 +124,10 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 			Labels:    metaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
+			PersistentVolumeClaimRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+				WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			},
 			ServiceName: name,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
@@ -251,6 +255,7 @@ func compactorArgsFrom(opts Options) []string {
 	args := []string{"compact"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
+		"--wait",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--objstore.config=$(%s)", objectStoreEnvVarName),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
