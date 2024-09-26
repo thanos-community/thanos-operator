@@ -65,7 +65,7 @@ func BuildQuery(opts Options) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
-	if opts.ServiceMonitorConfig.Enabled != nil && *opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig.Enabled {
 		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
 	}
 	return objs
@@ -209,7 +209,7 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
-	if opts.ServiceMonitorConfig.Enabled != nil && *opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig.Enabled {
 		objectMetaLabels["thanos-self-monitoring"] = opts.Name
 	}
 

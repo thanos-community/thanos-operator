@@ -227,7 +227,7 @@ func (rc RelabelConfigs) ToFlags() string {
 type Duration string
 
 type ServiceMonitorConfig struct {
-	Enabled   *bool
+	Enabled   bool
 	Labels    map[string]string
-	Namespace *string
+	Namespace string
 }

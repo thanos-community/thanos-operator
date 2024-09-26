@@ -244,14 +244,19 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitor(k8sClient, resourceName, ns)).To(BeTrue())
+				Expect(utils.VerifyServiceMonitor(k8sClient, QueryNameFromParent(resourceName), ns)).To(BeTrue())
 
 				enableSelfMonitor := false
-				resource.Spec.ServiceMonitorConfig.Enabled = &enableSelfMonitor
+
+				resource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
+						Enabled: &enableSelfMonitor,
+					},
+				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(k8sClient, resourceName, ns)
+					return utils.VerifyServiceMonitorDeleted(k8sClient, QueryNameFromParent(resourceName), ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 

@@ -191,8 +191,8 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace string, labels map[string]string) manifests.ServiceMonitorConfig {
 	if in == nil {
 		return manifests.ServiceMonitorConfig{
-			Enabled:   ptr.To(true),
-			Namespace: &namespace,
+			Enabled:   true,
+			Namespace: namespace,
 			Labels:    labels,
 		}
 	}
@@ -207,8 +207,8 @@ func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace str
 		in.Labels = labels
 	}
 	return manifests.ServiceMonitorConfig{
-		Enabled:   in.Enabled,
+		Enabled:   *in.Enabled,
 		Labels:    in.Labels,
-		Namespace: in.Namespace,
+		Namespace: *in.Namespace,
 	}
 }

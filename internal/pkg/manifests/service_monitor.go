@@ -27,7 +27,7 @@ func BuildServiceMonitor(opts Options, port string) *monitoringv1.ServiceMonitor
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
-			Namespace: *opts.ServiceMonitorConfig.Namespace,
+			Namespace: opts.Namespace, // Future: use namespace from ServiceMonitorConfig
 			Labels:    labels,
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{

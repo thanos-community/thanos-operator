@@ -2,8 +2,6 @@ package manifests
 
 import (
 	"testing"
-
-	"k8s.io/utils/ptr"
 )
 
 func TestBuildServiceMonitor(t *testing.T) {
@@ -11,8 +9,8 @@ func TestBuildServiceMonitor(t *testing.T) {
 		Name:      "thanos-stack",
 		Namespace: "ns",
 		ServiceMonitorConfig: ServiceMonitorConfig{
-			Enabled:   ptr.To(true),
-			Namespace: ptr.To("ns"),
+			Enabled:   true,
+			Namespace: "ns",
 		},
 	}
 	for _, tc := range []struct {
