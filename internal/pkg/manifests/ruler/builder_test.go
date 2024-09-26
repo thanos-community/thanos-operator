@@ -61,7 +61,7 @@ func TestBuildRuler(t *testing.T) {
 	expectStatefulset := NewRulerStatefulSet(opts)
 
 	objs := BuildRuler(opts)
-	if len(objs) != 3 {
+	if len(objs) != 4 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
@@ -85,11 +85,15 @@ func TestBuildRuler(t *testing.T) {
 		t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
 	}
 
+	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
+		t.Errorf("expected fourth object to be a pod disruption budget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
+	}
+
 	wantLabels := labelsForRulers(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 
-	for _, obj := range []client.Object{objs[1], objs[2]} {
+	for _, obj := range []client.Object{objs[1], objs[2], objs[3]} {
 		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
 			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
 		}
