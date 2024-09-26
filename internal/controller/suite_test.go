@@ -33,12 +33,14 @@ import (
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -97,53 +99,47 @@ var _ = BeforeSuite(func() {
 	controllerBaseMetrics := controllermetrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
+	buildControllerInstrumentationConfig := func(component string) InstrumentationConfig {
+		return InstrumentationConfig{
+			Logger:          logger.WithName(component),
+			EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),
+			MetricsRegistry: ctrlmetrics.Registry,
+			BaseMetrics:     controllerBaseMetrics,
+		}
+	}
+
 	err = NewThanosReceiveReconciler(
-		logger,
+		buildControllerInstrumentationConfig("receive"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		k8sManager.GetEventRecorderFor("thanosreceive-controller"),
-		reg,
-		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosQueryReconciler(
-		logger,
+		buildControllerInstrumentationConfig("query"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		k8sManager.GetEventRecorderFor("thanosquery-controller"),
-		reg,
-		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosStoreReconciler(
-		logger,
+		buildControllerInstrumentationConfig("store"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		k8sManager.GetEventRecorderFor("thanosstore-controller"),
-		reg,
-		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosRulerReconciler(
-		logger,
+		buildControllerInstrumentationConfig("ruler"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		k8sManager.GetEventRecorderFor("thanosruler-controller"),
-		reg,
-		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosCompactReconciler(
-		logger.WithName("compactor-test"),
+		buildControllerInstrumentationConfig("compact"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-		k8sManager.GetEventRecorderFor("thanoscompact-controller"),
-		reg,
-		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
