@@ -60,7 +60,8 @@ type IngesterOptions struct {
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
 	ExternalLabels map[string]string
-	Instance       string
+	// Instance is the owner of the ingester and if not set, defaults to the name of the object.
+	Instance string
 }
 
 type TSDBOpts struct {
@@ -133,8 +134,8 @@ func BuildIngester(opts IngesterOptions) []client.Object {
 	var objs []client.Object
 	selectorLabels := labelsForIngestor(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
-
-	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
+	// for receive ingesters we create a single service account per instance
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -251,10 +252,12 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 
 // BuildRouter builds the Thanos Receive router components
 func BuildRouter(opts RouterOptions) []client.Object {
+	selectorLabels := labelsForRouter(opts.Options)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	return []client.Object{
-		manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()),
-		NewRouterService(opts),
-		NewRouterDeployment(opts),
+		manifests.BuildServiceAccount(opts.Name, opts.Namespace, GetRequiredLabels()),
+		newRouterService(opts, selectorLabels, objectMetaLabels),
+		newRouterDeployment(opts, selectorLabels, objectMetaLabels),
 	}
 }
 
@@ -351,7 +354,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: Name,
+					ServiceAccountName: opts.Name,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -661,7 +664,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 							Args:                     routerArgsFrom(opts),
 						},
 					},
-					ServiceAccountName:           Name,
+					ServiceAccountName:           opts.Name,
 					AutomountServiceAccountToken: ptr.To(true),
 				},
 			},

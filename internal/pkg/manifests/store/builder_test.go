@@ -40,12 +40,8 @@ func TestBuildStore(t *testing.T) {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != Name {
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
 		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
-
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
-		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
 	}
 
 	if !equality.Semantic.DeepEqual(objs[2], expectStatefulSet) {

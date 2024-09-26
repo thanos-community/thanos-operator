@@ -45,12 +45,12 @@ func TestBuildIngesters(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != Name {
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
 		t.Errorf("expected first object to be a service account, got %v", objs[0])
 	}
 
 	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
-		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
+		t.Errorf("expected service account labels to match required labels")
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectService) {
@@ -94,12 +94,12 @@ func TestBuildRouter(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != Name {
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
 		t.Errorf("expected first object to be a service account, got %v", objs[0])
 	}
 
 	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
-		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
+		t.Errorf("expected service account labels to match service selector labels")
 	}
 
 	if !equality.Semantic.DeepEqual(objs[1], expectService) {
@@ -110,8 +110,8 @@ func TestBuildRouter(t *testing.T) {
 		t.Errorf("expected third object to be a deployment, wanted \n%v\n got \n%v\n", expectDeployment, objs[2])
 	}
 
-	if expectDeployment.Spec.Template.Spec.ServiceAccountName != Name {
-		t.Errorf("expected deployment to have service account %s, got %s", Name, expectDeployment.Spec.Template.Spec.ServiceAccountName)
+	if expectDeployment.Spec.Template.Spec.ServiceAccountName != opts.Name {
+		t.Errorf("expected deployment to have service account %s, got %s", opts.Name, expectDeployment.Spec.Template.Spec.ServiceAccountName)
 	}
 
 	wantLabels := labelsForRouter(opts.Options)
