@@ -36,8 +36,7 @@ type Options struct {
 	LookbackDelta string
 	MaxConcurrent int
 
-	Endpoints            []Endpoint
-	EnableServiceMonitor bool
+	Endpoints []Endpoint
 }
 
 type EndpointType string

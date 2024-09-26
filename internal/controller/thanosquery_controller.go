@@ -141,9 +141,23 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontendObjs...)
 	}
 
-	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
+	var errCount int
+	if errCount = r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
+	}
+
+	if query.Spec.ServiceMonitorConfig == nil || (query.Spec.ServiceMonitorConfig == nil && query.Spec.ServiceMonitorConfig.Enabled != nil && !*query.Spec.ServiceMonitorConfig.Enabled) {
+		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      query.GetName(),
+				Namespace: *query.Spec.ServiceMonitorConfig.Namespace,
+			},
+		},
+		}); errCount > 0 {
+			r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
+		}
 	}
 
 	return nil

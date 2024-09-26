@@ -1,6 +1,10 @@
 package manifests
 
-import "testing"
+import (
+	"testing"
+
+	"k8s.io/utils/ptr"
+)
 
 func TestBuildServiceMonitor(t *testing.T) {
 	opts := Options{
@@ -9,6 +13,14 @@ func TestBuildServiceMonitor(t *testing.T) {
 		Labels: map[string]string{
 			"app.kubernetes.io/name":     "thanos",
 			"app.kubernetes.io/instance": "thanos-stack",
+		},
+		ServiceMonitorConfig: ServiceMonitorConfig{
+			Enabled: ptr.To(true),
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "thanos-operator",
+				"test":                         "test",
+			},
+			Namespace: ptr.To("monitoring"),
 		},
 	}
 	for _, tc := range []struct {

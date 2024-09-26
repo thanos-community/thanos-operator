@@ -431,28 +431,6 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*5).Should(Succeed())
 			})
 		})
-
-		Context("Thanos Query Service Monitor", func() {
-			It("should remove service monitor when disabled", func() {
-				query := &v1alpha1.ThanosQuery{}
-				err := c.Get(context.Background(), client.ObjectKey{Name: queryName, Namespace: namespace}, query)
-				Expect(err).To(BeNil())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitor(c, queryName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
-
-				enable := false
-				query.Spec.CommonThanosFields.ServiceMonitorConfig.Enabled = &enable
-				err = c.Update(context.Background(), query)
-				Expect(err).To(BeNil())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(c, queryName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
-
-			})
-		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {

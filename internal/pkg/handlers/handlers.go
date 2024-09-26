@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
@@ -63,6 +64,31 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 			"resource configured",
 			"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
 			"resource", obj.GetName(), "namespace", obj.GetNamespace(),
+		)
+	}
+	return errCount
+}
+
+// Delete resources if they exist.
+func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int {
+	var errCount int
+	for _, obj := range objs {
+		if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) {
+			h.logger.Error(
+				err, "failed to delete resource",
+				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
+				"resource", obj.GetName(),
+				"namespace", obj.GetNamespace(),
+			)
+			errCount++
+			continue
+		}
+
+		h.logger.V(1).Info(
+			"resource deleted",
+			"gvk", obj.GetObjectKind().GroupVersionKind().String(),
+			"resource", obj.GetName(),
+			"namespace", obj.GetNamespace(),
 		)
 	}
 	return errCount

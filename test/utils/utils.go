@@ -550,16 +550,16 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 }
 
 func SetUpPrometheus(c client.Client) error {
-	if err := CreateServiceAccount(c); err != nil {
+	if err := CreateServiceAccount(c); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
-	if err := CreateClusterRole(c); err != nil {
+	if err := CreateClusterRole(c); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
-	if err := CreateClusterRoleBinding(c); err != nil {
+	if err := CreateClusterRoleBinding(c); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
-	if err := CreatePrometheus(c); err != nil {
+	if err := CreatePrometheus(c); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 	return nil

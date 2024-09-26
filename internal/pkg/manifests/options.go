@@ -3,7 +3,6 @@ package manifests
 import (
 	"fmt"
 
-	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -41,7 +40,7 @@ type Options struct {
 	// LogFormat is the log format for the component
 	LogFormat *string
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
-	ServiceMonitorConfig *v1alpha1.ServiceMonitorConfig
+	ServiceMonitorConfig
 }
 
 // ToFlags returns the flags for the Options
@@ -226,3 +225,9 @@ func (rc RelabelConfigs) ToFlags() string {
 }
 
 type Duration string
+
+type ServiceMonitorConfig struct {
+	Enabled   *bool
+	Labels    map[string]string
+	Namespace *string
+}
