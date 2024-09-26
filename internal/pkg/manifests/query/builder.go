@@ -62,7 +62,7 @@ func BuildQuery(opts Options) []client.Object {
 	selectorLabels := labelsForQuery(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
 	if opts.ServiceMonitorConfig.Enabled {
@@ -176,7 +176,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
-					ServiceAccountName: Name,
+					ServiceAccountName: opts.Name,
 				},
 			},
 		},

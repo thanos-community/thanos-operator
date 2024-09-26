@@ -7,6 +7,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -592,4 +593,41 @@ func TestMutateFuncFor_MutateStatefulSetSpec(t *testing.T) {
 			require.Equal(t, tst.got.Spec.VolumeClaimTemplates, tst.got.Spec.VolumeClaimTemplates)
 		})
 	}
+}
+
+func TestMutateFuncFor_MutatePodDisruptionBudget(t *testing.T) {
+	mu := intstr.FromInt32(1)
+	got := &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"test":  "test",
+				"other": "label",
+			},
+		},
+	}
+
+	want := &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"other": "label",
+				"new":   "label",
+			},
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: &mu,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"label": "test",
+					"and":   "another",
+				},
+			},
+		},
+	}
+
+	f := MutateFuncFor(got, want)
+	err := f()
+
+	require.NoError(t, err)
+	require.Exactly(t, got.Labels, want.Labels)
+	require.Exactly(t, got.Spec, want.Spec)
 }

@@ -55,15 +55,15 @@ const (
 	objStoreSecret    = "thanos-object-storage"
 	objStoreSecretKey = "thanos.yaml"
 
-	receiveName  = "example-receive"
-	storeName    = "example-store"
-	hashringName = "default"
-
-	queryName = "example-query"
-
-	rulerName = "example-ruler"
+	receiveName = "example-receive"
+	storeName   = "example-store"
+	queryName   = "example-query"
+	rulerName   = "example-ruler"
+	compactName = "example-compact"
 
 	prometheusPort = 9090
+  
+	hashringName = "default"
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -451,7 +451,7 @@ var _ = Describe("controller", Ordered, func() {
 							},
 						},
 						CommonThanosFields: v1alpha1.CommonThanosFields{},
-						StorageSize:        "1Gi",
+						StorageSize:        "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -533,7 +533,7 @@ var _ = Describe("controller", Ordered, func() {
 							Shards:        2,
 							ShardReplicas: 2,
 						},
-						StorageSize: "1Gi",
+						StorageSize: "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -566,6 +566,37 @@ var _ = Describe("controller", Ordered, func() {
 			It("should create a ConfigMap with the correct cache configuration", func() {
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(c, "thanos-store-inmemory-config", namespace, "config.yaml", store.InMemoryConfig)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+			})
+		})
+	})
+
+	Describe("Thanos Compact", Ordered, func() {
+		Context("When ThanosCompact is created", func() {
+			It("should bring up the compact components", func() {
+				cr := &v1alpha1.ThanosCompact{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      compactName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.ThanosCompactSpec{
+						CommonThanosFields: v1alpha1.CommonThanosFields{},
+						StorageSize:        "100Mi",
+						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: objStoreSecret,
+							},
+							Key: objStoreSecretKey,
+						},
+					},
+				}
+
+				err := c.Create(context.Background(), cr, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				stsName := controller.CompactNameFromParent(compactName)
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 		})

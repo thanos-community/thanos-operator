@@ -54,7 +54,7 @@ func Build(opts Options) []client.Object {
 	selectorLabels := labelsForStoreShard(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newStoreService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 
@@ -100,8 +100,8 @@ config:
 // NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
 func NewStoreStatefulSet(opts Options) client.Object {
 	selectorLabels := labelsForStoreShard(opts)
-
-	return newStoreShardStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	return newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
 func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
@@ -223,7 +223,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
-					ServiceAccountName: Name,
+					ServiceAccountName: opts.Name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),

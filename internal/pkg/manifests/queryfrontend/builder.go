@@ -54,7 +54,7 @@ func BuildQueryFrontend(opts Options) []client.Object {
 	selectorLabels := labelsForQueryFrontend(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
@@ -124,7 +124,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: Name,
+					ServiceAccountName: opts.Name,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{

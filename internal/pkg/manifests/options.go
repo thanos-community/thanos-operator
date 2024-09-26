@@ -71,8 +71,8 @@ func (o Options) GetContainerImage() string {
 	return fmt.Sprintf("%s:%s", *o.Image, *o.Version)
 }
 
-// AugmentWithOptions augments the object with the options
-// Supported objects are Deployment and StatefulSet and ServiceAccount
+// AugmentWithOptions augments the object with the options.
+// Supported objects are Deployment and StatefulSet.
 func AugmentWithOptions(obj client.Object, opts Options) {
 	switch o := obj.(type) {
 	case *appsv1.Deployment:

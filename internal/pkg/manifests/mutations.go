@@ -10,6 +10,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -81,6 +82,10 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 			wantSm := desired.(*monitoringv1.ServiceMonitor)
 			mutateServiceMonitor(sm, wantSm)
 
+		case *policyv1.PodDisruptionBudget:
+			pdb := existing.(*policyv1.PodDisruptionBudget)
+			wantPdb := desired.(*policyv1.PodDisruptionBudget)
+			mutatePodDisruptionBudget(pdb, wantPdb)
 		default:
 			t := reflect.TypeOf(existing).String()
 			return fmt.Errorf("missing mutate implementation for resource type %v", t)
@@ -165,4 +170,10 @@ func mutateServiceMonitor(existing, desired *monitoringv1.ServiceMonitor) {
 	existing.Spec.Selector.MatchLabels = desired.Spec.Selector.MatchLabels
 	existing.Spec.NamespaceSelector = desired.Spec.NamespaceSelector
 	existing.Spec.Endpoints = desired.Spec.Endpoints
+}
+
+func mutatePodDisruptionBudget(existing, desired *policyv1.PodDisruptionBudget) {
+	existing.Annotations = desired.Annotations
+	existing.Labels = desired.Labels
+	existing.Spec = desired.Spec
 }
