@@ -145,14 +145,6 @@ func main() {
 
 	logger := ctrl.Log.WithName("thanos-operator")
 
-	if err = (&controller.ThanosServiceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosService")
-		os.Exit(1)
-	}
-
 	if err = controller.NewThanosQueryReconciler(
 		logger.WithName("query"),
 		mgr.GetClient(),
