@@ -19,6 +19,7 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -32,11 +33,10 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -140,10 +140,19 @@ func main() {
 	ctrlmetrics.Registry.MustRegister(
 		versioncollector.NewCollector("thanos_operator"),
 	)
-	prometheus.DefaultRegisterer = ctrlmetrics.Registry
-	controllerBaseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
 
-	logger := ctrl.Log.WithName("thanos-operator")
+	prometheus.DefaultRegisterer = ctrlmetrics.Registry
+	baseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
+	baseLogger := ctrl.Log.WithName("thanos-operator")
+
+	buildControllerInstrumentationConfig := func(component string) controller.InstrumentationConfig {
+		return controller.InstrumentationConfig{
+			Logger:          baseLogger.WithName(component),
+			EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("thanos-%s-controller", component)),
+			MetricsRegistry: ctrlmetrics.Registry,
+			BaseMetrics:     baseMetrics,
+		}
+	}
 
 	if err = (&controller.ThanosServiceReconciler{
 		Client: mgr.GetClient(),
@@ -154,62 +163,47 @@ func main() {
 	}
 
 	if err = controller.NewThanosQueryReconciler(
-		logger.WithName("query"),
+		buildControllerInstrumentationConfig("query"),
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-query-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosQuery")
 		os.Exit(1)
 	}
 
 	if err = controller.NewThanosReceiveReconciler(
-		logger.WithName("query"),
+		buildControllerInstrumentationConfig("receive"),
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-receive-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosReceive")
 		os.Exit(1)
 	}
 
 	if err = controller.NewThanosStoreReconciler(
-		logger.WithName("store"),
+		buildControllerInstrumentationConfig("store"),
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-store-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosStore")
 		os.Exit(1)
 	}
 
-	if err = controller.NewThanosRulerReconciler(
-		logger.WithName("ruler"),
+	if err = controller.NewThanosCompactReconciler(
+		buildControllerInstrumentationConfig("compact"),
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-ruler-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosRuler")
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosCompact")
 		os.Exit(1)
 	}
 
-	if err = controller.NewThanosCompactReconciler(
-		logger.WithName("compactor"),
+	if err = controller.NewThanosRulerReconciler(
+		buildControllerInstrumentationConfig("ruler"),
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		mgr.GetEventRecorderFor("thanos-compact-controller"),
-		ctrlmetrics.Registry,
-		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosCompact")
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosRuler")
 		os.Exit(1)
 	}
 

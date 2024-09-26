@@ -21,8 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/prometheus/client_golang/prometheus"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -47,15 +45,13 @@ import (
 // ThanosCompactReconciler reconciles a ThanosCompact object
 type ThanosCompactReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme *runtime.Scheme
+
+	logger   logr.Logger
+	metrics  controllermetrics.ThanosCompactMetrics
+	recorder record.EventRecorder
 
 	handler *handlers.Handler
-	logger  logr.Logger
-
-	reg                   prometheus.Registerer
-	ControllerBaseMetrics *controllermetrics.BaseMetrics
-	thanosCompactMetrics  controllermetrics.ThanosCompactMetrics
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
@@ -72,32 +68,32 @@ type ThanosCompactReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestcompact.Name).Inc()
+	r.metrics.ReconciliationsTotal.WithLabelValues(manifestcompact.Name).Inc()
 
 	compact := &monitoringthanosiov1alpha1.ThanosCompact{}
 	err := r.Get(ctx, req.NamespacedName, compact)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Inc()
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos compact resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosCompact")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
-		r.Recorder.Event(compact, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosCompact resource")
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
+		r.recorder.Event(compact, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosCompact resource")
 		return ctrl.Result{}, err
 	}
 
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
-		r.Recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
+		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
 		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
-		r.Recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
+		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -105,16 +101,14 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // NewThanosCompactReconciler returns a reconciler for ThanosCompact resources.
-func NewThanosCompactReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosCompactReconciler {
+func NewThanosCompactReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosCompactReconciler {
 	return &ThanosCompactReconciler{
-		Client:                client,
-		Scheme:                scheme,
-		Recorder:              recorder,
-		handler:               handlers.NewHandler(client, scheme, logger),
-		logger:                logger,
-		reg:                   reg,
-		ControllerBaseMetrics: controllerBaseMetrics,
-		thanosCompactMetrics:  controllermetrics.NewThanosCompactMetrics(reg),
+		Client:   client,
+		Scheme:   scheme,
+		logger:   instrumentationConf.Logger,
+		metrics:  controllermetrics.NewThanosCompactMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
+		recorder: instrumentationConf.EventRecorder,
+		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
 	}
 }
 
@@ -138,7 +132,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
