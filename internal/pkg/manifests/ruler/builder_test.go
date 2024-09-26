@@ -65,11 +65,11 @@ func TestBuildRuler(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != Name {
+	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
 		t.Errorf("expected first object to be a service account, got %v", objs[0])
 	}
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
+	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), expectService.Spec.Selector) {
 		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
 	}
 
@@ -77,8 +77,8 @@ func TestBuildRuler(t *testing.T) {
 		t.Errorf("expected second object to be a statefuleset, wanted \n%v\n got \n%v\n", expectStatefulset, objs[2])
 	}
 
-	if expectStatefulset.Spec.Template.Spec.ServiceAccountName != Name {
-		t.Errorf("expected statefulset to have service account %s, got %s", Name, expectStatefulset.Spec.Template.Spec.ServiceAccountName)
+	if expectStatefulset.Spec.Template.Spec.ServiceAccountName != opts.Name {
+		t.Errorf("expected statefulset to have service account %s, got %s", opts.Name, expectStatefulset.Spec.Template.Spec.ServiceAccountName)
 	}
 
 	if !equality.Semantic.DeepEqual(objs[2], expectService) {

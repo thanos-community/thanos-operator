@@ -56,7 +56,7 @@ func BuildRuler(opts Options) []client.Object {
 	selectorLabels := labelsForRulers(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
+	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -246,7 +246,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{rulerContainer},
-					ServiceAccountName: Name,
+					ServiceAccountName: opts.Name,
 					Volumes:            volumes,
 				},
 			},
