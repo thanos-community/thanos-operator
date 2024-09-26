@@ -154,14 +154,6 @@ func main() {
 		}
 	}
 
-	if err = (&controller.ThanosServiceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosService")
-		os.Exit(1)
-	}
-
 	if err = controller.NewThanosQueryReconciler(
 		buildControllerInstrumentationConfig("query"),
 		mgr.GetClient(),
