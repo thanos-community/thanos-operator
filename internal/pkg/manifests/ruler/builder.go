@@ -59,6 +59,7 @@ func BuildRuler(opts Options) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(Name, opts.Namespace, GetRequiredLabels()))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
 	return objs
 }
 

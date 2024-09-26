@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -73,6 +74,10 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 			wantSts := desired.(*appsv1.StatefulSet)
 			mutateStatefulSet(sts, wantSts)
 
+		case *policyv1.PodDisruptionBudget:
+			pdb := existing.(*policyv1.PodDisruptionBudget)
+			wantPdb := desired.(*policyv1.PodDisruptionBudget)
+			mutatePodDisruptionBudget(pdb, wantPdb)
 		default:
 			t := reflect.TypeOf(existing).String()
 			return fmt.Errorf("missing mutate implementation for resource type %v", t)
@@ -150,4 +155,10 @@ func mutatePodSpec(existing *corev1.PodSpec, desired *corev1.PodSpec) {
 	existing.Tolerations = desired.Tolerations
 	existing.TopologySpreadConstraints = desired.TopologySpreadConstraints
 	existing.Volumes = desired.Volumes
+}
+
+func mutatePodDisruptionBudget(existing, desired *policyv1.PodDisruptionBudget) {
+	existing.Annotations = desired.Annotations
+	existing.Labels = desired.Labels
+	existing.Spec = desired.Spec
 }
