@@ -25,11 +25,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
+
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
@@ -131,6 +132,16 @@ var _ = BeforeSuite(func() {
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 		k8sManager.GetEventRecorderFor("thanosruler-controller"),
+		reg,
+		controllerBaseMetrics,
+	).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = NewThanosCompactReconciler(
+		logger.WithName("compactor-test"),
+		k8sManager.GetClient(),
+		k8sManager.GetScheme(),
+		k8sManager.GetEventRecorderFor("thanoscompact-controller"),
 		reg,
 		controllerBaseMetrics,
 	).SetupWithManager(k8sManager)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
@@ -12,6 +13,7 @@ import (
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
@@ -141,6 +143,72 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
 		Options:                  opts,
 	}
+}
+
+func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
+	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
+	name := CompactNameFromParent(in.GetName())
+	opts := commonToOpts(name, in.GetNamespace(), 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+
+	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
+		if in.Spec.DownsamplingConfig == nil {
+			return nil
+		}
+
+		disable := in.Spec.DownsamplingConfig.Disable != nil && *in.Spec.DownsamplingConfig.Disable
+
+		return &manifestscompact.DownsamplingOptions{
+			Disable:     disable,
+			Concurrency: in.Spec.DownsamplingConfig.Concurrency,
+		}
+	}
+
+	compaction := func() *manifestscompact.CompactionOptions {
+		if in.Spec.CompactConfig == nil {
+			return nil
+		}
+		return &manifestscompact.CompactionOptions{
+			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.Spec.CompactConfig.CleanupInterval)),
+			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
+			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
+		}
+	}
+	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
+		if in.Spec.BlockConfig == nil {
+			return nil
+		}
+		return &manifestscompact.BlockConfigOptions{
+			BlockDiscoveryStrategy:        ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
+			BlockFilesConcurrency:         in.Spec.BlockConfig.BlockFilesConcurrency,
+			BlockMetaFetchConcurrency:     in.Spec.BlockConfig.BlockMetaFetchConcurrency,
+			BlockViewerGlobalSyncInterval: ptr.To(manifests.Duration(*in.Spec.BlockConfig.BlockViewerGlobalSyncInterval)),
+			BlockViewerGlobalSyncTimeout:  ptr.To(manifests.Duration(*in.Spec.BlockConfig.BlockViewerGlobalSyncTimeout)),
+		}
+	}
+
+	return manifestscompact.Options{
+		Options: opts,
+		RetentionOptions: &manifestscompact.RetentionOptions{
+			Raw:         ptr.To(manifests.Duration(in.Spec.RetentionConfig.Raw)),
+			FiveMinutes: ptr.To(manifests.Duration(in.Spec.RetentionConfig.FiveMinutes)),
+			OneHour:     ptr.To(manifests.Duration(in.Spec.RetentionConfig.OneHour)),
+		},
+		BlockConfig:    blockDiscovery(),
+		Compaction:     compaction(),
+		Downsampling:   downsamplingConfig(),
+		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
+		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+	}
+}
+
+// CompactNameFromParent returns the name of the Thanos Compact component.
+func CompactNameFromParent(resourceName string) string {
+	return fmt.Sprintf("thanos-compact-%s", resourceName)
+}
+
+// CompactShardName returns the name of the Thanos Compact shard.
+func CompactShardName(resourceName, shardName string, shardIndex int) string {
+	return fmt.Sprintf("%s-%s-%d", CompactNameFromParent(resourceName), shardName, shardIndex)
 }
 
 // StoreNameFromParent returns the name of the Thanos Store component.

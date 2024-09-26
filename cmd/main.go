@@ -189,14 +189,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.ThanosCompactReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ThanosCompact")
-		os.Exit(1)
-	}
-
 	if err = controller.NewThanosRulerReconciler(
 		logger.WithName("ruler"),
 		mgr.GetClient(),
@@ -206,6 +198,18 @@ func main() {
 		controllerBaseMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ThanosRuler")
+		os.Exit(1)
+	}
+
+	if err = controller.NewThanosCompactReconciler(
+		logger.WithName("compactor"),
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		mgr.GetEventRecorderFor("thanos-compact-controller"),
+		ctrlmetrics.Registry,
+		controllerBaseMetrics,
+	).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ThanosCompact")
 		os.Exit(1)
 	}
 

@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
 
@@ -110,4 +111,9 @@ func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
 		Key:                  osc.Key,
 		Optional:             ptr.To(false),
 	}
+}
+
+// ToResourceQuantity converts a StorageSize to a resource.Quantity.
+func (s StorageSize) ToResourceQuantity() resource.Quantity {
+	return resource.MustParse(string(s))
 }
