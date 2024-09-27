@@ -122,8 +122,7 @@ func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact monitoringthanosiov1alpha1.ThanosCompact) error {
 	var errCount int
 	shardedObjects := r.buildCompact(compact)
-	instanceLabel := CompactNameFromParent(compact.GetName())
-	if err := r.pruneOrphanedResources(ctx, compact.GetNamespace(), instanceLabel, maps.Keys(shardedObjects)); err != nil {
+	if err := r.pruneOrphanedResources(ctx, compact.GetNamespace(), compact.GetName(), maps.Keys(shardedObjects)); err != nil {
 		return err
 	}
 
@@ -206,7 +205,6 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 			shardName := CompactShardName(compact.GetName(), shard.ShardName, i)
 			opts := compactV1Alpha1ToOptions(compact)
 			opts.Name = shardName
-			opts.InstanceName = compact.GetName()
 			opts.RelabelConfigs = manifests.RelabelConfigs{
 				{
 					Action:      "keep",
