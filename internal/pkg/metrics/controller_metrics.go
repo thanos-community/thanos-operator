@@ -11,28 +11,33 @@ type BaseMetrics struct {
 	ClientErrorsTotal          *prometheus.CounterVec
 }
 
-type ThanosCompactMetrics struct {
-}
-
 type ThanosQueryMetrics struct {
-	EndpointsConfigured                *prometheus.GaugeVec
-	ServiceWatchesReconciliationsTotal prometheus.Counter
-}
-
-type ThanosQueryFrontendMetrics struct {
-	ServiceWatchesReconciliationsTotal prometheus.Counter
+	*BaseMetrics
+	EndpointsConfigured                        *prometheus.GaugeVec
+	ServiceWatchesReconciliationsTotal         prometheus.Counter
+	FrontendServiceWatchesReconciliationsTotal prometheus.Counter
 }
 
 type ThanosReceiveMetrics struct {
+	*BaseMetrics
 	HashringsConfigured                 *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal prometheus.Counter
 }
 
 type ThanosRulerMetrics struct {
-	EndpointsConfigured                 *prometheus.GaugeVec
-	RuleFilesConfigured                 *prometheus.GaugeVec
-	ServiceWatchesReconciliationsTotal  prometheus.Counter
-	ConfigMapWatchesReconcilationsTotal prometheus.Counter
+	*BaseMetrics
+	EndpointsConfigured                  *prometheus.GaugeVec
+	RuleFilesConfigured                  *prometheus.GaugeVec
+	ServiceWatchesReconciliationsTotal   prometheus.Counter
+	ConfigMapWatchesReconciliationsTotal prometheus.Counter
+}
+
+type ThanosStoreMetrics struct {
+	*BaseMetrics
+}
+
+type ThanosCompactMetrics struct {
+	*BaseMetrics
 }
 
 func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
@@ -52,12 +57,9 @@ func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
 	}
 }
 
-func NewThanosCompactMetrics(reg prometheus.Registerer) ThanosCompactMetrics {
-	return ThanosCompactMetrics{}
-}
-
-func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
+func NewThanosQueryMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosQueryMetrics {
 	return ThanosQueryMetrics{
+		BaseMetrics: baseMetrics,
 		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_query_endpoints_configured",
 			Help: "Number of configured endpoints for ThanosQuery resources",
@@ -66,20 +68,16 @@ func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
 			Name: "thanos_operator_query_service_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosQuery resources due to Service events",
 		}),
-	}
-}
-
-func NewThanosQueryFrontendMetrics(reg prometheus.Registerer) ThanosQueryFrontendMetrics {
-	return ThanosQueryFrontendMetrics{
-		ServiceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+		FrontendServiceWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "thanos_operator_query_frontend_service_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosQueryFrontend resources due to Service events",
 		}),
 	}
 }
 
-func NewThanosReceiveMetrics(reg prometheus.Registerer, controlllerBasemetrics *BaseMetrics) ThanosReceiveMetrics {
+func NewThanosReceiveMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosReceiveMetrics {
 	return ThanosReceiveMetrics{
+		BaseMetrics: baseMetrics,
 		HashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashrings_configured",
 			Help: "Number of configured hashrings for ThanosReceive resources",
@@ -91,8 +89,9 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer, controlllerBasemetrics *
 	}
 }
 
-func NewThanosRulerMetrics(reg prometheus.Registerer) ThanosRulerMetrics {
+func NewThanosRulerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosRulerMetrics {
 	return ThanosRulerMetrics{
+		BaseMetrics: baseMetrics,
 		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_ruler_query_endpoints_configured",
 			Help: "Number of configured query endpoints for ThanosRuler resources",
@@ -105,9 +104,21 @@ func NewThanosRulerMetrics(reg prometheus.Registerer) ThanosRulerMetrics {
 			Name: "thanos_operator_ruler_service_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosRuler resources due to Service events",
 		}),
-		ConfigMapWatchesReconcilationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
+		ConfigMapWatchesReconciliationsTotal: promauto.With(reg).NewCounter(prometheus.CounterOpts{
 			Name: "thanos_operator_ruler_cfgmap_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosRuler resources due to ConfigMap events",
 		}),
+	}
+}
+
+func NewThanosStoreMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosStoreMetrics {
+	return ThanosStoreMetrics{
+		BaseMetrics: baseMetrics,
+	}
+}
+
+func NewThanosCompactMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosCompactMetrics {
+	return ThanosCompactMetrics{
+		BaseMetrics: baseMetrics,
 	}
 }

@@ -51,32 +51,24 @@ import (
 // ThanosQueryReconciler reconciles a ThanosQuery object
 type ThanosQueryReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme *runtime.Scheme
+
+	logger   logr.Logger
+	metrics  controllermetrics.ThanosQueryMetrics
+	recorder record.EventRecorder
 
 	handler *handlers.Handler
-
-	logger logr.Logger
-
-	reg                   prometheus.Registerer
-	ControllerBaseMetrics *controllermetrics.BaseMetrics
-	thanosQueryMetrics    controllermetrics.ThanosQueryMetrics
-	// Add QueryFrontend metrics
-	ThanosQueryFrontendMetrics controllermetrics.ThanosQueryFrontendMetrics
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
-func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosQueryReconciler {
+func NewThanosQueryReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
 	return &ThanosQueryReconciler{
-		Client:                     client,
-		Scheme:                     scheme,
-		Recorder:                   recorder,
-		handler:                    handlers.NewHandler(client, scheme, logger),
-		logger:                     logger,
-		reg:                        reg,
-		ControllerBaseMetrics:      controllerBaseMetrics,
-		thanosQueryMetrics:         controllermetrics.NewThanosQueryMetrics(reg),
-		ThanosQueryFrontendMetrics: controllermetrics.NewThanosQueryFrontendMetrics(reg),
+		Client:   client,
+		Scheme:   scheme,
+		logger:   instrumentationConf.Logger,
+		metrics:  controllermetrics.NewThanosQueryMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
+		recorder: instrumentationConf.EventRecorder,
+		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
 	}
 }
 
@@ -93,32 +85,32 @@ func NewThanosQueryReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestquery.Name).Inc()
+	r.metrics.ReconciliationsTotal.WithLabelValues(manifestquery.Name).Inc()
 
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Inc()
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
-		r.Recorder.Event(query, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosQuery resource")
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
+		r.recorder.Event(query, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosQuery resource")
 		return ctrl.Result{}, err
 	}
 
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
-		r.Recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
+		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
 		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
-		r.Recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
+		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -136,14 +128,14 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	objs = append(objs, querierObjs...)
 
 	if query.Spec.QueryFrontend != nil {
-		r.Recorder.Event(&query, corev1.EventTypeNormal, "BuildingQueryFrontend", "Building Query Frontend resources")
+		r.recorder.Event(&query, corev1.EventTypeNormal, "BuildingQueryFrontend", "Building Query Frontend resources")
 		frontendObjs := r.buildQueryFrontend(query)
 		objs = append(objs, frontendObjs...)
 	}
 
 	var errCount int
-	if errCount = r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
+	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
@@ -155,7 +147,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 			},
 		},
 		}); errCount > 0 {
-			r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
 		}
 	}
@@ -191,7 +183,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	if len(services.Items) == 0 {
-		r.Recorder.Event(&query, corev1.EventTypeWarning, "NoEndpointsFound", "No StoreAPI services found")
+		r.recorder.Event(&query, corev1.EventTypeWarning, "NoEndpointsFound", "No StoreAPI services found")
 		return []manifestquery.Endpoint{}, nil
 	}
 
@@ -215,7 +207,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 			Namespace:   svc.GetNamespace(),
 			Type:        etype,
 		}
-		r.thanosQueryMetrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
+		r.metrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
 	}
 
 	return endpoints, nil
@@ -255,7 +247,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// if servicemonitor CRD exists in the cluster, watch for changes to ServiceMonitor resources
 	if err != nil {
-		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
 		return err
 	}
 
@@ -298,7 +290,7 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 			}
 		}
 
-		r.thanosQueryMetrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
+		r.metrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }

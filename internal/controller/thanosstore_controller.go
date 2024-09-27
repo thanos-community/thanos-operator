@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -42,28 +41,24 @@ import (
 // ThanosStoreReconciler reconciles a ThanosStore object
 type ThanosStoreReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme *runtime.Scheme
+
+	logger   logr.Logger
+	metrics  controllermetrics.ThanosStoreMetrics
+	recorder record.EventRecorder
 
 	handler *handlers.Handler
-
-	logger logr.Logger
-
-	reg                   prometheus.Registerer
-	ControllerBaseMetrics *controllermetrics.BaseMetrics
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
-func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, reg prometheus.Registerer, controllerBaseMetrics *controllermetrics.BaseMetrics) *ThanosStoreReconciler {
+func NewThanosStoreReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
 	return &ThanosStoreReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		Recorder: recorder,
-		handler:  handlers.NewHandler(client, scheme, logger),
-
-		logger:                logger,
-		reg:                   reg,
-		ControllerBaseMetrics: controllerBaseMetrics,
+		logger:   instrumentationConf.Logger,
+		metrics:  controllermetrics.NewThanosStoreMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
+		recorder: instrumentationConf.EventRecorder,
+		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
 	}
 }
 
@@ -79,34 +74,34 @@ func NewThanosStoreReconciler(logger logr.Logger, client client.Client, scheme *
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ControllerBaseMetrics.ReconciliationsTotal.WithLabelValues(manifestsstore.Name).Inc()
+	r.metrics.ReconciliationsTotal.WithLabelValues(manifestsstore.Name).Inc()
 
 	store := &monitoringthanosiov1alpha1.ThanosStore{}
 	err := r.Get(ctx, req.NamespacedName, store)
 	if err != nil {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Inc()
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos store resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
-		r.Recorder.Event(store, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosStore resource")
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
+		r.recorder.Event(store, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosStore resource")
 		return ctrl.Result{}, err
 	}
 
 	if store.Spec.Paused != nil {
 		if *store.Spec.Paused {
 			r.logger.Info("reconciliation is paused for ThanosStore")
-			r.Recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
+			r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
 			return ctrl.Result{}, nil
 		}
 	}
 
 	err = r.syncResources(ctx, *store)
 	if err != nil {
-		r.ControllerBaseMetrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
-		r.Recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
+		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -124,7 +119,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount > 0 {
-		r.ControllerBaseMetrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
@@ -188,7 +183,7 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 
 	if err != nil {
-		r.Recorder.Event(&monitoringthanosiov1alpha1.ThanosStore{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosStore{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
 		return err
 	}
 

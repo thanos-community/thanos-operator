@@ -58,7 +58,6 @@ rules:
   - thanosqueries
   - thanosreceives
   - thanosrulers
-  - thanosservices
   - thanosstores
   verbs:
   - create
@@ -75,7 +74,6 @@ rules:
   - thanosqueries/finalizers
   - thanosreceives/finalizers
   - thanosrulers/finalizers
-  - thanosservices/finalizers
   - thanosstores/finalizers
   verbs:
   - update
@@ -86,7 +84,6 @@ rules:
   - thanosqueries/status
   - thanosreceives/status
   - thanosrulers/status
-  - thanosservices/status
   - thanosstores/status
   verbs:
   - get
