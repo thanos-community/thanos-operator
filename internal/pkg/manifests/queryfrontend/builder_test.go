@@ -40,14 +40,18 @@ func TestBuildQueryFrontend(t *testing.T) {
 	}
 
 	objs := BuildQueryFrontend(opts)
-	if len(objs) != 4 {
-		t.Fatalf("expected 4 objects, got %d", len(objs))
+	if len(objs) != 5 {
+		t.Fatalf("expected 5 objects, got %d", len(objs))
 	}
 
 	validateServiceAccount(t, opts, objs[0])
 	utils.ValidateObjectsEqual(t, objs[1], NewQueryFrontendDeployment(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewQueryFrontendService(opts))
-	utils.ValidateObjectsEqual(t, objs[3], newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
+	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
+		t.Errorf("expected object to be a PodDisruptionBudget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
+	}
+	utils.ValidateLabelsMatch(t, objs[3], objs[1])
+	utils.ValidateObjectsEqual(t, objs[4], newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 
 	wantLabels := GetSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue

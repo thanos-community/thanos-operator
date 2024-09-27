@@ -30,7 +30,7 @@ func NewPodDisruptionBudget(name, namespace string, selectorLabels, objectMetaLa
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
-			MinAvailable: &mu,
+			MaxUnavailable: &mu,
 		},
 	}
 }

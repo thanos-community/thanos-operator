@@ -67,6 +67,10 @@ func TestBuildRuler(t *testing.T) {
 	expectStateful := NewRulerStatefulSet(opts)
 	utils.ValidateObjectsEqual(t, objs[1], expectStateful)
 	utils.ValidateObjectsEqual(t, objs[2], NewRulerService(opts))
+	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
+		t.Errorf("expected object to be a PodDisruptionBudget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
+	}
+	utils.ValidateLabelsMatch(t, objs[3], objs[1])
 
 	wantLabels := GetSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
