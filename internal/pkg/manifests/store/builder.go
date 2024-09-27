@@ -45,7 +45,7 @@ type Options struct {
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
 	RelabelConfigs           manifests.RelabelConfigs
-	// Instance is the owner of the ingester and if not set, defaults to the name of the object.
+	// Instance is the owner of the Store and if not set, defaults to the name of the object.
 	Instance string
 }
 
