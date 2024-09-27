@@ -35,13 +35,17 @@ func TestBuildQuery(t *testing.T) {
 	}
 
 	objs := BuildQuery(opts)
-	if len(objs) != 3 {
-		t.Fatalf("expected 3 objects, got %d", len(objs))
+	if len(objs) != 4 {
+		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
 	validateServiceAccount(t, opts, objs[0])
 	utils.ValidateObjectsEqual(t, objs[1], NewQueryDeployment(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewQueryService(opts))
+	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
+		t.Errorf("expected object to be a PodDisruptionBudget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
+	}
+	utils.ValidateLabelsMatch(t, objs[3], objs[1])
 
 	wantLabels := GetSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue

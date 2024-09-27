@@ -57,7 +57,7 @@ func BuildQueryFrontend(opts Options) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
-
+	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
 	if opts.ResponseCacheConfig == nil {
 		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 	}

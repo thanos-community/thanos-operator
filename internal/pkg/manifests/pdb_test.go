@@ -39,8 +39,8 @@ func TestNewPodDisruptionBudget(t *testing.T) {
 			if pdb.Namespace != tt.args.namespace {
 				t.Errorf("pdb.Namespace = %v, want %v", pdb.Namespace, tt.args.namespace)
 			}
-			if pdb.Spec.MinAvailable.IntVal != int32(tt.args.maxUnavailable) {
-				t.Errorf("pdb.Spec.MinAvailable.IntVal = %v, want %v", pdb.Spec.MinAvailable.IntVal, tt.args.maxUnavailable)
+			if pdb.Spec.MaxUnavailable.IntVal != int32(tt.args.maxUnavailable) {
+				t.Errorf("pdb.Spec.MinAvailable.IntVal = %v, want %v", pdb.Spec.MaxUnavailable.IntVal, tt.args.maxUnavailable)
 			}
 		})
 	}

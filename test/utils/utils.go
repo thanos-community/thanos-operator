@@ -41,10 +41,12 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/portforward"
@@ -576,6 +578,33 @@ func ValidateHasLabels(t *testing.T, obj client.Object, labels map[string]string
 			t.Errorf("expected object %s to have label %s with value %s, got %s",
 				obj.GetName(), k, v, obj.GetLabels()[k])
 		}
+	}
+}
+
+func ValidateLabelsMatch(t *testing.T, objWithSelector client.Object, matches client.Object) {
+	t.Helper()
+	var ls *metav1.LabelSelector
+
+	switch objWithSelector := objWithSelector.(type) {
+	case *corev1.Service:
+		s := objWithSelector.Spec.Selector
+		ls = &metav1.LabelSelector{MatchLabels: s}
+	case *policyv1.PodDisruptionBudget:
+		ls = objWithSelector.Spec.Selector
+	case *monitoringv1.ServiceMonitor:
+		s := objWithSelector.Spec.Selector
+		ls = &s
+	default:
+		return
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(ls)
+	if err != nil {
+		t.Errorf("failed to convert label selector to selector: %v", err)
+	}
+	if !selector.Matches(labels.Set(matches.GetLabels())) {
+		t.Errorf("expected object %s to match labels %v, got %v",
+			objWithSelector.GetName(), ls, matches.GetLabels())
 	}
 }
 

@@ -65,6 +65,7 @@ func BuildQuery(opts Options) []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
 	if opts.ServiceMonitorConfig.Enabled {
 		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
 	}
