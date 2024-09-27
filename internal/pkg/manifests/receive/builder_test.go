@@ -2,11 +2,14 @@ package receive
 
 import (
 	"fmt"
+
+	"reflect"
 	"testing"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-
 	"github.com/go-logr/logr/testr"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -37,39 +40,19 @@ func TestBuildIngesters(t *testing.T) {
 		},
 	}
 
-	expectService := NewIngestorService(opts)
-	expectStatefulSet := NewIngestorStatefulSet(opts)
-
 	objs := BuildIngester(opts)
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
-		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
+	validateIngesterServiceAccount(t, opts, objs[0])
+	utils.ValidateObjectsEqual(t, objs[1], NewIngestorService(opts))
+	utils.ValidateObjectsEqual(t, objs[2], NewIngestorStatefulSet(opts))
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
-		t.Errorf("expected service account labels to match required labels")
-	}
-
-	if !equality.Semantic.DeepEqual(objs[1], expectService) {
-		t.Errorf("expected second object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
-	}
-
-	if !equality.Semantic.DeepEqual(objs[2], expectStatefulSet) {
-		t.Errorf("expected third object to be a sts, wanted \n%v\n got \n%v\n", expectStatefulSet, objs[2])
-	}
-
-	wantLabels := labelsForIngestor(opts)
+	wantLabels := GetIngesterSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-
-	for _, obj := range []client.Object{objs[1], objs[2]} {
-		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
-			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
-		}
-	}
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
 func TestBuildRouter(t *testing.T) {
@@ -86,75 +69,27 @@ func TestBuildRouter(t *testing.T) {
 		},
 	}
 
-	expectService := NewRouterService(opts)
-	expectDeployment := NewRouterDeployment(opts)
-
 	objs := BuildRouter(opts)
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
-		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
+	validateRouterServiceAccount(t, opts, objs[0])
+	utils.ValidateObjectsEqual(t, objs[1], NewRouterService(opts))
+	utils.ValidateObjectsEqual(t, objs[2], NewRouterDeployment(opts))
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), GetRequiredLabels()) {
-		t.Errorf("expected service account labels to match service selector labels")
-	}
-
-	if !equality.Semantic.DeepEqual(objs[1], expectService) {
-		t.Errorf("expected first object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
-	}
-
-	if !equality.Semantic.DeepEqual(objs[2], expectDeployment) {
-		t.Errorf("expected third object to be a deployment, wanted \n%v\n got \n%v\n", expectDeployment, objs[2])
-	}
-
-	if expectDeployment.Spec.Template.Spec.ServiceAccountName != opts.Name {
-		t.Errorf("expected deployment to have service account %s, got %s", opts.Name, expectDeployment.Spec.Template.Spec.ServiceAccountName)
-	}
-
-	wantLabels := labelsForRouter(opts.Options)
+	wantLabels := GetRouterLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-
-	for _, obj := range []client.Object{objs[1], objs[2]} {
-		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
-			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
-		}
-	}
-}
-
-func TestIngesterNameFromParent(t *testing.T) {
-	for _, tc := range []struct {
-		name   string
-		parent string
-		child  string
-		expect string
-	}{
-		{
-			name:   "test inherit from parent when valid",
-			parent: "some-allowed-value",
-			child:  "my-resource",
-			expect: "some-allowed-value-my-resource",
-		},
-		{
-			name:   "test inherit from parent when invalid",
-			parent: "some-disallowed-value-because-the value-is-just-way-too-long-to-be-supported-by-label-constraints-which-are-required-for-matching-ingesters-and-even-though-this-is-unlikely-to-happen-in-practice-we-should-still-handle-it-because-its-possible",
-			child:  "my-resource",
-			expect: "my-resource",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := IngesterNameFromParent(tc.parent, tc.child); got != tc.expect {
-				t.Errorf("expected ingester name to be %s, got %s", tc.expect, got)
-			}
-		})
-	}
-
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
 func TestNewIngestorStatefulSet(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts IngesterOptions
@@ -228,33 +163,21 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorStatefulSet(tc.opts)
-			if ingester.GetName() != tc.opts.Name {
-				t.Errorf("expected ingester statefulset name to be %s, got %s", tc.opts.Name, ingester.GetName())
-			}
-			if ingester.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected ingester statefulset namespace to be %s, got %s", tc.opts.Namespace, ingester.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ingester.GetLabels()) != 9 {
-				t.Errorf("expected ingester statefulset to have 8 labels, got %d", len(ingester.GetLabels()))
-			}
-			// ensure custom labels are set
-			if ingester.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected ingester statefulset to have label 'some-custom-label' with value 'xyz', got %s", ingester.GetLabels()["some-custom-label"])
-			}
-			if ingester.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected ingester statefulset to have label 'some-other-label' with value 'abc', got %s", ingester.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForIngestor(tc.opts)
-			for k, v := range expect {
-				if ingester.GetLabels()[k] != v {
-					t.Errorf("expected ingester statefulset to have label %s with value %s, got %s", k, v, ingester.GetLabels()[k])
-				}
+			objectMetaLabels := GetIngesterLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ingester, GetIngesterSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, ingester, extraLabels)
+
+			if ingester.Spec.ServiceName != GetIngesterServiceName(tc.opts) {
+				t.Errorf("expected ingester statefulset to have serviceName %s, got %s", GetIngesterServiceAccountName(tc.opts), ingester.Spec.ServiceName)
 			}
 
-			if tc.name == "test additional container" && len(ingester.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("expected ingester deployment to have 2 containers, got %d", len(ingester.Spec.Template.Spec.Containers))
+			if ingester.Spec.Template.Spec.ServiceAccountName != GetIngesterServiceAccountName(tc.opts) {
+				t.Errorf("expected ingester statefulset to have service account name %s, got %s", GetIngesterServiceAccountName(tc.opts), ingester.Spec.Template.Spec.ServiceAccountName)
+			}
+
+			if len(ingester.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
+				t.Errorf("expected ingester statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ingester.Spec.Template.Spec.Containers))
 			}
 
 			expectArgs := ingestorArgsFrom(tc.opts)
@@ -265,36 +188,34 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 					if c.Image != tc.opts.GetContainerImage() {
 						t.Errorf("expected ingester statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
 					}
-					if len(c.Args) != len(expectArgs) {
-						t.Errorf("expected ingester statefulset to have %d args, got %d", len(expectArgs), len(c.Args))
-					}
-					for i, arg := range c.Args {
-						if arg != expectArgs[i] {
-							t.Errorf("expected ingester statefulset to have arg %s, got %s", expectArgs[i], arg)
-						}
+
+					if !reflect.DeepEqual(c.Args, expectArgs) {
+						t.Errorf("expected ingester statefulset to have args %v, got %v", expectArgs, c.Args)
 					}
 
-					if tc.name == "test additional volumemount" {
-						if len(c.VolumeMounts) != 2 {
-							t.Errorf("expected ingester deployment to have 2 volumemount, got %d", len(c.VolumeMounts))
-						}
+					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
 						if c.VolumeMounts[1].Name != "http-config" {
-							t.Errorf("expected ingester deployment to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
+							t.Errorf("expected ingester to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
 						}
 						if c.VolumeMounts[1].MountPath != "/http-config" {
-							t.Errorf("expected ingester deployment to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
+							t.Errorf("expected ingester to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}
 			}
 			if !found {
-				t.Errorf("expected ingester statefulset to have container named %s", IngestComponentName)
+				t.Errorf("expected ingester to have container named %s", IngestComponentName)
 			}
 		})
 	}
 }
 
 func TestNewRouterDeployment(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts RouterOptions
@@ -368,33 +289,16 @@ func TestNewRouterDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterDeployment(tc.opts)
-			if router.GetName() != tc.opts.Name {
-				t.Errorf("expected router deployment name to be %s, got %s", tc.opts.Name, router.GetName())
-			}
-			if router.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected router deployment namespace to be %s, got %s", tc.opts.Namespace, router.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(router.GetLabels()) != 7 {
-				t.Errorf("expected router deployment to have 7 labels, got %d", len(router.GetLabels()))
-			}
-			// ensure custom labels are set
-			if router.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected router deployment to have label 'some-custom-label' with value 'xyz', got %s", router.GetLabels()["some-custom-label"])
-			}
-			if router.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected router deployment to have label 'some-other-label' with value 'abc', got %s", router.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForRouter(tc.opts.Options)
-			for k, v := range expect {
-				if router.GetLabels()[k] != v {
-					t.Errorf("expected router deployment to have label %s with value %s, got %s", k, v, router.GetLabels()[k])
-				}
-			}
+			objectMetaLabels := GetRouterLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, router, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, router, GetRouterSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, router, extraLabels)
 
-			if tc.name == "test additional container" && len(router.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("expected router deployment to have 2 containers, got %d", len(router.Spec.Template.Spec.Containers))
+			if router.Spec.Template.Spec.ServiceAccountName != GetRouterServiceAccountName(tc.opts) {
+				t.Errorf("expected deployment to use service account %s, got %s", GetRouterServiceAccountName(tc.opts), router.Spec.Template.Spec.ServiceAccountName)
+			}
+			if len(router.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
+				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(router.Spec.Template.Spec.Containers))
 			}
 
 			expectArgs := routerArgsFrom(tc.opts)
@@ -405,19 +309,12 @@ func TestNewRouterDeployment(t *testing.T) {
 					if c.Image != tc.opts.GetContainerImage() {
 						t.Errorf("expected router deployment to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
 					}
-					if len(c.Args) != len(expectArgs) {
-						t.Errorf("expected router deployment to have %d args, got %d", len(expectArgs), len(c.Args))
-					}
-					for i, arg := range c.Args {
-						if arg != expectArgs[i] {
-							t.Errorf("expected router deployment to have arg %s, got %s", expectArgs[i], arg)
-						}
+
+					if !reflect.DeepEqual(c.Args, expectArgs) {
+						t.Errorf("expected router deployment to have args %v, got %v", expectArgs, c.Args)
 					}
 
-					if tc.name == "test additional volumemount" {
-						if len(c.VolumeMounts) != 2 {
-							t.Errorf("expected router deployment to have 2 volumemount, got %d", len(c.VolumeMounts))
-						}
+					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
 						if c.VolumeMounts[1].Name != "http-config" {
 							t.Errorf("expected router deployment to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
 						}
@@ -435,6 +332,11 @@ func TestNewRouterDeployment(t *testing.T) {
 }
 
 func TestNewIngestorService(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	opts := IngesterOptions{
 		Options: manifests.Options{
 			Name:      "test",
@@ -458,39 +360,23 @@ func TestNewIngestorService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorService(tc.opts)
-			if ingester.GetName() != tc.opts.Name {
-				t.Errorf("expected ingester service name to be %s, got %s", tc.opts.Name, ingester.GetName())
-			}
-			if ingester.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected ingester service namespace to be %s, got %s", tc.opts.Namespace, ingester.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ingester.GetLabels()) != 9 {
-				t.Errorf("expected ingester service to have 8 labels, got %d", len(ingester.GetLabels()))
-			}
-			// ensure custom labels are set
-			if ingester.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected ingester service to have label 'some-custom-label' with value 'xyz', got %s", ingester.GetLabels()["some-custom-label"])
-			}
-			if ingester.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected ingester service to have label 'some-other-label' with value 'abc', got %s", ingester.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForIngestor(tc.opts)
-			for k, v := range expect {
-				if ingester.GetLabels()[k] != v {
-					t.Errorf("expected ingester service to have label %s with value %s, got %s", k, v, ingester.GetLabels()[k])
-				}
-			}
+			objectMetaLabels := GetIngesterLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, ingester, GetIngesterServiceName(opts), opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ingester, extraLabels)
+			utils.ValidateHasLabels(t, ingester, GetIngesterSelectorLabels(tc.opts))
 
-			if ingester.Spec.ClusterIP != "None" {
-				t.Errorf("expected ingester service to have ClusterIP 'None', got %s", ingester.Spec.ClusterIP)
+			if ingester.Spec.ClusterIP != corev1.ClusterIPNone {
+				t.Errorf("expected store service to have ClusterIP 'None', got %s", ingester.Spec.ClusterIP)
 			}
 		})
 	}
 }
 
 func TestNewRouterService(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
 	opts := RouterOptions{
 		Options: manifests.Options{
 			Name:      "test",
@@ -514,30 +400,10 @@ func TestNewRouterService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterService(tc.opts)
-			if router.GetName() != tc.opts.Name {
-				t.Errorf("expected router service name to be %s, got %s", tc.opts.Name, router.GetName())
-			}
-			if router.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected router service namespace to be %s, got %s", tc.opts.Namespace, router.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(router.GetLabels()) != 7 {
-				t.Errorf("expected router service to have 7 labels, got %d", len(router.GetLabels()))
-			}
-			// ensure custom labels are set
-			if router.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected router service to have label 'some-custom-label' with value 'xyz', got %s", router.GetLabels()["some-custom-label"])
-			}
-			if router.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected router service to have label 'some-other-label' with value 'abc', got %s", router.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForRouter(tc.opts.Options)
-			for k, v := range expect {
-				if router.GetLabels()[k] != v {
-					t.Errorf("expected router service to have label %s with value %s, got %s", k, v, router.GetLabels()[k])
-				}
-			}
+			objectMetaLabels := GetRouterLabels(opts)
+			utils.ValidateNameNamespaceAndLabels(t, router, opts.Name, opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, router, extraLabels)
+			utils.ValidateHasLabels(t, router, GetRouterSelectorLabels(opts))
 		})
 	}
 }
@@ -548,6 +414,12 @@ func TestBuildHashrings(t *testing.T) {
 		Name:      "test",
 		Namespace: "test",
 		Replicas:  3,
+	}
+
+	ro := RouterOptions{
+		Options:           baseOptions,
+		ReplicationFactor: 0,
+		ExternalLabels:    nil,
 	}
 
 	for _, tc := range []struct {
@@ -572,7 +444,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: EmptyHashringConfig,
@@ -620,7 +492,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: EmptyHashringConfig,
@@ -678,7 +550,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: EmptyHashringConfig,
@@ -736,7 +608,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: EmptyHashringConfig,
@@ -795,7 +667,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: `[
@@ -869,7 +741,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: `[
@@ -985,7 +857,7 @@ func TestBuildHashrings(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
-					Labels:    labelsForRouter(baseOptions),
+					Labels:    GetRouterSelectorLabels(ro),
 				},
 				Data: map[string]string{
 					HashringConfigKey: `[
@@ -1050,4 +922,22 @@ func TestBuildHashrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func validateIngesterServiceAccount(t *testing.T, opts IngesterOptions, expectSA client.Object) {
+	t.Helper()
+	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetIngesterServiceAccountName(opts), opts.Namespace, GetIngesterSelectorLabels(opts))
+}
+
+func validateRouterServiceAccount(t *testing.T, opts RouterOptions, expectSA client.Object) {
+	t.Helper()
+	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetRouterServiceAccountName(opts), opts.Namespace, GetRouterSelectorLabels(opts))
 }

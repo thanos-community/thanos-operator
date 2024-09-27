@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -38,51 +39,28 @@ func TestBuildQueryFrontend(t *testing.T) {
 		LabelsMaxRetries:     3,
 	}
 
-	expectService := NewQueryFrontendService(opts)
-	expectDeployment := NewQueryFrontendDeployment(opts)
-	expectConfigMap := NewQueryFrontendInMemoryConfigMap(opts)
-
 	objs := BuildQueryFrontend(opts)
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
-		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
+	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateObjectsEqual(t, objs[1], NewQueryFrontendDeployment(opts))
+	utils.ValidateObjectsEqual(t, objs[2], NewQueryFrontendService(opts))
+	utils.ValidateObjectsEqual(t, objs[3], newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), expectService.Spec.Selector) {
-		t.Errorf("expected service account labels to match service selector labels")
-	}
-
-	if !equality.Semantic.DeepEqual(objs[1], expectDeployment) {
-		t.Errorf("expected second object to be a deployment, got %v", objs[1])
-	}
-
-	if expectDeployment.Spec.Template.Spec.ServiceAccountName != opts.Name {
-		t.Errorf("expected deployment to have service account %s, got %s", opts.Name, expectDeployment.Spec.Template.Spec.ServiceAccountName)
-	}
-
-	if !equality.Semantic.DeepEqual(objs[2], expectService) {
-		t.Errorf("expected third object to be a service, got %v", objs[2])
-	}
-
-	if !equality.Semantic.DeepEqual(objs[3], expectConfigMap) {
-		t.Errorf("expected fourth object to be a configmap, got %v", objs[3])
-	}
-
-	wantLabels := labelsForQueryFrontend(opts)
+	wantLabels := GetSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-
-	for _, obj := range []client.Object{objs[1], objs[2]} {
-		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
-			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
-		}
-	}
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
 func TestNewQueryFrontendDeployment(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts Options
@@ -180,32 +158,26 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := NewQueryFrontendDeployment(tc.opts)
+			objectMetaLabels := GetLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, deployment, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, deployment, GetSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, deployment, extraLabels)
 
-			if deployment.GetName() != tc.opts.Name {
-				t.Errorf("expected deployment name to be %s, got %s", tc.opts.Name, deployment.GetName())
+			if deployment.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
+				t.Errorf("expected deployment to use service account %s, got %s", GetServiceAccountName(tc.opts), deployment.Spec.Template.Spec.ServiceAccountName)
 			}
-
-			if deployment.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected deployment namespace to be %s, got %s", tc.opts.Namespace, deployment.GetNamespace())
+			if len(deployment.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
+				t.Errorf("expected store statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(deployment.Spec.Template.Spec.Containers))
 			}
 
 			if *deployment.Spec.Replicas != tc.opts.Replicas {
 				t.Errorf("expected deployment replicas to be %d, got %d", tc.opts.Replicas, *deployment.Spec.Replicas)
 			}
 
-			// Check labels
-			wantLabels := labelsForQueryFrontend(tc.opts)
-			wantLabels["some-custom-label"] = someCustomLabelValue
-			wantLabels["some-other-label"] = someOtherLabelValue
-
-			if !equality.Semantic.DeepEqual(deployment.GetLabels(), wantLabels) {
-				t.Errorf("expected deployment to have labels %v, got %v", wantLabels, deployment.GetLabels())
-			}
-
 			// Check containers
 			containers := deployment.Spec.Template.Spec.Containers
-			if tc.name == "test additional container" && len(containers) != 2 {
-				t.Errorf("expected deployment to have 2 containers, got %d", len(containers))
+			if len(tc.opts.Additional.Containers)+1 != len(containers) {
+				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(containers))
 			}
 
 			var found bool
@@ -229,15 +201,15 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						t.Errorf("expected container to have 1 env var (CACHE_CONFIG), got %v", c.Env)
 					}
 
-					if tc.name == "test additional volumemount" {
-						if len(c.VolumeMounts) != 1 {
-							t.Errorf("expected container to have 1 volumemount, got %d", len(c.VolumeMounts))
-						}
+					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts) {
+						t.Errorf("expected query fe deployment to have 1 volumemount, got %d", len(c.VolumeMounts))
+					}
+					if len(c.VolumeMounts) > 0 {
 						if c.VolumeMounts[0].Name != "test-sd" {
-							t.Errorf("expected volumemount named test-sd, got %s", c.VolumeMounts[0].Name)
+							t.Errorf("expected query fe deployment to have volumemount named test-sd, got %s", c.VolumeMounts[0].Name)
 						}
 						if c.VolumeMounts[0].MountPath != "/test-sd-file" {
-							t.Errorf("expected volumemount mounted at /test-sd-file, got %s", c.VolumeMounts[0].MountPath)
+							t.Errorf("expected query fe deployment to have volumemount mounted at /test-sd-file, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}
@@ -250,6 +222,11 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 }
 
 func TestNewQueryFrontendService(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
@@ -263,22 +240,13 @@ func TestNewQueryFrontendService(t *testing.T) {
 	}
 
 	service := NewQueryFrontendService(opts)
-
-	if service.GetName() != opts.Name {
-		t.Errorf("expected service name to be %s, got %s", opts.Name, service.GetName())
-	}
-
-	if service.GetNamespace() != opts.Namespace {
-		t.Errorf("expected service namespace to be %s, got %s", opts.Namespace, service.GetNamespace())
-	}
+	objectMetaLabels := GetLabels(opts)
+	utils.ValidateNameNamespaceAndLabels(t, service, opts.Name, opts.Namespace, objectMetaLabels)
+	utils.ValidateHasLabels(t, service, extraLabels)
+	utils.ValidateHasLabels(t, service, GetSelectorLabels(opts))
 
 	if len(service.Spec.Ports) != 1 || service.Spec.Ports[0].Port != HTTPPort {
 		t.Errorf("expected service to have 1 port (%d), got %v", HTTPPort, service.Spec.Ports)
-	}
-
-	expectedSelector := labelsForQueryFrontend(opts)
-	if !equality.Semantic.DeepEqual(service.Spec.Selector, expectedSelector) {
-		t.Errorf("expected service selector to be %v, got %v", expectedSelector, service.Spec.Selector)
 	}
 }
 
@@ -296,14 +264,16 @@ func TestNewQueryFrontendConfigMap(t *testing.T) {
 	}
 
 	configMap := NewQueryFrontendInMemoryConfigMap(opts)
+	if configMap.Data[defaultInMemoryConfigmapKey] != InMemoryConfig {
+		t.Errorf("expected config map data to be %s, got %s", InMemoryConfig, configMap.Data[defaultInMemoryConfigmapKey])
+	}
+}
 
-	// Cast configMap to *corev1.ConfigMap
-	cm, ok := configMap.(*corev1.ConfigMap)
-	if !ok {
-		t.Fatalf("expected configMap to be *corev1.ConfigMap, got %T", configMap)
+func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
+	t.Helper()
+	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
 	}
 
-	if cm.Data[defaultInMemoryConfigmapKey] != InMemoryConfig {
-		t.Errorf("expected config map data to be %s, got %s", InMemoryConfig, cm.Data[defaultInMemoryConfigmapKey])
-	}
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

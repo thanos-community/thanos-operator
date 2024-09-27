@@ -1,12 +1,13 @@
 package ruler
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,50 +58,32 @@ func TestBuildRuler(t *testing.T) {
 		},
 	}
 
-	expectService := NewRulerService(opts)
-	expectStatefulset := NewRulerStatefulSet(opts)
-
 	objs := BuildRuler(opts)
 	if len(objs) != 4 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
-		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
+	validateServiceAccount(t, opts, objs[0])
+	expectStateful := NewRulerStatefulSet(opts)
+	utils.ValidateObjectsEqual(t, objs[1], expectStateful)
+	utils.ValidateObjectsEqual(t, objs[2], NewRulerService(opts))
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), expectService.Spec.Selector) {
-		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
-	}
-
-	if !equality.Semantic.DeepEqual(objs[1], expectStatefulset) {
-		t.Errorf("expected second object to be a statefuleset, wanted \n%v\n got \n%v\n", expectStatefulset, objs[2])
-	}
-
-	if expectStatefulset.Spec.Template.Spec.ServiceAccountName != opts.Name {
-		t.Errorf("expected statefulset to have service account %s, got %s", opts.Name, expectStatefulset.Spec.Template.Spec.ServiceAccountName)
-	}
-
-	if !equality.Semantic.DeepEqual(objs[2], expectService) {
-		t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
-	}
+	wantLabels := GetSelectorLabels(opts)
+	wantLabels["some-custom-label"] = someCustomLabelValue
+	wantLabels["some-other-label"] = someOtherLabelValue
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 
 	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
 		t.Errorf("expected fourth object to be a pod disruption budget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
 	}
-
-	wantLabels := labelsForRulers(opts)
-	wantLabels["some-custom-label"] = someCustomLabelValue
-	wantLabels["some-other-label"] = someOtherLabelValue
-
-	for _, obj := range []client.Object{objs[1], objs[2], objs[3]} {
-		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
-			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
-		}
-	}
 }
 
 func TestNewRulerStatefulSet(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts Options
@@ -252,33 +235,21 @@ func TestNewRulerStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ruler := NewRulerStatefulSet(tc.opts)
-			if ruler.GetName() != tc.opts.Name {
-				t.Errorf("expected ruler statefuleset name to be %s, got %s", tc.opts.Name, ruler.GetName())
-			}
-			if ruler.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected ruler statefulset namespace to be %s, got %s", tc.opts.Namespace, ruler.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ruler.GetLabels()) != 7 {
-				t.Errorf("expected ruler stateful to have 7 labels, got %d", len(ruler.GetLabels()))
-			}
-			// ensure custom labels are set
-			if ruler.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected ruler statefulset to have label 'some-custom-label' with value 'xyz', got %s", ruler.GetLabels()["some-custom-label"])
-			}
-			if ruler.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected ruler statefulset to have label 'some-other-label' with value 'abc', got %s", ruler.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForRulers(tc.opts)
-			for k, v := range expect {
-				if ruler.GetLabels()[k] != v {
-					t.Errorf("expected query deployment to have label %s with value %s, got %s", k, v, ruler.GetLabels()[k])
-				}
+			objectMetaLabels := GetLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, ruler, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ruler, GetSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, ruler, extraLabels)
+
+			if ruler.Spec.ServiceName != GetServiceAccountName(tc.opts) {
+				t.Errorf("expected ruler statefulset to have serviceName %s, got %s", GetServiceAccountName(tc.opts), ruler.Spec.ServiceName)
 			}
 
-			if tc.name == "test additional container" && len(ruler.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("expected ruler statefulset to have 2 containers, got %d", len(ruler.Spec.Template.Spec.Containers))
+			if ruler.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
+				t.Errorf("expected ruler statefulset to have service account name %s, got %s", GetServiceAccountName(tc.opts), ruler.Spec.Template.Spec.ServiceAccountName)
+			}
+
+			if len(ruler.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
+				t.Errorf("expected ruler statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ruler.Spec.Template.Spec.Containers))
 			}
 
 			expectArgs := rulerArgs(tc.opts)
@@ -289,26 +260,17 @@ func TestNewRulerStatefulSet(t *testing.T) {
 					if c.Image != tc.opts.GetContainerImage() {
 						t.Errorf("expected ruler statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
 					}
-					if len(c.Args) != len(expectArgs) {
-						t.Errorf("expected ruler statefulset to have %d args, got %d", len(expectArgs), len(c.Args))
-					}
-					for i, arg := range c.Args {
-						if arg != expectArgs[i] {
-							t.Errorf("expected ruler statfulset to have arg %s, got %s", expectArgs[i], arg)
-						}
+
+					if !reflect.DeepEqual(c.Args, expectArgs) {
+						t.Errorf("expected ruler statefulset to have args %v, got %v", expectArgs, c.Args)
 					}
 
-					if tc.name == "test additional volumemount" {
-						if len(c.VolumeMounts) != 3 {
-							t.Errorf("expected ruler statfulset to have 3 volumemount, got %d", len(c.VolumeMounts))
+					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
+						if c.VolumeMounts[0].Name != dataVolumeName {
+							t.Errorf("expected ruler statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
 						}
-
-						if c.VolumeMounts[2].Name != "some-rule" {
-							t.Errorf("expected ruler statfulset to have volumemount with name 'some-rule', got %s", c.VolumeMounts[1].Name)
-						}
-
-						if c.VolumeMounts[2].MountPath != "/some-rule" {
-							t.Errorf("expected ruler statfulset to have volumemount with mount path '/some-rule', got %s", c.VolumeMounts[1].MountPath)
+						if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
+							t.Errorf("expected ruler statefulset to have volumemount mounted at var/thanos/ruler, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}
@@ -321,6 +283,11 @@ func TestNewRulerStatefulSet(t *testing.T) {
 }
 
 func TestNewRulerService(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	opts := Options{
 		Options: manifests.Options{
 			Name:      "test",
@@ -371,34 +338,23 @@ func TestNewRulerService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ruler := NewRulerService(tc.opts)
-			if ruler.GetName() != tc.opts.Name {
-				t.Errorf("expected ruler service name to be %s, got %s", tc.opts.Name, ruler.GetName())
-			}
-			if ruler.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected ruler service namespace to be %s, got %s", tc.opts.Namespace, ruler.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(ruler.GetLabels()) != 7 {
-				t.Errorf("expected ruler service to have 7 labels, got %d", len(ruler.GetLabels()))
-			}
-			// ensure custom labels are set
-			if ruler.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected ruler service to have label 'some-custom-label' with value 'xyz', got %s", ruler.GetLabels()["some-custom-label"])
-			}
-			if ruler.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected ruler service to have label 'some-other-label' with value 'abc', got %s", ruler.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForRulers(tc.opts)
-			for k, v := range expect {
-				if ruler.GetLabels()[k] != v {
-					t.Errorf("expected ruler service to have label %s with value %s, got %s", k, v, ruler.GetLabels()[k])
-				}
-			}
+			objectMetaLabels := GetLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, ruler, GetServiceName(opts), opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ruler, extraLabels)
+			utils.ValidateHasLabels(t, ruler, GetSelectorLabels(tc.opts))
 
-			if ruler.Spec.ClusterIP != "None" {
+			if ruler.Spec.ClusterIP != corev1.ClusterIPNone {
 				t.Errorf("expected ruler service to have ClusterIP 'None', got %s", ruler.Spec.ClusterIP)
 			}
 		})
 	}
+}
+
+func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
+	t.Helper()
+	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

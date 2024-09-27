@@ -43,6 +43,14 @@ type Options struct {
 	EvaluationInterval manifests.Duration
 }
 
+func GetServiceAccountName(opts Options) string {
+	return opts.Name
+}
+
+func GetServiceName(opts Options) string {
+	return opts.Name
+}
+
 // Endpoint represents a single QueryAPI DNS formatted address.
 // TODO(saswatamcode): Add validation.
 type Endpoint struct {
@@ -53,10 +61,10 @@ type Endpoint struct {
 
 func BuildRuler(opts Options) []client.Object {
 	var objs []client.Object
-	selectorLabels := labelsForRulers(opts)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
@@ -71,8 +79,9 @@ const (
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
-	selectorLabels := labelsForRulers(opts)
-	return newRulerStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
+	return newRulerStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
 func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
@@ -247,10 +256,11 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{rulerContainer},
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: GetServiceAccountName(opts),
 					Volumes:            volumes,
 				},
 			},
+			ServiceName: GetServiceName(opts),
 		},
 	}
 
@@ -259,7 +269,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 }
 
 func NewRulerService(opts Options) *corev1.Service {
-	defaultLabels := labelsForRulers(opts)
+	defaultLabels := GetSelectorLabels(opts)
 	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
 	servicePorts := []corev1.ServicePort{
 		{
@@ -280,7 +290,7 @@ func NewRulerService(opts Options) *corev1.Service {
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      GetServiceName(opts),
 			Namespace: opts.Namespace,
 			Labels:    aggregatedLabels,
 		},
@@ -375,8 +385,12 @@ func GetRequiredLabels() map[string]string {
 	}
 }
 
-func labelsForRulers(opts Options) map[string]string {
+func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = opts.Name
 	return labels
+}
+
+func GetLabels(opts Options) map[string]string {
+	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
 }

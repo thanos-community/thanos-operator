@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,46 +34,27 @@ func TestBuildQuery(t *testing.T) {
 		MaxConcurrent: 20,
 	}
 
-	expectService := NewQueryService(opts)
-	expectDeployment := NewQueryDeployment(opts)
-
 	objs := BuildQuery(opts)
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	if objs[0].GetObjectKind().GroupVersionKind().String() != "ServiceAccount" && objs[0].GetName() != opts.Name {
-		t.Errorf("expected first object to be a service account, got %v", objs[0])
-	}
+	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateObjectsEqual(t, objs[1], NewQueryDeployment(opts))
+	utils.ValidateObjectsEqual(t, objs[2], NewQueryService(opts))
 
-	if !equality.Semantic.DeepEqual(objs[0].GetLabels(), expectService.Spec.Selector) {
-		t.Errorf("expected service account to have labels %v, got %v", GetRequiredLabels(), objs[0].GetLabels())
-	}
-
-	if !equality.Semantic.DeepEqual(objs[1], expectDeployment) {
-		t.Errorf("expected second object to be a deployment, wanted \n%v\n got \n%v\n", expectDeployment, objs[2])
-	}
-
-	if expectDeployment.Spec.Template.Spec.ServiceAccountName != opts.Name {
-		t.Errorf("expected deployment to have service account %s, got %s", opts.Name, expectDeployment.Spec.Template.Spec.ServiceAccountName)
-	}
-
-	if !equality.Semantic.DeepEqual(objs[2], expectService) {
-		t.Errorf("expected third object to be a service, wanted \n%v\n got \n%v\n", expectService, objs[1])
-	}
-
-	wantLabels := labelsForQuery(opts)
+	wantLabels := GetSelectorLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-
-	for _, obj := range []client.Object{objs[1], objs[2]} {
-		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
-			t.Errorf("expected object to have labels %v, got %v", wantLabels, obj.GetLabels())
-		}
-	}
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
 func TestNewQueryDeployment(t *testing.T) {
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts Options
@@ -156,33 +137,16 @@ func TestNewQueryDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			query := NewQueryDeployment(tc.opts)
-			if query.GetName() != tc.opts.Name {
-				t.Errorf("expected query deployment name to be %s, got %s", tc.opts.Name, query.GetName())
-			}
-			if query.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected query deployment namespace to be %s, got %s", tc.opts.Namespace, query.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(query.GetLabels()) != 8 {
-				t.Errorf("expected query deployment to have 8 labels, got %d", len(query.GetLabels()))
-			}
-			// ensure custom labels are set
-			if query.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected query deployment to have label 'some-custom-label' with value 'xyz', got %s", query.GetLabels()["some-custom-label"])
-			}
-			if query.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected query deployment to have label 'some-other-label' with value 'abc', got %s", query.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForQuery(tc.opts)
-			for k, v := range expect {
-				if query.GetLabels()[k] != v {
-					t.Errorf("expected query deployment to have label %s with value %s, got %s", k, v, query.GetLabels()[k])
-				}
-			}
+			objectMetaLabels := GetLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, query, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, query, GetSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, query, extraLabels)
 
-			if tc.name == "test additional container" && len(query.Spec.Template.Spec.Containers) != 2 {
-				t.Errorf("expected query deployment to have 2 containers, got %d", len(query.Spec.Template.Spec.Containers))
+			if query.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
+				t.Errorf("expected deployment to use service account %s, got %s", GetServiceAccountName(tc.opts), query.Spec.Template.Spec.ServiceAccountName)
+			}
+			if len(query.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
+				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(query.Spec.Template.Spec.Containers))
 			}
 
 			expectArgs := queryArgs(tc.opts)
@@ -202,10 +166,10 @@ func TestNewQueryDeployment(t *testing.T) {
 						}
 					}
 
-					if tc.name == "test additional volumemount" {
-						if len(c.VolumeMounts) != 1 {
-							t.Errorf("expected query deployment to have 1 volumemount, got %d", len(c.VolumeMounts))
-						}
+					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts) {
+						t.Errorf("expected query deployment to have 1 volumemount, got %d", len(c.VolumeMounts))
+					}
+					if len(c.VolumeMounts) > 0 {
 						if c.VolumeMounts[0].Name != "test-sd" {
 							t.Errorf("expected query deployment to have volumemount named test-sd, got %s", c.VolumeMounts[0].Name)
 						}
@@ -213,6 +177,7 @@ func TestNewQueryDeployment(t *testing.T) {
 							t.Errorf("expected query deployment to have volumemount mounted at /test-sd-file, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
+
 				}
 			}
 			if !found {
@@ -239,6 +204,11 @@ func TestNewQueryService(t *testing.T) {
 		MaxConcurrent: 20,
 	}
 
+	extraLabels := map[string]string{
+		"some-custom-label": someCustomLabelValue,
+		"some-other-label":  someOtherLabelValue,
+	}
+
 	for _, tc := range []struct {
 		name string
 		opts Options
@@ -249,35 +219,20 @@ func TestNewQueryService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			querier := NewQueryService(tc.opts)
-			if querier.GetName() != tc.opts.Name {
-				t.Errorf("expected querier service name to be %s, got %s", tc.opts.Name, querier.GetName())
-			}
-			if querier.GetNamespace() != tc.opts.Namespace {
-				t.Errorf("expected querier service namespace to be %s, got %s", tc.opts.Namespace, querier.GetNamespace())
-			}
-			// ensure we inherit the labels from the Options struct and that the strict labels cannot be overridden
-			if len(querier.GetLabels()) != 8 {
-				t.Errorf("expected querier service to have 8 labels, got %d", len(querier.GetLabels()))
-			}
-			// ensure custom labels are set
-			if querier.GetLabels()["some-custom-label"] != someCustomLabelValue {
-				t.Errorf("expected query service to have label 'some-custom-label' with value 'xyz', got %s", querier.GetLabels()["some-custom-label"])
-			}
-			if querier.GetLabels()["some-other-label"] != someOtherLabelValue {
-				t.Errorf("expected query service to have label 'some-other-label' with value 'abc', got %s", querier.GetLabels()["some-other-label"])
-			}
-			// ensure default labels are set
-			expect := labelsForQuery(tc.opts)
-			for k, v := range expect {
-				if querier.GetLabels()[k] != v {
-					t.Errorf("expected query service to have label %s with value %s, got %s", k, v, querier.GetLabels()[k])
-				}
-			}
-
-			if querier.Spec.ClusterIP != "None" {
-				t.Errorf("expected query service to have ClusterIP 'None', got %s", querier.Spec.ClusterIP)
-			}
+			querySvc := NewQueryService(tc.opts)
+			objectMetaLabels := GetLabels(tc.opts)
+			utils.ValidateNameNamespaceAndLabels(t, querySvc, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, querySvc, extraLabels)
+			utils.ValidateHasLabels(t, querySvc, GetSelectorLabels(tc.opts))
 		})
 	}
+}
+
+func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
+	t.Helper()
+	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

@@ -143,6 +143,7 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
 		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
 		Options:                  opts,
+		Instance:                 in.GetName(),
 	}
 }
 
@@ -199,6 +200,7 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		Downsampling:   downsamplingConfig(),
 		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
 		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		InstanceName:   in.GetName(),
 	}
 }
 

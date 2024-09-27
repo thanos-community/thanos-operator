@@ -70,6 +70,11 @@ func GetServiceAccountName(opts Options) string {
 	return opts.Name
 }
 
+// GetServiceName returns the name of the Service for the Thanos Store component.
+func GetServiceName(opts Options) string {
+	return opts.Name
+}
+
 func newStoreInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -104,7 +109,7 @@ config:
 )
 
 // NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
-func NewStoreStatefulSet(opts Options) client.Object {
+func NewStoreStatefulSet(opts Options) *appsv1.StatefulSet {
 	selectorLabels := GetSelectorLabels(opts)
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	return newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels)
@@ -212,7 +217,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: opts.Name,
+			ServiceName: GetServiceName(opts),
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
@@ -298,12 +303,12 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 }
 
 // NewStoreService creates a new Service for Thanos Store shard.
-func NewStoreService(opts Options) client.Object {
+func NewStoreService(opts Options) *corev1.Service {
 	selectorLabels := GetSelectorLabels(opts)
 	return newStoreService(opts, GetSelectorLabels(opts), manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
-func newStoreService(opts Options, selectorLabels, objectMetaLabels map[string]string) client.Object {
+func newStoreService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	svc := newService(opts, selectorLabels, objectMetaLabels)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 	if opts.Additional.ServicePorts != nil {
@@ -330,7 +335,7 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      GetServiceName(opts),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},

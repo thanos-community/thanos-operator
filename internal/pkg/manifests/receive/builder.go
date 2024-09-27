@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,6 +63,14 @@ type IngesterOptions struct {
 	Instance string
 }
 
+func GetIngesterServiceName(opts IngesterOptions) string {
+	return opts.Name
+}
+
+func GetIngesterServiceAccountName(opts IngesterOptions) string {
+	return opts.Name
+}
+
 type TSDBOpts struct {
 	Retention string
 }
@@ -73,6 +80,14 @@ type RouterOptions struct {
 	manifests.Options
 	ReplicationFactor int32
 	ExternalLabels    map[string]string
+}
+
+func GetRouterServiceName(opts RouterOptions) string {
+	return opts.Name
+}
+
+func GetRouterServiceAccountName(opts RouterOptions) string {
+	return opts.Name
 }
 
 // HashringOptions for Thanos Receive hashring
@@ -132,10 +147,10 @@ type Hashrings []HashringConfig
 // BuildIngester builds the ingester for Thanos Receive
 func BuildIngester(opts IngesterOptions) []client.Object {
 	var objs []client.Object
-	selectorLabels := labelsForIngestor(opts)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	selectorLabels := GetIngesterSelectorLabels(opts)
+	objectMetaLabels := GetIngesterLabels(opts)
 	// for receive ingesters we create a single service account per instance
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, GetRequiredLabels()))
+	objs = append(objs, manifests.BuildServiceAccount(GetIngesterServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
 	return objs
@@ -152,8 +167,10 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 			return nil, fmt.Errorf("failed to unmarshal current state from ConfigMap: %w", err)
 		}
 	}
-
-	opts.Labels = manifests.MergeLabels(opts.Labels, labelsForRouter(opts.Options))
+	routerOpts := RouterOptions{
+		Options: opts.Options,
+	}
+	opts.Labels = manifests.MergeLabels(opts.Labels, GetRouterSelectorLabels(routerOpts))
 	cm := newHashringConfigMap(opts)
 
 	var hashrings Hashrings
@@ -252,10 +269,10 @@ func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts
 
 // BuildRouter builds the Thanos Receive router components
 func BuildRouter(opts RouterOptions) []client.Object {
-	selectorLabels := labelsForRouter(opts.Options)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	selectorLabels := GetRouterSelectorLabels(opts)
+	objectMetaLabels := GetRouterLabels(opts)
 	return []client.Object{
-		manifests.BuildServiceAccount(opts.Name, opts.Namespace, GetRequiredLabels()),
+		manifests.BuildServiceAccount(GetRouterServiceAccountName(opts), opts.Namespace, selectorLabels),
 		newRouterService(opts, selectorLabels, objectMetaLabels),
 		newRouterDeployment(opts, selectorLabels, objectMetaLabels),
 	}
@@ -307,8 +324,9 @@ const (
 
 // NewIngestorStatefulSet creates a new StatefulSet for the Thanos Receive ingester.
 func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
-	selectorLabels := labelsForIngestor(opts)
-	return newIngestorStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetIngesterSelectorLabels(opts)
+	objectMetaLabels := GetIngesterLabels(opts)
+	return newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
 func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
@@ -343,7 +361,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: opts.Name,
+			ServiceName: GetIngesterServiceName(opts),
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
@@ -354,7 +372,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: GetIngesterServiceAccountName(opts),
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -463,7 +481,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 
 // NewIngestorService creates a new Service for the Thanos Receive ingester.
 func NewIngestorService(opts IngesterOptions) *corev1.Service {
-	selectorLabels := labelsForIngestor(opts)
+	selectorLabels := GetIngesterSelectorLabels(opts)
 	svc := newService(opts.Name, opts.Namespace, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
@@ -475,7 +493,7 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 }
 
 func newIngestorService(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
-	svc := newService(opts.Name, opts.Namespace, selectorLabels, objectMetaLabels)
+	svc := newService(GetIngesterServiceName(opts), opts.Namespace, selectorLabels, objectMetaLabels)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
 	if opts.Additional.ServicePorts != nil {
@@ -487,11 +505,12 @@ func newIngestorService(opts IngesterOptions, selectorLabels, objectMetaLabels m
 
 // NewRouterService creates a new Service for the Thanos Receive router.
 func NewRouterService(opts RouterOptions) *corev1.Service {
-	selectorLabels := labelsForRouter(opts.Options)
-	return newRouterService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetRouterSelectorLabels(opts)
+	objectMetaLabels := GetRouterLabels(opts)
+	return newRouterService(opts, selectorLabels, objectMetaLabels)
 }
 func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
-	svc := newService(opts.Name, opts.Namespace, selectorLabels, objectMetaLabels)
+	svc := newService(GetRouterServiceName(opts), opts.Namespace, selectorLabels, objectMetaLabels)
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
@@ -542,8 +561,9 @@ const (
 
 // NewRouterDeployment creates a new Deployment for the Thanos Receive router.
 func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
-	selectorLabels := labelsForRouter(opts.Options)
-	return newRouterDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetRouterSelectorLabels(opts)
+	objectMetaLabels := GetRouterLabels(opts)
+	return newRouterDeployment(opts, selectorLabels, objectMetaLabels)
 }
 
 func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
@@ -664,7 +684,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 							Args:                     routerArgsFrom(opts),
 						},
 					},
-					ServiceAccountName:           opts.Name,
+					ServiceAccountName:           GetRouterServiceAccountName(opts),
 					AutomountServiceAccountToken: ptr.To(true),
 				},
 			},
@@ -680,18 +700,6 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 	}
 	manifests.AugmentWithOptions(deployment, opts.Options)
 	return deployment
-}
-
-// IngesterNameFromParent returns a name for the ingester based on the parent and the ingester name.
-// If the resulting name is longer than allowed, the ingester name is used as a fallback.
-func IngesterNameFromParent(receiveName, ingesterName string) string {
-	name := fmt.Sprintf("%s-%s", receiveName, ingesterName)
-	// check if the name is a valid DNS-1123 subdomain
-	if len(validation.IsDNS1123Subdomain(name)) == 0 {
-		return name
-	}
-	// fallback to ingester name
-	return ingesterName
 }
 
 func ingestorArgsFrom(opts IngesterOptions) []string {
@@ -804,20 +812,25 @@ func GetRequiredLabels() map[string]string {
 	}
 }
 
-// GetRequiredIngestorLabels returns a map of labels that can be used to look up thanos receive ingest resources.
+// GetRequiredIngesterLabels returns a map of labels that can be used to look up thanos receive ingest resources.
 // These labels are guaranteed to be present on all resources created by this package.
-func GetRequiredIngestorLabels() map[string]string {
+func GetRequiredIngesterLabels() map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.ComponentLabel] = IngestComponentName
 	labels[manifests.DefaultStoreAPILabel] = manifests.DefaultStoreAPIValue
 	return labels
 }
 
-func labelsForIngestor(opts IngesterOptions) map[string]string {
-	labels := GetRequiredIngestorLabels()
+func GetIngesterSelectorLabels(opts IngesterOptions) map[string]string {
+	labels := GetRequiredIngesterLabels()
 	labels[manifests.InstanceLabel] = opts.Instance
 	labels[ShardLabel] = opts.Name
 	return labels
+}
+
+func GetIngesterLabels(opts IngesterOptions) map[string]string {
+	labels := GetIngesterSelectorLabels(opts)
+	return manifests.MergeLabels(opts.Labels, labels)
 }
 
 // GetRequiredRouterLabels returns a map of labels that can be used to look up thanos receive router resources.
@@ -828,10 +841,15 @@ func GetRequiredRouterLabels() map[string]string {
 	return labels
 }
 
-func labelsForRouter(opts manifests.Options) map[string]string {
+func GetRouterSelectorLabels(opts RouterOptions) map[string]string {
 	labels := GetRequiredRouterLabels()
 	labels[manifests.InstanceLabel] = opts.Name
 	return labels
+}
+
+func GetRouterLabels(opts RouterOptions) map[string]string {
+	labels := GetRouterSelectorLabels(opts)
+	return manifests.MergeLabels(opts.Labels, labels)
 }
 
 func (h Hashrings) toJson() (string, error) {
