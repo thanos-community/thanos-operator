@@ -59,10 +59,10 @@ type Endpoint struct {
 
 func BuildQuery(opts Options) []client.Object {
 	var objs []client.Object
-	selectorLabels := labelsForQuery(opts)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
 	if opts.ServiceMonitorConfig.Enabled {
@@ -71,9 +71,18 @@ func BuildQuery(opts Options) []client.Object {
 	return objs
 }
 
+func GetServiceAccountName(opts Options) string {
+	return opts.Name
+}
+
+func GetServiceName(opts Options) string {
+	return opts.Name
+}
+
 func NewQueryDeployment(opts Options) *appsv1.Deployment {
-	selectorLabels := labelsForQuery(opts)
-	return newQueryDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
+	return newQueryDeployment(opts, selectorLabels, objectMetaLabels)
 }
 
 func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
@@ -176,7 +185,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: GetServiceAccountName(opts),
 				},
 			},
 		},
@@ -187,7 +196,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 }
 
 func NewQueryService(opts Options) *corev1.Service {
-	selectorLabels := labelsForQuery(opts)
+	selectorLabels := GetSelectorLabels(opts)
 	return newQueryService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
@@ -215,7 +224,7 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      GetServiceName(opts),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -282,8 +291,14 @@ func GetRequiredLabels() map[string]string {
 	}
 }
 
-func labelsForQuery(opts Options) map[string]string {
+// GetSelectorLabels returns a map of labels that can be used to look up query resources.
+func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = opts.Name
 	return labels
+}
+
+// GetLabels returns a map of labels that can be used to look up query resources.
+func GetLabels(opts Options) map[string]string {
+	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
 }

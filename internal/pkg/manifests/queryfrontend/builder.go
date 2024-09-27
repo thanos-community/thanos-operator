@@ -51,24 +51,32 @@ type Options struct {
 
 func BuildQueryFrontend(opts Options) []client.Object {
 	var objs []client.Object
-	selectorLabels := labelsForQueryFrontend(opts)
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.Name, opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.ResponseCacheConfig == nil {
-		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, objectMetaLabels))
+		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 	}
 	return objs
 }
 
-func NewQueryFrontendInMemoryConfigMap(opts Options) client.Object {
-	return newQueryFrontendInMemoryConfigMap(opts, manifests.MergeLabels(opts.Labels, labelsForQueryFrontend(opts)))
+func GetServiceAccountName(opts Options) string {
+	return opts.Name
 }
 
-func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
+func GetServiceName(opts Options) string {
+	return opts.Name
+}
+
+func NewQueryFrontendInMemoryConfigMap(opts Options) *corev1.ConfigMap {
+	return newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels())
+}
+
+func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultInMemoryConfigmapName,
@@ -82,8 +90,9 @@ func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) c
 }
 
 func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
-	selectorLabels := labelsForQueryFrontend(opts)
-	return newQueryFrontendDeployment(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
+	return newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels)
 }
 
 func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
@@ -124,7 +133,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: opts.Name,
+					ServiceAccountName: GetServiceAccountName(opts),
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -152,7 +161,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/-/healthy",
-										Port: intstr.FromInt(HTTPPort),
+										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
 							},
@@ -160,7 +169,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/-/ready",
-										Port: intstr.FromInt(HTTPPort),
+										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
 							},
@@ -175,14 +184,15 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 }
 
 func NewQueryFrontendService(opts Options) *corev1.Service {
-	selectorLabels := labelsForQueryFrontend(opts)
-	return newQueryFrontendService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := GetSelectorLabels(opts)
+	objectMetaLabels := GetLabels(opts)
+	return newQueryFrontendService(opts, selectorLabels, objectMetaLabels)
 }
 
 func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      GetServiceName(opts),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -191,7 +201,7 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 				{
 					Name:       HTTPPortName,
 					Port:       HTTPPort,
-					TargetPort: intstr.FromInt(HTTPPort),
+					TargetPort: intstr.FromInt32(HTTPPort),
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
@@ -244,8 +254,14 @@ func GetRequiredLabels() map[string]string {
 	}
 }
 
-func labelsForQueryFrontend(opts Options) map[string]string {
+// GetSelectorLabels returns a map of labels that can be used to look up qfe resources.
+func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = opts.Name
 	return labels
+}
+
+// GetLabels returns a map of labels that can be used to look up qfe resources.
+func GetLabels(opts Options) map[string]string {
+	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
 }

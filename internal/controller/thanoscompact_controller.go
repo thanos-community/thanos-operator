@@ -205,7 +205,8 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 		for i, v := range shard.Values {
 			shardName := CompactShardName(compact.GetName(), shard.ShardName, i)
 			opts := compactV1Alpha1ToOptions(compact)
-			opts.ShardName = shardName
+			opts.Name = shardName
+			opts.InstanceName = compact.GetName()
 			opts.RelabelConfigs = manifests.RelabelConfigs{
 				{
 					Action:      "keep",
