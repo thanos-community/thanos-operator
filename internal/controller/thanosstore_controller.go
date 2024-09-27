@@ -153,7 +153,8 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	for i := range store.Spec.ShardingStrategy.Shards {
 		shardName := StoreShardName(store.GetName(), i)
 		storeShardOpts := storeV1Alpha1ToOptions(store)
-		storeShardOpts.ShardName = shardName
+		storeShardOpts.Instance = store.GetName()
+		storeShardOpts.Name = shardName
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",
