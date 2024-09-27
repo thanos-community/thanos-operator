@@ -76,6 +76,9 @@ type CommonThanosFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
+	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
+	// +kubebuilder:validation:Optional
+	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
 }
 
 type Additional struct {
@@ -103,6 +106,19 @@ type Additional struct {
 	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
 	// +kubebuilder:validation:Optional
 	ServicePorts []corev1.ServicePort `json:"additionalServicePorts,omitempty"`
+}
+
+type ServiceMonitorConfig struct {
+	//Enabled
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=true
+	Enabled *bool `json:"enabled,omitempty"`
+	//Labels to add to the ServiceMonitor.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
+	//Namespace to deploy the ServiceMonitor in.
+	// +kubebuilder:validation:Optional
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {

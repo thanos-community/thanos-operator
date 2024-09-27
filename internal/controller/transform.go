@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
@@ -13,7 +15,6 @@ import (
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 )
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
@@ -238,6 +239,7 @@ func commonToOpts(
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
+		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, namespace, labels),
 	}
 }
 
@@ -250,5 +252,30 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 		Ports:        in.Ports,
 		Env:          in.Env,
 		ServicePorts: in.ServicePorts,
+	}
+}
+
+func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace string, labels map[string]string) manifests.ServiceMonitorConfig {
+	if in == nil {
+		return manifests.ServiceMonitorConfig{
+			Enabled:   true,
+			Namespace: namespace,
+			Labels:    labels,
+		}
+	}
+
+	if in != nil && in.Enabled == nil {
+		in.Enabled = ptr.To(true)
+	}
+	if in != nil && in.Namespace == nil {
+		in.Namespace = &namespace
+	}
+	if in != nil && in.Labels == nil {
+		in.Labels = labels
+	}
+	return manifests.ServiceMonitorConfig{
+		Enabled:   *in.Enabled,
+		Labels:    in.Labels,
+		Namespace: *in.Namespace,
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -75,6 +76,7 @@ func NewThanosQueryReconciler(instrumentationConf InstrumentationConfig, client 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosqueries/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -130,9 +132,23 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontendObjs...)
 	}
 
+	var errCount int
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
+	}
+
+	if query.Spec.ServiceMonitorConfig != nil && query.Spec.ServiceMonitorConfig.Enabled != nil && !*query.Spec.ServiceMonitorConfig.Enabled {
+		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      QueryNameFromParent(query.GetName()),
+				Namespace: query.GetNamespace(),
+			},
+		},
+		}); errCount > 0 {
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
+		}
 	}
 
 	return nil
@@ -220,6 +236,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
@@ -227,6 +244,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Complete(r)
 
+	// if servicemonitor CRD exists in the cluster, watch for changes to ServiceMonitor resources
 	if err != nil {
 		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
 		return err

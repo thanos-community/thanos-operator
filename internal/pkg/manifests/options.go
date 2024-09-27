@@ -39,6 +39,8 @@ type Options struct {
 	LogLevel *string
 	// LogFormat is the log format for the component
 	LogFormat *string
+	//ServiceMonitorConfig is the configuration for the ServiceMonitor
+	ServiceMonitorConfig
 }
 
 // ToFlags returns the flags for the Options
@@ -223,3 +225,9 @@ func (rc RelabelConfigs) ToFlags() string {
 }
 
 type Duration string
+
+type ServiceMonitorConfig struct {
+	Enabled   bool
+	Labels    map[string]string
+	Namespace string
+}

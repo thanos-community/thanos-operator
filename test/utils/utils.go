@@ -19,6 +19,7 @@ package utils
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -27,6 +28,15 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"k8s.io/utils/ptr"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/api/errors"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
@@ -55,6 +65,17 @@ const (
 	certmanagerVersion = "v1.5.3"
 	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
 )
+
+type PrometheusResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric map[string]string `json:"metric"`
+			Value  []interface{}     `json:"value"` // Use interface{} because value can be mixed types
+		} `json:"result"`
+	} `json:"data"`
+}
 
 func warnError(err error) {
 	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
@@ -527,4 +548,145 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 	default:
 		return false
 	}
+}
+
+func SetUpPrometheus(c client.Client) error {
+	if err := CreateServiceAccount(c); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	if err := CreateClusterRole(c); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	if err := CreateClusterRoleBinding(c); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	if err := CreatePrometheus(c); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func CreatePrometheus(c client.Client) error {
+	promRes := &monitoringv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-prometheus",
+			Namespace: "default",
+		},
+		Spec: monitoringv1.PrometheusSpec{
+			CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+				ServiceAccountName:              "prometheus",
+				Replicas:                        ptr.To(int32(1)),
+				ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
+				ServiceMonitorSelector:          &metav1.LabelSelector{},
+				Version:                         "v2.54.0",
+			},
+			Retention: "10d",
+		},
+	}
+	if err := c.Create(context.Background(), promRes); err != nil {
+		return err
+	}
+	return nil
+}
+
+// create service account for prometheus
+func CreateServiceAccount(c client.Client) error {
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "prometheus",
+			Namespace: "default",
+		},
+	}
+	if err := c.Create(context.Background(), sa); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateClusterRole(c client.Client) error {
+	cr := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheus",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes", "nodes/proxy", "services", "endpoints", "pods"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get"},
+			},
+			{
+				NonResourceURLs: []string{"/metrics"},
+				Verbs:           []string{"get"},
+			},
+		},
+	}
+	if err := c.Create(context.Background(), cr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateClusterRoleBinding(c client.Client) error {
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "prometheus",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "prometheus",
+				Namespace: "default",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind: "ClusterRole",
+			Name: "prometheus",
+		},
+	}
+	if err := c.Create(context.Background(), crb); err != nil {
+		return err
+	}
+	return nil
+}
+
+func VerifyServiceMonitor(c client.Client, name, ns string) bool {
+	sm := &monitoringv1.ServiceMonitor{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: ns,
+	}, sm)
+	return err == nil
+}
+
+func VerifyServiceMonitorDeleted(c client.Client, name, ns string) bool {
+	sm := &monitoringv1.ServiceMonitor{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: ns,
+	}, sm)
+	return errors.IsNotFound(err)
+}
+
+func QueryPrometheus(query string) (*PrometheusResponse, error) {
+	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", query)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var promResp PrometheusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&promResp); err != nil {
+		return nil, err
+	}
+	return &promResp, nil
 }
