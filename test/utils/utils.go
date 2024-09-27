@@ -27,20 +27,13 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"testing"
 	"time"
-
-	"k8s.io/utils/ptr"
-
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/apimachinery/pkg/api/errors"
-
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
 	"github.com/golang/snappy"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	pconf "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
@@ -48,10 +41,15 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -548,6 +546,48 @@ func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, 
 	default:
 		return false
 	}
+}
+
+func ValidateObjectsEqual(t *testing.T, got client.Object, want client.Object) {
+	t.Helper()
+	if got.GetObjectKind().GroupVersionKind() != want.GetObjectKind().GroupVersionKind() {
+		t.Errorf("got GVK %s, want %s", got.GetObjectKind().GroupVersionKind(), want.GetObjectKind().GroupVersionKind())
+	}
+
+	if !equality.Semantic.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v for object %s %s", got, want, got.GetObjectKind().GroupVersionKind().Kind, got.GetName())
+	}
+}
+
+func ValidateObjectLabelsEqual(t *testing.T, wantLabels map[string]string, onObjs ...client.Object) {
+	t.Helper()
+	for _, obj := range onObjs {
+		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
+			t.Errorf("expected object %s of kind %s to have labels %v, got %v",
+				obj.GetName(), obj.GetObjectKind().GroupVersionKind().Kind, wantLabels, obj.GetLabels())
+		}
+	}
+}
+
+func ValidateHasLabels(t *testing.T, obj client.Object, labels map[string]string) {
+	t.Helper()
+	for k, v := range labels {
+		if obj.GetLabels()[k] != v {
+			t.Errorf("expected object %s to have label %s with value %s, got %s",
+				obj.GetName(), k, v, obj.GetLabels()[k])
+		}
+	}
+}
+
+func ValidateNameNamespaceAndLabels(t *testing.T, obj client.Object, name, namespace string, labels map[string]string) {
+	t.Helper()
+	if obj.GetName() != name {
+		t.Errorf("expected object to have name %s, got %s", name, obj.GetName())
+	}
+	if obj.GetNamespace() != namespace {
+		t.Errorf("expected object to have namespace %s, got %s", namespace, obj.GetNamespace())
+	}
+	ValidateObjectLabelsEqual(t, labels, obj)
 }
 
 func SetUpPrometheus(c client.Client) error {
