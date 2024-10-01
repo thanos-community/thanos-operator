@@ -266,13 +266,13 @@ func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace str
 		}
 	}
 
-	if in != nil && in.Enabled == nil {
+	if in.Enabled == nil {
 		in.Enabled = ptr.To(true)
 	}
-	if in != nil && in.Namespace == nil {
+	if in.Namespace == nil {
 		in.Namespace = &namespace
 	}
-	if in != nil && in.Labels == nil {
+	if in.Labels == nil {
 		in.Labels = labels
 	}
 	return manifests.ServiceMonitorConfig{

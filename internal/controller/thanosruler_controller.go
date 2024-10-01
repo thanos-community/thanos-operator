@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -129,6 +130,18 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
+	}
+	if ruler.Spec.ServiceMonitorConfig != nil && ruler.Spec.ServiceMonitorConfig.Enabled != nil && !*ruler.Spec.ServiceMonitorConfig.Enabled {
+		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      RulerNameFromParent(ruler.GetName()),
+				Namespace: ruler.GetNamespace(),
+			},
+		},
+		}); errCount > 0 {
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d resources for the ruler", errCount)
+		}
 	}
 
 	return nil
@@ -258,6 +271,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),

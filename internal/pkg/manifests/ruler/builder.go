@@ -68,6 +68,9 @@ func BuildRuler(opts Options) []client.Object {
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
+	if opts.ServiceMonitorConfig.Enabled {
+		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
+	}
 	return objs
 }
 
@@ -318,6 +321,10 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 
 	if opts.Additional.ServicePorts != nil {
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
+	}
+
+	if opts.ServiceMonitorConfig.Enabled {
+		objectMetaLabels["thanos-self-monitoring"] = opts.Name
 	}
 
 	return &corev1.Service{

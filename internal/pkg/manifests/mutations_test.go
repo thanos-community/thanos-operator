@@ -3,6 +3,8 @@ package manifests
 import (
 	"testing"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/stretchr/testify/require"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -630,4 +632,40 @@ func TestMutateFuncFor_MutatePodDisruptionBudget(t *testing.T) {
 	require.NoError(t, err)
 	require.Exactly(t, got.Labels, want.Labels)
 	require.Exactly(t, got.Spec, want.Spec)
+}
+
+func TestMutateFuncFor_ServiceMonitor(t *testing.T) {
+	got := &monitoringv1.ServiceMonitor{
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: "web",
+				},
+			},
+		},
+	}
+	want := &monitoringv1.ServiceMonitor{
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: "web",
+				},
+			},
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{"test"},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test": "test",
+				},
+			},
+		},
+	}
+
+	f := MutateFuncFor(got, want)
+	err := f()
+
+	require.NoError(t, err)
+	require.Exactly(t, got.Spec.NamespaceSelector, want.Spec.NamespaceSelector)
+	require.Exactly(t, got.Spec.Selector, want.Spec.Selector)
 }
