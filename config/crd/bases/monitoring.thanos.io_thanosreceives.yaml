@@ -39,7 +39,7 @@ spec:
           spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
-              ingestorSpec:
+              ingesterSpec:
                 description: Ingester is the configuration for the ingestor.
                 properties:
                   additionalArgs:
@@ -7502,13 +7502,13 @@ spec:
                 - replicationFactor
                 type: object
             required:
-            - ingestorSpec
+            - ingesterSpec
             - routerSpec
             type: object
             x-kubernetes-validations:
             - message: ' Ingester replicas must be greater than or equal to the Router
                 replicas'
-              rule: self.ingestorSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor
+              rule: self.ingesterSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor
                 )
           status:
             description: Status defines the observed state of ThanosReceive
