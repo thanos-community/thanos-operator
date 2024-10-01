@@ -1,0 +1,19 @@
+apiVersion: monitoring.thanos.io/v1alpha1
+kind: ThanosCompact
+metadata:
+  name: example-compact
+spec:
+  storageSize: "100Mi"
+  shardingConfig:
+    externalLabelSharding:
+      - shardName: example
+        label: tenant_id
+        values: ["a", "b"]
+  objectStorageConfig:
+    name: thanos-object-storage
+    key: thanos.yaml
+  retentionConfig:
+    raw: 30d
+    fiveMinutes: 30d
+    oneHour: 30d
+

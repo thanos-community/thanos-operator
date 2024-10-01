@@ -3,14 +3,12 @@ kind: ThanosReceive
 metadata:
   name: example-receive
 spec:
-  ingestor:
-    logFormat: logfmt
-    imagePullPolicy: IfNotPresent
+  ingestorSpec:
     defaultObjectStorageConfig:
       name: thanos-object-storage
       key: thanos.yaml
     hashrings:
-      - name: default
+      - name: blue
         storageSize: "100Mi"
         tsdbConfig:
           retention: 2h
@@ -18,7 +16,15 @@ spec:
         replicas: 1
         externalLabels:
           replica: $(POD_NAME)
-  router:
+      - name: green
+        storageSize: "100Mi"
+        tsdbConfig:
+          retention: 2h
+        tenantMatcherType: exact
+        replicas: 1
+        externalLabels:
+          replica: $(POD_NAME)
+  routerSpec:
     logFormat: logfmt
     imagePullPolicy: IfNotPresent
     externalLabels:

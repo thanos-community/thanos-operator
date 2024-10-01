@@ -114,14 +114,14 @@ type IngesterHashringSpec struct {
 }
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive
-// +kubebuilder:validation:XValidation:rule="self.ingestorSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
+// +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
 type ThanosReceiveSpec struct {
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required
 	Router RouterSpec `json:"routerSpec,omitempty"`
 	// Ingester is the configuration for the ingestor.
 	// +kubebuilder:validation:Required
-	Ingester IngesterSpec `json:"ingestorSpec,omitempty"`
+	Ingester IngesterSpec `json:"ingesterSpec,omitempty"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive
