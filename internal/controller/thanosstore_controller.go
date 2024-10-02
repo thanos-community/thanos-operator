@@ -127,15 +127,17 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && !*store.Spec.ServiceMonitorConfig.Enabled {
-		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      StoreNameFromParent(store.GetName()),
-				Namespace: store.GetNamespace(),
+		for i := range store.Spec.ShardingStrategy.Shards {
+			if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      StoreShardName(store.GetName(), i),
+					Namespace: store.GetNamespace(),
+				},
 			},
-		},
-		}); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
-			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
+			}); errCount > 0 {
+				r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+				return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
+			}
 		}
 	}
 
