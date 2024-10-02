@@ -18,8 +18,10 @@ package controller
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/receive"
 
 	"github.com/go-logr/logr"
 
@@ -176,20 +178,11 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
 	}
 
-	var objs []client.Object
-	hashringConf, err := r.buildHashringConfig(ctx, receiver)
+	hashringConfig, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
-		if !errors.Is(err, manifestreceive.ErrHashringsEmpty) {
-			r.recorder.Event(&receiver, corev1.EventTypeWarning, "HashringConfigBuildFailed", fmt.Sprintf("Failed to build hashring configuration: %v", err))
-			return fmt.Errorf("failed to build hashring configuration: %w", err)
-		}
-		// we can create the config map even if there are no hashrings
-		objs = append(objs, hashringConf)
-	} else {
-		objs = append(objs, hashringConf)
-		// bring up the router components only if there are ready hashrings to avoid crash looping the router
-		objs = append(objs, r.buildRouter(receiver)...)
+		return fmt.Errorf("failed to build hashring config: %w", err)
 	}
+	objs := r.buildRouter(receiver, string(hashringConfig))
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objs); errs > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errs))
@@ -231,7 +224,7 @@ func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosi
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
-func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) (client.Object, error) {
+func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) ([]byte, error) {
 	cm := &corev1.ConfigMap{}
 	name := ReceiveRouterNameFromParent(receiver.GetName())
 	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: name}, cm)
@@ -241,45 +234,42 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
-	opts := manifestreceive.HashringOptions{
-		Options: manifests.Options{
-			Name:      name,
-			Namespace: receiver.GetNamespace(),
-			Labels:    receiver.GetLabels(),
-		},
-		DesiredReplicationFactor: receiver.Spec.Router.ReplicationFactor,
-		HashringSettings:         make(map[string]manifestreceive.HashringMeta, len(receiver.Spec.Ingester.Hashrings)),
+	var currentHashringState receive.Hashrings
+	if cm.Data != nil && cm.Data[manifestreceive.HashringConfigKey] != "" {
+		if err := json.Unmarshal([]byte(cm.Data[manifestreceive.HashringConfigKey]), &currentHashringState); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal current state from ConfigMap: %w", err)
+		}
 	}
 
-	totalHashrings := len(receiver.Spec.Ingester.Hashrings)
-	for i, hashring := range receiver.Spec.Ingester.Hashrings {
+	desiredState := make(receive.HashringState, len(receiver.Spec.Ingester.Hashrings))
+	for _, hashring := range receiver.Spec.Ingester.Hashrings {
+		filters := []receive.EndpointFilter{receive.FilterEndpointReady()}
 		labelValue := ReceiveIngesterNameFromParent(receiver.GetName(), hashring.Name)
-		// kubernetes sets this label on the endpoint slices - we want to match the generated name
-		selectorListOpt := client.MatchingLabels{discoveryv1.LabelServiceName: labelValue}
-
-		eps := discoveryv1.EndpointSliceList{}
-		if err = r.Client.List(ctx, &eps, selectorListOpt, client.InNamespace(receiver.GetNamespace())); err != nil {
-			return nil, fmt.Errorf("failed to list endpoint slices for resource %s: %w", receiver.GetName(), err)
+		eps, err := r.handler.GetEndpointSlices(ctx, labelValue, receiver.GetNamespace())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get endpoint slices for resource %s: %w", receiver.GetName(), err)
 		}
 
-		opts.HashringSettings[labelValue] = manifestreceive.HashringMeta{
-			DesiredReplicasReplicas:  hashring.Replicas,
-			OriginalName:             hashring.Name,
-			Tenants:                  hashring.Tenants,
-			TenantMatcherType:        manifestreceive.TenantMatcher(hashring.TenantMatcherType),
-			AssociatedEndpointSlices: eps,
-			// set the priority by slice order for now
-			Priority: totalHashrings - i,
+		desiredState[hashring.Name] = receive.HashringMeta{
+			DesiredReplicas: int(hashring.Replicas),
+			Config: receive.HashringConfig{
+				Name:              hashring.Name,
+				Tenants:           hashring.Tenants,
+				TenantMatcherType: receive.TenantMatcher(hashring.TenantMatcherType),
+				Endpoints:         receive.EndpointSliceListToEndpoints(receive.DefaultEndpointConverter, *eps, filters...),
+			},
 		}
 	}
+	out := receive.DynamicMerge(currentHashringState, desiredState, int(receiver.Spec.Router.ReplicationFactor))
+	if len(out) == 0 {
+		return []byte(""), nil
+	}
 
-	r.metrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(totalHashrings))
-	r.recorder.Event(&receiver, corev1.EventTypeNormal, "HashringConfigBuilt", fmt.Sprintf("Built hashring configuration with %d hashrings", totalHashrings))
-	return manifestreceive.BuildHashrings(r.logger, cm, opts)
+	return json.MarshalIndent(out, "", "    ")
 }
 
 // build hashring builds out the ingesters for the ThanosReceive resource.
-func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha1.ThanosReceive) []client.Object {
+func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) []client.Object {
 	if receiver.Spec.Router.Paused != nil && *receiver.Spec.Router.Paused {
 		r.logger.Info("router is paused")
 		r.recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
@@ -287,6 +277,7 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 		return nil
 	}
 	opts := receiverV1Alpha1ToRouterOptions(receiver)
+	opts.HashringConfig = hashringConfig
 	return manifestreceive.BuildRouter(opts)
 }
 
