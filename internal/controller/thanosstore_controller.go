@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -130,12 +129,12 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	if store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && !*store.Spec.ServiceMonitorConfig.Enabled {
 		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      RulerNameFromParent(store.GetName()),
+				Name:      StoreNameFromParent(store.GetName()),
 				Namespace: store.GetNamespace(),
 			},
 		},
 		}); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
 		}
 	}

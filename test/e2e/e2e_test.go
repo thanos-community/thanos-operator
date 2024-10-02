@@ -403,6 +403,34 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 		})
+		Context("Discover Thanos Query as a target", func() {
+			It("Prometheus should discover Thanos Query as a target", func() {
+				pods := &corev1.PodList{}
+				selector := client.MatchingLabels{
+					"prometheus": "test-prometheus",
+				}
+				err := c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
+				Expect(err).To(BeNil())
+				Expect(len(pods.Items)).To(Equal(1))
+
+				pod := pods.Items[0].Name
+				port := intstr.IntOrString{IntVal: prometheusPort}
+				cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					promResp, err := utils.QueryPrometheus("up{service=\"" + queryName + "\"}")
+					if err != nil {
+						return err
+					}
+					if len(promResp.Data.Result) > 0 && promResp.Data.Result[0].Metric["service"] != queryName {
+						return fmt.Errorf("query service is not up in Prometheus")
+					}
+					return nil
+				}, time.Minute*1, time.Second*5).Should(Succeed())
+			})
+		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
@@ -570,50 +598,6 @@ var _ = Describe("controller", Ordered, func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
-			})
-		})
-	})
-
-	Describe("Discover Thanos components as targets with Service Monitor Enabled", Ordered, func() {
-		BeforeAll(func() {
-			pods := &corev1.PodList{}
-			selector := client.MatchingLabels{
-				"prometheus": "test-prometheus",
-			}
-			err := c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
-			Expect(err).To(BeNil())
-			Expect(len(pods.Items)).To(Equal(1))
-
-			pod := pods.Items[0].Name
-			port := intstr.IntOrString{IntVal: prometheusPort}
-			cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
-			Expect(err).To(BeNil())
-			defer cancelFn()
-		})
-		Context("Discover Thanos Components as a target", func() {
-			It("Prometheus should discover Thanos Query as a target", func() {
-				Eventually(func() error {
-					promResp, err := utils.QueryPrometheus("up{service=\"" + queryName + "\"}")
-					if err != nil {
-						return err
-					}
-					if len(promResp.Data.Result) > 0 && promResp.Data.Result[0].Metric["service"] != queryName {
-						return fmt.Errorf("query service is not up in Prometheus")
-					}
-					return nil
-				}, time.Minute*1, time.Second*5).Should(Succeed())
-			})
-			It("Prometheus should discover Thanos Store as a target", func() {
-				Eventually(func() error {
-					promResp, err := utils.QueryPrometheus("up{service=\"" + storeName + "\"}")
-					if err != nil {
-						return err
-					}
-					if len(promResp.Data.Result) > 0 && promResp.Data.Result[0].Metric["service"] != storeName {
-						return fmt.Errorf("store service is not up in Prometheus")
-					}
-					return nil
-				}, time.Minute*1, time.Second*5).Should(Succeed())
 			})
 		})
 	})
