@@ -188,6 +188,24 @@ config:
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
+
+			By("removing service monitor when disabled", func() {
+				Expect(utils.VerifyServiceMonitor(k8sClient, RulerNameFromParent(resourceName), ns)).To(BeTrue())
+
+				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
+				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
+				enableSelfMonitor := false
+				updatedResource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
+						Enabled: &enableSelfMonitor,
+					},
+				}
+				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
+
+				Eventually(func() bool {
+					return utils.VerifyServiceMonitorDeleted(k8sClient, RulerNameFromParent(resourceName), ns)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
 		})
 	})
 })
