@@ -62,6 +62,9 @@ func Build(opts Options) []client.Object {
 	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
 		objs = append(objs, newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
 	}
+	if opts.ServiceMonitorConfig.Enabled {
+		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
+	}
 	return objs
 }
 
@@ -331,6 +334,10 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 			Port:       HTTPPort,
 			TargetPort: intstr.FromInt32(HTTPPort),
 		},
+	}
+
+	if opts.ServiceMonitorConfig.Enabled {
+		objectMetaLabels["thanos-self-monitoring"] = opts.Name
 	}
 
 	svc := &corev1.Service{

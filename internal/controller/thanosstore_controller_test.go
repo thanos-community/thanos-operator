@@ -209,7 +209,37 @@ config:
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
+			By("removing service monitor when disabled", func() {
+				expect := []string{StoreShardName(resourceName, 0), StoreShardName(resourceName, 1), StoreShardName(resourceName, 2)}
+				for _, shard := range expect {
+					Expect(utils.VerifyServiceMonitor(k8sClient, shard, ns)).To(BeTrue())
+				}
+
+				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
+				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
+
+				enableSelfMonitor := false
+				updatedResource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
+						Enabled: &enableSelfMonitor,
+					},
+				}
+				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
+
+				Eventually(func() bool {
+					for _, shard := range expect {
+						if !utils.VerifyServiceMonitorDeleted(k8sClient, shard, ns) {
+							return false
+						}
+					}
+					return true
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
 			By("checking paused state", func() {
+				resource := &monitoringthanosiov1alpha1.ThanosStore{}
+				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
+
 				resource.Spec.Paused = ptr.To(true)
 				resource.Spec.ShardingStrategy.ShardReplicas = 4
 

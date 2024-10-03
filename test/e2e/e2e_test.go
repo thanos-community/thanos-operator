@@ -23,11 +23,13 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -36,7 +38,6 @@ import (
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -403,34 +404,6 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 		})
-		Context("Discover Thanos Query as a target", func() {
-			It("Prometheus should discover Thanos Query as a target", func() {
-				pods := &corev1.PodList{}
-				selector := client.MatchingLabels{
-					"prometheus": "test-prometheus",
-				}
-				err := c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
-				Expect(err).To(BeNil())
-				Expect(len(pods.Items)).To(Equal(1))
-
-				pod := pods.Items[0].Name
-				port := intstr.IntOrString{IntVal: prometheusPort}
-				cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
-				Expect(err).To(BeNil())
-				defer cancelFn()
-
-				Eventually(func() error {
-					promResp, err := utils.QueryPrometheus("up{service=\"" + queryName + "\"}")
-					if err != nil {
-						return err
-					}
-					if len(promResp.Data.Result) > 0 && promResp.Data.Result[0].Metric["service"] != queryName {
-						return fmt.Errorf("query service is not up in Prometheus")
-					}
-					return nil
-				}, time.Minute*1, time.Second*5).Should(Succeed())
-			})
-		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
@@ -598,6 +571,37 @@ var _ = Describe("controller", Ordered, func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
+			})
+		})
+	})
+	Describe("Discover Thanos components as targets with Service Monitor Enabled", Ordered, func() {
+		Context("Discover Thanos Components as a target", func() {
+			It("Service Should be present in Up Metric", func() {
+				pods := &corev1.PodList{}
+				selector := client.MatchingLabels{
+					"prometheus": "test-prometheus",
+				}
+				err := c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
+				Expect(err).To(BeNil())
+				Expect(len(pods.Items)).To(Equal(1))
+
+				pod := pods.Items[0].Name
+				port := intstr.IntOrString{IntVal: prometheusPort}
+				cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				firstShard := controller.StoreShardName(storeName, 0)
+				secondShard := controller.StoreShardName(storeName, 1)
+				componentMap := map[string]struct{}{
+					controller.QueryNameFromParent(queryName):   {},
+					controller.StoreNameFromParent(firstShard):  {},
+					controller.StoreNameFromParent(secondShard): {},
+				}
+				for component := range componentMap {
+					_, err := utils.QueryPrometheus("up{service=\"" + component + "\"}")
+					Expect(err).To(BeNil())
+				}
 			})
 		})
 	})

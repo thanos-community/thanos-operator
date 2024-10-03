@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/go-logr/logr"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -123,6 +126,21 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
+	if store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && !*store.Spec.ServiceMonitorConfig.Enabled {
+		for i := range store.Spec.ShardingStrategy.Shards {
+			if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      StoreShardName(store.GetName(), i),
+					Namespace: store.GetNamespace(),
+				},
+			},
+			}); errCount > 0 {
+				r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+				return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -180,6 +198,7 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Complete(r)
 
 	if err != nil {
