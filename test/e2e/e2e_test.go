@@ -240,9 +240,15 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 
-			It("should create a ConfigMap with the correct hashring configuration", func() {
-				//nolint:lll
-				expect := fmt.Sprintf(`[
+			Context("When the ingesters have been created", func() {
+				It("should bring up the router components", func() {
+					Eventually(func() bool {
+						return utils.VerifyDeploymentReplicasRunning(c, 1, routerName, namespace)
+					}, time.Minute*5, time.Second*10).Should(BeTrue())
+				})
+				It("should create a ConfigMap with the correct hashring configuration", func() {
+					//nolint:lll
+					expect := fmt.Sprintf(`[
     {
         "hashring": "default",
         "tenant_matcher_type": "exact",
@@ -254,18 +260,12 @@ var _ = Describe("controller", Ordered, func() {
         ]
     }
 ]`, ingesterName, ingesterName)
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+					Eventually(func() bool {
+						return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
+					}, time.Minute*5, time.Second*10).Should(BeTrue())
+				})
 			})
-		})
 
-		Context("When the hashring configuration exists", func() {
-			It("should bring up the router components", func() {
-				Eventually(func() bool {
-					return utils.VerifyDeploymentReplicasRunning(c, 1, routerName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
-			})
 		})
 
 		Context("When ThanosReceive is fully operational", func() {
@@ -287,7 +287,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				Eventually(func() error {
 					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
-				}, time.Minute*1, time.Second*5).Should(Succeed())
+				}, time.Minute*2, time.Second*5).Should(Succeed())
 
 			})
 		})

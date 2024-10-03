@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -92,4 +94,15 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 		)
 	}
 	return errCount
+}
+
+// GetEndpointSlices returns the EndpointSlices for the given service in the given namespace.
+func (h *Handler) GetEndpointSlices(ctx context.Context, serviceName string, namespace string) (*discoveryv1.EndpointSliceList, error) {
+	selectorListOpt := client.MatchingLabels{discoveryv1.LabelServiceName: serviceName}
+	eps := discoveryv1.EndpointSliceList{}
+	if err := h.client.List(ctx, &eps, selectorListOpt, client.InNamespace(namespace)); err != nil {
+		return nil, fmt.Errorf("failed to list endpoint slices for service %s in namespace %s: %w",
+			serviceName, namespace, err)
+	}
+	return &eps, nil
 }

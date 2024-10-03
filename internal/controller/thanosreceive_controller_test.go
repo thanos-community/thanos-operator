@@ -214,12 +214,6 @@ config:
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
-			By("creating a hashring config in ConfigMap of the same name as the CR", func() {
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
-			})
-
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
 				// we label below for verbosity in testing but via predicates we really should not need to deal
 				// with such events. we do however want to ensure we deal with them correctly in case someone

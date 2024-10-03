@@ -1,19 +1,12 @@
 package receive
 
 import (
-	"encoding/json"
 	"fmt"
-	"slices"
-	"sort"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
-	"github.com/go-logr/logr"
-	"github.com/prometheus/prometheus/model/labels"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -80,6 +73,8 @@ type RouterOptions struct {
 	manifests.Options
 	ReplicationFactor int32
 	ExternalLabels    map[string]string
+	HashringConfig    string
+	HashringAlgorithm string
 }
 
 func GetRouterServiceName(opts RouterOptions) string {
@@ -89,60 +84,6 @@ func GetRouterServiceName(opts RouterOptions) string {
 func GetRouterServiceAccountName(opts RouterOptions) string {
 	return opts.Name
 }
-
-// HashringOptions for Thanos Receive hashring
-type HashringOptions struct {
-	manifests.Options
-	// DesiredReplicationFactor is the desired replication factor for the hashrings.
-	DesiredReplicationFactor int32
-	// HashringSettings is the configuration for the hashrings.
-	// The key should be the name of the Service that the hashring is associated with.
-	HashringSettings map[string]HashringMeta
-}
-
-// HashringMeta represents the metadata for a hashring.
-type HashringMeta struct {
-	// OriginalName is the original name of the hashring
-	OriginalName string
-	// DesiredReplicasReplicas is the desired number of replicas for the hashring
-	DesiredReplicasReplicas int32
-	// Tenants is a list of tenants that match on this hashring.
-	Tenants []string
-	// TenantMatcherType is the type of tenant matching to use.
-	TenantMatcherType TenantMatcher
-	// Priority is the priority of the hashring which is used for sorting.
-	// If Priority is the same, the hashring will be sorted by name.
-	Priority int
-	// AssociatedEndpointSlices is the list of EndpointSlices associated with the hashring.
-	AssociatedEndpointSlices discoveryv1.EndpointSliceList
-}
-
-// Endpoint represents a single logical member of a hashring.
-type Endpoint struct {
-	// Address is the address of the endpoint.
-	Address string `json:"address"`
-	// AZ is the availability zone of the endpoint.
-	AZ string `json:"az"`
-}
-
-// HashringConfig represents the configuration for a hashring a receiver node knows about.
-type HashringConfig struct {
-	// Hashring is the name of the hashring.
-	Hashring string `json:"hashring,omitempty"`
-	// Tenants is a list of tenants that match on this hashring.
-	Tenants []string `json:"tenants,omitempty"`
-	// TenantMatcherType is the type of tenant matching to use.
-	TenantMatcherType TenantMatcher `json:"tenant_matcher_type,omitempty"`
-	// Endpoints is a list of endpoints that are part of this hashring.
-	Endpoints []Endpoint `json:"endpoints"`
-	// Algorithm is the hashing algorithm to use.
-	Algorithm HashringAlgorithm `json:"algorithm,omitempty"`
-	// ExternalLabels are the external labels to use for this hashring.
-	ExternalLabels labels.Labels `json:"external_labels,omitempty"`
-}
-
-// Hashrings is a list of hashrings.
-type Hashrings []HashringConfig
 
 // BuildIngester builds the ingester for Thanos Receive
 func BuildIngester(opts IngesterOptions) []client.Object {
@@ -156,117 +97,6 @@ func BuildIngester(opts IngesterOptions) []client.Object {
 	return objs
 }
 
-// ErrHashringsEmpty is returned when one or more hashrings are empty
-var ErrHashringsEmpty = fmt.Errorf("one or more hashrings are empty")
-
-// BuildHashrings builds the hashrings for Thanos Receive from the provided configuration.
-func BuildHashrings(logger logr.Logger, preExistingState *corev1.ConfigMap, opts HashringOptions) (client.Object, error) {
-	var currentState []HashringConfig
-	if preExistingState != nil && preExistingState.Data != nil && preExistingState.Data[HashringConfigKey] != "" {
-		if err := json.Unmarshal([]byte(preExistingState.Data[HashringConfigKey]), &currentState); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal current state from ConfigMap: %w", err)
-		}
-	}
-	routerOpts := RouterOptions{
-		Options: opts.Options,
-	}
-	opts.Labels = manifests.MergeLabels(opts.Labels, GetRouterSelectorLabels(routerOpts))
-	cm := newHashringConfigMap(opts)
-
-	var hashrings Hashrings
-	// iterate over all the input options and build the hashrings
-	for hashringName, hashringMeta := range opts.HashringSettings {
-
-		var readyEndpoints []string
-		for _, epSlice := range hashringMeta.AssociatedEndpointSlices.Items {
-			// validate ownership of the EndpointSlice
-			if !isExpectedOwner(logger, epSlice, hashringName) {
-				continue
-			}
-
-			readyEndpoints = append(readyEndpoints, extractReadyEndpoints(epSlice, hashringName)...)
-
-		}
-		// sort and deduplicate the endpoints in case there are duplicates across multiple EndpointSlices
-		slices.Sort(readyEndpoints)
-		readyEndpoints = slices.Compact(readyEndpoints)
-		// convert to local types
-		var endpoints []Endpoint
-		for _, ep := range readyEndpoints {
-			endpoints = append(endpoints, Endpoint{Address: ep})
-		}
-
-		// if this is the first time we have seen this hashring,
-		// we want to make sure it is fully ready before we add it to the list of hashrings.
-		var found bool
-		var currentHashring HashringConfig
-		for _, hr := range currentState {
-			if hr.Hashring == hashringMeta.OriginalName {
-				found = true
-				currentHashring = hr
-				break
-			}
-		}
-
-		if !found {
-			// if we have never seen this before, we want to ensure readiness, otherwise we wait
-			if len(endpoints) < int(hashringMeta.DesiredReplicasReplicas) {
-				logger.Info("hashring not ready yet, skipping for now", "hashring",
-					hashringMeta.OriginalName, "expected", hashringMeta.DesiredReplicasReplicas, "got", len(endpoints),
-				)
-				continue
-			}
-		}
-
-		if len(endpoints) < int(opts.DesiredReplicationFactor) {
-			// we have a situation here where the hashring is ready but the replication factor is not met
-			// this will cause the router to crash - see https://github.com/thanos-io/thanos/issues/7054
-			// to avoid this, we will keep the previous state of the hashring if it exists
-			if found {
-				hashrings = append(hashrings, currentHashring)
-			}
-
-		} else {
-			// we just take the pre existing ready state of the hashring i.e dynamic scaling
-			// todo - we might want to offer different scaling strategies in the future (static, dynamic, etc)
-			hashrings = append(hashrings, HashringConfig{
-				Hashring:          hashringMeta.OriginalName,
-				Tenants:           hashringMeta.Tenants,
-				TenantMatcherType: hashringMeta.TenantMatcherType,
-				Endpoints:         endpoints,
-				ExternalLabels:    nil,
-			})
-		}
-
-	}
-
-	if len(hashrings) == 0 {
-		cm.Data = map[string]string{
-			HashringConfigKey: EmptyHashringConfig,
-		}
-		return cm, ErrHashringsEmpty
-	}
-
-	// sort the hashrings by priority or name
-	sort.Slice(hashrings, func(i, j int) bool {
-		if opts.HashringSettings[hashrings[i].Hashring].Priority == opts.HashringSettings[hashrings[j].Hashring].Priority {
-			return hashrings[i].Hashring > hashrings[j].Hashring
-		}
-		return opts.HashringSettings[hashrings[i].Hashring].Priority > opts.HashringSettings[hashrings[j].Hashring].Priority
-	})
-
-	conf, err := hashrings.toJson()
-	if err != nil {
-		return nil, err
-	}
-
-	cm.Data = map[string]string{
-		HashringConfigKey: conf,
-	}
-
-	return cm, nil
-}
-
 // BuildRouter builds the Thanos Receive router components
 func BuildRouter(opts RouterOptions) []client.Object {
 	selectorLabels := GetRouterSelectorLabels(opts)
@@ -275,45 +105,9 @@ func BuildRouter(opts RouterOptions) []client.Object {
 		manifests.BuildServiceAccount(GetRouterServiceAccountName(opts), opts.Namespace, selectorLabels),
 		newRouterService(opts, selectorLabels, objectMetaLabels),
 		newRouterDeployment(opts, selectorLabels, objectMetaLabels),
+		newHashringConfigMap(GetRouterServiceName(opts), opts.Namespace, opts.HashringConfig, objectMetaLabels),
 	}
 }
-
-// UnmarshalJSON unmarshals the endpoint from JSON.
-func (e *Endpoint) UnmarshalJSON(data []byte) error {
-	// First try to unmarshal as a string.
-	err := json.Unmarshal(data, &e.Address)
-	if err == nil {
-		return nil
-	}
-
-	// If that fails, try to unmarshal as an endpoint object.
-	type endpointAlias Endpoint
-	var configEndpoint endpointAlias
-	err = json.Unmarshal(data, &configEndpoint)
-	if err == nil {
-		e.Address = configEndpoint.Address
-		e.AZ = configEndpoint.AZ
-	}
-	return err
-}
-
-// TenantMatcher represents the type of tenant matching to use.
-type TenantMatcher string
-
-const (
-	// TenantMatcherTypeExact matches tenants exactly. This is also the default one.
-	TenantMatcherTypeExact TenantMatcher = "exact"
-	// TenantMatcherGlob matches tenants using glob patterns.
-	TenantMatcherGlob TenantMatcher = "glob"
-)
-
-// HashringAlgorithm represents the hashing algorithm to use.
-type HashringAlgorithm string
-
-const (
-	// AlgorithmKetama is the ketama hashing algorithm.
-	AlgorithmKetama HashringAlgorithm = "ketama"
-)
 
 const (
 	ingestObjectStoreEnvVarName = "OBJSTORE_CONFIG"
@@ -738,7 +532,7 @@ func routerArgsFrom(opts RouterOptions) []string {
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
-		fmt.Sprintf("--receive.hashrings-algorithm=%s", AlgorithmKetama),
+		fmt.Sprintf("--receive.hashrings-algorithm=%s", opts.HashringAlgorithm),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
 	)
 	for k, v := range opts.ExternalLabels {
@@ -754,52 +548,24 @@ func routerArgsFrom(opts RouterOptions) []string {
 }
 
 // newHashringConfigMap creates a skeleton ConfigMap for the hashring configuration.
-func newHashringConfigMap(opts HashringOptions) *corev1.ConfigMap {
+func newHashringConfigMap(name, namespace, contents string, objectMetaLabels map[string]string) *corev1.ConfigMap {
+	if contents == "" {
+		contents = EmptyHashringConfig
+	}
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ConfigMap",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Labels:    opts.Labels,
-			Namespace: opts.Namespace,
+			Name:      name,
+			Labels:    objectMetaLabels,
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			HashringConfigKey: contents,
 		},
 	}
-}
-
-// isExpectedOwner checks if the endpoint slice is owned by the service and if the service is belonged to the hashring.
-func isExpectedOwner(logger logr.Logger, epSlice discoveryv1.EndpointSlice, expectedOwner string) bool {
-	if len(epSlice.GetOwnerReferences()) != 1 {
-		logger.Info("skipping endpoint slice with more than one owner",
-			"namespace", epSlice.Namespace, "name", epSlice.Name)
-		return false
-	}
-
-	owner := epSlice.GetOwnerReferences()[0]
-	if owner.Kind != "Service" || owner.Name != expectedOwner {
-		logger.Info("skipping endpoint slice where owner ref is not a service or does not match hashring name",
-			"namespace", epSlice.Namespace, "name", epSlice.Name)
-		return false
-	}
-	return true
-}
-
-func extractReadyEndpoints(epSlice discoveryv1.EndpointSlice, svcName string) []string {
-	readyEndpoints := make([]string, 0, len(epSlice.Endpoints))
-	for _, ep := range epSlice.Endpoints {
-		if ep.Hostname == nil {
-			continue
-		}
-		if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
-			continue
-		}
-		readyEndpoints = append(
-			readyEndpoints,
-			fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, epSlice.GetNamespace(), GRPCPort),
-		)
-	}
-	return readyEndpoints
 }
 
 // GetRequiredLabels returns a map of labels that can be used to look up thanos receive resources.
@@ -850,12 +616,4 @@ func GetRouterSelectorLabels(opts RouterOptions) map[string]string {
 func GetRouterLabels(opts RouterOptions) map[string]string {
 	labels := GetRouterSelectorLabels(opts)
 	return manifests.MergeLabels(opts.Labels, labels)
-}
-
-func (h Hashrings) toJson() (string, error) {
-	b, err := json.MarshalIndent(h, "", "    ")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal hashrings: %w", err)
-	}
-	return string(b), nil
 }
