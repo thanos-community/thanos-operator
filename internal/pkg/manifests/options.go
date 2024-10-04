@@ -26,15 +26,24 @@ type Options struct {
 	Additional
 	// Name is the name of the object
 	Name string
-	// Namespace is the namespace of the object
+	// Owner is the name of the owner of the object. This relates to the CustomResource or entity that created the object.
+	// This value will be used to populate the OwnerLabel after it has been run through ValidateAndSanitizeResourceName.
+	Owner string
+	// Namespace is the namespace for the object
 	Namespace string
-	// Replicas is the number of replicas for the object
+	// Replicas is the number of replicas for the object.
+	// Specific build functions may override this value.
 	Replicas int32
 	// Labels is the labels for the object
+	// Labels will be merged with the default labels for the component.
+	// The builders should ensure that the default labels are set on the object.
+	// The builders will overwrite the default labels if they are set in the Labels.
 	Labels map[string]string
 	// Image is the image to use for the component
+	// If not set, DefaultThanosImage will be used
 	Image *string
 	// Version is the version of Thanos
+	// If not set, DefaultThanosVersion will be used
 	Version *string
 	// ResourceRequirements for the component
 	ResourceRequirements *corev1.ResourceRequirements

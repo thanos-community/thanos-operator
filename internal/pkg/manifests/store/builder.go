@@ -45,8 +45,6 @@ type Options struct {
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
 	RelabelConfigs           manifests.RelabelConfigs
-	// Instance is the owner of the Store and if not set, defaults to the name of the object.
-	Instance string
 }
 
 // Build builds Thanos Store shards.
@@ -396,8 +394,8 @@ func GetRequiredLabels() map[string]string {
 // GetSelectorLabels returns a map of labels that can be used to select store resources.
 func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = opts.Instance
-	labels[ShardLabel] = opts.Name
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
 	return labels
 }
 

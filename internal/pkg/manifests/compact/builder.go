@@ -295,8 +295,8 @@ func GetRequiredLabels() map[string]string {
 // GetSelectorLabels returns a map of labels that can be used to look up ThanosCompact resources.
 func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = opts.InstanceName
-	labels[ShardLabel] = opts.Name
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetName())
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
 	return labels
 }
 
