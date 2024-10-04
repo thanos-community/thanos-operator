@@ -1,10 +1,13 @@
 package manifests
 
 import (
+	"crypto/md5"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +44,46 @@ type Options struct {
 	LogFormat *string
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
 	ServiceMonitorConfig
+}
+
+// ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.
+func ValidateAndSanitizeResourceName(name string) string {
+	if n := validation.IsDNS1123Subdomain(name); len(n) == 0 {
+		return name
+	}
+	// we can create a longer name here if we wish, it will be obfuscated at this point regardless
+	return sanitizeToLength(name, 63)
+}
+
+// ValidateAndSanitizeNameToValidLabelValue sanitizes the provided name to a valid label value.
+// The core of this function was copied from https://github.com/solo-io/k8s-utils
+func ValidateAndSanitizeNameToValidLabelValue(value string) string {
+	if l := validation.IsValidLabelValue(value); len(l) == 0 {
+		return value
+	}
+	return sanitizeToLength(value, 63)
+}
+
+func sanitizeToLength(value string, length int) string {
+	value = strings.Replace(value, "*", "-", -1)
+	value = strings.Replace(value, "/", "-", -1)
+	value = strings.Replace(value, ".", "-", -1)
+	value = strings.Replace(value, "[", "", -1)
+	value = strings.Replace(value, "]", "", -1)
+	value = strings.Replace(value, ":", "-", -1)
+	value = strings.Replace(value, "_", "-", -1)
+	value = strings.Replace(value, " ", "-", -1)
+	value = strings.Replace(value, "\n", "", -1)
+	value = strings.Replace(value, "\"", "", -1)
+	value = strings.Replace(value, "'", "", -1)
+	if len(value) > length {
+		hash := md5.Sum([]byte(value))
+		value = fmt.Sprintf("%s-%x", value[:31], hash)
+		value = value[:length]
+	}
+	value = strings.Replace(value, ".", "-", -1)
+	value = strings.ToLower(value)
+	return value
 }
 
 // ToFlags returns the flags for the Options
