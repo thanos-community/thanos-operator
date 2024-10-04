@@ -21,6 +21,19 @@ const (
 	defaultLogFormat = "logfmt"
 )
 
+type Buildable interface {
+	Build() []client.Object
+	// GetName is the name of the object and this will be used to generate the name of the resource(s) it creates
+	// This value should be used to populate the InstanceLabel after it has been
+	// run through ValidateAndSanitizeNameToValidLabelValue for resources that are Selectable
+	GetName() string
+}
+
+type Selectable interface {
+	// GetSelectorLabels returns the labels that should be used to select the object
+	GetSelectorLabels() map[string]string
+}
+
 // Options is a struct that holds the options for the common manifests
 type Options struct {
 	Additional
