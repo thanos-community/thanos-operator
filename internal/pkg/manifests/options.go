@@ -1,10 +1,13 @@
 package manifests
 
 import (
+	"crypto/md5"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,20 +21,60 @@ const (
 	defaultLogFormat = "logfmt"
 )
 
+type Buildable interface {
+	Build() []client.Object
+	// GetName is the name of the object and this will be used to generate the name of the resource(s) it creates
+	// This value should be used to populate the InstanceLabel after it has been
+	// run through ValidateAndSanitizeNameToValidLabelValue for resources that are Selectable
+	GetName() string
+	// GetOwner returns the name of the owner of the object.
+	// This relates to the CustomResource or entity that created the object.
+	GetOwner() string
+	// GetSelectorLabels returns the labels that should be used to select the object
+	GetSelectorLabels() map[string]string
+}
+
+type Selectable interface {
+}
+
+// GetLabelSelectorForOwner is a convenience function to enable building a ListOption for the Owner label.
+// This will return all resources that were built by Buildable and owned by a given object.
+func GetLabelSelectorForOwner(opts Buildable, requiredLabels map[string]string) client.ListOption {
+	if opts == nil {
+		return nil
+	}
+
+	listOption := make(client.MatchingLabels, len(requiredLabels)+1)
+	for k, v := range requiredLabels {
+		listOption[k] = v
+	}
+	listOption[OwnerLabel] = opts.GetOwner()
+	return listOption
+}
+
 // Options is a struct that holds the options for the common manifests
 type Options struct {
 	Additional
 	// Name is the name of the object
 	Name string
-	// Namespace is the namespace of the object
+	// Owner is the name of the owner of the object. This relates to the CustomResource or entity that created the object.
+	// This value will be used to populate the OwnerLabel after it has been run through ValidateAndSanitizeResourceName.
+	Owner string
+	// Namespace is the namespace for the object
 	Namespace string
-	// Replicas is the number of replicas for the object
+	// Replicas is the number of replicas for the object.
+	// Specific build functions may override this value.
 	Replicas int32
 	// Labels is the labels for the object
+	// Labels will be merged with the default labels for the component.
+	// The builders should ensure that the default labels are set on the object.
+	// The builders will overwrite the default labels if they are set in the Labels.
 	Labels map[string]string
 	// Image is the image to use for the component
+	// If not set, DefaultThanosImage will be used
 	Image *string
 	// Version is the version of Thanos
+	// If not set, DefaultThanosVersion will be used
 	Version *string
 	// ResourceRequirements for the component
 	ResourceRequirements *corev1.ResourceRequirements
@@ -41,6 +84,46 @@ type Options struct {
 	LogFormat *string
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
 	ServiceMonitorConfig
+}
+
+// ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.
+func ValidateAndSanitizeResourceName(name string) string {
+	if n := validation.IsDNS1123Subdomain(name); len(n) == 0 {
+		return name
+	}
+	// we can create a longer name here if we wish, it will be obfuscated at this point regardless
+	return sanitizeToLength(name, 63)
+}
+
+// ValidateAndSanitizeNameToValidLabelValue sanitizes the provided name to a valid label value.
+// The core of this function was copied from https://github.com/solo-io/k8s-utils
+func ValidateAndSanitizeNameToValidLabelValue(value string) string {
+	if l := validation.IsValidLabelValue(value); len(l) == 0 {
+		return value
+	}
+	return sanitizeToLength(value, 63)
+}
+
+func sanitizeToLength(value string, length int) string {
+	value = strings.Replace(value, "*", "-", -1)
+	value = strings.Replace(value, "/", "-", -1)
+	value = strings.Replace(value, ".", "-", -1)
+	value = strings.Replace(value, "[", "", -1)
+	value = strings.Replace(value, "]", "", -1)
+	value = strings.Replace(value, ":", "-", -1)
+	value = strings.Replace(value, "_", "-", -1)
+	value = strings.Replace(value, " ", "-", -1)
+	value = strings.Replace(value, "\n", "", -1)
+	value = strings.Replace(value, "\"", "", -1)
+	value = strings.Replace(value, "'", "", -1)
+	if len(value) > length {
+		hash := md5.Sum([]byte(value))
+		value = fmt.Sprintf("%s-%x", value[:31], hash)
+		value = value[:length]
+	}
+	value = strings.Replace(value, ".", "-", -1)
+	value = strings.ToLower(value)
+	return value
 }
 
 // ToFlags returns the flags for the Options

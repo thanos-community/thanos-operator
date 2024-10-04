@@ -21,13 +21,13 @@ func TestNewService(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
 			Namespace: "any",
-			Name:      "standalone",
+			Owner:     "standalone",
 		},
 	}
 	obj := NewService(opts)
 	objectMetaLabels := GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, GetServiceName(opts), opts.Namespace, objectMetaLabels)
-	utils.ValidateHasLabels(t, obj, GetSelectorLabels(opts))
+	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetName(), opts.Namespace, objectMetaLabels)
+	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
 
 	if obj.Spec.Ports[0].Name != HTTPPortName {
 		t.Errorf("expected service port name to be 'http', got %s", obj.Spec.Ports[0].Name)
@@ -39,14 +39,13 @@ func TestNewService(t *testing.T) {
 	opts = Options{
 		Options: manifests.Options{
 			Namespace: "any",
-			Name:      "shard",
+			Owner:     "shard",
 		},
-		InstanceName: "test",
 	}
 	obj = NewService(opts)
 	objectMetaLabels = GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, GetServiceName(opts), opts.Namespace, objectMetaLabels)
-	utils.ValidateHasLabels(t, obj, GetSelectorLabels(opts))
+	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetName(), opts.Namespace, objectMetaLabels)
+	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
 }
 
 func TestNewStatefulSet(t *testing.T) {
@@ -56,16 +55,14 @@ func TestNewStatefulSet(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name       string
-		opts       Options
-		expectName string
+		name string
+		opts Options
 	}{
 		{
-			name:       "test compact sts correctness with no shard name",
-			expectName: "test",
+			name: "test compact sts correctness with no shard name",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
+					Owner:     "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -77,11 +74,10 @@ func TestNewStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name:       "test compact sts correctness with no shard name",
-			expectName: "some-shard",
+			name: "test compact sts correctness with no shard name",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "some-shard",
+					Owner:     "some-shard",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -90,24 +86,23 @@ func TestNewStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 				},
-				InstanceName: "test",
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			compact := NewStatefulSet(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-
-			utils.ValidateNameNamespaceAndLabels(t, compact, tc.expectName, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, compact, GetSelectorLabels(tc.opts))
+			name := tc.opts.GetName()
+			utils.ValidateNameNamespaceAndLabels(t, compact, name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, compact, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, compact, extraLabels)
 
-			if compact.Spec.ServiceName != GetServiceName(tc.opts) {
-				t.Errorf("expected compact statefulset to have serviceName %s, got %s", GetServiceName(tc.opts), compact.Spec.ServiceName)
+			if compact.Spec.ServiceName != name {
+				t.Errorf("expected compact statefulset to have serviceName %s, got %s", name, compact.Spec.ServiceName)
 			}
 
-			if compact.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
-				t.Errorf("expected compact statefulset to have service account name %s, got %s", GetServiceAccountName(tc.opts), compact.Spec.Template.Spec.ServiceAccountName)
+			if compact.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected compact statefulset to have service account name %s, got %s", name, compact.Spec.Template.Spec.ServiceAccountName)
 			}
 
 			if *compact.Spec.Replicas != *ptr.To(int32(1)) {
@@ -153,7 +148,7 @@ func TestNewStatefulSet(t *testing.T) {
 func TestBuild(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
+			Owner:     "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -164,7 +159,7 @@ func TestBuild(t *testing.T) {
 		},
 	}
 
-	objs := Build(opts)
+	objs := opts.Build()
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
@@ -173,7 +168,7 @@ func TestBuild(t *testing.T) {
 	utils.ValidateObjectsEqual(t, objs[1], NewStatefulSet(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewService(opts))
 
-	wantLabels := GetSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
@@ -185,5 +180,43 @@ func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) 
 		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
 	}
 
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts))
+	utils.ValidateNameNamespaceAndLabels(t, expectSA, opts.GetName(), opts.Namespace, opts.GetSelectorLabels())
+}
+
+func TestOptions_GetName(t *testing.T) {
+	tests := []struct {
+		name     string
+		opts     Options
+		expected string
+	}{
+		{
+			name: "Test not sharded",
+			opts: Options{
+				Options: manifests.Options{
+					Owner: "valid-owner",
+				},
+			},
+			expected: "thanos-compact-valid-owner",
+		},
+		{
+			name: "Test sharded",
+			opts: Options{
+				Options: manifests.Options{
+					Owner: "valid-owner",
+				},
+				ShardName:  ptr.To("shard"),
+				ShardIndex: ptr.To(1),
+			},
+			expected: "thanos-compact-valid-owner-shard-1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.opts.GetName()
+			if result != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, result)
+			}
+		})
+	}
 }

@@ -33,9 +33,9 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	"k8s.io/utils/strings/slices"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -138,12 +138,11 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	return nil
 }
 
-func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, instanceLabel string, expectShards []string) error {
-	ls := &metav1.LabelSelector{MatchLabels: map[string]string{manifests.InstanceLabel: instanceLabel}}
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ls, manifestcompact.GetRequiredLabels())
-	if err != nil {
-		return err
-	}
+func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) error {
+	listOpt := manifests.GetLabelSelectorForOwner(
+		manifestcompact.Options{Options: manifests.Options{Owner: owner}},
+		manifestcompact.GetRequiredLabels(),
+	)
 
 	deleteOrphanedShardResources := func(obj client.Object) error {
 		if !slices.Contains(expectShards, obj.GetName()) {
@@ -156,7 +155,7 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 	}
 
 	compactSTS := &v1.StatefulSetList{}
-	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: labelSelector}, client.InNamespace(ns)}
+	opts := []client.ListOption{listOpt, client.InNamespace(ns)}
 	if err := r.List(ctx, compactSTS, opts...); err != nil {
 		return err
 	}
@@ -188,7 +187,7 @@ func (r *ThanosCompactReconciler) buildCompact(compact monitoringthanosiov1alpha
 	shardedObjects := make(map[string][]client.Object, len(opts))
 
 	for i, opt := range opts {
-		compactorObjs := manifestcompact.Build(opt)
+		compactorObjs := opt.Build()
 		shardedObjects[i] = append(shardedObjects[i], compactorObjs...)
 	}
 	return shardedObjects
@@ -196,15 +195,16 @@ func (r *ThanosCompactReconciler) buildCompact(compact monitoringthanosiov1alpha
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) map[string]manifestcompact.Options {
 	if compact.Spec.ShardingConfig == nil || compact.Spec.ShardingConfig.ExternalLabelSharding == nil {
-		return map[string]manifestcompact.Options{compact.GetName(): compactV1Alpha1ToOptions(compact)}
+		opts := compactV1Alpha1ToOptions(compact)
+		return map[string]manifestcompact.Options{opts.GetName(): opts}
 	}
 
 	shardedOptions := make(map[string]manifestcompact.Options)
 	for _, shard := range compact.Spec.ShardingConfig.ExternalLabelSharding {
 		for i, v := range shard.Values {
-			shardName := CompactShardName(compact.GetName(), shard.ShardName, i)
 			opts := compactV1Alpha1ToOptions(compact)
-			opts.Name = shardName
+			opts.ShardName = ptr.To(shard.ShardName)
+			opts.ShardIndex = ptr.To(i)
 			opts.RelabelConfigs = manifests.RelabelConfigs{
 				{
 					Action:      "keep",
@@ -212,7 +212,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 					Regex:       v,
 				},
 			}
-			shardedOptions[shardName] = opts
+			shardedOptions[opts.GetName()] = opts
 		}
 	}
 	return shardedOptions

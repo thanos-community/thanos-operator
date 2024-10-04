@@ -3,8 +3,6 @@ package controller
 import (
 	"fmt"
 
-	"k8s.io/utils/ptr"
-
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
@@ -15,12 +13,15 @@ import (
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	name := QueryNameFromParent(in.GetName())
-	opts := commonToOpts(name, in.GetNamespace(), in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(name, &in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
 		ReplicaLabels: in.Spec.QuerierReplicaLabels,
@@ -40,7 +41,7 @@ func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryf
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	name := QueryFrontendNameFromParent(in.GetName())
 	frontend := in.Spec.QueryFrontend
-	opts := commonToOpts(name, in.GetNamespace(), frontend.Replicas, labels, frontend.CommonThanosFields, frontend.Additional)
+	opts := commonToOpts(name, &in, frontend.Replicas, labels, frontend.CommonThanosFields, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -65,7 +66,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), nil)
 	name := RulerNameFromParent(in.GetName())
-	opts := commonToOpts(name, in.GetNamespace(), in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(name, &in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestruler.Options{
 		Options:            opts,
 		ObjStoreSecret:     in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -93,7 +94,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(name, in.GetNamespace(), spec.Replicas, labels, common, additional)
+	opts := commonToOpts(name, &in, spec.Replicas, labels, common, additional)
 	return manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -101,7 +102,6 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 			Retention: string(spec.TSDBConfig.Retention),
 		},
 		StorageSize:    resource.MustParse(string(spec.StorageSize)),
-		Instance:       in.GetName(),
 		ExternalLabels: spec.ExternalLabels,
 	}
 }
@@ -111,7 +111,7 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.
 	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
 	name := ReceiveRouterNameFromParent(in.GetName())
 
-	opts := commonToOpts(name, in.GetNamespace(), router.Replicas, labels, router.CommonThanosFields, router.Additional)
+	opts := commonToOpts(name, &in, router.Replicas, labels, router.CommonThanosFields, router.Additional)
 
 	return manifestreceive.RouterOptions{
 		Options:           opts,
@@ -133,7 +133,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	name := StoreNameFromParent(in.GetName())
-	opts := commonToOpts(name, in.GetNamespace(), in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(name, &in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         in.Spec.IndexCacheConfig,
@@ -143,14 +143,12 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
 		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
 		Options:                  opts,
-		Instance:                 in.GetName(),
 	}
 }
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	name := CompactNameFromParent(in.GetName())
-	opts := commonToOpts(name, in.GetNamespace(), 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts("", &in, 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.Spec.DownsamplingConfig == nil {
@@ -200,18 +198,7 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		Downsampling:   downsamplingConfig(),
 		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
 		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		InstanceName:   in.GetName(),
 	}
-}
-
-// CompactNameFromParent returns the name of the Thanos Compact component.
-func CompactNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-compact-%s", resourceName)
-}
-
-// CompactShardName returns the name of the Thanos Compact shard.
-func CompactShardName(resourceName, shardName string, shardIndex int) string {
-	return fmt.Sprintf("%s-%s-%d", CompactNameFromParent(resourceName), shardName, shardIndex)
 }
 
 // StoreNameFromParent returns the name of the Thanos Store component.
@@ -225,15 +212,16 @@ func StoreShardName(resourceName string, shard int32) string {
 }
 
 func commonToOpts(
-	name,
-	namespace string,
+	name string,
+	owner client.Object,
 	replicas int32,
 	labels map[string]string,
 	common v1alpha1.CommonThanosFields,
 	additional v1alpha1.Additional) manifests.Options {
 	return manifests.Options{
 		Name:                 name,
-		Namespace:            namespace,
+		Owner:                owner.GetName(),
+		Namespace:            owner.GetNamespace(),
 		Replicas:             replicas,
 		Labels:               labels,
 		Image:                common.Image,
@@ -241,7 +229,7 @@ func commonToOpts(
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
-		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, namespace, labels),
+		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, owner.GetNamespace(), labels),
 	}
 }
 

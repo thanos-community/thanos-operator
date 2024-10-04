@@ -257,7 +257,8 @@ func GetRequiredLabels() map[string]string {
 // GetSelectorLabels returns a map of labels that can be used to look up qfe resources.
 func GetSelectorLabels(opts Options) map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = opts.Name
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
 	return labels
 }
 

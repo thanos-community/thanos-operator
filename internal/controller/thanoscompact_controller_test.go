@@ -24,12 +24,15 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosCompact Controller", Ordered, func() {
@@ -47,8 +50,12 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 			Namespace: ns,
 		}
 
-		shardOne := CompactShardName(resourceName, shardName, 0)
-		shardTwo := CompactShardName(resourceName, shardName, 1)
+		shardOne := compact.Options{
+			Options:   manifests.Options{Owner: resourceName},
+			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetName()
+		shardTwo := compact.Options{
+			Options:   manifests.Options{Owner: resourceName},
+			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetName()
 
 		BeforeAll(func() {
 			By("creating the namespace and objstore secret")
@@ -193,12 +200,13 @@ config:
 						}
 					}
 					return true
-				}, time.Second*100, time.Second*2).Should(BeTrue())
+				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
+					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetName()
 					return utils.VerifyNamedServiceAndWorkloadExists(
-						k8sClient, &appsv1.StatefulSet{}, CompactNameFromParent(resourceName), ns)
-				}, time.Second*100, time.Second*2).Should(BeTrue())
+						k8sClient, &appsv1.StatefulSet{}, name, ns)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
 			})
 		})
 	})

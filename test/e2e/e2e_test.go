@@ -23,27 +23,25 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
-
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -567,7 +565,7 @@ var _ = Describe("controller", Ordered, func() {
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
-				stsName := controller.CompactNameFromParent(compactName)
+				stsName := compact.Options{Options: manifests.Options{Owner: compactName}}.GetName()
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())

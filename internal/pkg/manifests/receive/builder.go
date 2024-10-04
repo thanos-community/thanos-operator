@@ -41,8 +41,6 @@ const (
 	HashringConfigKey = "hashrings.json"
 	// EmptyHashringConfig is the empty hashring configuration.
 	EmptyHashringConfig = "[{}]"
-
-	ShardLabel = "operator.thanos.io/receive-ingester"
 )
 
 // IngesterOptions for Thanos Receive components
@@ -52,8 +50,6 @@ type IngesterOptions struct {
 	StorageSize    resource.Quantity
 	ObjStoreSecret corev1.SecretKeySelector
 	ExternalLabels map[string]string
-	// Instance is the owner of the ingester and if not set, defaults to the name of the object.
-	Instance string
 }
 
 func GetIngesterServiceName(opts IngesterOptions) string {
@@ -581,39 +577,40 @@ func GetRequiredLabels() map[string]string {
 // GetRequiredIngesterLabels returns a map of labels that can be used to look up thanos receive ingest resources.
 // These labels are guaranteed to be present on all resources created by this package.
 func GetRequiredIngesterLabels() map[string]string {
-	labels := GetRequiredLabels()
-	labels[manifests.ComponentLabel] = IngestComponentName
-	labels[manifests.DefaultStoreAPILabel] = manifests.DefaultStoreAPIValue
-	return labels
+	l := GetRequiredLabels()
+	l[manifests.ComponentLabel] = IngestComponentName
+	l[manifests.DefaultStoreAPILabel] = manifests.DefaultStoreAPIValue
+	return l
 }
 
 func GetIngesterSelectorLabels(opts IngesterOptions) map[string]string {
-	labels := GetRequiredIngesterLabels()
-	labels[manifests.InstanceLabel] = opts.Instance
-	labels[ShardLabel] = opts.Name
-	return labels
+	l := GetRequiredIngesterLabels()
+	l[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	l[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	return l
 }
 
 func GetIngesterLabels(opts IngesterOptions) map[string]string {
-	labels := GetIngesterSelectorLabels(opts)
-	return manifests.MergeLabels(opts.Labels, labels)
+	l := GetIngesterSelectorLabels(opts)
+	return manifests.MergeLabels(opts.Labels, l)
 }
 
 // GetRequiredRouterLabels returns a map of labels that can be used to look up thanos receive router resources.
 // These labels are guaranteed to be present on all resources created by this package.
 func GetRequiredRouterLabels() map[string]string {
-	labels := GetRequiredLabels()
-	labels[manifests.ComponentLabel] = RouterComponentName
-	return labels
+	l := GetRequiredLabels()
+	l[manifests.ComponentLabel] = RouterComponentName
+	return l
 }
 
 func GetRouterSelectorLabels(opts RouterOptions) map[string]string {
-	labels := GetRequiredRouterLabels()
-	labels[manifests.InstanceLabel] = opts.Name
-	return labels
+	l := GetRequiredRouterLabels()
+	l[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	l[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	return l
 }
 
 func GetRouterLabels(opts RouterOptions) map[string]string {
-	labels := GetRouterSelectorLabels(opts)
-	return manifests.MergeLabels(opts.Labels, labels)
+	l := GetRouterSelectorLabels(opts)
+	return manifests.MergeLabels(opts.Labels, l)
 }
