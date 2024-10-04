@@ -27,11 +27,29 @@ type Buildable interface {
 	// This value should be used to populate the InstanceLabel after it has been
 	// run through ValidateAndSanitizeNameToValidLabelValue for resources that are Selectable
 	GetName() string
+	// GetOwner returns the name of the owner of the object.
+	// This relates to the CustomResource or entity that created the object.
+	GetOwner() string
+	// GetSelectorLabels returns the labels that should be used to select the object
+	GetSelectorLabels() map[string]string
 }
 
 type Selectable interface {
-	// GetSelectorLabels returns the labels that should be used to select the object
-	GetSelectorLabels() map[string]string
+}
+
+// GetLabelSelectorForOwner is a convenience function to enable building a ListOption for the Owner label.
+// This will return all resources that were built by Buildable and owned by a given object.
+func GetLabelSelectorForOwner(opts Buildable, requiredLabels map[string]string) client.ListOption {
+	if opts == nil {
+		return nil
+	}
+
+	listOption := make(client.MatchingLabels, len(requiredLabels)+1)
+	for k, v := range requiredLabels {
+		listOption[k] = v
+	}
+	listOption[OwnerLabel] = opts.GetOwner()
+	return listOption
 }
 
 // Options is a struct that holds the options for the common manifests

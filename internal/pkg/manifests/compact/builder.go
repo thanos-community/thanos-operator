@@ -25,8 +25,6 @@ const (
 	// HTTPPort is the port used by the HTTP server.
 	HTTPPort     = 10902
 	HTTPPortName = "http"
-
-	ShardLabel = "operator.thanos.io/compact-shard"
 )
 
 const (
@@ -49,38 +47,42 @@ type Options struct {
 	// ObjStoreSecret is the secret key selector for the object store configuration.
 	ObjStoreSecret corev1.SecretKeySelector
 	// Min and Max time for the compactor
-	Min, Max *manifests.Duration
-	// InstanceName is the name of the Thanos Compact instance.
-	InstanceName string
+	Min, Max   *manifests.Duration
+	ShardName  *string
+	ShardIndex *int
 }
 
-// Build returns a list of Kubernetes objects for the Thanos Compact component from the given Options.
-func Build(opts Options) []client.Object {
+func (opts Options) Build() []client.Object {
 	var objs []client.Object
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
 	return objs
 }
 
-func GetServiceAccountName(opts Options) string {
-	return opts.Name
+func (opts Options) GetName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.Owner)
+	if opts.ShardName != nil && opts.ShardIndex != nil {
+		name = fmt.Sprintf("%s-%s-%d", name, *opts.ShardName, *opts.ShardIndex)
+	}
+	return manifests.ValidateAndSanitizeResourceName(name)
 }
 
-func GetServiceName(opts Options) string {
-	return opts.Name
+func (opts Options) GetOwner() string {
+	return opts.Owner
 }
 
 // NewStatefulSet creates a new StatefulSet for the Thanos Compact shard.
 func NewStatefulSet(opts Options) *appsv1.StatefulSet {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	return newShardStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
 func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLabels map[string]string) *appsv1.StatefulSet {
+	name := opts.GetName()
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -122,7 +124,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    metaLabels,
 		},
@@ -131,7 +133,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 				WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
 				WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
 			},
-			ServiceName: GetServiceName(opts),
+			ServiceName: name,
 			Replicas:    ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
@@ -143,7 +145,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
-					ServiceAccountName: GetServiceAccountName(opts),
+					ServiceAccountName: name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -216,7 +218,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 // The Service name will be the same as the Shard name if provided.
 // The Service name will be the same as the Options.Name if Shard name is not provided.
 func NewService(opts Options) *corev1.Service {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	svc := newService(opts, selectorLabels, objectMetaLabels)
 	if opts.Additional.ServicePorts != nil {
@@ -237,7 +239,7 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceName(opts),
+			Name:      opts.GetName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -293,16 +295,16 @@ func GetRequiredLabels() map[string]string {
 }
 
 // GetSelectorLabels returns a map of labels that can be used to look up ThanosCompact resources.
-func GetSelectorLabels(opts Options) map[string]string {
+func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetName())
-	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetOwner())
 	return labels
 }
 
 // GetLabels returns the ObjectMeta labels for Thanos Compact.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
 }
 
 // RetentionOptions for Thanos Compact
