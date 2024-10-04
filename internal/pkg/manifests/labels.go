@@ -33,6 +33,10 @@ const (
 	// The following label is used to identify Rule Configs and will be set on the resources created by the operator.
 	DefaultRuleConfigLabel = "operator.thanos.io/rule-file"
 	DefaultRuleConfigValue = "true"
+
+	// OwnerLabel is the label used to identify the owner of the object.
+	// This relates to the CustomResource or entity that created the object.
+	OwnerLabel = "operator.thanos.io/owner"
 )
 
 // MergeLabels merges the provided labels with the default labels for a component.
