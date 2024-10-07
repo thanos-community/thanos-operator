@@ -45,15 +45,17 @@ type Options struct {
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
 	RelabelConfigs           manifests.RelabelConfigs
+	ShardIndex               *int32
 }
 
 // Build builds Thanos Store shards.
-func Build(opts Options) []client.Object {
+func (opts Options) Build() []client.Object {
 	var objs []client.Object
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
+	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts)))
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels))
 	objs = append(objs, newStoreService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 
@@ -61,19 +63,19 @@ func Build(opts Options) []client.Object {
 		objs = append(objs, newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
 	}
 	if opts.ServiceMonitorConfig.Enabled {
-		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
 }
 
-// GetServiceAccountName returns the name of the ServiceAccount for the Thanos Store component.
-func GetServiceAccountName(opts Options) string {
-	return opts.Name
-}
-
-// GetServiceName returns the name of the Service for the Thanos Store component.
-func GetServiceName(opts Options) string {
-	return opts.Name
+// GetGeneratedResourceName returns the name of the Thanos Store component.
+// If a shard index is provided, the name will be suffixed with the shard index.
+func (opts Options) GetGeneratedResourceName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.Owner)
+	if opts.ShardIndex == nil {
+		return manifests.ValidateAndSanitizeResourceName(name)
+	}
+	return manifests.ValidateAndSanitizeResourceName(fmt.Sprintf("%s-shard-%d", name, *opts.ShardIndex))
 }
 
 func newStoreInMemoryConfigMap(opts Options, labels map[string]string) client.Object {
@@ -111,12 +113,13 @@ config:
 
 // NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
 func NewStoreStatefulSet(opts Options) *appsv1.StatefulSet {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	return newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
 func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
+	name := opts.GetGeneratedResourceName()
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -213,12 +216,12 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: GetServiceName(opts),
+			ServiceName: name,
 			Replicas:    ptr.To(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
@@ -230,7 +233,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:    &corev1.PodSecurityContext{},
-					ServiceAccountName: GetServiceAccountName(opts),
+					ServiceAccountName: name,
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -305,8 +308,8 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 
 // NewStoreService creates a new Service for Thanos Store shard.
 func NewStoreService(opts Options) *corev1.Service {
-	selectorLabels := GetSelectorLabels(opts)
-	return newStoreService(opts, GetSelectorLabels(opts), manifests.MergeLabels(opts.Labels, selectorLabels))
+	selectorLabels := opts.GetSelectorLabels()
+	return newStoreService(opts, selectorLabels, GetLabels(opts))
 }
 
 func newStoreService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
@@ -334,13 +337,9 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 		},
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
-		objectMetaLabels["thanos-self-monitoring"] = opts.Name
-	}
-
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceName(opts),
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -392,14 +391,21 @@ func GetRequiredLabels() map[string]string {
 }
 
 // GetSelectorLabels returns a map of labels that can be used to select store resources.
-func GetSelectorLabels(opts Options) map[string]string {
+func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
 	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
 	return labels
 }
 
 // GetLabels returns the labels that will be set as ObjectMeta labels for store resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+}
+
+func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+	return manifests.ServiceMonitorOptions{
+		Port:     ptr.To(HTTPPortName),
+		Interval: from.Interval,
+	}
 }
