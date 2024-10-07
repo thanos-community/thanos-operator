@@ -52,10 +52,10 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 
 		shardOne := compact.Options{
 			Options:   manifests.Options{Owner: resourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetName()
+			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetGeneratedResourceName()
 		shardTwo := compact.Options{
 			Options:   manifests.Options{Owner: resourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetName()
+			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetGeneratedResourceName()
 
 		BeforeAll(func() {
 			By("creating the namespace and objstore secret")
@@ -203,7 +203,7 @@ config:
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetName()
+					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 					return utils.VerifyNamedServiceAndWorkloadExists(
 						k8sClient, &appsv1.StatefulSet{}, name, ns)
 				}, time.Second*30, time.Second*2).Should(BeTrue())
