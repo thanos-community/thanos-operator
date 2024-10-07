@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/prometheus/prometheus/util/fmtutil"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -758,4 +759,13 @@ func QueryPrometheus(query string) (*PrometheusResponse, error) {
 		return nil, err
 	}
 	return &promResp, nil
+}
+
+func ValidateIsNamedServiceAccount(t *testing.T, obj client.Object, b manifests.Buildable, namespace string) {
+	t.Helper()
+	if obj.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
+		t.Errorf("expected object to be a service account, got %v", obj.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	ValidateNameNamespaceAndLabels(t, obj, b.GetGeneratedResourceName(), namespace, b.GetSelectorLabels())
 }
