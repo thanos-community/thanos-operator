@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -116,9 +115,9 @@ config:
 
 			By("setting up the thanos ruler resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-
+				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, RulerNameFromParent(resourceName), ns)
+					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
@@ -190,7 +189,7 @@ config:
 			})
 
 			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitor(k8sClient, RulerNameFromParent(resourceName), ns)).To(BeTrue())
+				Expect(utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)).To(BeTrue())
 
 				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
@@ -203,8 +202,8 @@ config:
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
 
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(k8sClient, RulerNameFromParent(resourceName), ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)
+				}, time.Minute*1, time.Second*10).Should(BeFalse())
 			})
 		})
 	})

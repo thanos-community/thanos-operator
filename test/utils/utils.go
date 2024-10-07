@@ -206,13 +206,82 @@ func CreateMinioObjectStorageSecret() error {
 	return err
 }
 
+type Verifier struct {
+	cm, secret, svc, sa, sts, dep, svcMon bool
+}
+
+func (v Verifier) WithConfigMap() Verifier {
+	v.cm = true
+	return v
+}
+
+func (v Verifier) WithSecret() Verifier {
+	v.secret = true
+	return v
+}
+
+func (v Verifier) WithService() Verifier {
+	v.svc = true
+	return v
+}
+
+func (v Verifier) WithStatefulSet() Verifier {
+	v.svc = true
+	return v
+}
+
+func (v Verifier) WithDeployment() Verifier {
+	v.dep = true
+	return v
+}
+
+func (v Verifier) WithServiceMonitor() Verifier {
+	v.svcMon = true
+	return v
+}
+
+func (v Verifier) WithServiceAccount() Verifier {
+	v.sa = true
+	return v
+}
+
+func (v Verifier) Verify(c client.Client, name, ns string) bool {
+	if v.cm && !VerifyConfigMapExists(c, name, ns) {
+		return false
+	}
+	if v.secret && !VerifySecretExists(c, name, ns) {
+		return false
+	}
+	if v.svc && !VerifyServiceExists(c, name, ns) {
+		return false
+	}
+	if v.sts && !VerifyStatefulSetExists(c, name, ns) {
+		return false
+	}
+	if v.dep && !VerifyDeploymentExists(c, name, ns) {
+		return false
+	}
+	if v.svcMon && !VerifyServiceMonitorExists(c, name, ns) {
+		return false
+	}
+	return true
+}
+
+func VerifyConfigMapExists(c client.Client, name, namespace string) bool {
+	cm := &corev1.ConfigMap{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, cm)
+	return err == nil
+}
+
 func VerifyServiceExists(c client.Client, name string, namespace string) bool {
 	svc := &corev1.Service{}
 	err := c.Get(context.Background(), client.ObjectKey{
 		Name:      name,
 		Namespace: namespace,
 	}, svc)
-
 	return err == nil
 }
 
@@ -222,7 +291,33 @@ func VerifyServiceAccountExists(c client.Client, name string, namespace string) 
 		Name:      name,
 		Namespace: namespace,
 	}, sa)
+	return err == nil
+}
 
+func VerifyDeploymentExists(c client.Client, name string, namespace string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+	return err == nil
+}
+
+func VerifySecretExists(c client.Client, name string, namespace string) bool {
+	secret := &corev1.Secret{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, secret)
+	return err == nil
+}
+
+func VerifyServiceMonitorExists(c client.Client, name, ns string) bool {
+	sm := &monitoringv1.ServiceMonitor{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: ns,
+	}, sm)
 	return err == nil
 }
 
@@ -257,16 +352,6 @@ func VerifyStatefulSetReplicas(c client.Client, expect int, name string, namespa
 		return false
 	}
 	return true
-}
-
-func VerifyDeploymentExists(c client.Client, name string, namespace string) bool {
-	deployment := &appsv1.Deployment{}
-	err := c.Get(context.Background(), client.ObjectKey{
-		Name:      name,
-		Namespace: namespace,
-	}, deployment)
-
-	return err == nil
 }
 
 func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, namespace string) bool {
@@ -477,21 +562,6 @@ func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		req.Header.Set(key, value)
 	}
 	return s.RoundTripper.RoundTrip(req)
-}
-
-// VerifyNamedServiceAndWorkloadExists checks if the named Service and StatefulSet/Deployment exist in the cluster.
-func VerifyNamedServiceAndWorkloadExists(c client.Client, obj client.Object, name, ns string) bool {
-	switch obj.(type) {
-	case *appsv1.Deployment:
-		if !VerifyDeploymentExists(c, name, ns) {
-			return false
-		}
-	case *appsv1.StatefulSet:
-		if !VerifyStatefulSetExists(c, name, ns) {
-			return false
-		}
-	}
-	return VerifyServiceExists(c, name, ns)
 }
 
 func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
@@ -727,24 +797,6 @@ func CreateClusterRoleBinding(c client.Client) error {
 		return err
 	}
 	return nil
-}
-
-func VerifyServiceMonitor(c client.Client, name, ns string) bool {
-	sm := &monitoringv1.ServiceMonitor{}
-	err := c.Get(context.Background(), client.ObjectKey{
-		Name:      name,
-		Namespace: ns,
-	}, sm)
-	return err == nil
-}
-
-func VerifyServiceMonitorDeleted(c client.Client, name, ns string) bool {
-	sm := &monitoringv1.ServiceMonitor{}
-	err := c.Get(context.Background(), client.ObjectKey{
-		Name:      name,
-		Namespace: ns,
-	}, sm)
-	return errors.IsNotFound(err)
 }
 
 func QueryPrometheus(query string) (*PrometheusResponse, error) {

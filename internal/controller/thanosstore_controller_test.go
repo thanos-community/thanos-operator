@@ -122,10 +122,11 @@ config:
 
 			By("setting up the thanos store resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithService().WithServiceAccount().WithStatefulSet()
 				for _, shard := range []string{firstShard, secondShard, thirdShard} {
 					EventuallyWithOffset(1, func() bool {
-						return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, shard, ns)
-					}, time.Second*100, time.Second*2).Should(BeTrue())
+						return verifier.Verify(k8sClient, shard, ns)
+					}, time.Second*10, time.Second*2).Should(BeTrue())
 				}
 
 				EventuallyWithOffset(1, func() bool {
@@ -213,7 +214,7 @@ config:
 
 			By("removing service monitor when disabled", func() {
 				for _, shard := range []string{firstShard, secondShard, thirdShard} {
-					Expect(utils.VerifyServiceMonitor(k8sClient, shard, ns)).To(BeTrue())
+					Expect(utils.VerifyServiceMonitorExists(k8sClient, shard, ns)).To(BeTrue())
 				}
 
 				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
@@ -226,15 +227,11 @@ config:
 					},
 				}
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
-
-				Eventually(func() bool {
-					for _, shard := range []string{firstShard, secondShard, thirdShard} {
-						if !utils.VerifyServiceMonitorDeleted(k8sClient, shard, ns) {
-							return false
-						}
-					}
-					return true
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				for _, shard := range []string{firstShard, secondShard, thirdShard} {
+					Eventually(func() bool {
+						return utils.VerifyServiceMonitorExists(k8sClient, shard, ns)
+					}, time.Second*30, time.Second*10).Should(BeFalse())
+				}
 			})
 
 			By("checking paused state", func() {

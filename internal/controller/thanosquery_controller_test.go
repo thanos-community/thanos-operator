@@ -105,8 +105,9 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			}
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, name, ns)
+					return verifier.Verify(k8sClient, name, ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -207,9 +208,9 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				}
 
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
+				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, QueryFrontendNameFromParent(resourceName), ns)
+					return verifier.Verify(k8sClient, QueryFrontendNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -245,7 +246,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitor(k8sClient, name, ns)).To(BeTrue())
+				Expect(utils.VerifyServiceMonitorExists(k8sClient, name, ns)).To(BeTrue())
 
 				enableSelfMonitor := false
 
@@ -257,8 +258,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
+				}, time.Minute*1, time.Second*10).Should(BeFalse())
 			})
 
 			By("checking paused state", func() {

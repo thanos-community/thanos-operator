@@ -132,26 +132,19 @@ config:
 
 			By("setting up the thanos compact resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
+				for _, shard := range []string{shardOne, shardTwo} {
+					EventuallyWithOffset(1, func() bool {
+						return verifier.Verify(k8sClient, shard, ns)
+					}, time.Second*10, time.Second*2).Should(BeTrue())
+				}
 
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(
-						k8sClient, &appsv1.StatefulSet{}, shardOne, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(
-						k8sClient, &appsv1.StatefulSet{}, shardTwo, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 1, shardOne, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 1, shardTwo, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				for _, shard := range []string{shardOne, shardTwo} {
+					EventuallyWithOffset(1, func() bool {
+						return utils.VerifyStatefulSetReplicas(
+							k8sClient, 1, shard, ns)
+					}, time.Second*10, time.Second*2).Should(BeTrue())
+				}
 			})
 
 			By("setting correct sharding arg on thanos compact", func() {
@@ -189,24 +182,21 @@ config:
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.ShardingConfig = nil
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
 
 				EventuallyWithOffset(1, func() bool {
 					for _, shard := range []string{shardOne, shardTwo} {
-						if utils.VerifyServiceExists(k8sClient, shard, ns) {
-							return false
-						}
-						if utils.VerifyStatefulSetExists(k8sClient, shard, ns) {
-							return false
+						if verifier.Verify(k8sClient, shard, ns) {
+							return true
 						}
 					}
-					return true
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+					return false
+				}, time.Second*10, time.Second*2).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
-					return utils.VerifyNamedServiceAndWorkloadExists(
-						k8sClient, &appsv1.StatefulSet{}, name, ns)
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+					return verifier.Verify(k8sClient, name, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 		})
 	})
