@@ -49,27 +49,29 @@ type Options struct {
 	LabelsDefaultTimeRange manifests.Duration
 }
 
-func BuildQueryFrontend(opts Options) []client.Object {
+func (opts Options) Build() []client.Object {
 	var objs []client.Object
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
+	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
+	objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, ptr.To(1)))
 	if opts.ResponseCacheConfig == nil {
 		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 	}
 	return objs
 }
 
-func GetServiceAccountName(opts Options) string {
-	return opts.Name
+func (opts Options) GetGeneratedResourceName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
+	return manifests.ValidateAndSanitizeResourceName(name)
 }
 
-func GetServiceName(opts Options) string {
-	return opts.Name
+func (opts Options) getOwner() string {
+	return opts.Owner
 }
 
 func NewQueryFrontendInMemoryConfigMap(opts Options) *corev1.ConfigMap {
@@ -90,12 +92,13 @@ func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) *
 }
 
 func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	return newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels)
 }
 
 func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
+	name := opts.GetGeneratedResourceName()
 	cacheConfigEnv := corev1.EnvVar{
 		Name: "CACHE_CONFIG",
 		ValueFrom: &corev1.EnvVarSource{
@@ -119,7 +122,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -133,7 +136,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: GetServiceAccountName(opts),
+					ServiceAccountName: name,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
@@ -184,7 +187,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 }
 
 func NewQueryFrontendService(opts Options) *corev1.Service {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	return newQueryFrontendService(opts, selectorLabels, objectMetaLabels)
 }
@@ -192,7 +195,7 @@ func NewQueryFrontendService(opts Options) *corev1.Service {
 func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceName(opts),
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -255,14 +258,14 @@ func GetRequiredLabels() map[string]string {
 }
 
 // GetSelectorLabels returns a map of labels that can be used to look up qfe resources.
-func GetSelectorLabels(opts Options) map[string]string {
+func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
-	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.getOwner())
 	return labels
 }
 
 // GetLabels returns a map of labels that can be used to look up qfe resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
 }
