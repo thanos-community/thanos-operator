@@ -41,6 +41,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -516,7 +517,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
-				firstShard := controller.StoreShardName(storeName, 0)
+				firstShard := controller.StoreNameFromParent(storeName, ptr.To(int32(0)))
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 2, firstShard, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
@@ -565,7 +566,7 @@ var _ = Describe("controller", Ordered, func() {
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
-				stsName := compact.Options{Options: manifests.Options{Owner: compactName}}.GetName()
+				stsName := compact.Options{Options: manifests.Options{Owner: compactName}}.GetGeneratedResourceName()
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
@@ -589,12 +590,12 @@ var _ = Describe("controller", Ordered, func() {
 				Expect(err).To(BeNil())
 				defer cancelFn()
 
-				firstShard := controller.StoreShardName(storeName, 0)
-				secondShard := controller.StoreShardName(storeName, 1)
+				firstShard := controller.StoreNameFromParent(storeName, ptr.To(int32(0)))
+				secondShard := controller.StoreNameFromParent(storeName, ptr.To(int32(1)))
 				componentMap := map[string]struct{}{
-					controller.QueryNameFromParent(queryName):   {},
-					controller.StoreNameFromParent(firstShard):  {},
-					controller.StoreNameFromParent(secondShard): {},
+					controller.QueryNameFromParent(queryName): {},
+					firstShard:  {},
+					secondShard: {},
 				}
 				for component := range componentMap {
 					_, err := utils.QueryPrometheus("up{service=\"" + component + "\"}")

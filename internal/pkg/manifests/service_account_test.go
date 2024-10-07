@@ -5,8 +5,8 @@ import (
 )
 
 func TestBuildServiceAccount(t *testing.T) {
+	const name = "thanos-stack"
 	opts := Options{
-		Name:      "thanos-stack",
 		Namespace: "ns",
 		Labels: map[string]string{
 			"app.kubernetes.io/name":     "thanos",
@@ -24,9 +24,9 @@ func TestBuildServiceAccount(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sa := BuildServiceAccount(tc.opts.Name, tc.opts.Namespace, tc.opts.Labels)
-			if sa.GetName() != tc.opts.Name {
-				t.Errorf("expected service account name to be %s, got %s", tc.opts.Name, sa.GetName())
+			sa := BuildServiceAccount(name, tc.opts.Namespace, tc.opts.Labels)
+			if sa.GetName() != name {
+				t.Errorf("expected service account name to be %s, got %s", name, sa.GetName())
 			}
 			if sa.GetNamespace() != tc.opts.Namespace {
 				t.Errorf("expected service account namespace to be %s, got %s", tc.opts.Namespace, sa.GetNamespace())

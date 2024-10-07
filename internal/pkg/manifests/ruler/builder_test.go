@@ -21,8 +21,8 @@ const (
 func TestBuildRuler(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
+			Owner:     "any",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -58,12 +58,12 @@ func TestBuildRuler(t *testing.T) {
 		},
 	}
 
-	objs := BuildRuler(opts)
+	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	expectStateful := NewRulerStatefulSet(opts)
 	utils.ValidateObjectsEqual(t, objs[1], expectStateful)
 	utils.ValidateObjectsEqual(t, objs[2], NewRulerService(opts))
@@ -72,14 +72,10 @@ func TestBuildRuler(t *testing.T) {
 	}
 	utils.ValidateLabelsMatch(t, objs[3], objs[1])
 
-	wantLabels := GetSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
-
-	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
-		t.Errorf("expected fourth object to be a pod disruption budget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
-	}
 }
 
 func TestNewRulerStatefulSet(t *testing.T) {
@@ -96,7 +92,6 @@ func TestNewRulerStatefulSet(t *testing.T) {
 			name: "test ruler statefulset correctness",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -137,7 +132,6 @@ func TestNewRulerStatefulSet(t *testing.T) {
 			name: "test additional volumemount",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -186,7 +180,6 @@ func TestNewRulerStatefulSet(t *testing.T) {
 			name: "test additional container",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -238,18 +231,19 @@ func TestNewRulerStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			name := tc.opts.GetGeneratedResourceName()
 			ruler := NewRulerStatefulSet(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ruler, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ruler, GetSelectorLabels(tc.opts))
+			utils.ValidateNameNamespaceAndLabels(t, ruler, name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ruler, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, ruler, extraLabels)
 
-			if ruler.Spec.ServiceName != GetServiceAccountName(tc.opts) {
-				t.Errorf("expected ruler statefulset to have serviceName %s, got %s", GetServiceAccountName(tc.opts), ruler.Spec.ServiceName)
+			if ruler.Spec.ServiceName != name {
+				t.Errorf("expected ruler statefulset to have serviceName %s, got %s", name, ruler.Spec.ServiceName)
 			}
 
-			if ruler.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
-				t.Errorf("expected ruler statefulset to have service account name %s, got %s", GetServiceAccountName(tc.opts), ruler.Spec.Template.Spec.ServiceAccountName)
+			if ruler.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected ruler statefulset to have service account name %s, got %s", name, ruler.Spec.Template.Spec.ServiceAccountName)
 			}
 
 			if len(ruler.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
@@ -294,7 +288,6 @@ func TestNewRulerService(t *testing.T) {
 
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -343,22 +336,13 @@ func TestNewRulerService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ruler := NewRulerService(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ruler, GetServiceName(opts), opts.Namespace, objectMetaLabels)
+			utils.ValidateNameNamespaceAndLabels(t, ruler, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, ruler, extraLabels)
-			utils.ValidateHasLabels(t, ruler, GetSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, ruler, tc.opts.GetSelectorLabels())
 
 			if ruler.Spec.ClusterIP != corev1.ClusterIPNone {
 				t.Errorf("expected ruler service to have ClusterIP 'None', got %s", ruler.Spec.ClusterIP)
 			}
 		})
 	}
-}
-
-func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

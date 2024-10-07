@@ -27,7 +27,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
-	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -143,7 +142,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	if query.Spec.ServiceMonitorConfig != nil && query.Spec.ServiceMonitorConfig.Enabled != nil && !*query.Spec.ServiceMonitorConfig.Enabled {
 		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      QueryNameFromParent(query.GetName()),
+				Name:      manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName(),
 				Namespace: query.GetNamespace(),
 			},
 		},
@@ -165,7 +164,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 	opts := queryV1Alpha1ToOptions(query)
 	opts.Endpoints = endpoints
 
-	return manifestquery.BuildQuery(opts), nil
+	return opts.Build(), nil
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the StoreAPI services that match the ThanosQuery storeLabelSelector.
@@ -215,8 +214,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
-	options := queryV1Alpha1ToQueryFrontEndOptions(query)
-	return manifestqueryfrontend.BuildQueryFrontend(options)
+	return queryV1Alpha1ToQueryFrontEndOptions(query).Build()
 }
 
 // SetupWithManager sets up the controller with the Manager.

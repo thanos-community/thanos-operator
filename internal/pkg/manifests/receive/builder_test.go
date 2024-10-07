@@ -21,7 +21,6 @@ const (
 func TestBuildIngesters(t *testing.T) {
 	opts := IngesterOptions{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -32,16 +31,16 @@ func TestBuildIngesters(t *testing.T) {
 		},
 	}
 
-	objs := BuildIngester(opts)
+	objs := opts.Build()
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	validateIngesterServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewIngestorService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewIngestorStatefulSet(opts))
 
-	wantLabels := GetIngesterSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
@@ -50,7 +49,6 @@ func TestBuildIngesters(t *testing.T) {
 func TestBuildRouter(t *testing.T) {
 	opts := RouterOptions{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -61,12 +59,12 @@ func TestBuildRouter(t *testing.T) {
 		},
 	}
 
-	objs := BuildRouter(opts)
+	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	validateRouterServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewRouterService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewRouterDeployment(opts))
 
@@ -90,7 +88,6 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 			name: "test ingester statefulset correctness",
 			opts: IngesterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -105,7 +102,6 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 			name: "test additional volumemount",
 			opts: IngesterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -128,7 +124,6 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 			name: "test additional container",
 			opts: IngesterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -156,16 +151,17 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorStatefulSet(tc.opts)
 			objectMetaLabels := GetIngesterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ingester, GetIngesterSelectorLabels(tc.opts))
+			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, ingester, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, ingester, extraLabels)
+			name := tc.opts.GetGeneratedResourceName()
 
-			if ingester.Spec.ServiceName != GetIngesterServiceName(tc.opts) {
-				t.Errorf("expected ingester statefulset to have serviceName %s, got %s", GetIngesterServiceAccountName(tc.opts), ingester.Spec.ServiceName)
+			if ingester.Spec.ServiceName != name {
+				t.Errorf("expected ingester statefulset to have serviceName %s, got %s", name, ingester.Spec.ServiceName)
 			}
 
-			if ingester.Spec.Template.Spec.ServiceAccountName != GetIngesterServiceAccountName(tc.opts) {
-				t.Errorf("expected ingester statefulset to have service account name %s, got %s", GetIngesterServiceAccountName(tc.opts), ingester.Spec.Template.Spec.ServiceAccountName)
+			if ingester.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected ingester statefulset to have service account name %s, got %s", name, ingester.Spec.Template.Spec.ServiceAccountName)
 			}
 
 			if len(ingester.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
@@ -216,7 +212,6 @@ func TestNewRouterDeployment(t *testing.T) {
 			name: "test router deployment correctness",
 			opts: RouterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -231,7 +226,6 @@ func TestNewRouterDeployment(t *testing.T) {
 			name: "test additional volumemount",
 			opts: RouterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -254,7 +248,6 @@ func TestNewRouterDeployment(t *testing.T) {
 			name: "test additional container",
 			opts: RouterOptions{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -282,12 +275,13 @@ func TestNewRouterDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterDeployment(tc.opts)
 			objectMetaLabels := GetRouterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, router, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, router, GetRouterSelectorLabels(tc.opts))
+			utils.ValidateNameNamespaceAndLabels(t, router, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, router, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, router, extraLabels)
+			name := tc.opts.GetGeneratedResourceName()
 
-			if router.Spec.Template.Spec.ServiceAccountName != GetRouterServiceAccountName(tc.opts) {
-				t.Errorf("expected deployment to use service account %s, got %s", GetRouterServiceAccountName(tc.opts), router.Spec.Template.Spec.ServiceAccountName)
+			if router.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected deployment to use service account %s, got %s", name, router.Spec.Template.Spec.ServiceAccountName)
 			}
 			if len(router.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(router.Spec.Template.Spec.Containers))
@@ -331,7 +325,6 @@ func TestNewIngestorService(t *testing.T) {
 
 	opts := IngesterOptions{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -353,9 +346,9 @@ func TestNewIngestorService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorService(tc.opts)
 			objectMetaLabels := GetIngesterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ingester, GetIngesterServiceName(opts), opts.Namespace, objectMetaLabels)
+			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, ingester, extraLabels)
-			utils.ValidateHasLabels(t, ingester, GetIngesterSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, ingester, tc.opts.GetSelectorLabels())
 
 			if ingester.Spec.ClusterIP != corev1.ClusterIPNone {
 				t.Errorf("expected store service to have ClusterIP 'None', got %s", ingester.Spec.ClusterIP)
@@ -371,7 +364,6 @@ func TestNewRouterService(t *testing.T) {
 	}
 	opts := RouterOptions{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -393,27 +385,9 @@ func TestNewRouterService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterService(tc.opts)
 			objectMetaLabels := GetRouterLabels(opts)
-			utils.ValidateNameNamespaceAndLabels(t, router, opts.Name, opts.Namespace, objectMetaLabels)
+			utils.ValidateNameNamespaceAndLabels(t, router, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, router, extraLabels)
-			utils.ValidateHasLabels(t, router, GetRouterSelectorLabels(opts))
+			utils.ValidateHasLabels(t, router, opts.GetSelectorLabels())
 		})
 	}
-}
-
-func validateIngesterServiceAccount(t *testing.T, opts IngesterOptions, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetIngesterServiceAccountName(opts), opts.Namespace, GetIngesterSelectorLabels(opts))
-}
-
-func validateRouterServiceAccount(t *testing.T, opts RouterOptions, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetRouterServiceAccountName(opts), opts.Namespace, GetRouterSelectorLabels(opts))
 }

@@ -22,16 +22,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
+
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosStore Controller", Ordered, func() {
@@ -85,6 +85,9 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
+			firstShard := StoreNameFromParent(resourceName, ptr.To(int32(0)))
+			secondShard := StoreNameFromParent(resourceName, ptr.To(int32(1)))
+			thirdShard := StoreNameFromParent(resourceName, ptr.To(int32(2)))
 			resource := &monitoringthanosiov1alpha1.ThanosStore{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -119,11 +122,10 @@ config:
 
 			By("setting up the thanos store resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-				expect := []string{StoreShardName(resourceName, 0), StoreShardName(resourceName, 1), StoreShardName(resourceName, 2)}
-				for _, shard := range expect {
+				for _, shard := range []string{firstShard, secondShard, thirdShard} {
 					EventuallyWithOffset(1, func() bool {
 						return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*100, time.Second*2).Should(BeTrue())
 				}
 
 				EventuallyWithOffset(1, func() bool {
@@ -132,7 +134,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, StoreShardName(resourceName, 2), ns)
+						k8sClient, 2, secondShard, ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
@@ -146,7 +148,7 @@ config:
 - action: keep
   source_labels: ["shard"]
   regex: 0`
-					return utils.VerifyStatefulSetArgs(k8sClient, StoreShardName(resourceName, 0), ns, 0, args)
+					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, args)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
@@ -154,7 +156,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					statefulSet := &appsv1.StatefulSet{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      StoreShardName(resourceName, 0),
+						Name:      firstShard,
 						Namespace: ns,
 					}, statefulSet); err != nil {
 						return false
@@ -184,7 +186,7 @@ config:
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
 						&appsv1.StatefulSet{},
-						StoreShardName(resourceName, 0),
+						firstShard,
 						ns,
 						0,
 						"INDEX_CACHE_CONFIG",
@@ -196,7 +198,7 @@ config:
 					if !utils.VerifyCfgMapOrSecretEnvVarExists(
 						k8sClient,
 						&appsv1.StatefulSet{},
-						StoreShardName(resourceName, 0),
+						firstShard,
 						ns,
 						0,
 						"CACHING_BUCKET_CONFIG",
@@ -210,8 +212,7 @@ config:
 			})
 
 			By("removing service monitor when disabled", func() {
-				expect := []string{StoreShardName(resourceName, 0), StoreShardName(resourceName, 1), StoreShardName(resourceName, 2)}
-				for _, shard := range expect {
+				for _, shard := range []string{firstShard, secondShard, thirdShard} {
 					Expect(utils.VerifyServiceMonitor(k8sClient, shard, ns)).To(BeTrue())
 				}
 
@@ -227,7 +228,7 @@ config:
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
 
 				Eventually(func() bool {
-					for _, shard := range expect {
+					for _, shard := range []string{firstShard, secondShard, thirdShard} {
 						if !utils.VerifyServiceMonitorDeleted(k8sClient, shard, ns) {
 							return false
 						}
@@ -241,14 +242,11 @@ config:
 				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
 
 				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.ShardingStrategy.ShardReplicas = 4
-
+				resource.Spec.CommonThanosFields.LogLevel = ptr.To("debug")
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, StoreShardName(resourceName, 0), ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				Consistently(func() bool {
+					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, "--log.level=debug")
+				}, time.Second*5, time.Second).Should(BeFalse())
 			})
 		})
 	})

@@ -57,21 +57,24 @@ func (opts Options) Build() []client.Object {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.GetName(), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
 	return objs
 }
 
-func (opts Options) GetName() string {
-	name := fmt.Sprintf("%s-%s", Name, opts.Owner)
+// GetGeneratedResourceName returns the generated name for the Thanos Compact or shard.
+// If no sharding is configured, the name will be generated from the Options.Owner.
+// If sharding is configured, the name will be generated from the Options.Owner, ShardName, and ShardIndex.
+func (opts Options) GetGeneratedResourceName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
 	if opts.ShardName != nil && opts.ShardIndex != nil {
 		name = fmt.Sprintf("%s-%s-%d", name, *opts.ShardName, *opts.ShardIndex)
 	}
 	return manifests.ValidateAndSanitizeResourceName(name)
 }
 
-func (opts Options) GetOwner() string {
+func (opts Options) getOwner() string {
 	return opts.Owner
 }
 
@@ -82,7 +85,7 @@ func NewStatefulSet(opts Options) *appsv1.StatefulSet {
 }
 
 func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLabels map[string]string) *appsv1.StatefulSet {
-	name := opts.GetName()
+	name := opts.GetGeneratedResourceName()
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -239,7 +242,7 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.GetName(),
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -297,8 +300,8 @@ func GetRequiredLabels() map[string]string {
 // GetSelectorLabels returns a map of labels that can be used to look up ThanosCompact resources.
 func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetName())
-	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetOwner())
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.getOwner())
 	return labels
 }
 

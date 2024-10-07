@@ -36,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,7 +131,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		for i := range store.Spec.ShardingStrategy.Shards {
 			if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      StoreShardName(store.GetName(), i),
+					Name:      StoreNameFromParent(store.GetName(), ptr.To(i)),
 					Namespace: store.GetNamespace(),
 				},
 			},
@@ -151,7 +152,7 @@ func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.Than
 	shardedObjects := make(map[string][]client.Object, len(opts))
 
 	for i, opt := range opts {
-		storeObjs := manifestsstore.Build(opt)
+		storeObjs := opt.Build()
 		shardedObjects[i] = append(shardedObjects[i], storeObjs...)
 	}
 	return shardedObjects
@@ -169,9 +170,8 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
 
 	for i := range store.Spec.ShardingStrategy.Shards {
-		shardName := StoreShardName(store.GetName(), i)
+		shardName := StoreNameFromParent(store.GetName(), ptr.To(i))
 		storeShardOpts := storeV1Alpha1ToOptions(store)
-		storeShardOpts.Name = shardName
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",
@@ -185,6 +185,7 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 				Regex:       fmt.Sprintf("%d", i),
 			},
 		}
+		storeShardOpts.ShardIndex = ptr.To(i)
 		shardedOptions[shardName] = storeShardOpts
 	}
 	return shardedOptions

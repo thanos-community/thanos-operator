@@ -26,7 +26,7 @@ func TestNewService(t *testing.T) {
 	}
 	obj := NewService(opts)
 	objectMetaLabels := GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetName(), opts.Namespace, objectMetaLabels)
+	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
 
 	if obj.Spec.Ports[0].Name != HTTPPortName {
@@ -44,7 +44,7 @@ func TestNewService(t *testing.T) {
 	}
 	obj = NewService(opts)
 	objectMetaLabels = GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetName(), opts.Namespace, objectMetaLabels)
+	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
 }
 
@@ -92,7 +92,7 @@ func TestNewStatefulSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			compact := NewStatefulSet(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			name := tc.opts.GetName()
+			name := tc.opts.GetGeneratedResourceName()
 			utils.ValidateNameNamespaceAndLabels(t, compact, name, tc.opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, compact, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, compact, extraLabels)
@@ -164,7 +164,7 @@ func TestBuild(t *testing.T) {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
 	}
 
-	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewStatefulSet(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewService(opts))
 
@@ -172,15 +172,6 @@ func TestBuild(t *testing.T) {
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
-}
-
-func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, opts.GetName(), opts.Namespace, opts.GetSelectorLabels())
 }
 
 func TestOptions_GetName(t *testing.T) {
@@ -213,7 +204,7 @@ func TestOptions_GetName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.opts.GetName()
+			result := tt.opts.GetGeneratedResourceName()
 			if result != tt.expected {
 				t.Errorf("expected %s, got %s", tt.expected, result)
 			}

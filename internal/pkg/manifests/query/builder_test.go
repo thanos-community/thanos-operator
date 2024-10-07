@@ -20,7 +20,7 @@ const (
 func TestBuildQuery(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
+			Owner:     "any",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -34,12 +34,12 @@ func TestBuildQuery(t *testing.T) {
 		MaxConcurrent: 20,
 	}
 
-	objs := BuildQuery(opts)
+	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
-	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewQueryDeployment(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewQueryService(opts))
 	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
@@ -47,7 +47,7 @@ func TestBuildQuery(t *testing.T) {
 	}
 	utils.ValidateLabelsMatch(t, objs[3], objs[1])
 
-	wantLabels := GetSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
@@ -67,7 +67,6 @@ func TestNewQueryDeployment(t *testing.T) {
 			name: "test query deployment correctness",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -85,7 +84,6 @@ func TestNewQueryDeployment(t *testing.T) {
 			name: "test additional volumemount",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -111,7 +109,6 @@ func TestNewQueryDeployment(t *testing.T) {
 			name: "test additional container",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -140,14 +137,15 @@ func TestNewQueryDeployment(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			name := tc.opts.GetGeneratedResourceName()
 			query := NewQueryDeployment(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, query, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, query, GetSelectorLabels(tc.opts))
+			utils.ValidateNameNamespaceAndLabels(t, query, name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, query, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, query, extraLabels)
 
-			if query.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
-				t.Errorf("expected deployment to use service account %s, got %s", GetServiceAccountName(tc.opts), query.Spec.Template.Spec.ServiceAccountName)
+			if query.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected deployment to use service account %s, got %s", name, query.Spec.Template.Spec.ServiceAccountName)
 			}
 			if len(query.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(query.Spec.Template.Spec.Containers))
@@ -194,7 +192,6 @@ func TestNewQueryDeployment(t *testing.T) {
 func TestNewQueryService(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -225,18 +222,9 @@ func TestNewQueryService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			querySvc := NewQueryService(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, querySvc, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateNameNamespaceAndLabels(t, querySvc, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, querySvc, extraLabels)
-			utils.ValidateHasLabels(t, querySvc, GetSelectorLabels(tc.opts))
+			utils.ValidateHasLabels(t, querySvc, tc.opts.GetSelectorLabels())
 		})
 	}
-}
-
-func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

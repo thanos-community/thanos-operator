@@ -43,14 +43,6 @@ type Options struct {
 	EvaluationInterval manifests.Duration
 }
 
-func GetServiceAccountName(opts Options) string {
-	return opts.Name
-}
-
-func GetServiceName(opts Options) string {
-	return opts.Name
-}
-
 // Endpoint represents a single QueryAPI DNS formatted address.
 // TODO(saswatamcode): Add validation.
 type Endpoint struct {
@@ -59,19 +51,27 @@ type Endpoint struct {
 	Port        int32
 }
 
-func BuildRuler(opts Options) []client.Object {
+func (opts Options) Build() []client.Object {
 	var objs []client.Object
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
+	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
+	objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, ptr.To(1)))
+
 	if opts.ServiceMonitorConfig.Enabled {
-		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
+		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
+}
+
+func (opts Options) GetGeneratedResourceName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.Owner)
+	return manifests.ValidateAndSanitizeResourceName(name)
 }
 
 const (
@@ -82,12 +82,13 @@ const (
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	return newRulerStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
 func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
+	name := opts.GetGeneratedResourceName()
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -97,7 +98,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      manifests.NameLabel,
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{opts.Name},
+							Values:   []string{name},
 						}},
 					},
 					Namespaces:  []string{opts.Namespace},
@@ -241,7 +242,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -259,11 +260,11 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{rulerContainer},
-					ServiceAccountName: GetServiceAccountName(opts),
+					ServiceAccountName: name,
 					Volumes:            volumes,
 				},
 			},
-			ServiceName: GetServiceName(opts),
+			ServiceName: name,
 		},
 	}
 
@@ -272,8 +273,8 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 }
 
 func NewRulerService(opts Options) *corev1.Service {
-	defaultLabels := GetSelectorLabels(opts)
-	aggregatedLabels := manifests.MergeLabels(opts.Labels, defaultLabels)
+	selectorLabels := opts.GetSelectorLabels()
+	objectMetaLabels := GetLabels(opts)
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -293,12 +294,12 @@ func NewRulerService(opts Options) *corev1.Service {
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceName(opts),
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
-			Labels:    aggregatedLabels,
+			Labels:    objectMetaLabels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector:  defaultLabels,
+			Selector:  selectorLabels,
 			Ports:     servicePorts,
 			ClusterIP: corev1.ClusterIPNone,
 		},
@@ -323,13 +324,9 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
-		objectMetaLabels["thanos-self-monitoring"] = opts.Name
-	}
-
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -392,13 +389,20 @@ func GetRequiredLabels() map[string]string {
 	}
 }
 
-func GetSelectorLabels(opts Options) map[string]string {
+func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
 	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
 	return labels
 }
 
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+}
+
+func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+	return manifests.ServiceMonitorOptions{
+		Port:     ptr.To(HTTPPortName),
+		Interval: from.Interval,
+	}
 }

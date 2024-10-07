@@ -209,8 +209,8 @@ func (r *ThanosReceiveReconciler) buildIngesterHashrings(receiver monitoringthan
 			}
 		}
 
-		storeObjs := manifestreceive.BuildIngester(opt)
-		shardedObjects[hashring] = append(shardedObjects[hashring], storeObjs...)
+		objs := opt.Build()
+		shardedObjects[hashring] = append(shardedObjects[hashring], objs...)
 	}
 	return shardedObjects
 }
@@ -218,7 +218,9 @@ func (r *ThanosReceiveReconciler) buildIngesterHashrings(receiver monitoringthan
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) map[string]manifestreceive.IngesterOptions {
 	opts := make(map[string]manifestreceive.IngesterOptions, len(receiver.Spec.Ingester.Hashrings))
 	for _, v := range receiver.Spec.Ingester.Hashrings {
-		opts[v.Name] = receiverV1Alpha1ToIngesterOptions(receiver, v)
+		opt := receiverV1Alpha1ToIngesterOptions(receiver, v)
+		opt.HashringName = v.Name
+		opts[v.Name] = opt
 	}
 	return opts
 }
@@ -278,7 +280,7 @@ func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha
 	}
 	opts := receiverV1Alpha1ToRouterOptions(receiver)
 	opts.HashringConfig = hashringConfig
-	return manifestreceive.BuildRouter(opts)
+	return opts.Build()
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {

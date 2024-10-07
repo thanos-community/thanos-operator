@@ -162,7 +162,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
-	return manifestruler.BuildRuler(opts), nil
+	return opts.Build(), nil
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.

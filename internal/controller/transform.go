@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"fmt"
-
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
@@ -20,8 +18,7 @@ import (
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	name := QueryNameFromParent(in.GetName())
-	opts := commonToOpts(name, &in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
 		ReplicaLabels: in.Spec.QuerierReplicaLabels,
@@ -33,15 +30,14 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 
 // QueryNameFromParent returns the name of the Thanos Query component.
 func QueryNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-query-%s", resourceName)
+	return manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 }
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
 func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryfrontend.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	name := QueryFrontendNameFromParent(in.GetName())
 	frontend := in.Spec.QueryFrontend
-	opts := commonToOpts(name, &in, frontend.Replicas, labels, frontend.CommonThanosFields, frontend.Additional)
+	opts := commonToOpts(&in, frontend.Replicas, labels, frontend.CommonThanosFields, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -60,13 +56,12 @@ func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryf
 
 // QueryFrontendNameFromParent returns the name of the Thanos Query Frontend component.
 func QueryFrontendNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-query-frontend-%s", resourceName)
+	return manifestqueryfrontend.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 }
 
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), nil)
-	name := RulerNameFromParent(in.GetName())
-	opts := commonToOpts(name, &in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestruler.Options{
 		Options:            opts,
 		ObjStoreSecret:     in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -81,12 +76,11 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 
 // RulerNameFromParent returns the name of the Thanos Ruler component.
 func RulerNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-ruler-%s", resourceName)
+	return manifestruler.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 }
 
 func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec) manifestreceive.IngesterOptions {
 	labels := manifests.MergeLabels(in.GetLabels(), spec.Labels)
-	name := ReceiveIngesterNameFromParent(in.GetName(), spec.Name)
 	common := spec.CommonThanosFields
 	additional := in.Spec.Ingester.Additional
 	secret := in.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
@@ -94,7 +88,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(name, &in, spec.Replicas, labels, common, additional)
+	opts := commonToOpts(&in, spec.Replicas, labels, common, additional)
 	return manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -109,9 +103,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.RouterOptions {
 	router := in.Spec.Router
 	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
-	name := ReceiveRouterNameFromParent(in.GetName())
-
-	opts := commonToOpts(name, &in, router.Replicas, labels, router.CommonThanosFields, router.Additional)
+	opts := commonToOpts(&in, router.Replicas, labels, router.CommonThanosFields, router.Additional)
 
 	return manifestreceive.RouterOptions{
 		Options:           opts,
@@ -122,18 +114,17 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.
 
 // ReceiveIngesterNameFromParent returns the name of the Thanos Receive Ingester component.
 func ReceiveIngesterNameFromParent(resourceName, hashringName string) string {
-	return fmt.Sprintf("thanos-receive-hashring-%s-%s", resourceName, hashringName)
+	return manifestreceive.IngesterOptions{Options: manifests.Options{Owner: resourceName}, HashringName: hashringName}.GetGeneratedResourceName()
 }
 
 // ReceiveRouterNameFromParent returns the name of the Thanos Receive Router component.
 func ReceiveRouterNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-receive-router-%s", resourceName)
+	return manifestreceive.RouterOptions{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 }
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	name := StoreNameFromParent(in.GetName())
-	opts := commonToOpts(name, &in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         in.Spec.IndexCacheConfig,
@@ -148,7 +139,7 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts("", &in, 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.Spec.DownsamplingConfig == nil {
@@ -202,24 +193,17 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 }
 
 // StoreNameFromParent returns the name of the Thanos Store component.
-func StoreNameFromParent(resourceName string) string {
-	return fmt.Sprintf("thanos-store-%s", resourceName)
-}
-
-// StoreShardName returns the name of the Thanos Store shard.
-func StoreShardName(resourceName string, shard int32) string {
-	return fmt.Sprintf("%s-shard-%d", StoreNameFromParent(resourceName), shard)
+func StoreNameFromParent(resourceName string, index *int32) string {
+	return manifestsstore.Options{Options: manifests.Options{Owner: resourceName}, ShardIndex: index}.GetGeneratedResourceName()
 }
 
 func commonToOpts(
-	name string,
 	owner client.Object,
 	replicas int32,
 	labels map[string]string,
 	common v1alpha1.CommonThanosFields,
 	additional v1alpha1.Additional) manifests.Options {
 	return manifests.Options{
-		Name:                 name,
 		Owner:                owner.GetName(),
 		Namespace:            owner.GetNamespace(),
 		Replicas:             replicas,

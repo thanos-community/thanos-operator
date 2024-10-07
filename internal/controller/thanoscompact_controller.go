@@ -139,10 +139,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 }
 
 func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) error {
-	listOpt := manifests.GetLabelSelectorForOwner(
-		manifestcompact.Options{Options: manifests.Options{Owner: owner}},
-		manifestcompact.GetRequiredLabels(),
-	)
+	listOpt := manifests.GetLabelSelectorForOwner(manifestcompact.Options{Options: manifests.Options{Owner: owner}})
 
 	deleteOrphanedShardResources := func(obj client.Object) error {
 		if !slices.Contains(expectShards, obj.GetName()) {
@@ -196,7 +193,7 @@ func (r *ThanosCompactReconciler) buildCompact(compact monitoringthanosiov1alpha
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) map[string]manifestcompact.Options {
 	if compact.Spec.ShardingConfig == nil || compact.Spec.ShardingConfig.ExternalLabelSharding == nil {
 		opts := compactV1Alpha1ToOptions(compact)
-		return map[string]manifestcompact.Options{opts.GetName(): opts}
+		return map[string]manifestcompact.Options{opts.GetGeneratedResourceName(): opts}
 	}
 
 	shardedOptions := make(map[string]manifestcompact.Options)
@@ -212,7 +209,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 					Regex:       v,
 				},
 			}
-			shardedOptions[opts.GetName()] = opts
+			shardedOptions[opts.GetGeneratedResourceName()] = opts
 		}
 	}
 	return shardedOptions

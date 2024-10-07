@@ -21,7 +21,6 @@ const (
 func TestBuildStore(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -32,17 +31,17 @@ func TestBuildStore(t *testing.T) {
 		},
 	}
 
-	objs := Build(opts)
+	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
-	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewStoreService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewStoreStatefulSet(opts))
 	utils.ValidateObjectsEqual(t, objs[3], newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
 
-	wantLabels := GetSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
@@ -50,8 +49,8 @@ func TestBuildStore(t *testing.T) {
 
 func TestNewStoreStatefulSet(t *testing.T) {
 	const (
-		name = "test"
-		ns   = "ns"
+		owner = "test"
+		ns    = "ns"
 	)
 
 	extraLabels := map[string]string{
@@ -62,29 +61,26 @@ func TestNewStoreStatefulSet(t *testing.T) {
 	buildDefaultOpts := func() Options {
 		return Options{
 			Options: manifests.Options{
-				Name:      name,
 				Namespace: ns,
 				Image:     ptr.To("some-custom-image"),
 				Labels: map[string]string{
-					"some-custom-label":      someCustomLabelValue,
-					"some-other-label":       someOtherLabelValue,
-					"app.kubernetes.io/name": "expect-to-be-discarded",
+					"some-custom-label":       someCustomLabelValue,
+					"some-other-label":        someOtherLabelValue,
+					"app.kubernetes.io/owner": "expect-to-be-discarded",
 				},
 			},
 		}
 	}
 
 	for _, tc := range []struct {
-		name       string
-		opts       func() Options
-		expectName string
+		name string
+		opts func() Options
 	}{
 		{
 			name: "test store stateful correctness",
 			opts: func() Options {
 				return buildDefaultOpts()
 			},
-			expectName: name,
 		},
 		{
 			name: "test additional volumemount",
@@ -98,7 +94,6 @@ func TestNewStoreStatefulSet(t *testing.T) {
 				}
 				return opts
 			},
-			expectName: name,
 		},
 		{
 			name: "test additional container",
@@ -117,24 +112,25 @@ func TestNewStoreStatefulSet(t *testing.T) {
 				}
 				return opts
 			},
-			expectName: name,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()
 			store := NewStoreStatefulSet(builtOpts)
 			objectMetaLabels := GetLabels(builtOpts)
+			name := builtOpts.GetGeneratedResourceName()
 
-			utils.ValidateNameNamespaceAndLabels(t, store, tc.expectName, ns, objectMetaLabels)
-			utils.ValidateHasLabels(t, store, GetSelectorLabels(builtOpts))
+			utils.ValidateNameNamespaceAndLabels(t, store, name, ns, objectMetaLabels)
+			utils.ValidateHasLabels(t, store, builtOpts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, store, extraLabels)
+			objName := builtOpts.GetGeneratedResourceName()
 
-			if store.Spec.ServiceName != GetServiceAccountName(builtOpts) {
-				t.Errorf("expected store statefulset to have serviceName %s, got %s", GetServiceAccountName(builtOpts), store.Spec.ServiceName)
+			if store.Spec.ServiceName != objName {
+				t.Errorf("expected store statefulset to have serviceName %s, got %s", objName, store.Spec.ServiceName)
 			}
 
-			if store.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(builtOpts) {
-				t.Errorf("expected store statefulset to have service account name %s, got %s", GetServiceAccountName(builtOpts), store.Spec.Template.Spec.ServiceAccountName)
+			if store.Spec.Template.Spec.ServiceAccountName != objName {
+				t.Errorf("expected store statefulset to have service account owner %s, got %s", objName, store.Spec.Template.Spec.ServiceAccountName)
 			}
 
 			if len(store.Spec.Template.Spec.Containers) != (len(builtOpts.Additional.Containers) + 1) {
@@ -173,8 +169,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 
 func TestNewStoreService(t *testing.T) {
 	const (
-		name = "test"
-		ns   = "ns"
+		ns = "ns"
 	)
 
 	extraLabels := map[string]string{
@@ -184,7 +179,6 @@ func TestNewStoreService(t *testing.T) {
 
 	opts := Options{
 		Options: manifests.Options{
-			Name:      name,
 			Namespace: ns,
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -210,22 +204,13 @@ func TestNewStoreService(t *testing.T) {
 			builtOpts := tc.opts()
 			storeSvc := NewStoreService(builtOpts)
 			objectMetaLabels := GetLabels(builtOpts)
-			utils.ValidateNameNamespaceAndLabels(t, storeSvc, GetServiceName(opts), ns, objectMetaLabels)
+			utils.ValidateNameNamespaceAndLabels(t, storeSvc, opts.GetGeneratedResourceName(), ns, objectMetaLabels)
 			utils.ValidateHasLabels(t, storeSvc, extraLabels)
-			utils.ValidateHasLabels(t, storeSvc, GetSelectorLabels(builtOpts))
+			utils.ValidateHasLabels(t, storeSvc, opts.GetSelectorLabels())
 
 			if storeSvc.Spec.ClusterIP != corev1.ClusterIPNone {
 				t.Errorf("expected store service to have ClusterIP 'None', got %s", storeSvc.Spec.ClusterIP)
 			}
 		})
 	}
-}
-
-func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceName(opts), opts.Namespace, GetSelectorLabels(opts))
 }

@@ -21,8 +21,8 @@ const (
 func TestBuildQueryFrontend(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
+			Owner:     "any",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -39,12 +39,12 @@ func TestBuildQueryFrontend(t *testing.T) {
 		LabelsMaxRetries:     3,
 	}
 
-	objs := BuildQueryFrontend(opts)
+	objs := opts.Build()
 	if len(objs) != 5 {
 		t.Fatalf("expected 5 objects, got %d", len(objs))
 	}
 
-	validateServiceAccount(t, opts, objs[0])
+	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewQueryFrontendDeployment(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewQueryFrontendService(opts))
 	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
@@ -53,7 +53,7 @@ func TestBuildQueryFrontend(t *testing.T) {
 	utils.ValidateLabelsMatch(t, objs[3], objs[1])
 	utils.ValidateObjectsEqual(t, objs[4], newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 
-	wantLabels := GetSelectorLabels(opts)
+	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
@@ -73,7 +73,6 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			name: "test query frontend deployment correctness",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -96,7 +95,6 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			name: "test additional volumemount",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -127,7 +125,6 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			name: "test additional container",
 			opts: Options{
 				Options: manifests.Options{
-					Name:      "test",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -161,14 +158,15 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			name := tc.opts.GetGeneratedResourceName()
 			deployment := NewQueryFrontendDeployment(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, deployment, tc.opts.Name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, deployment, GetSelectorLabels(tc.opts))
+			utils.ValidateNameNamespaceAndLabels(t, deployment, name, tc.opts.Namespace, objectMetaLabels)
+			utils.ValidateHasLabels(t, deployment, tc.opts.GetSelectorLabels())
 			utils.ValidateHasLabels(t, deployment, extraLabels)
 
-			if deployment.Spec.Template.Spec.ServiceAccountName != GetServiceAccountName(tc.opts) {
-				t.Errorf("expected deployment to use service account %s, got %s", GetServiceAccountName(tc.opts), deployment.Spec.Template.Spec.ServiceAccountName)
+			if deployment.Spec.Template.Spec.ServiceAccountName != name {
+				t.Errorf("expected deployment to use service account %s, got %s", name, deployment.Spec.Template.Spec.ServiceAccountName)
 			}
 			if len(deployment.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected store statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(deployment.Spec.Template.Spec.Containers))
@@ -233,7 +231,6 @@ func TestNewQueryFrontendService(t *testing.T) {
 
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -245,9 +242,9 @@ func TestNewQueryFrontendService(t *testing.T) {
 
 	service := NewQueryFrontendService(opts)
 	objectMetaLabels := GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, service, opts.Name, opts.Namespace, objectMetaLabels)
+	utils.ValidateNameNamespaceAndLabels(t, service, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 	utils.ValidateHasLabels(t, service, extraLabels)
-	utils.ValidateHasLabels(t, service, GetSelectorLabels(opts))
+	utils.ValidateHasLabels(t, service, opts.GetSelectorLabels())
 
 	if len(service.Spec.Ports) != 1 || service.Spec.Ports[0].Port != HTTPPort {
 		t.Errorf("expected service to have 1 port (%d), got %v", HTTPPort, service.Spec.Ports)
@@ -257,7 +254,6 @@ func TestNewQueryFrontendService(t *testing.T) {
 func TestNewQueryFrontendConfigMap(t *testing.T) {
 	opts := Options{
 		Options: manifests.Options{
-			Name:      "test",
 			Namespace: "ns",
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -271,13 +267,4 @@ func TestNewQueryFrontendConfigMap(t *testing.T) {
 	if configMap.Data[defaultInMemoryConfigmapKey] != InMemoryConfig {
 		t.Errorf("expected config map data to be %s, got %s", InMemoryConfig, configMap.Data[defaultInMemoryConfigmapKey])
 	}
-}
-
-func validateServiceAccount(t *testing.T, opts Options, expectSA client.Object) {
-	t.Helper()
-	if expectSA.GetObjectKind().GroupVersionKind().Kind != "ServiceAccount" {
-		t.Errorf("expected object to be a service account, got %v", expectSA.GetObjectKind().GroupVersionKind().Kind)
-	}
-
-	utils.ValidateNameNamespaceAndLabels(t, expectSA, GetServiceAccountName(opts), opts.Namespace, GetSelectorLabels(opts))
 }
