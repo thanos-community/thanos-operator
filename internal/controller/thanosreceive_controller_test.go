@@ -208,9 +208,10 @@ config:
 			}
 
 			By("setting up the thanos receive ingest resources", func() {
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.StatefulSet{}, ingesterName, ns)
+					return verifier.Verify(k8sClient, ingesterName, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
@@ -341,8 +342,9 @@ config:
 			})
 
 			By("creating the router components", func() {
+				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				Eventually(func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, routerName, ns)
+					return verifier.Verify(k8sClient, routerName, ns)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
