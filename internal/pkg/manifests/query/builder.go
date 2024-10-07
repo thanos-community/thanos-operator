@@ -57,36 +57,39 @@ type Endpoint struct {
 	Port        int32
 }
 
-func BuildQuery(opts Options) []client.Object {
+func (opts Options) Build() []client.Object {
 	var objs []client.Object
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
+	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(GetServiceAccountName(opts), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, manifests.NewPodDisruptionBudget(opts.Name, opts.Name, selectorLabels, objectMetaLabels, ptr.To(1)))
+	objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, ptr.To(1)))
 	if opts.ServiceMonitorConfig.Enabled {
-		objs = append(objs, manifests.BuildServiceMonitor(opts.Options, HTTPPortName))
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
 }
 
-func GetServiceAccountName(opts Options) string {
-	return opts.Name
+func (opts Options) GetGeneratedResourceName() string {
+	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
+	return manifests.ValidateAndSanitizeResourceName(name)
 }
 
-func GetServiceName(opts Options) string {
-	return opts.Name
+func (opts Options) getOwner() string {
+	return opts.Owner
 }
 
 func NewQueryDeployment(opts Options) *appsv1.Deployment {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	return newQueryDeployment(opts, selectorLabels, objectMetaLabels)
 }
 
 func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
+	name := opts.GetGeneratedResourceName()
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -96,7 +99,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      manifests.NameLabel,
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{opts.Name},
+							Values:   []string{name},
 						}},
 					},
 					Namespaces:  []string{opts.Namespace},
@@ -169,7 +172,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
+			Name:      name,
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -186,7 +189,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Affinity:           &podAffinity,
 					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers:         []corev1.Container{queryContainer},
-					ServiceAccountName: GetServiceAccountName(opts),
+					ServiceAccountName: name,
 				},
 			},
 		},
@@ -197,7 +200,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 }
 
 func NewQueryService(opts Options) *corev1.Service {
-	selectorLabels := GetSelectorLabels(opts)
+	selectorLabels := opts.GetSelectorLabels()
 	return newQueryService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
 }
 
@@ -219,13 +222,9 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 		servicePorts = append(servicePorts, opts.Additional.ServicePorts...)
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
-		objectMetaLabels["thanos-self-monitoring"] = opts.Name
-	}
-
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetServiceName(opts),
+			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
 			Labels:    objectMetaLabels,
 		},
@@ -293,14 +292,21 @@ func GetRequiredLabels() map[string]string {
 }
 
 // GetSelectorLabels returns a map of labels that can be used to look up query resources.
-func GetSelectorLabels(opts Options) map[string]string {
+func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
-	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Name)
-	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
+	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.getOwner())
 	return labels
 }
 
 // GetLabels returns a map of labels that can be used to look up query resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, GetSelectorLabels(opts))
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+}
+
+func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+	return manifests.ServiceMonitorOptions{
+		Port:     ptr.To(HTTPPortName),
+		Interval: from.Interval,
+	}
 }

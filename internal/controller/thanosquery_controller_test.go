@@ -81,6 +81,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 		})
 
 		It("should reconcile correctly", func() {
+			name := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -105,7 +106,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			By("setting up the thanos query resources", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, QueryNameFromParent(resourceName), ns)
+					return utils.VerifyNamedServiceAndWorkloadExists(k8sClient, &appsv1.Deployment{}, name, ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -124,7 +125,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
 				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyDeploymentArgs(k8sClient, QueryNameFromParent(resourceName), ns, 0, expectArg)
+					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -160,7 +161,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      QueryNameFromParent(resourceName),
+						Name:      name,
 						Namespace: ns,
 					}, deployment); err != nil {
 						return err
@@ -173,11 +174,11 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					}
 
 					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc.cluster.local", receive.GRPCPortName, receiveSvcName, ns)
-					if utils.VerifyDeploymentArgs(k8sClient, QueryNameFromParent(resourceName), ns, 0, arg) == false {
+					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
 					}
 
-					if utils.VerifyDeploymentArgs(k8sClient, QueryNameFromParent(resourceName), ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {
+					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {
 						return fmt.Errorf("expected arg for additional container --reporter.grpc.host-port=jaeger-collector:14250")
 					}
 
@@ -235,7 +236,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 			By("verifying query frontend is linked to query service", func() {
 				EventuallyWithOffset(1, func() error {
-					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.cluster.local:9090", QueryNameFromParent(resourceName), ns)
+					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.cluster.local:9090", name, ns)
 					if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}
@@ -244,7 +245,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitor(k8sClient, QueryNameFromParent(resourceName), ns)).To(BeTrue())
+				Expect(utils.VerifyServiceMonitor(k8sClient, name, ns)).To(BeTrue())
 
 				enableSelfMonitor := false
 
@@ -256,7 +257,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorDeleted(k8sClient, QueryNameFromParent(resourceName), ns)
+					return utils.VerifyServiceMonitorDeleted(k8sClient, name, ns)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
@@ -281,7 +282,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      QueryNameFromParent(resourceName),
+						Name:      name,
 						Namespace: ns,
 					}, deployment); err != nil {
 						return err
