@@ -25,12 +25,17 @@ import (
 	"os"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
+	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -68,6 +73,9 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+
+	var featureGatePrometheusOperator bool
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -77,6 +85,8 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-service-monitors", true,
+		"If set, the operator will manage ServiceMonitors for Prometheus Operator")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -146,19 +156,24 @@ func main() {
 
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
-	baseLogger := ctrl.Log.WithName("thanos-operator")
+	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
-	buildControllerInstrumentationConfig := func(component string) controller.InstrumentationConfig {
-		return controller.InstrumentationConfig{
-			Logger:          baseLogger.WithName(component),
-			EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("thanos-%s-controller", component)),
-			MetricsRegistry: ctrlmetrics.Registry,
-			BaseMetrics:     baseMetrics,
+	buildConfig := func(component string) controller.Config {
+		return controller.Config{
+			FeatureGate: controller.FeatureGate{
+				EnableServiceMonitor: featureGatePrometheusOperator,
+			},
+			InstrumentationConfig: controller.InstrumentationConfig{
+				Logger:          baseLogger.WithName(component),
+				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
+				MetricsRegistry: ctrlmetrics.Registry,
+				BaseMetrics:     baseMetrics,
+			},
 		}
 	}
 
 	if err = controller.NewThanosQueryReconciler(
-		buildControllerInstrumentationConfig("query"),
+		buildConfig(manifestquery.Name),
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
@@ -167,7 +182,7 @@ func main() {
 	}
 
 	if err = controller.NewThanosReceiveReconciler(
-		buildControllerInstrumentationConfig("receive"),
+		buildConfig(manifestreceive.Name),
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
@@ -176,7 +191,7 @@ func main() {
 	}
 
 	if err = controller.NewThanosStoreReconciler(
-		buildControllerInstrumentationConfig("store"),
+		buildConfig(manifestsstore.Name),
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
@@ -185,7 +200,7 @@ func main() {
 	}
 
 	if err = controller.NewThanosCompactReconciler(
-		buildControllerInstrumentationConfig("compact"),
+		buildConfig(manifestscompact.Name),
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {
@@ -194,7 +209,7 @@ func main() {
 	}
 
 	if err = controller.NewThanosRulerReconciler(
-		buildControllerInstrumentationConfig("ruler"),
+		buildConfig(manifestruler.Name),
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {

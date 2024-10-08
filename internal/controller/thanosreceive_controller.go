@@ -21,16 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/receive"
-
 	"github.com/go-logr/logr"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
-	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
+	"github.com/thanos-community/thanos-operator/internal/pkg/receive"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -67,14 +65,20 @@ type ThanosReceiveReconciler struct {
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
-func NewThanosReceiveReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosReceiveReconciler {
+func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosReceiveReconciler {
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		handler.SetFeatureGates(featureGates)
+	}
+
 	return &ThanosReceiveReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		logger:   instrumentationConf.Logger,
-		metrics:  controllermetrics.NewThanosReceiveMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
-		recorder: instrumentationConf.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+		handler:  handler,
 	}
 }
 
@@ -174,7 +178,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
 	}
 

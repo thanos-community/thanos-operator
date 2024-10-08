@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -34,6 +32,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -55,14 +54,20 @@ type ThanosStoreReconciler struct {
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
-func NewThanosStoreReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
+func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		handler.SetFeatureGates(featureGates)
+	}
+
 	return &ThanosStoreReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		logger:   instrumentationConf.Logger,
-		metrics:  controllermetrics.NewThanosStoreMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
-		recorder: instrumentationConf.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+		handler:  handler,
 	}
 }
 

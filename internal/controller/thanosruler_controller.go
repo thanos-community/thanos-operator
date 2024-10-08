@@ -61,14 +61,20 @@ type ThanosRulerReconciler struct {
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
-func NewThanosRulerReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
+func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		handler.SetFeatureGates(featureGates)
+	}
+
 	return &ThanosRulerReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		logger:   instrumentationConf.Logger,
-		metrics:  controllermetrics.NewThanosRulerMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
-		recorder: instrumentationConf.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+		handler:  handler,
 	}
 }
 

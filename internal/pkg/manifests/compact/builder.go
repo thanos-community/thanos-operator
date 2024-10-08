@@ -64,6 +64,7 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
+
 	return objs
 }
 
