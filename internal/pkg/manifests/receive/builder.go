@@ -72,10 +72,16 @@ func (opts IngesterOptions) Build() []client.Object {
 	var objs []client.Object
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetIngesterLabels(opts)
-	// for receive ingesters we create a single service account per instance
-	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
+	name := opts.GetGeneratedResourceName()
+
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels))
 	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
+
+	if opts.PodDisruptionConfig != nil {
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+	}
+
 	return objs
 }
 
@@ -86,15 +92,20 @@ func (opts IngesterOptions) GetGeneratedResourceName() string {
 
 // Build builds the Thanos Receive router components
 func (opts RouterOptions) Build() []client.Object {
+	var objs []client.Object
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetRouterLabels(opts)
 	name := opts.GetGeneratedResourceName()
-	return []client.Object{
-		manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels),
-		newRouterService(opts, selectorLabels, objectMetaLabels),
-		newRouterDeployment(opts, selectorLabels, objectMetaLabels),
-		newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels),
+
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels))
+	objs = append(objs, newRouterService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
+
+	if opts.PodDisruptionConfig != nil {
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
 	}
+	return objs
 }
 
 func (opts RouterOptions) GetGeneratedResourceName() string {

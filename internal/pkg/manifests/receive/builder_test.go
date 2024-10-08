@@ -21,6 +21,7 @@ const (
 func TestBuildIngesters(t *testing.T) {
 	opts := IngesterOptions{
 		Options: manifests.Options{
+			Owner:     "any",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -28,17 +29,20 @@ func TestBuildIngesters(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
+		HashringName: "test-hashring",
 	}
 
 	objs := opts.Build()
-	if len(objs) != 3 {
-		t.Fatalf("expected 3 objects, got %d", len(objs))
+	if len(objs) != 4 {
+		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewIngestorService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewIngestorStatefulSet(opts))
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[3], opts, opts.Namespace, objs[1])
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
@@ -49,6 +53,7 @@ func TestBuildIngesters(t *testing.T) {
 func TestBuildRouter(t *testing.T) {
 	opts := RouterOptions{
 		Options: manifests.Options{
+			Owner:     "any",
 			Namespace: "ns",
 			Image:     ptr.To("some-custom-image"),
 			Labels: map[string]string{
@@ -56,17 +61,19 @@ func TestBuildRouter(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 	}
 
 	objs := opts.Build()
-	if len(objs) != 4 {
-		t.Fatalf("expected 3 objects, got %d", len(objs))
+	if len(objs) != 5 {
+		t.Fatalf("expected 5 objects, got %d", len(objs))
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewRouterService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewRouterDeployment(opts))
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[4], opts, opts.Namespace, objs[2])
 
 	wantLabels := GetRouterLabels(opts)
 	wantLabels["some-custom-label"] = someCustomLabelValue

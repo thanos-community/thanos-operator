@@ -29,6 +29,7 @@ func TestBuildRuler(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		Endpoints: []Endpoint{
 			{

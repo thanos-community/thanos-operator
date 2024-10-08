@@ -226,7 +226,7 @@ func (v Verifier) WithService() Verifier {
 }
 
 func (v Verifier) WithStatefulSet() Verifier {
-	v.svc = true
+	v.sts = true
 	return v
 }
 
@@ -679,7 +679,7 @@ func ValidateLabelsMatch(t *testing.T, objWithSelector client.Object, matches cl
 	}
 }
 
-func ValidateNameNamespaceAndLabels(t *testing.T, obj client.Object, name, namespace string, labels map[string]string) {
+func ValidateNameAndNamespace(t *testing.T, obj client.Object, name, namespace string) {
 	t.Helper()
 	if obj.GetName() != name {
 		t.Errorf("expected object to have name %s, got %s", name, obj.GetName())
@@ -687,6 +687,11 @@ func ValidateNameNamespaceAndLabels(t *testing.T, obj client.Object, name, names
 	if obj.GetNamespace() != namespace {
 		t.Errorf("expected object to have namespace %s, got %s", namespace, obj.GetNamespace())
 	}
+}
+
+func ValidateNameNamespaceAndLabels(t *testing.T, obj client.Object, name, namespace string, labels map[string]string) {
+	t.Helper()
+	ValidateNameAndNamespace(t, obj, name, namespace)
 	ValidateObjectLabelsEqual(t, labels, obj)
 }
 
@@ -820,4 +825,13 @@ func ValidateIsNamedServiceAccount(t *testing.T, obj client.Object, b manifests.
 	}
 
 	ValidateNameNamespaceAndLabels(t, obj, b.GetGeneratedResourceName(), namespace, b.GetSelectorLabels())
+}
+
+func ValidateIsNamedPodDisruptionBudget(t *testing.T, obj client.Object, b manifests.Buildable, namespace string, matching client.Object) {
+	t.Helper()
+	if obj.GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
+		t.Errorf("expected object to be a PodDisruptionBudget, got %v", obj.GetObjectKind().GroupVersionKind().Kind)
+	}
+	ValidateNameAndNamespace(t, obj, b.GetGeneratedResourceName(), namespace)
+	ValidateLabelsMatch(t, obj, matching)
 }

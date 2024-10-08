@@ -60,7 +60,10 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, ptr.To(1)))
+
+	if opts.PodDisruptionConfig != nil {
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+	}
 
 	if opts.ServiceMonitorConfig.Enabled {
 		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)

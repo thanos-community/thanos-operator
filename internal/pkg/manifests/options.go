@@ -90,6 +90,9 @@ type Options struct {
 	LogFormat *string
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
 	ServiceMonitorConfig ServiceMonitorConfig
+	// PodDisruptionConfig is the configuration for the PodDisruptionBudget
+	// If not set, the PodDisruptionBudget will not be created.
+	PodDisruptionConfig *PodDisruptionBudgetOptions
 }
 
 // ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.

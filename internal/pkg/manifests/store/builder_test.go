@@ -28,11 +28,13 @@ func TestBuildStore(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Owner:               "any",
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 	}
 
 	objs := opts.Build()
-	if len(objs) != 4 {
+	if len(objs) != 5 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
@@ -40,6 +42,7 @@ func TestBuildStore(t *testing.T) {
 	utils.ValidateObjectsEqual(t, objs[1], NewStoreService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewStoreStatefulSet(opts))
 	utils.ValidateObjectsEqual(t, objs[3], newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[4], opts, opts.Namespace, objs[2])
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
@@ -61,6 +64,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 	buildDefaultOpts := func() Options {
 		return Options{
 			Options: manifests.Options{
+				Owner:     owner,
 				Namespace: ns,
 				Image:     ptr.To("some-custom-image"),
 				Labels: map[string]string{
