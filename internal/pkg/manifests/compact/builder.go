@@ -52,6 +52,10 @@ type Options struct {
 	ShardIndex *int
 }
 
+// Build compiles all the Kubernetes objects for the Thanos Compact shard.
+// This includes the ServiceAccount, StatefulSet, and Service.
+// Build ignores any manifests.PodDisruptionBudgetOptions as well as replicas set in the Options since
+// enforce running compactor as a single replica.
 func (opts Options) Build() []client.Object {
 	var objs []client.Object
 	selectorLabels := opts.GetSelectorLabels()

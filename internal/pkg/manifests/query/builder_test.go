@@ -28,6 +28,7 @@ func TestBuildQuery(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		Timeout:       "15m",
 		LookbackDelta: "5m",
@@ -42,10 +43,7 @@ func TestBuildQuery(t *testing.T) {
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewQueryDeployment(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewQueryService(opts))
-	if objs[3].GetObjectKind().GroupVersionKind().Kind != "PodDisruptionBudget" {
-		t.Errorf("expected object to be a PodDisruptionBudget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
-	}
-	utils.ValidateLabelsMatch(t, objs[3], objs[1])
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[3], opts, opts.Namespace, objs[1])
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue

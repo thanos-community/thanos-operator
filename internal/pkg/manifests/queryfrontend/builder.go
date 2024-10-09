@@ -58,7 +58,11 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, ptr.To(1)))
+
+	if opts.PodDisruptionConfig != nil {
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+	}
+
 	if opts.ResponseCacheConfig == nil {
 		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 	}

@@ -156,6 +156,8 @@ func TestBuild(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			// should ignore this setting
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 	}
 

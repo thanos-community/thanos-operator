@@ -62,6 +62,11 @@ func (opts Options) Build() []client.Object {
 	if opts.IndexCacheConfig == nil || opts.CachingBucketConfig == nil {
 		objs = append(objs, newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
 	}
+
+	if opts.PodDisruptionConfig != nil {
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+	}
+
 	if opts.ServiceMonitorConfig.Enabled {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
