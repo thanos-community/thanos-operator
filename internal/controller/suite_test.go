@@ -23,11 +23,10 @@ import (
 	"runtime"
 	"testing"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -108,45 +107,48 @@ var _ = BeforeSuite(func() {
 	controllerBaseMetrics := controllermetrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
 
-	buildControllerInstrumentationConfig := func(component string) InstrumentationConfig {
-		return InstrumentationConfig{
-			Logger:          logger.WithName(component),
-			EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),
-			MetricsRegistry: ctrlmetrics.Registry,
-			BaseMetrics:     controllerBaseMetrics,
+	buildConfig := func(component string) Config {
+		return Config{
+			FeatureGate: FeatureGate{EnableServiceMonitor: true},
+			InstrumentationConfig: InstrumentationConfig{
+				Logger:          logger.WithName(component),
+				EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),
+				MetricsRegistry: ctrlmetrics.Registry,
+				BaseMetrics:     controllerBaseMetrics,
+			},
 		}
 	}
 
 	err = NewThanosReceiveReconciler(
-		buildControllerInstrumentationConfig("receive"),
+		buildConfig("receive"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosQueryReconciler(
-		buildControllerInstrumentationConfig("query"),
+		buildConfig("query"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosStoreReconciler(
-		buildControllerInstrumentationConfig("store"),
+		buildConfig("store"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosRulerReconciler(
-		buildControllerInstrumentationConfig("ruler"),
+		buildConfig("ruler"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosCompactReconciler(
-		buildControllerInstrumentationConfig("compact"),
+		buildConfig("compact"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).SetupWithManager(k8sManager)

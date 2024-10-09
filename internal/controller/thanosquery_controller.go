@@ -60,14 +60,20 @@ type ThanosQueryReconciler struct {
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
-func NewThanosQueryReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
+func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		handler.SetFeatureGates(featureGates)
+	}
+
 	return &ThanosQueryReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		logger:   instrumentationConf.Logger,
-		metrics:  controllermetrics.NewThanosQueryMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
-		recorder: instrumentationConf.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+		handler:  handler,
 	}
 }
 

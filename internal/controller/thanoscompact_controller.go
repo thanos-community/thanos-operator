@@ -21,11 +21,11 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
-	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	"golang.org/x/exp/maps"
@@ -101,14 +101,20 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // NewThanosCompactReconciler returns a reconciler for ThanosCompact resources.
-func NewThanosCompactReconciler(instrumentationConf InstrumentationConfig, client client.Client, scheme *runtime.Scheme) *ThanosCompactReconciler {
+func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosCompactReconciler {
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		handler.SetFeatureGates(featureGates)
+	}
+
 	return &ThanosCompactReconciler{
 		Client:   client,
 		Scheme:   scheme,
-		logger:   instrumentationConf.Logger,
-		metrics:  controllermetrics.NewThanosCompactMetrics(instrumentationConf.MetricsRegistry, instrumentationConf.BaseMetrics),
-		recorder: instrumentationConf.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, instrumentationConf.Logger),
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+		handler:  handler,
 	}
 }
 
@@ -131,7 +137,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 

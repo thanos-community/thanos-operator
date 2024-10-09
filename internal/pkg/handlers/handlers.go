@@ -11,6 +11,8 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,6 +21,8 @@ type Handler struct {
 	client client.Client
 	scheme *runtime.Scheme
 	logger logr.Logger
+
+	gatedGVK []schema.GroupVersionKind
 }
 
 // NewHandler creates a new Handler.
@@ -30,6 +34,12 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 	}
 }
 
+// SetFeatureGates sets the feature gates for the handler.
+// Handler will ignore actions on resources with the given GroupVersionKind.
+func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) {
+	h.gatedGVK = gvk
+}
+
 // CreateOrUpdate creates or updates the given objects in the Kubernetes cluster.
 // It sets the owner reference of each object to the given owner.
 // It logs the operation and any errors encountered.
@@ -37,6 +47,17 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner client.Object, objs []client.Object) int {
 	var errCount int
 	for _, obj := range objs {
+
+		if h.isFeatureGated(obj) {
+			h.logger.V(1).Info(
+				"resource is feature gated, skipping",
+				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
+				"resource", obj.GetName(),
+				"namespace", obj.GetNamespace(),
+			)
+			continue
+		}
+
 		if manifests.IsNamespacedResource(obj) {
 			obj.SetNamespace(namespace)
 			if err := ctrl.SetControllerReference(owner, obj, h.scheme); err != nil {
@@ -70,10 +91,21 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 	return errCount
 }
 
-// Delete resources if they exist.
+// DeleteResource resources if they exist
 func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int {
 	var errCount int
 	for _, obj := range objs {
+
+		if h.isFeatureGated(obj) {
+			h.logger.V(1).Info(
+				"resource is feature gated, skipping",
+				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
+				"resource", obj.GetName(),
+				"namespace", obj.GetNamespace(),
+			)
+			continue
+		}
+
 		if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) {
 			h.logger.Error(
 				err, "failed to delete resource",
@@ -104,4 +136,14 @@ func (h *Handler) GetEndpointSlices(ctx context.Context, serviceName string, nam
 			serviceName, namespace, err)
 	}
 	return &eps, nil
+}
+
+func (h *Handler) isFeatureGated(obj client.Object) bool {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	for _, gatedGVK := range h.gatedGVK {
+		if gvk == gatedGVK {
+			return true
+		}
+	}
+	return false
 }
