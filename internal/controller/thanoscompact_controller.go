@@ -28,16 +28,11 @@ import (
 	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
-	"golang.org/x/exp/maps"
-
-	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
-	"k8s.io/utils/strings/slices"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -127,13 +122,24 @@ func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact monitoringthanosiov1alpha1.ThanosCompact) error {
 	var errCount int
-	shardedObjects := r.buildCompact(compact)
-	if err := r.pruneOrphanedResources(ctx, compact.GetNamespace(), compact.GetName(), maps.Keys(shardedObjects)); err != nil {
-		return err
+	options := r.specToOptions(compact)
+
+	// for compactor, we want to make sure we clean up any resources that are no longer needed first
+	// as we don't want multiple compactor instances potentially compacting the same data.
+	expectResources := make([]string, len(options))
+	for _, opt := range options {
+		expectResources = append(expectResources, opt.GetGeneratedResourceName())
 	}
 
-	for _, shardObjs := range shardedObjects {
-		errCount += r.handler.CreateOrUpdate(ctx, compact.GetNamespace(), &compact, shardObjs)
+	errCount = r.pruneOrphanedResources(ctx, compact.GetNamespace(), compact.GetName(), expectResources)
+	if errCount > 0 {
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
+		return fmt.Errorf("failed to prune %d orphaned resources for compact or compact shard(s)", errCount)
+	}
+
+	// now we can create what we expect to be built based on the spec
+	for _, opt := range options {
+		errCount += r.handler.CreateOrUpdate(ctx, compact.GetNamespace(), &compact, opt.Build())
 	}
 
 	if errCount > 0 {
@@ -144,65 +150,20 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	return nil
 }
 
-func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) error {
+func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
 	listOpt := manifests.GetLabelSelectorForOwner(manifestcompact.Options{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
-	deleteOrphanedShardResources := func(obj client.Object) error {
-		if !slices.Contains(expectShards, obj.GetName()) {
-			err := r.Delete(ctx, obj)
-			if err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-		}
-		return nil
-	}
-
-	compactSTS := &v1.StatefulSetList{}
-	opts := []client.ListOption{listOpt, client.InNamespace(ns)}
-	if err := r.List(ctx, compactSTS, opts...); err != nil {
-		return err
-	}
-
-	for _, s := range compactSTS.Items {
-		if err := deleteOrphanedShardResources(&s); err != nil {
-			return fmt.Errorf("failed to delete orphaned StatefulSets: %w", err)
-		}
-	}
-
-	compactServices := &corev1.ServiceList{}
-	if err := r.List(ctx, compactServices, opts...); err != nil {
-		return err
-	}
-
-	for _, s := range compactServices.Items {
-		if err := deleteOrphanedShardResources(&s); err != nil {
-			return fmt.Errorf("failed to delete orphaned Service: %w", err)
-		}
-	}
-
-	return nil
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithServiceMonitor()
+	return pruner.Prune(ctx, expectShards, listOpts...)
 }
 
-// buildCompact returns a slice of slices of client.Object that represents the desired state of the Thanos Compact resources.
-// each key represents a named shard and each slice value represents the resources for that shard.
-func (r *ThanosCompactReconciler) buildCompact(compact monitoringthanosiov1alpha1.ThanosCompact) map[string][]client.Object {
-	opts := r.specToOptions(compact)
-	shardedObjects := make(map[string][]client.Object, len(opts))
-
-	for i, opt := range opts {
-		compactorObjs := opt.Build()
-		shardedObjects[i] = append(shardedObjects[i], compactorObjs...)
-	}
-	return shardedObjects
-}
-
-func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) map[string]manifestcompact.Options {
+func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
 	if compact.Spec.ShardingConfig == nil || compact.Spec.ShardingConfig.ExternalLabelSharding == nil {
-		opts := compactV1Alpha1ToOptions(compact)
-		return map[string]manifestcompact.Options{opts.GetGeneratedResourceName(): opts}
+		return []manifests.Buildable{compactV1Alpha1ToOptions(compact)}
 	}
 
-	shardedOptions := make(map[string]manifestcompact.Options)
+	var buildable []manifests.Buildable
 	for _, shard := range compact.Spec.ShardingConfig.ExternalLabelSharding {
 		for i, v := range shard.Values {
 			opts := compactV1Alpha1ToOptions(compact)
@@ -215,8 +176,8 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 					Regex:       v,
 				},
 			}
-			shardedOptions[opts.GetGeneratedResourceName()] = opts
+			buildable = append(buildable, opts)
 		}
 	}
-	return shardedOptions
+	return buildable
 }
