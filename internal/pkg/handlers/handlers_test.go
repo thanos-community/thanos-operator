@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,15 @@ import (
 type fakeClientWithError struct {
 	client.Client
 	shouldError bool
+}
+
+func (fc *fakeClientWithError) List(ctx context.Context, objs client.ObjectList, opts ...client.ListOption) error {
+	if fc.shouldError {
+		// after we hit the first error we should reset the flag
+		fc.shouldError = false
+		return fmt.Errorf("error")
+	}
+	return fc.Client.List(ctx, objs)
 }
 
 func (fc *fakeClientWithError) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
@@ -66,9 +76,11 @@ func TestHandler_CreateOrUpdate(t *testing.T) {
 			name: "test no errors on create fresh objects",
 			h: func() *Handler {
 				return &Handler{
-					client: fake.NewFakeClient(),
-					scheme: scheme.Scheme,
-					logger: logr.New(log.NullLogSink{}),
+					handler: &handler{
+						client: fake.NewFakeClient(),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
 				}
 			},
 			objs: baseObjects,
@@ -77,12 +89,14 @@ func TestHandler_CreateOrUpdate(t *testing.T) {
 			name: "test error on update returns correct error count",
 			h: func() *Handler {
 				return &Handler{
-					client: &fakeClientWithError{
-						Client:      fake.NewFakeClient(runTimeSts),
-						shouldError: true,
+					handler: &handler{
+						client: &fakeClientWithError{
+							Client:      fake.NewFakeClient(runTimeSts),
+							shouldError: true,
+						},
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
 					},
-					scheme: scheme.Scheme,
-					logger: logr.New(log.NullLogSink{}),
 				}
 			},
 			objs:           baseObjects,
@@ -154,7 +168,13 @@ func TestHandler_GetEndpointSlices(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			h := &Handler{client: fake.NewFakeClient(tc.objs...), scheme: scheme.Scheme, logger: logr.New(log.NullLogSink{})}
+			h := &Handler{
+				handler: &handler{
+					client: fake.NewFakeClient(tc.objs...),
+					scheme: scheme.Scheme,
+					logger: logr.New(log.NullLogSink{}),
+				},
+			}
 			eps, err := h.GetEndpointSlices(ctx, svcName, namespace)
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -170,6 +190,110 @@ func TestHandler_GetEndpointSlices(t *testing.T) {
 
 			if eps.Items[0].Labels[discoveryv1.LabelServiceName] != svcName && eps.Items[0].Labels["explain"] != "should be included" {
 				t.Errorf("unexpected endpoint slice: %v", eps.Items[0])
+			}
+		})
+	}
+}
+
+func TestPrune(t *testing.T) {
+	tests := []struct {
+		name              string
+		keepResourceNames []string
+		from              client.ListOption
+		setup             func() *resourcePruner
+		expectedError     bool
+		expectedRemaining []string
+	}{
+		{
+			name:              "DeletesOrphanedResources",
+			keepResourceNames: []string{"keep-me"},
+			from:              client.InNamespace("test-namespace"),
+			setup: func() *resourcePruner {
+				return &resourcePruner{
+					handler: &handler{
+						client: fake.NewFakeClient(
+							&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "delete-me", Namespace: "test-namespace"}},
+							&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "keep-me", Namespace: "test-namespace"}},
+						),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+					sa: true,
+				}
+			},
+			expectedError:     false,
+			expectedRemaining: []string{"keep-me"},
+		},
+		{
+			name:              "NoResourcesToDelete",
+			keepResourceNames: []string{"keep-me"},
+			from:              client.InNamespace("test-namespace"),
+			setup: func() *resourcePruner {
+				return &resourcePruner{
+					handler: &handler{
+						client: fake.NewFakeClient(
+							&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "keep-me", Namespace: "test-namespace"}},
+						),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+					sa: true,
+				}
+			},
+			expectedError:     false,
+			expectedRemaining: []string{"keep-me"},
+		},
+		{
+			name:              "HandlesListError",
+			keepResourceNames: []string{"keep-me"},
+			from:              client.InNamespace("test-namespace"),
+			setup: func() *resourcePruner {
+				return &resourcePruner{
+					handler: &handler{
+						client: &fakeClientWithError{Client: fake.NewFakeClient(), shouldError: true},
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+					sa: true,
+				}
+			},
+			expectedError:     true,
+			expectedRemaining: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := tt.setup()
+			errs := r.Prune(context.Background(), tt.keepResourceNames, tt.from)
+			if tt.expectedError {
+				if errs == 0 {
+					t.Errorf("expected error, got none")
+				}
+			} else {
+				if errs != 0 {
+					t.Fatalf("unexpected error count: %v ", errs)
+				}
+			}
+
+			saList := &corev1.ServiceAccountList{}
+			if err := r.client.List(context.Background(), saList, tt.from); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			var remaining []string
+			for _, sa := range saList.Items {
+				remaining = append(remaining, sa.Name)
+			}
+
+			if len(remaining) != len(tt.expectedRemaining) {
+				t.Errorf("expected %d remaining resources, got %d", len(tt.expectedRemaining), len(remaining))
+			}
+
+			for _, rem := range remaining {
+				if !slices.Contains(tt.expectedRemaining, rem) {
+					t.Errorf("unexpected remaining resource %s", rem)
+				}
 			}
 		})
 	}
