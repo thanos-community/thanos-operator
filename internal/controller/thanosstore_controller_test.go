@@ -212,10 +212,33 @@ config:
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
+			By("ensuring old shards are cleaned up", func() {
+				resource.Spec.ShardingStrategy.Shards = 1
+				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
+
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount().WithServiceMonitor()
+				updatedName := StoreNameFromParent(resourceName, nil)
+
+				EventuallyWithOffset(1, func() bool {
+					return verifier.Verify(k8sClient, updatedName, ns)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetExists(k8sClient, firstShard, ns)
+				}, time.Second*10, time.Second*2).Should(BeFalse())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetExists(k8sClient, secondShard, ns)
+				}, time.Second*10, time.Second*2).Should(BeFalse())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetExists(k8sClient, thirdShard, ns)
+				}, time.Second*10, time.Second*2).Should(BeFalse())
+			})
+
 			By("removing service monitor when disabled", func() {
-				for _, shard := range []string{firstShard, secondShard, thirdShard} {
-					Expect(utils.VerifyServiceMonitorExists(k8sClient, shard, ns)).To(BeTrue())
-				}
+				updatedName := StoreNameFromParent(resourceName, nil)
+				Expect(utils.VerifyServiceMonitorExists(k8sClient, updatedName, ns)).To(BeTrue())
 
 				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
@@ -227,11 +250,11 @@ config:
 					},
 				}
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
-				for _, shard := range []string{firstShard, secondShard, thirdShard} {
-					Eventually(func() bool {
-						return utils.VerifyServiceMonitorExists(k8sClient, shard, ns)
-					}, time.Second*30, time.Second*10).Should(BeFalse())
-				}
+
+				Eventually(func() bool {
+					return utils.VerifyServiceMonitorExists(k8sClient, updatedName, ns)
+				}, time.Second*30, time.Second*10).Should(BeFalse())
+
 			})
 
 			By("checking paused state", func() {
