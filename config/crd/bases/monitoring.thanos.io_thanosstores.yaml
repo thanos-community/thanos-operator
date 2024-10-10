@@ -3532,7 +3532,8 @@ spec:
                   IN-MEMORY config is loaded by default if not specified.
                 properties:
                   key:
-                    description: The key to select.
+                    description: The key of the secret to select from.  Must be a
+                      valid secret key.
                     type: string
                   name:
                     default: ""
@@ -3544,8 +3545,7 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   optional:
-                    description: Specify whether the ConfigMap or its key must be
-                      defined
+                    description: Specify whether the Secret or its key must be defined
                     type: boolean
                 required:
                 - key
@@ -3602,7 +3602,8 @@ spec:
                   IN-MEMORY config is loaded by default if not specified.
                 properties:
                   key:
-                    description: The key to select.
+                    description: The key of the secret to select from.  Must be a
+                      valid secret key.
                     type: string
                   name:
                     default: ""
@@ -3614,8 +3615,7 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   optional:
-                    description: Specify whether the ConfigMap or its key must be
-                      defined
+                    description: Specify whether the Secret or its key must be defined
                     type: boolean
                 required:
                 - key

@@ -38,7 +38,7 @@ type ThanosQuerySpec struct {
 	// Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
 	// +kubebuilder:default:={"replica"}
 	// +kubebuilder:validation:Optional
-	ReplicaLabels []string `json:"querierReplicaLabels,omitempty"`
+	ReplicaLabels []string `json:"replicaLabels,omitempty"`
 	// StoreLabelSelector enables adding additional labels to build a custom label selector
 	// for discoverable StoreAPIs. Values provided here will be appended to the default which are
 	// {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.

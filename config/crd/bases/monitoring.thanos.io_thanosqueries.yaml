@@ -3634,17 +3634,6 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
-              querierReplicaLabels:
-                default:
-                - replica
-                description: |-
-                  ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
-                  Data can still be queried without deduplication using 'dedup=false' parameter.
-                  Data includes time series, recording rules, and alerting rules.
-                  Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
-                items:
-                  type: string
-                type: array
               queryFrontend:
                 description: |-
                   QueryFrontend is the configuration for the Query Frontend
@@ -7408,6 +7397,17 @@ spec:
                       Thanos available at the time when the version of the operator was released.
                     type: string
                 type: object
+              replicaLabels:
+                default:
+                - replica
+                description: |-
+                  ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
+                  Data can still be queried without deduplication using 'dedup=false' parameter.
+                  Data includes time series, recording rules, and alerting rules.
+                  Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
+                items:
+                  type: string
+                type: array
               replicas:
                 default: 1
                 description: Replicas is the number of querier replicas.

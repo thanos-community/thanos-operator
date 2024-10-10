@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -1089,12 +1089,12 @@ func (in *ThanosStoreSpec) DeepCopyInto(out *ThanosStoreSpec) {
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
 	if in.IndexCacheConfig != nil {
 		in, out := &in.IndexCacheConfig, &out.IndexCacheConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.CachingBucketConfig != nil {
 		in, out := &in.CachingBucketConfig, &out.CachingBucketConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	out.ShardingStrategy = in.ShardingStrategy
