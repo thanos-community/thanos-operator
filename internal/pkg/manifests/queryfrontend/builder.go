@@ -41,7 +41,7 @@ type Options struct {
 	QueryPort              int32
 	LogQueriesLongerThan   manifests.Duration
 	CompressResponses      bool
-	ResponseCacheConfig    *corev1.ConfigMapKeySelector
+	ResponseCacheConfig    *corev1.SecretKeySelector
 	RangeSplitInterval     manifests.Duration
 	LabelsSplitInterval    manifests.Duration
 	RangeMaxRetries        int
@@ -119,7 +119,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 		cacheConfigEnv = corev1.EnvVar{
 			Name: "CACHE_CONFIG",
 			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: opts.ResponseCacheConfig,
+				SecretKeyRef: opts.ResponseCacheConfig,
 			},
 		}
 	}

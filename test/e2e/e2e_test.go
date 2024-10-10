@@ -307,7 +307,7 @@ var _ = Describe("controller", Ordered, func() {
 						Labels: map[string]string{
 							"some-label": "xyz",
 						},
-						QuerierReplicaLabels: []string{
+						ReplicaLabels: []string{
 							"prometheus_replica",
 							"replica",
 							"rule_replica",

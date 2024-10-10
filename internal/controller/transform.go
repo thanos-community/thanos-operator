@@ -21,7 +21,7 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
-		ReplicaLabels: in.Spec.QuerierReplicaLabels,
+		ReplicaLabels: in.Spec.ReplicaLabels,
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
