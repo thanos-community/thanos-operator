@@ -123,9 +123,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 
 	expectShards := make([]string, len(opts))
 	for i, opt := range opts {
-		if opt == nil {
-			continue
-		}
 		expectShards[i] = opt.GetGeneratedResourceName()
 		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, opt.Build())
 	}
@@ -167,8 +164,8 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
-	buildables := make([]manifests.Buildable, shardCount)
-	for i := range store.Spec.ShardingStrategy.Shards {
+	buildable := make([]manifests.Buildable, shardCount)
+	for i := range store.Spec.ShardingStrategy.Shards - 1 {
 		storeShardOpts := storeV1Alpha1ToOptions(store)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
@@ -184,9 +181,9 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 			},
 		}
 		storeShardOpts.ShardIndex = ptr.To(i)
-		buildables[i] = storeShardOpts
+		buildable[i] = storeShardOpts
 	}
-	return buildables
+	return buildable
 }
 
 func (r *ThanosStoreReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
