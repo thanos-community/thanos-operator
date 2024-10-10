@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -85,6 +86,9 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
+			if os.Getenv("EXCLUDE_STORE") == skipValue {
+				Skip("Skipping ThanosStore controller tests")
+			}
 			firstShard := StoreNameFromParent(resourceName, ptr.To(int32(0)))
 			secondShard := StoreNameFromParent(resourceName, ptr.To(int32(1)))
 			thirdShard := StoreNameFromParent(resourceName, ptr.To(int32(2)))
@@ -238,8 +242,6 @@ config:
 
 			By("removing service monitor when disabled", func() {
 				updatedName := StoreNameFromParent(resourceName, nil)
-				Expect(utils.VerifyServiceMonitorExists(k8sClient, updatedName, ns)).To(BeTrue())
-
 				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
 

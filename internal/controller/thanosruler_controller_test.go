@@ -19,19 +19,19 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/test/utils"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -85,6 +85,9 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,

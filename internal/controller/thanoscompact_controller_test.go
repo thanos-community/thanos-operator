@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -94,6 +95,10 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
+			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
+				Skip("Skipping ThanosCompact controller tests")
+			}
+
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
