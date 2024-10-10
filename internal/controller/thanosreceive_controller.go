@@ -169,17 +169,24 @@ func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 // It creates or updates the resources for the hashrings and the router.
 func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) error {
 	var errCount int
-	shardedObjects := r.buildIngesterHashrings(receiver)
 
-	// todo - we need to prune any orphaned resources here at this point
-
-	for _, shardObjs := range shardedObjects {
-		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, shardObjs)
+	ingestOpts := r.specToIngestOptions(receiver)
+	expectIngesters := make([]string, 1, len(ingestOpts))
+	for i, opt := range ingestOpts {
+		expectIngesters[i] = opt.GetGeneratedResourceName()
+		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, opt.Build())
 	}
 
 	if errCount > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
+	}
+
+	// prune the ingest resources that are no longer needed/have changed
+	errCount = r.pruneOrphanedResources(ctx, receiver.GetNamespace(), receiver.GetName(), expectIngesters)
+	if errCount > 0 {
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
+		return fmt.Errorf("failed to prune %d orphaned resources for receive ingester(s)", errCount)
 	}
 
 	hashringConfig, err := r.buildHashringConfig(ctx, receiver)
@@ -196,37 +203,28 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	return nil
 }
 
-// buildIngesterHashrings builds the ingesters for the ThanosReceive resource.
-// It returns a map of slices of client.Object that represents the desired state of the Thanos Ingester resources.
-// Each key represents a named ingester and each slice value represents the resources for that ingester.
-func (r *ThanosReceiveReconciler) buildIngesterHashrings(receiver monitoringthanosiov1alpha1.ThanosReceive) map[string][]client.Object {
-	opts := r.specToIngestOptions(receiver)
-	shardedObjects := make(map[string][]client.Object, len(opts))
-
-	for hashring, opt := range opts {
-		for _, ingester := range receiver.Spec.Ingester.Hashrings {
-			if ingester.Paused != nil && *ingester.Paused && hashring == ingester.Name {
-				r.logger.Info("ingester is paused", "ingester", hashring)
-				r.recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
-					"Reconciliation is paused for ThanosReceive resource - hashring "+hashring)
-				continue
-			}
+func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
+	opts := make([]manifests.Buildable, 1, len(receiver.Spec.Ingester.Hashrings))
+	for i, v := range receiver.Spec.Ingester.Hashrings {
+		if v.Paused != nil && *v.Paused {
+			r.logger.Info("ingester is paused", "ingester", v.Name)
+			r.recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
+				"Reconciliation is paused for ThanosReceive resource - ingester "+v.Name)
+			continue
 		}
-
-		objs := opt.Build()
-		shardedObjects[hashring] = append(shardedObjects[hashring], objs...)
-	}
-	return shardedObjects
-}
-
-func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) map[string]manifestreceive.IngesterOptions {
-	opts := make(map[string]manifestreceive.IngesterOptions, len(receiver.Spec.Ingester.Hashrings))
-	for _, v := range receiver.Spec.Ingester.Hashrings {
 		opt := receiverV1Alpha1ToIngesterOptions(receiver, v)
 		opt.HashringName = v.Name
-		opts[v.Name] = opt
+		opts[i] = opt
 	}
 	return opts
+}
+
+func (r *ThanosReceiveReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestreceive.IngesterOptions{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectShards, listOpts...)
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.

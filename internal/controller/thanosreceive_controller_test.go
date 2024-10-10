@@ -29,7 +29,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +46,8 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 			objStoreSecretName = "test-secret"
 			objStoreSecretKey  = "test-key.yaml"
 
-			hashringName = "test-hashring"
+			hashringName        = "test-hashring"
+			updatedHashringName = "test-hashring-2"
 		)
 
 		ctx := context.Background()
@@ -338,7 +338,35 @@ config:
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
+			})
 
+			By("creating the additional container for ingesters", func() {
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(
+						k8sClient, ingesterName, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
+				}, time.Second*10, time.Second*1).Should(BeTrue())
+			})
+
+			By("ensuring old shards are cleaned up", func() {
+				resource.Spec.Ingester.Hashrings = []monitoringthanosiov1alpha1.IngesterHashringSpec{
+					{
+						Name:        updatedHashringName,
+						Labels:      map[string]string{"test": "my-ingester-test"},
+						StorageSize: "100Mi",
+						Tenants:     []string{"test-tenant"},
+						Replicas:    3,
+					},
+				}
+				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
+				updatedIngesterName := ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
+				EventuallyWithOffset(1, func() bool {
+					return verifier.Verify(k8sClient, updatedIngesterName, ns)
+				}, time.Second*10, time.Second*2).Should(BeFalse())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetExists(k8sClient, ingesterName, ns)
+				}, time.Second*10, time.Second*2).Should(BeFalse())
 			})
 
 			By("creating the router components", func() {
@@ -355,30 +383,13 @@ config:
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
-			By("creating the additional container for ingesters", func() {
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(
-						k8sClient, ingesterName, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
-			})
-
-			By("checking updates do not take effect when resource is paused", func() {
-				originalReplicas := resource.Spec.Router.Replicas
+			By("checking paused state", func() {
 				resource.Spec.Router.Paused = ptr.To(true)
-				resource.Spec.Router.Replicas = 20
+				resource.Spec.Router.CommonThanosFields.LogLevel = ptr.To("debug")
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
 				Consistently(func() bool {
-					deployment := &appsv1.Deployment{}
-					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: routerName, Namespace: ns}, deployment)
-					if err != nil {
-						return false
-					}
-					if *deployment.Spec.Replicas != originalReplicas {
-						return false
-					}
-					return true
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")
+				}, time.Second*5, time.Second).Should(BeFalse())
 			})
 		})
 	})
