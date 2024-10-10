@@ -119,12 +119,15 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) error {
 	var errCount int
-	shardedObjects := r.buildStore(store)
+	opts := r.specToOptions(store)
 
-	// todo - we need to prune any orphaned resources here at this point
-
-	for _, shardObjs := range shardedObjects {
-		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, shardObjs)
+	expectShards := make([]string, len(opts))
+	for i, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		expectShards[i] = opt.GetGeneratedResourceName()
+		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, opt.Build())
 	}
 
 	if errCount > 0 {
@@ -132,50 +135,40 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
-	if store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && !*store.Spec.ServiceMonitorConfig.Enabled {
-		for i := range store.Spec.ShardingStrategy.Shards {
-			if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      StoreNameFromParent(store.GetName(), ptr.To(i)),
-					Namespace: store.GetNamespace(),
-				},
-			},
-			}); errCount > 0 {
-				r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
-				return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
-			}
-		}
+	// prune the store resources that are no longer needed/have changed
+	errCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
+	if errCount > 0 {
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
 	}
 
+	if !r.hasServiceMonitorsEnabled(store) {
+		objs := make([]client.Object, len(expectShards))
+		for i, shard := range expectShards {
+			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: shard, Namespace: store.GetNamespace()}}
+		}
+
+		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
+		}
+	}
 	return nil
 }
 
-// buildStore returns a map of slices of client.Object that represents the desired state of the Thanos Store resources.
-// each key represents a named shard and each slice value represents the resources for that shard.
-func (r *ThanosStoreReconciler) buildStore(store monitoringthanosiov1alpha1.ThanosStore) map[string][]client.Object {
-	opts := r.specToOptions(store)
-	shardedObjects := make(map[string][]client.Object, len(opts))
-
-	for i, opt := range opts {
-		storeObjs := opt.Build()
-		shardedObjects[i] = append(shardedObjects[i], storeObjs...)
-	}
-	return shardedObjects
+func (r *ThanosStoreReconciler) hasServiceMonitorsEnabled(store monitoringthanosiov1alpha1.ThanosStore) bool {
+	return store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && *store.Spec.ServiceMonitorConfig.Enabled
 }
 
-func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) map[string]manifestsstore.Options {
+func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return map[string]manifestsstore.Options{
-			store.GetName(): storeV1Alpha1ToOptions(store),
-		}
+		return []manifests.Buildable{storeV1Alpha1ToOptions(store)}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
-	shardedOptions := make(map[string]manifestsstore.Options, shardCount)
-
+	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		shardName := StoreNameFromParent(store.GetName(), ptr.To(i))
 		storeShardOpts := storeV1Alpha1ToOptions(store)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
@@ -191,9 +184,17 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 			},
 		}
 		storeShardOpts.ShardIndex = ptr.To(i)
-		shardedOptions[shardName] = storeShardOpts
+		buildables[i] = storeShardOpts
 	}
-	return shardedOptions
+	return buildables
+}
+
+func (r *ThanosStoreReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestsstore.Options{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectShards, listOpts...)
 }
 
 // SetupWithManager sets up the controller with the Manager.
