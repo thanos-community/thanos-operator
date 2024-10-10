@@ -21,7 +21,7 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
-		ReplicaLabels: in.Spec.QuerierReplicaLabels,
+		ReplicaLabels: in.Spec.ReplicaLabels,
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
@@ -203,10 +203,7 @@ func commonToOpts(
 	labels map[string]string,
 	common v1alpha1.CommonThanosFields,
 	additional v1alpha1.Additional) manifests.Options {
-	var pdbConfig *manifests.PodDisruptionBudgetOptions
-	if replicas > 1 {
-		pdbConfig = &manifests.PodDisruptionBudgetOptions{}
-	}
+
 	return manifests.Options{
 		Owner:                owner.GetName(),
 		Namespace:            owner.GetNamespace(),
@@ -218,8 +215,16 @@ func commonToOpts(
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, owner.GetNamespace(), labels),
-		PodDisruptionConfig:  pdbConfig,
+		PodDisruptionConfig:  getPodDisruptionBudget(replicas),
 	}
+}
+
+// getPodDisruptionBudget returns a PodDisruptionBudgetOptions if replicas is greater than 1 or nil otherwise.
+func getPodDisruptionBudget(replicas int32) *manifests.PodDisruptionBudgetOptions {
+	if replicas > 1 {
+		return &manifests.PodDisruptionBudgetOptions{}
+	}
+	return nil
 }
 
 func additionalToOpts(in v1alpha1.Additional) manifests.Additional {

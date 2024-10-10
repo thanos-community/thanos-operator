@@ -43,12 +43,12 @@ type ThanosStoreSpec struct {
 	// YAML file that contains index cache configuration. See format details: https://thanos.io/tip/components/store.md/#index-cache
 	// IN-MEMORY config is loaded by default if not specified.
 	// +kubebuilder:validation:Optional
-	IndexCacheConfig *corev1.ConfigMapKeySelector `json:"indexCacheConfig,omitempty"`
+	IndexCacheConfig *corev1.SecretKeySelector `json:"indexCacheConfig,omitempty"`
 	// YAML that contains configuration for caching bucket.
 	// See format details: https://thanos.io/tip/components/store.md/#caching-bucket"
 	// IN-MEMORY config is loaded by default if not specified.
 	// +kubebuilder:validation:Optional
-	CachingBucketConfig *corev1.ConfigMapKeySelector `json:"cachingBucketConfig,omitempty"`
+	CachingBucketConfig *corev1.SecretKeySelector `json:"cachingBucketConfig,omitempty"`
 	// ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks.
 	// +kubebuilder:validation:Required
 	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`

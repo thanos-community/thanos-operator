@@ -379,7 +379,7 @@ func (in *QueryFrontendSpec) DeepCopyInto(out *QueryFrontendSpec) {
 	}
 	if in.QueryRangeResponseCacheConfig != nil {
 		in, out := &in.QueryRangeResponseCacheConfig, &out.QueryRangeResponseCacheConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.QueryRangeSplitInterval != nil {
@@ -747,8 +747,8 @@ func (in *ThanosQuerySpec) DeepCopyInto(out *ThanosQuerySpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.QuerierReplicaLabels != nil {
-		in, out := &in.QuerierReplicaLabels, &out.QuerierReplicaLabels
+	if in.ReplicaLabels != nil {
+		in, out := &in.ReplicaLabels, &out.ReplicaLabels
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -1089,12 +1089,12 @@ func (in *ThanosStoreSpec) DeepCopyInto(out *ThanosStoreSpec) {
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
 	if in.IndexCacheConfig != nil {
 		in, out := &in.IndexCacheConfig, &out.IndexCacheConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.CachingBucketConfig != nil {
 		in, out := &in.CachingBucketConfig, &out.CachingBucketConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	out.ShardingStrategy = in.ShardingStrategy

@@ -92,10 +92,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
-					CommonThanosFields:   monitoringthanosiov1alpha1.CommonThanosFields{},
-					Replicas:             3,
-					QuerierReplicaLabels: []string{"replica"},
-					Labels:               map[string]string{"some-label": "xyz"},
+					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+					Replicas:           3,
+					ReplicaLabels:      []string{"replica"},
+					Labels:             map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -199,7 +199,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 					Replicas:          2,
 					CompressResponses: true,
-					QueryRangeResponseCacheConfig: &corev1.ConfigMapKeySelector{
+					QueryRangeResponseCacheConfig: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "cache-config",
 						},

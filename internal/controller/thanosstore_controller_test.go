@@ -172,13 +172,13 @@ config:
 			})
 
 			By("setting custom caches on thanos store", func() {
-				resource.Spec.IndexCacheConfig = &corev1.ConfigMapKeySelector{
+				resource.Spec.IndexCacheConfig = &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "index-cache",
 					},
 					Key: "index-cache.yaml",
 				}
-				resource.Spec.CachingBucketConfig = &corev1.ConfigMapKeySelector{
+				resource.Spec.CachingBucketConfig = &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "caching-bucket",
 					},
