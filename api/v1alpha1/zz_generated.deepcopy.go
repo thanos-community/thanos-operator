@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -379,7 +379,7 @@ func (in *QueryFrontendSpec) DeepCopyInto(out *QueryFrontendSpec) {
 	}
 	if in.QueryRangeResponseCacheConfig != nil {
 		in, out := &in.QueryRangeResponseCacheConfig, &out.QueryRangeResponseCacheConfig
-		*out = new(corev1.ConfigMapKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.QueryRangeSplitInterval != nil {
@@ -747,8 +747,8 @@ func (in *ThanosQuerySpec) DeepCopyInto(out *ThanosQuerySpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.QuerierReplicaLabels != nil {
-		in, out := &in.QuerierReplicaLabels, &out.QuerierReplicaLabels
+	if in.ReplicaLabels != nil {
+		in, out := &in.ReplicaLabels, &out.ReplicaLabels
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

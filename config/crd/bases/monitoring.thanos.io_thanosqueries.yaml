@@ -3638,8 +3638,8 @@ spec:
                 default:
                 - replica
                 description: |-
-                  Labels to treat as a replica indicator along which data is deduplicated.
-                  Still you will be able to query without deduplication using 'dedup=false' parameter.
+                  ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
+                  Data can still be queried without deduplication using 'dedup=false' parameter.
                   Data includes time series, recording rules, and alerting rules.
                   Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
                 items:
@@ -3648,8 +3648,7 @@ spec:
               queryFrontend:
                 description: |-
                   QueryFrontend is the configuration for the Query Frontend
-                  If you specify this, the operator will create a Query Frontend in front of your
-                  Querier deployment.
+                  If you specify this, the operator will create a Query Frontend in front of your query deployment.
                 properties:
                   additionalArgs:
                     description: Additional arguments to pass to the Thanos components.
@@ -7296,7 +7295,8 @@ spec:
                       for the query range response cache
                     properties:
                       key:
-                        description: The key to select.
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
                         type: string
                       name:
                         default: ""
@@ -7308,8 +7308,8 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
                       optional:
-                        description: Specify whether the ConfigMap or its key must
-                          be defined
+                        description: Specify whether the Secret or its key must be
+                          defined
                         type: boolean
                     required:
                     - key

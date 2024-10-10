@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -27,6 +28,7 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -320,7 +322,4 @@ func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMet
 	return etype
 }
 
-var requiredStoreServiceLabels = map[string]string{
-	manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-}
+var requiredStoreServiceLabels = maps.Clone(manifestsstore.GetRequiredLabels())
