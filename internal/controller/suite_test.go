@@ -56,6 +56,10 @@ var (
 	cancel    context.CancelFunc
 )
 
+const (
+	skipValue = "true"
+)
+
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 

@@ -19,19 +19,20 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
-
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
-	appsv1 "k8s.io/api/apps/v1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -81,6 +82,9 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 		})
 
 		It("should reconcile correctly", func() {
+			if os.Getenv("EXCLUDE_QUERY") == skipValue {
+				Skip("Skipping ThanosQuery controller tests")
+			}
 			name := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{
 				ObjectMeta: metav1.ObjectMeta{
