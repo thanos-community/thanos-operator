@@ -40,8 +40,8 @@ type Options struct {
 	manifests.Options
 	StorageSize              resource.Quantity
 	ObjStoreSecret           corev1.SecretKeySelector
-	IndexCacheConfig         *corev1.ConfigMapKeySelector
-	CachingBucketConfig      *corev1.ConfigMapKeySelector
+	IndexCacheConfig         *corev1.SecretKeySelector
+	CachingBucketConfig      *corev1.SecretKeySelector
 	IgnoreDeletionMarksDelay manifests.Duration
 	Min, Max                 manifests.Duration
 	RelabelConfigs           manifests.RelabelConfigs
@@ -176,7 +176,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 		indexCacheEnv = corev1.EnvVar{
 			Name: indexCacheConfigEnvVarName,
 			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: opts.IndexCacheConfig.Name,
 					},
@@ -203,7 +203,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 		cachingBucketEnv = corev1.EnvVar{
 			Name: cachingBucketConfigEnvVarName,
 			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: opts.CachingBucketConfig.Name,
 					},
