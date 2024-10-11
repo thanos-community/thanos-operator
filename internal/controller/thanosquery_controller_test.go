@@ -22,6 +22,8 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/utils/ptr"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -92,10 +94,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
-					CommonThanosFields:   monitoringthanosiov1alpha1.CommonThanosFields{},
-					Replicas:             3,
-					QuerierReplicaLabels: []string{"replica"},
-					Labels:               map[string]string{"some-label": "xyz"},
+					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
+					Replicas:           3,
+					ReplicaLabels:      []string{"replica"},
+					Labels:             map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -199,11 +201,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 					Replicas:          2,
 					CompressResponses: true,
-					QueryRangeResponseCacheConfig: &corev1.ConfigMapKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "cache-config",
+					QueryRangeResponseCacheConfig: &monitoringthanosiov1alpha1.CacheConfig{
+						InMemoryCacheConfig: &monitoringthanosiov1alpha1.InMemoryCacheConfig{
+							MaxItemSize: ptr.To(monitoringthanosiov1alpha1.StorageSize("1Mi")),
+							MaxSize:     ptr.To(monitoringthanosiov1alpha1.StorageSize("1Gi")),
 						},
-						Key: "config.yaml",
+						ExternalCacheConfig: nil,
 					},
 					QueryRangeSplitInterval: &oneh,
 					LabelsSplitInterval:     &thirtym,
@@ -219,10 +222,16 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("verifying the query frontend deployment configuration", func() {
+				inMemoryConfig := `type: IN-MEMORY
+config:
+  max_size: 1Gi
+  max_item_size: 1Mi
+`
 				EventuallyWithOffset(1, func() error {
 					expectedArgs := []string{
 						"--query-frontend.compress-responses",
-						"--query-range.response-cache-config=$(CACHE_CONFIG)",
+						fmt.Sprintf("--query-range.response-cache-config=%s", inMemoryConfig),
+						fmt.Sprintf("--labels.response-cache-config=%s", inMemoryConfig),
 						"--query-range.split-interval=1h",
 						"--labels.split-interval=30m",
 						"--query-range.max-retries-per-request=10",

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -585,12 +586,11 @@ func GetRequiredLabels() map[string]string {
 }
 
 // GetRequiredIngesterLabels returns a map of labels that can be used to look up thanos receive ingest resources.
-// These labels are guaranteed to be present on all resources created by this package.
+// These labels are guaranteed to be present on all ingest resources created by this package.
 func GetRequiredIngesterLabels() map[string]string {
 	l := GetRequiredLabels()
 	l[manifests.ComponentLabel] = IngestComponentName
-	l[manifests.DefaultStoreAPILabel] = manifests.DefaultStoreAPIValue
-	return l
+	return manifests.MergeLabels(l, manifestsstore.GetRequiredStoreServiceLabel())
 }
 
 func (opts IngesterOptions) GetSelectorLabels() map[string]string {

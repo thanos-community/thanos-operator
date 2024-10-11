@@ -366,7 +366,7 @@ config:
 				updatedIngesterName := ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedIngesterName, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, ingesterName, ns)

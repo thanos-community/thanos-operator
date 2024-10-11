@@ -34,15 +34,14 @@ func TestBuildStore(t *testing.T) {
 	}
 
 	objs := opts.Build()
-	if len(objs) != 5 {
+	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
 	utils.ValidateObjectsEqual(t, objs[1], NewStoreService(opts))
 	utils.ValidateObjectsEqual(t, objs[2], NewStoreStatefulSet(opts))
-	utils.ValidateObjectsEqual(t, objs[3], newStoreInMemoryConfigMap(opts, GetRequiredLabels()))
-	utils.ValidateIsNamedPodDisruptionBudget(t, objs[4], opts, opts.Namespace, objs[2])
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[3], opts, opts.Namespace, objs[2])
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue

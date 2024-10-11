@@ -123,9 +123,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 
 	expectShards := make([]string, len(opts))
 	for i, opt := range opts {
-		if opt == nil {
-			continue
-		}
 		expectShards[i] = opt.GetGeneratedResourceName()
 		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, opt.Build())
 	}

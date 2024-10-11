@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,21 +31,20 @@ type ThanosQuerySpec struct {
 	// Labels are additional labels to add to the Querier component.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
-	// Labels to treat as a replica indicator along which data is deduplicated.
-	// Still you will be able to query without deduplication using 'dedup=false' parameter.
+	// ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
+	// Data can still be queried without deduplication using 'dedup=false' parameter.
 	// Data includes time series, recording rules, and alerting rules.
 	// Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
 	// +kubebuilder:default:={"replica"}
 	// +kubebuilder:validation:Optional
-	QuerierReplicaLabels []string `json:"querierReplicaLabels,omitempty"`
+	ReplicaLabels []string `json:"replicaLabels,omitempty"`
 	// StoreLabelSelector enables adding additional labels to build a custom label selector
 	// for discoverable StoreAPIs. Values provided here will be appended to the default which are
 	// {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
 	// QueryFrontend is the configuration for the Query Frontend
-	// If you specify this, the operator will create a Query Frontend in front of your
-	// Querier deployment.
+	// If you specify this, the operator will create a Query Frontend in front of your query deployment.
 	// +kubebuilder:validation:Optional
 	QueryFrontend *QueryFrontendSpec `json:"queryFrontend,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
@@ -76,7 +74,7 @@ type QueryFrontendSpec struct {
 	LogQueriesLongerThan *Duration `json:"logQueriesLongerThan,omitempty"`
 	// QueryRangeResponseCacheConfig holds the configuration for the query range response cache
 	// +kubebuilder:validation:Optional
-	QueryRangeResponseCacheConfig *corev1.ConfigMapKeySelector `json:"queryRangeResponseCacheConfig,omitempty"`
+	QueryRangeResponseCacheConfig *CacheConfig `json:"queryRangeResponseCacheConfig,omitempty"`
 	// QueryRangeSplitInterval sets the split interval for query range
 	// +kubebuilder:validation:Optional
 	QueryRangeSplitInterval *Duration `json:"queryRangeSplitInterval,omitempty"`

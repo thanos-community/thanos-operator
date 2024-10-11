@@ -3634,22 +3634,10 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
-              querierReplicaLabels:
-                default:
-                - replica
-                description: |-
-                  Labels to treat as a replica indicator along which data is deduplicated.
-                  Still you will be able to query without deduplication using 'dedup=false' parameter.
-                  Data includes time series, recording rules, and alerting rules.
-                  Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
-                items:
-                  type: string
-                type: array
               queryFrontend:
                 description: |-
                   QueryFrontend is the configuration for the Query Frontend
-                  If you specify this, the operator will create a Query Frontend in front of your
-                  Querier deployment.
+                  If you specify this, the operator will create a Query Frontend in front of your query deployment.
                 properties:
                   additionalArgs:
                     description: Additional arguments to pass to the Thanos components.
@@ -7295,26 +7283,47 @@ spec:
                     description: QueryRangeResponseCacheConfig holds the configuration
                       for the query range response cache
                     properties:
-                      key:
-                        description: The key to select.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the ConfigMap or its key must
-                          be defined
-                        type: boolean
-                    required:
-                    - key
+                      externalCacheConfig:
+                        description: ExternalCacheConfig is the configuration for
+                          the external cache.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      inMemoryCacheConfig:
+                        description: InMemoryCacheConfig is the configuration for
+                          the in-memory cache.
+                        properties:
+                          maxItemSize:
+                            description: StorageSize is the size of the PV storage
+                              to be used by a Thanos component.
+                            pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            type: string
+                          maxSize:
+                            description: StorageSize is the size of the PV storage
+                              to be used by a Thanos component.
+                            pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            type: string
+                        type: object
                     type: object
-                    x-kubernetes-map-type: atomic
                   queryRangeSplitInterval:
                     description: QueryRangeSplitInterval sets the split interval for
                       query range
@@ -7408,6 +7417,17 @@ spec:
                       Thanos available at the time when the version of the operator was released.
                     type: string
                 type: object
+              replicaLabels:
+                default:
+                - replica
+                description: |-
+                  ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
+                  Data can still be queried without deduplication using 'dedup=false' parameter.
+                  Data includes time series, recording rules, and alerting rules.
+                  Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels
+                items:
+                  type: string
+                type: array
               replicas:
                 default: 1
                 description: Replicas is the number of querier replicas.

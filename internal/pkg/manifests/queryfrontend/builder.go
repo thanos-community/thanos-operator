@@ -24,14 +24,7 @@ const (
 	HTTPPort     = 9090
 	HTTPPortName = "http"
 
-	defaultInMemoryConfigmapName = "thanos-query-frontend-inmemory-config"
-	defaultInMemoryConfigmapKey  = "config.yaml"
-
-	// InMemoryConfig is the default configuration for the in-memory cache.
-	InMemoryConfig = `type: IN-MEMORY
-config:
-  max_size: 512MiB
-  max_item_size: 5MiB`
+	externalCacheEnvVarName = "CACHE_CONFIG"
 )
 
 // Options for Thanos Query Frontend
@@ -41,7 +34,7 @@ type Options struct {
 	QueryPort              int32
 	LogQueriesLongerThan   manifests.Duration
 	CompressResponses      bool
-	ResponseCacheConfig    *corev1.ConfigMapKeySelector
+	ResponseCacheConfig    manifests.CacheConfig
 	RangeSplitInterval     manifests.Duration
 	LabelsSplitInterval    manifests.Duration
 	RangeMaxRetries        int
@@ -63,9 +56,6 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ResponseCacheConfig == nil {
-		objs = append(objs, newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
-	}
 	return objs
 }
 
@@ -78,23 +68,6 @@ func (opts Options) getOwner() string {
 	return opts.Owner
 }
 
-func NewQueryFrontendInMemoryConfigMap(opts Options) *corev1.ConfigMap {
-	return newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels())
-}
-
-func newQueryFrontendInMemoryConfigMap(opts Options, labels map[string]string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultInMemoryConfigmapName,
-			Namespace: opts.Namespace,
-			Labels:    labels,
-		},
-		Data: map[string]string{
-			defaultInMemoryConfigmapKey: InMemoryConfig,
-		},
-	}
-}
-
 func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
@@ -103,25 +76,17 @@ func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
-	cacheConfigEnv := corev1.EnvVar{
-		Name: "CACHE_CONFIG",
-		ValueFrom: &corev1.EnvVarSource{
-			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: defaultInMemoryConfigmapName,
-				},
-				Key:      defaultInMemoryConfigmapKey,
-				Optional: ptr.To(false),
-			},
-		},
-	}
-	if opts.ResponseCacheConfig != nil {
-		cacheConfigEnv = corev1.EnvVar{
-			Name: "CACHE_CONFIG",
+	var env []corev1.EnvVar
+
+	if opts.ResponseCacheConfig.FromSecret != nil {
+		env = make([]corev1.EnvVar, 1)
+		cacheConfigEnv := corev1.EnvVar{
+			Name: externalCacheEnvVarName,
 			ValueFrom: &corev1.EnvVarSource{
-				ConfigMapKeyRef: opts.ResponseCacheConfig,
+				SecretKeyRef: opts.ResponseCacheConfig.FromSecret,
 			},
 		}
+		env[0] = cacheConfigEnv
 	}
 
 	deployment := &appsv1.Deployment{
@@ -154,7 +119,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							Env: []corev1.EnvVar{cacheConfigEnv},
+							Env: env,
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: ptr.To(false),
 								RunAsNonRoot:             ptr.To(true),
@@ -234,9 +199,16 @@ func queryFrontendArgs(opts Options) []string {
 		fmt.Sprintf("--query-range.max-retries-per-request=%d", opts.RangeMaxRetries),
 		fmt.Sprintf("--labels.max-retries-per-request=%d", opts.LabelsMaxRetries),
 		fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange),
-		"--query-range.response-cache-config=$(CACHE_CONFIG)",
-		"--labels.response-cache-config=$(CACHE_CONFIG)",
 		"--cache-compression-type=snappy",
+	}
+
+	if opts.ResponseCacheConfig.FromSecret != nil {
+		args = append(args, fmt.Sprintf("--query-range.response-cache-config=$(%s)", externalCacheEnvVarName))
+		args = append(args, fmt.Sprintf("--labels.response-cache-config=$(%s)", externalCacheEnvVarName))
+	} else if opts.ResponseCacheConfig.InMemoryCacheConfig != nil {
+		conf := opts.ResponseCacheConfig.InMemoryCacheConfig.String()
+		args = append(args, fmt.Sprintf("--query-range.response-cache-config=%s", conf))
+		args = append(args, fmt.Sprintf("--labels.response-cache-config=%s", conf))
 	}
 
 	if opts.CompressResponses {

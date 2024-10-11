@@ -22,11 +22,11 @@ import (
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -164,7 +164,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
-		return []client.Object{}, err
+		return nil, err
 	}
 
 	opts := queryV1Alpha1ToOptions(query)
@@ -320,7 +320,4 @@ func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMet
 	return etype
 }
 
-var requiredStoreServiceLabels = map[string]string{
-	manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-}
+var requiredStoreServiceLabels = manifestsstore.GetRequiredStoreServiceLabel()

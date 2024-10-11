@@ -21,7 +21,7 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
-		ReplicaLabels: in.Spec.QuerierReplicaLabels,
+		ReplicaLabels: in.Spec.ReplicaLabels,
 		Timeout:       "15m",
 		LookbackDelta: "5m",
 		MaxConcurrent: 20,
@@ -45,7 +45,7 @@ func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryf
 		QueryPort:              manifestquery.HTTPPort,
 		LogQueriesLongerThan:   manifests.Duration(manifests.OptionalToString(frontend.LogQueriesLongerThan)),
 		CompressResponses:      frontend.CompressResponses,
-		ResponseCacheConfig:    frontend.QueryRangeResponseCacheConfig,
+		ResponseCacheConfig:    toManifestCacheConfig(frontend.QueryRangeResponseCacheConfig),
 		RangeSplitInterval:     manifests.Duration(manifests.OptionalToString(frontend.QueryRangeSplitInterval)),
 		LabelsSplitInterval:    manifests.Duration(manifests.OptionalToString(frontend.LabelsSplitInterval)),
 		RangeMaxRetries:        frontend.QueryRangeMaxRetries,
@@ -127,8 +127,8 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		IndexCacheConfig:         in.Spec.IndexCacheConfig,
-		CachingBucketConfig:      in.Spec.CachingBucketConfig,
+		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
+		CachingBucketConfig:      toManifestCacheConfig(in.Spec.CachingBucketConfig),
 		Min:                      manifests.Duration(manifests.OptionalToString(in.Spec.MinTime)),
 		Max:                      manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime)),
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
@@ -203,10 +203,7 @@ func commonToOpts(
 	labels map[string]string,
 	common v1alpha1.CommonThanosFields,
 	additional v1alpha1.Additional) manifests.Options {
-	var pdbConfig *manifests.PodDisruptionBudgetOptions
-	if replicas > 1 {
-		pdbConfig = &manifests.PodDisruptionBudgetOptions{}
-	}
+
 	return manifests.Options{
 		Owner:                owner.GetName(),
 		Namespace:            owner.GetNamespace(),
@@ -218,8 +215,16 @@ func commonToOpts(
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, owner.GetNamespace(), labels),
-		PodDisruptionConfig:  pdbConfig,
+		PodDisruptionConfig:  getPodDisruptionBudget(replicas),
 	}
+}
+
+// getPodDisruptionBudget returns a PodDisruptionBudgetOptions if replicas is greater than 1 or nil otherwise.
+func getPodDisruptionBudget(replicas int32) *manifests.PodDisruptionBudgetOptions {
+	if replicas > 1 {
+		return &manifests.PodDisruptionBudgetOptions{}
+	}
+	return nil
 }
 
 func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
@@ -256,5 +261,43 @@ func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace str
 		Enabled:   *in.Enabled,
 		Labels:    in.Labels,
 		Namespace: *in.Namespace,
+	}
+}
+
+func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
+	if config == nil {
+		return manifests.CacheConfig{
+			InMemoryCacheConfig: nil,
+			FromSecret:          nil,
+		}
+	}
+
+	// prefer the external cache config and return it if it is set
+	if config.ExternalCacheConfig != nil {
+		return manifests.CacheConfig{
+			FromSecret: config.ExternalCacheConfig,
+		}
+	}
+
+	// if there is no external cache config, try to build the in-memory cache config
+	var toInMemoryCacheConfig *manifests.InMemoryCacheConfig
+	if config.InMemoryCacheConfig != nil {
+		var maxSize, maxItemSize string
+		if config.InMemoryCacheConfig.MaxSize != nil {
+			maxSize = string(*config.InMemoryCacheConfig.MaxSize)
+		}
+		if config.InMemoryCacheConfig.MaxItemSize != nil {
+			maxItemSize = string(*config.InMemoryCacheConfig.MaxItemSize)
+		}
+		if maxSize != "" || maxItemSize != "" {
+			toInMemoryCacheConfig = &manifests.InMemoryCacheConfig{
+				MaxSize:     maxSize,
+				MaxItemSize: maxItemSize,
+			}
+		}
+	}
+	return manifests.CacheConfig{
+		InMemoryCacheConfig: toInMemoryCacheConfig,
+		FromSecret:          nil,
 	}
 }
