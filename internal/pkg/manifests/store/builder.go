@@ -340,16 +340,25 @@ func storeArgsFrom(opts Options) []string {
 	return manifests.PruneEmptyArgs(args)
 }
 
+// GetRequiredStoreServiceLabel returns the minimum set of labels that can be used to look up Services
+// that implement the Store API. Implementations of manifests.Buildable that provide Store API services
+// should include these labels in their Service ObjectMeta.
+func GetRequiredStoreServiceLabel() map[string]string {
+	return map[string]string{
+		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
+		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+	}
+}
+
 // GetRequiredLabels returns a map of labels that can be used to look up store resources.
 // These labels are guaranteed to be present on all resources created by this package.
 func GetRequiredLabels() map[string]string {
-	return map[string]string{
-		manifests.NameLabel:            Name,
-		manifests.ComponentLabel:       ComponentName,
-		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
-		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+	labels := map[string]string{
+		manifests.NameLabel:      Name,
+		manifests.ComponentLabel: ComponentName,
+		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
+	return manifests.MergeLabels(labels, GetRequiredStoreServiceLabel())
 }
 
 // GetSelectorLabels returns a map of labels that can be used to select store resources.
