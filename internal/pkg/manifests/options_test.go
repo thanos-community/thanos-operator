@@ -157,3 +157,52 @@ func TestRelabelConfigs_ToFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestInMemoryCacheConfig_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   InMemoryCacheConfig
+		expected string
+	}{
+		{
+			name:   "EmptyConfig",
+			config: InMemoryCacheConfig{},
+			expected: `type: IN-MEMORY
+config:
+`,
+		},
+		{
+			name:   "WithMaxSize",
+			config: InMemoryCacheConfig{MaxSize: "100MB"},
+			expected: `type: IN-MEMORY
+config:
+  max_size: 100MB
+`,
+		},
+		{
+			name:   "WithMaxItemSize",
+			config: InMemoryCacheConfig{MaxItemSize: "10MB"},
+			expected: `type: IN-MEMORY
+config:
+  max_item_size: 10MB
+`,
+		},
+		{
+			name:   "WithMaxSizeAndMaxItemSize",
+			config: InMemoryCacheConfig{MaxSize: "100MB", MaxItemSize: "10MB"},
+			expected: `type: IN-MEMORY
+config:
+  max_size: 100MB
+  max_item_size: 10MB
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.config.String(); got != tt.expected {
+				t.Errorf("InMemoryCacheConfig.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

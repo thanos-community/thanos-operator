@@ -1,6 +1,7 @@
 package queryfrontend
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -41,8 +42,8 @@ func TestBuildQueryFrontend(t *testing.T) {
 	}
 
 	objs := opts.Build()
-	if len(objs) != 5 {
-		t.Fatalf("expected 5 objects, got %d", len(objs))
+	if len(objs) != 4 {
+		t.Fatalf("expected 4 objects, got %d", len(objs))
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
@@ -52,7 +53,6 @@ func TestBuildQueryFrontend(t *testing.T) {
 		t.Errorf("expected object to be a PodDisruptionBudget, got %v", objs[3].GetObjectKind().GroupVersionKind().Kind)
 	}
 	utils.ValidateLabelsMatch(t, objs[3], objs[1])
-	utils.ValidateObjectsEqual(t, objs[4], newQueryFrontendInMemoryConfigMap(opts, GetRequiredLabels()))
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
@@ -67,8 +67,9 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts Options
+		name      string
+		opts      Options
+		expectEnv []corev1.EnvVar
 	}{
 		{
 			name: "test query frontend deployment correctness",
@@ -157,6 +158,45 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 				LabelsMaxRetries:     3,
 			},
 		},
+		{
+			name: "test with external cache",
+			opts: Options{
+
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Replicas: 2,
+				},
+				QueryService:         "thanos-query",
+				LogQueriesLongerThan: "5s",
+				CompressResponses:    true,
+				RangeSplitInterval:   "1h",
+				LabelsSplitInterval:  "30m",
+				RangeMaxRetries:      5,
+				LabelsMaxRetries:     3,
+				ResponseCacheConfig: manifests.CacheConfig{
+					InMemoryCacheConfig: nil,
+					FromSecret:          &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}},
+				},
+			},
+			expectEnv: []corev1.EnvVar{
+				{
+					Name: externalCacheEnvVarName,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "test-secret",
+							},
+						},
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			name := tc.opts.GetGeneratedResourceName()
@@ -171,6 +211,10 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			}
 			if len(deployment.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected store statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(deployment.Spec.Template.Spec.Containers))
+			}
+
+			if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].Env, tc.expectEnv) {
+				t.Errorf("expected deployment to have env %v, got %v", tc.expectEnv, deployment.Spec.Template.Spec.Containers[0].Env)
 			}
 
 			if *deployment.Spec.Replicas != tc.opts.Replicas {
@@ -198,10 +242,6 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 
 					if len(c.Ports) != 1 || c.Ports[0].ContainerPort != HTTPPort {
 						t.Errorf("expected container to have 1 port (%d), got %v", HTTPPort, c.Ports)
-					}
-
-					if len(c.Env) != 1 || c.Env[0].Name != "CACHE_CONFIG" {
-						t.Errorf("expected container to have 1 env var (CACHE_CONFIG), got %v", c.Env)
 					}
 
 					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts) {
@@ -249,23 +289,5 @@ func TestNewQueryFrontendService(t *testing.T) {
 
 	if len(service.Spec.Ports) != 1 || service.Spec.Ports[0].Port != HTTPPort {
 		t.Errorf("expected service to have 1 port (%d), got %v", HTTPPort, service.Spec.Ports)
-	}
-}
-
-func TestNewQueryFrontendConfigMap(t *testing.T) {
-	opts := Options{
-		Options: manifests.Options{
-			Namespace: "ns",
-			Labels: map[string]string{
-				"some-custom-label":      someCustomLabelValue,
-				"some-other-label":       someOtherLabelValue,
-				"app.kubernetes.io/name": "expect-to-be-discarded",
-			},
-		},
-	}
-
-	configMap := NewQueryFrontendInMemoryConfigMap(opts)
-	if configMap.Data[defaultInMemoryConfigmapKey] != InMemoryConfig {
-		t.Errorf("expected config map data to be %s, got %s", InMemoryConfig, configMap.Data[defaultInMemoryConfigmapKey])
 	}
 }

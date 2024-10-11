@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -75,7 +74,7 @@ type QueryFrontendSpec struct {
 	LogQueriesLongerThan *Duration `json:"logQueriesLongerThan,omitempty"`
 	// QueryRangeResponseCacheConfig holds the configuration for the query range response cache
 	// +kubebuilder:validation:Optional
-	QueryRangeResponseCacheConfig *corev1.SecretKeySelector `json:"queryRangeResponseCacheConfig,omitempty"`
+	QueryRangeResponseCacheConfig *CacheConfig `json:"queryRangeResponseCacheConfig,omitempty"`
 	// QueryRangeSplitInterval sets the split interval for query range
 	// +kubebuilder:validation:Optional
 	QueryRangeSplitInterval *Duration `json:"queryRangeSplitInterval,omitempty"`

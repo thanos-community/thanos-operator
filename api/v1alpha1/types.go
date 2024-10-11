@@ -17,6 +17,24 @@ type Duration string
 // See https://thanos.io/tip/thanos/storage.md/#supported-clients for relevant documentation.
 type ObjectStorageConfig corev1.SecretKeySelector
 
+// CacheConfig is the configuration for the cache.
+// If both InMemoryCacheConfig and ExternalCacheConfig are specified, the operator will prefer the ExternalCacheConfig.
+// +kubebuilder:validation:Optional
+type CacheConfig struct {
+	// InMemoryCacheConfig is the configuration for the in-memory cache.
+	// +kubebuilder:validation:Optional
+	InMemoryCacheConfig *InMemoryCacheConfig `json:"inMemoryCacheConfig,omitempty"`
+	// ExternalCacheConfig is the configuration for the external cache.
+	// +kubebuilder:validation:Optional
+	ExternalCacheConfig *corev1.SecretKeySelector `json:"externalCacheConfig,omitempty"`
+}
+
+// InMemoryCacheConfig is the configuration for the in-memory cache.
+type InMemoryCacheConfig struct {
+	MaxSize     *StorageSize `json:"maxSize,omitempty"`
+	MaxItemSize *StorageSize `json:"maxItemSize,omitempty"`
+}
+
 // ExternalLabels are the labels to add to the metrics.
 // POD_NAME and POD_NAMESPACE are available via the downward API.
 // +kubebuilder:validation:MinProperties=1

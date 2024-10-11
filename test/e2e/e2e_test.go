@@ -32,7 +32,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -533,11 +532,6 @@ var _ = Describe("controller", Ordered, func() {
   regex: 0`
 
 					return utils.VerifyStatefulSetArgs(c, firstShard, namespace, 0, expect)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
-			})
-			It("should create a ConfigMap with the correct cache configuration", func() {
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(c, "thanos-store-inmemory-config", namespace, "config.yaml", store.InMemoryConfig)
 				}, time.Minute*5, time.Second*10).Should(BeTrue())
 			})
 		})

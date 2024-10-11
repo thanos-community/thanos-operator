@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,15 +39,14 @@ type ThanosStoreSpec struct {
 	// file to mark after what duration the block should be deleted rather than deleting the block straight away.
 	// +kubebuilder:default="24h"
 	IgnoreDeletionMarksDelay Duration `json:"ignoreDeletionMarksDelay,omitempty"`
-	// YAML file that contains index cache configuration. See format details: https://thanos.io/tip/components/store.md/#index-cache
-	// IN-MEMORY config is loaded by default if not specified.
+	// IndexCacheConfig allows configuration of the index cache.
+	// See format details: https://thanos.io/tip/components/store.md/#index-cache
 	// +kubebuilder:validation:Optional
-	IndexCacheConfig *corev1.SecretKeySelector `json:"indexCacheConfig,omitempty"`
-	// YAML that contains configuration for caching bucket.
-	// See format details: https://thanos.io/tip/components/store.md/#caching-bucket"
-	// IN-MEMORY config is loaded by default if not specified.
+	IndexCacheConfig *CacheConfig `json:"indexCacheConfig,omitempty"`
+	// CachingBucketConfig allows configuration of the caching bucket.
+	// See format details: https://thanos.io/tip/components/store.md/#caching-bucket
 	// +kubebuilder:validation:Optional
-	CachingBucketConfig *corev1.SecretKeySelector `json:"cachingBucketConfig,omitempty"`
+	CachingBucketConfig *CacheConfig `json:"cachingBucketConfig,omitempty"`
 	// ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks.
 	// +kubebuilder:validation:Required
 	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`

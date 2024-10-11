@@ -7283,27 +7283,47 @@ spec:
                     description: QueryRangeResponseCacheConfig holds the configuration
                       for the query range response cache
                     properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
+                      externalCacheConfig:
+                        description: ExternalCacheConfig is the configuration for
+                          the external cache.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      inMemoryCacheConfig:
+                        description: InMemoryCacheConfig is the configuration for
+                          the in-memory cache.
+                        properties:
+                          maxItemSize:
+                            description: StorageSize is the size of the PV storage
+                              to be used by a Thanos component.
+                            pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            type: string
+                          maxSize:
+                            description: StorageSize is the size of the PV storage
+                              to be used by a Thanos component.
+                            pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                            type: string
+                        type: object
                     type: object
-                    x-kubernetes-map-type: atomic
                   queryRangeSplitInterval:
                     description: QueryRangeSplitInterval sets the split interval for
                       query range

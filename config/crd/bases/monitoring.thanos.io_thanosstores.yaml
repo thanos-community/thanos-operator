@@ -3527,30 +3527,50 @@ spec:
                 type: array
               cachingBucketConfig:
                 description: |-
-                  YAML that contains configuration for caching bucket.
-                  See format details: https://thanos.io/tip/components/store.md/#caching-bucket"
-                  IN-MEMORY config is loaded by default if not specified.
+                  CachingBucketConfig allows configuration of the caching bucket.
+                  See format details: https://thanos.io/tip/components/store.md/#caching-bucket
                 properties:
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
+                  externalCacheConfig:
+                    description: ExternalCacheConfig is the configuration for the
+                      external cache.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  inMemoryCacheConfig:
+                    description: InMemoryCacheConfig is the configuration for the
+                      in-memory cache.
+                    properties:
+                      maxItemSize:
+                        description: StorageSize is the size of the PV storage to
+                          be used by a Thanos component.
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      maxSize:
+                        description: StorageSize is the size of the PV storage to
+                          be used by a Thanos component.
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                    type: object
                 type: object
-                x-kubernetes-map-type: atomic
               ignoreDeletionMarksDelay:
                 default: 24h
                 description: |-
@@ -3598,29 +3618,50 @@ spec:
                 type: array
               indexCacheConfig:
                 description: |-
-                  YAML file that contains index cache configuration. See format details: https://thanos.io/tip/components/store.md/#index-cache
-                  IN-MEMORY config is loaded by default if not specified.
+                  IndexCacheConfig allows configuration of the index cache.
+                  See format details: https://thanos.io/tip/components/store.md/#index-cache
                 properties:
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
+                  externalCacheConfig:
+                    description: ExternalCacheConfig is the configuration for the
+                      external cache.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  inMemoryCacheConfig:
+                    description: InMemoryCacheConfig is the configuration for the
+                      in-memory cache.
+                    properties:
+                      maxItemSize:
+                        description: StorageSize is the size of the PV storage to
+                          be used by a Thanos component.
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                      maxSize:
+                        description: StorageSize is the size of the PV storage to
+                          be used by a Thanos component.
+                        pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                        type: string
+                    type: object
                 type: object
-                x-kubernetes-map-type: atomic
               labels:
                 additionalProperties:
                   type: string

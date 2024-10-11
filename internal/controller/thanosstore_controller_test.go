@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -134,10 +133,6 @@ config:
 				}
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, "thanos-store-inmemory-config", ns, "config.yaml", store.InMemoryConfig)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, secondShard, ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
@@ -172,17 +167,21 @@ config:
 			})
 
 			By("setting custom caches on thanos store", func() {
-				resource.Spec.IndexCacheConfig = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "index-cache",
+				resource.Spec.IndexCacheConfig = &monitoringthanosiov1alpha1.CacheConfig{
+					ExternalCacheConfig: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "index-cache",
+						},
+						Key: "index-cache.yaml",
 					},
-					Key: "index-cache.yaml",
 				}
-				resource.Spec.CachingBucketConfig = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "caching-bucket",
+				resource.Spec.CachingBucketConfig = &monitoringthanosiov1alpha1.CacheConfig{
+					ExternalCacheConfig: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "caching-bucket",
+						},
+						Key: "caching-bucket.yaml",
 					},
-					Key: "caching-bucket.yaml",
 				}
 
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())

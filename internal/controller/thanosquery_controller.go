@@ -166,7 +166,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
-		return []client.Object{}, err
+		return nil, err
 	}
 
 	opts := queryV1Alpha1ToOptions(query)

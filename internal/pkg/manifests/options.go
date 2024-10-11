@@ -317,3 +317,26 @@ func (rc RelabelConfigs) ToFlags() string {
 }
 
 type Duration string
+
+type CacheConfig struct {
+	InMemoryCacheConfig *InMemoryCacheConfig
+	FromSecret          *corev1.SecretKeySelector
+}
+
+type InMemoryCacheConfig struct {
+	MaxSize     string
+	MaxItemSize string
+}
+
+func (ic InMemoryCacheConfig) String() string {
+	base := `type: IN-MEMORY
+config:
+`
+	if ic.MaxSize != "" {
+		base += fmt.Sprintf("  max_size: %s\n", ic.MaxSize)
+	}
+	if ic.MaxItemSize != "" {
+		base += fmt.Sprintf("  max_item_size: %s\n", ic.MaxItemSize)
+	}
+	return base
+}
