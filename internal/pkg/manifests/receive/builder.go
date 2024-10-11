@@ -341,6 +341,10 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 	}
 
 	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -369,6 +373,10 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
 	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: opts.Namespace,

@@ -3802,20 +3802,23 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               serviceMonitor:
-                description: ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                default:
+                  enable: true
+                description: |-
+                  ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                  This setting requires the feature gate for ServiceMonitor management to be enabled.
                 properties:
-                  enabled:
+                  enable:
                     default: true
-                    description: Enabled
+                    description: |-
+                      Enable the management of ServiceMonitors for the Thanos component.
+                      If not specified, the operator will default to true.
                     type: boolean
                   labels:
                     additionalProperties:
                       type: string
                     description: Labels to add to the ServiceMonitor.
                     type: object
-                  namespace:
-                    description: Namespace to deploy the ServiceMonitor in.
-                    type: string
                 type: object
               storageSize:
                 description: StorageSize is the size of the storage to be used by

@@ -64,21 +64,16 @@ func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) {
 func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner client.Object, objs []client.Object) int {
 	var errCount int
 	for _, obj := range objs {
-
+		logger := loggerForObj(h.logger, obj)
 		if h.isFeatureGated(obj) {
-			h.logger.V(1).Info(
-				"resource is feature gated, skipping",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
-			)
+			logger.V(1).Info("resource is feature gated, skipping")
 			continue
 		}
 
 		if manifests.IsNamespacedResource(obj) {
 			obj.SetNamespace(namespace)
 			if err := ctrl.SetControllerReference(owner, obj, h.scheme); err != nil {
-				h.logger.Error(err, "failed to set controller owner reference to resource")
+				logger.Error(err, "failed to set controller owner reference to resource")
 				errCount++
 				continue
 			}
@@ -88,22 +83,13 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 		mutateFn := manifests.MutateFuncFor(obj, desired)
 
 		op, err := ctrl.CreateOrUpdate(ctx, h.client, obj, mutateFn)
+
 		if err != nil {
-			h.logger.Error(
-				err, "failed to create or update resource",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
-			)
+			logger.Error(err, "failed to create or update resource")
 			errCount++
 			continue
 		}
-
-		h.logger.V(1).Info(
-			"resource configured",
-			"operation", op, "gvk", obj.GetObjectKind().GroupVersionKind().String(),
-			"resource", obj.GetName(), "namespace", obj.GetNamespace(),
-		)
+		logger.V(1).Info("resource configured", "operation", op)
 	}
 	return errCount
 }
@@ -124,14 +110,10 @@ func (h *handler) isFeatureGated(obj client.Object) bool {
 func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int {
 	var errCount int
 	for _, obj := range objs {
+		logger := loggerForObj(h.logger, obj)
 
 		if h.isFeatureGated(obj) {
-			h.logger.V(1).Info(
-				"resource is feature gated, skipping",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
-			)
+			logger.V(1).Info("resource is feature gated, skipping")
 			continue
 		}
 
@@ -141,12 +123,7 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 				continue
 			}
 
-			h.logger.Error(
-				err, "failed to get resource",
-				"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-				"resource", obj.GetName(),
-				"namespace", obj.GetNamespace(),
-			)
+			logger.Error(err, "failed to get resource in DeleteResource handler")
 			errCount++
 			continue
 		}
@@ -163,22 +140,13 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 // It logs the operation and any errors encountered.
 // If the item does not exist, it does not return an error.
 func (h *handler) deleteResource(ctx context.Context, obj client.Object) error {
+	logger := loggerForObj(h.logger, obj)
 	if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) {
-		h.logger.Error(
-			err, "failed to delete resource",
-			"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-			"resource", obj.GetName(),
-			"namespace", obj.GetNamespace(),
-		)
+		logger.Error(err, "failed to delete resource")
 		return err
 	}
 
-	h.logger.V(1).Info(
-		"resource deleted",
-		"gvk", obj.GetObjectKind().GroupVersionKind().String(),
-		"resource", obj.GetName(),
-		"namespace", obj.GetNamespace(),
-	)
+	logger.V(1).Info("resource deleted")
 	return nil
 }
 
@@ -296,4 +264,8 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 		}
 	}
 	return errCount
+}
+
+func loggerForObj(logger logr.Logger, obj client.Object) logr.Logger {
+	return logger.WithValues("name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetObjectKind().GroupVersionKind().Kind)
 }

@@ -90,6 +90,10 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 	}
 
 	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: opts.Namespace,
@@ -163,6 +167,10 @@ func NewQueryFrontendService(opts Options) *corev1.Service {
 
 func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	service := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,

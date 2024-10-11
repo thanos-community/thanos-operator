@@ -296,6 +296,10 @@ func NewRulerService(opts Options) *corev1.Service {
 	}
 
 	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
@@ -328,6 +332,10 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 	}
 
 	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,

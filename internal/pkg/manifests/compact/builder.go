@@ -246,6 +246,10 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 	}
 
 	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.GetGeneratedResourceName(),
 			Namespace: opts.Namespace,
