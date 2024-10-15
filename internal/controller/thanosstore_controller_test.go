@@ -247,7 +247,7 @@ config:
 				enableSelfMonitor := false
 				updatedResource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enabled: &enableSelfMonitor,
+						Enable: &enableSelfMonitor,
 					},
 				}
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())

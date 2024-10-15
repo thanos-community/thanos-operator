@@ -214,7 +214,7 @@ func commonToOpts(
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
-		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, owner.GetNamespace(), labels),
+		ServiceMonitorConfig: serviceMonitorConfigToOpts(common.ServiceMonitorConfig, labels),
 		PodDisruptionConfig:  getPodDisruptionBudget(replicas),
 	}
 }
@@ -239,28 +239,17 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 	}
 }
 
-func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, namespace string, labels map[string]string) manifests.ServiceMonitorConfig {
+func serviceMonitorConfigToOpts(in *v1alpha1.ServiceMonitorConfig, labels map[string]string) manifests.ServiceMonitorConfig {
 	if in == nil {
-		return manifests.ServiceMonitorConfig{
-			Enabled:   true,
-			Namespace: namespace,
-			Labels:    labels,
-		}
+		return manifests.ServiceMonitorConfig{Enabled: false}
 	}
 
-	if in.Enabled == nil {
-		in.Enabled = ptr.To(true)
-	}
-	if in.Namespace == nil {
-		in.Namespace = &namespace
-	}
 	if in.Labels == nil {
 		in.Labels = labels
 	}
 	return manifests.ServiceMonitorConfig{
-		Enabled:   *in.Enabled,
-		Labels:    in.Labels,
-		Namespace: *in.Namespace,
+		Enabled: *in.Enable,
+		Labels:  in.Labels,
 	}
 }
 

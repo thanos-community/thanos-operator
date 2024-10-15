@@ -154,7 +154,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 }
 
 func (r *ThanosStoreReconciler) hasServiceMonitorsEnabled(store monitoringthanosiov1alpha1.ThanosStore) bool {
-	return store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enabled != nil && *store.Spec.ServiceMonitorConfig.Enabled
+	return store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enable != nil && *store.Spec.ServiceMonitorConfig.Enable
 }
 
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
