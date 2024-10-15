@@ -75,12 +75,12 @@ func (opts IngesterOptions) Build() []client.Object {
 	objectMetaLabels := GetIngesterLabels(opts)
 	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newIngestorService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newIngestorStatefulSet(opts, selectorLabels, objectMetaLabels))
 
 	if opts.PodDisruptionConfig != nil {
-		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
 	return objs
@@ -98,13 +98,13 @@ func (opts RouterOptions) Build() []client.Object {
 	objectMetaLabels := GetRouterLabels(opts)
 	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newRouterService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
 
 	if opts.PodDisruptionConfig != nil {
-		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 	return objs
 }
@@ -156,9 +156,10 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        name,
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
@@ -282,7 +283,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 // NewIngestorService creates a new Service for the Thanos Receive ingester.
 func NewIngestorService(opts IngesterOptions) *corev1.Service {
 	selectorLabels := opts.GetSelectorLabels()
-	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels), opts.Annotations)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
 	if opts.Additional.ServicePorts != nil {
@@ -293,7 +294,7 @@ func NewIngestorService(opts IngesterOptions) *corev1.Service {
 }
 
 func newIngestorService(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
-	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels)
+	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
 	if opts.Additional.ServicePorts != nil {
@@ -309,8 +310,9 @@ func NewRouterService(opts RouterOptions) *corev1.Service {
 	objectMetaLabels := GetRouterLabels(opts)
 	return newRouterService(opts, selectorLabels, objectMetaLabels)
 }
+
 func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
-	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels)
+	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations)
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
@@ -318,7 +320,7 @@ func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[s
 }
 
 // newService creates a new Service for the Thanos Receive components.
-func newService(name, namespace string, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+func newService(name, namespace string, selectorLabels, objectMetaLabels map[string]string, annotations map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -346,9 +348,10 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    objectMetaLabels,
+			Name:        name,
+			Namespace:   namespace,
+			Labels:      objectMetaLabels,
+			Annotations: annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selectorLabels,
@@ -378,9 +381,10 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        name,
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To(opts.Replicas),

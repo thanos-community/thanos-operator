@@ -48,12 +48,12 @@ func (opts Options) Build() []client.Object {
 	objectMetaLabels := GetLabels(opts)
 	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.PodDisruptionConfig != nil {
-		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
 	return objs
@@ -95,9 +95,10 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        name,
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &opts.Replicas,
@@ -172,9 +173,10 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.GetGeneratedResourceName(),
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{

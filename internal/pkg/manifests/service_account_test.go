@@ -12,6 +12,9 @@ func TestBuildServiceAccount(t *testing.T) {
 			"app.kubernetes.io/name":     "thanos",
 			"app.kubernetes.io/instance": "thanos-stack",
 		},
+		Annotations: map[string]string{
+			"test": "annotation",
+		},
 	}
 
 	for _, tc := range []struct {
@@ -24,7 +27,7 @@ func TestBuildServiceAccount(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sa := BuildServiceAccount(name, tc.opts.Namespace, tc.opts.Labels)
+			sa := BuildServiceAccount(name, tc.opts.Namespace, tc.opts.Labels, tc.opts.Annotations)
 			if sa.GetName() != name {
 				t.Errorf("expected service account name to be %s, got %s", name, sa.GetName())
 			}
@@ -39,6 +42,12 @@ func TestBuildServiceAccount(t *testing.T) {
 			}
 			if sa.GetLabels()["app.kubernetes.io/instance"] != "thanos-stack" {
 				t.Errorf("expected service account label app.kubernetes.io/instance to be thanos-stack, got %s", sa.GetLabels()["app.kubernetes.io/instance"])
+			}
+			if len(sa.GetAnnotations()) != 1 {
+				t.Errorf("expected service account to have 1 annotation, got %d", len(sa.GetAnnotations()))
+			}
+			if sa.GetAnnotations()["test"] != "annotation" {
+				t.Errorf("expected service account annotation test to be annotation, got %s", sa.GetAnnotations()["test"])
 			}
 		})
 	}

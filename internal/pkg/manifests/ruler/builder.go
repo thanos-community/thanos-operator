@@ -57,12 +57,12 @@ func (opts Options) Build() []client.Object {
 	objectMetaLabels := GetLabels(opts)
 	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.PodDisruptionConfig != nil {
-		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, *opts.PodDisruptionConfig))
+		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
 	if opts.ServiceMonitorConfig.Enabled {
@@ -245,9 +245,10 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        name,
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas:             &opts.Replicas,
@@ -301,9 +302,10 @@ func NewRulerService(opts Options) *corev1.Service {
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.GetGeneratedResourceName(),
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector:  selectorLabels,
@@ -337,9 +339,10 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.GetGeneratedResourceName(),
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector:  selectorLabels,

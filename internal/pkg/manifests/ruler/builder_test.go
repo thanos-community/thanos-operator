@@ -100,6 +100,9 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 				},
 				Endpoints: []Endpoint{
 					{
@@ -139,6 +142,9 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -187,6 +193,9 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -249,6 +258,10 @@ func TestNewRulerStatefulSet(t *testing.T) {
 
 			if len(ruler.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected ruler statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ruler.Spec.Template.Spec.Containers))
+			}
+
+			if ruler.Annotations["test"] != "annotation" {
+				t.Errorf("expected ruler statefulset annotation test to be annotation, got %s", ruler.Annotations["test"])
 			}
 
 			expectArgs := rulerArgs(tc.opts)

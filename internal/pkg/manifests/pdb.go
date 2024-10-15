@@ -21,7 +21,7 @@ type PodDisruptionBudgetOptions struct {
 // It sets the object name, namespace, selector labels, object meta labels, and maxUnavailable.
 // The maxUnavailable is a pointer to an int32 value.
 // If the maxUnavailable is nil, it defaults to 1.
-func NewPodDisruptionBudget(name, namespace string, selectorLabels, objectMetaLabels map[string]string, opts PodDisruptionBudgetOptions) *policyv1.PodDisruptionBudget {
+func NewPodDisruptionBudget(name, namespace string, selectorLabels, objectMetaLabels, annotations map[string]string, opts PodDisruptionBudgetOptions) *policyv1.PodDisruptionBudget {
 	minValue, maxValue := opts.getMinAndMax()
 	return &policyv1.PodDisruptionBudget{
 		TypeMeta: metav1.TypeMeta{
@@ -29,9 +29,10 @@ func NewPodDisruptionBudget(name, namespace string, selectorLabels, objectMetaLa
 			APIVersion: policyv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    objectMetaLabels,
-			Name:      name,
-			Namespace: namespace,
+			Labels:      objectMetaLabels,
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: annotations,
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{

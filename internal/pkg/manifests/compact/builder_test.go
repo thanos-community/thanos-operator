@@ -70,6 +70,9 @@ func TestNewStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 				},
 			},
 		},
@@ -84,6 +87,9 @@ func TestNewStatefulSet(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 				},
 			},
@@ -111,6 +117,10 @@ func TestNewStatefulSet(t *testing.T) {
 
 			if len(compact.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected compact statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(compact.Spec.Template.Spec.Containers))
+			}
+
+			if compact.Annotations["test"] != "annotation" {
+				t.Errorf("expected compact statefulset annotation test to be annotation, got %s", compact.Annotations["test"])
 			}
 
 			expectArgs := compactorArgsFrom(tc.opts)

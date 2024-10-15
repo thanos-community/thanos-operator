@@ -82,6 +82,9 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 					Replicas: 2,
 				},
 				QueryService:         "thanos-query",
@@ -103,6 +106,9 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Replicas: 2,
 					Additional: manifests.Additional{
@@ -133,6 +139,9 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Replicas: 2,
 					Additional: manifests.Additional{
@@ -169,6 +178,9 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Replicas: 2,
 				},
@@ -219,6 +231,10 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 
 			if *deployment.Spec.Replicas != tc.opts.Replicas {
 				t.Errorf("expected deployment replicas to be %d, got %d", tc.opts.Replicas, *deployment.Spec.Replicas)
+			}
+
+			if deployment.Annotations["test"] != "annotation" {
+				t.Errorf("expected deployment annotation test to be annotation, got %s", deployment.Annotations["test"])
 			}
 
 			// Check containers

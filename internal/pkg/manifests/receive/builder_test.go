@@ -102,6 +102,9 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 				},
 			},
 		},
@@ -115,6 +118,9 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -137,6 +143,9 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -173,6 +182,10 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 
 			if len(ingester.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected ingester statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ingester.Spec.Template.Spec.Containers))
+			}
+
+			if ingester.Annotations["test"] != "annotation" {
+				t.Errorf("expected ingester statefulset annotation test to be annotation, got %s", ingester.Annotations["test"])
 			}
 
 			expectArgs := ingestorArgsFrom(tc.opts)
@@ -226,6 +239,9 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 				},
 			},
 		},
@@ -239,6 +255,9 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -261,6 +280,9 @@ func TestNewRouterDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -292,6 +314,10 @@ func TestNewRouterDeployment(t *testing.T) {
 			}
 			if len(router.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(router.Spec.Template.Spec.Containers))
+			}
+
+			if router.Annotations["test"] != "annotation" {
+				t.Errorf("expected router deployment annotation test to be annotation, got %s", router.Annotations["test"])
 			}
 
 			expectArgs := routerArgsFrom(tc.opts)

@@ -76,6 +76,8 @@ type Options struct {
 	// The builders should ensure that the default labels are set on the object.
 	// The builders will overwrite the default labels if they are set in the Labels.
 	Labels map[string]string
+	// Annotations is the annotations for the object
+	Annotations map[string]string
 	// Image is the image to use for the component
 	// If not set, DefaultThanosImage will be used
 	Image *string

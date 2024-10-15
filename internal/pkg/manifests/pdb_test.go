@@ -10,6 +10,7 @@ func TestNewPodDisruptionBudget(t *testing.T) {
 		namespace        string
 		selectorLabels   map[string]string
 		objectMetaLabels map[string]string
+		annotations      map[string]string
 		conf             PodDisruptionBudgetOptions
 	}
 	tests := []struct {
@@ -23,13 +24,14 @@ func TestNewPodDisruptionBudget(t *testing.T) {
 				namespace:        "test-namespace",
 				selectorLabels:   map[string]string{"test": "label"},
 				objectMetaLabels: map[string]string{"test": "label"},
+				annotations:      map[string]string{"test": "annotation"},
 				conf:             PodDisruptionBudgetOptions{},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pdb := NewPodDisruptionBudget(tt.args.name, tt.args.namespace, tt.args.selectorLabels, tt.args.objectMetaLabels, tt.args.conf)
+			pdb := NewPodDisruptionBudget(tt.args.name, tt.args.namespace, tt.args.selectorLabels, tt.args.objectMetaLabels, tt.args.annotations, tt.args.conf)
 			if pdb.Name != tt.args.name {
 				t.Errorf("pdb.Name = %v, want %v", pdb.Name, tt.args.name)
 			}
