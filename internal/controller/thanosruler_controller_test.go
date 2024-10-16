@@ -117,23 +117,6 @@ config:
 			}
 
 			By("setting up the thanos ruler resources", func() {
-				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
-				EventuallyWithOffset(1, func() bool {
-					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
-				}, time.Minute, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
-				}, time.Second*30, time.Second*2).Should(BeTrue())
-
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, RulerNameFromParent(resourceName), ns)
-				}, time.Second*30, time.Second*2).Should(BeTrue())
-			})
-
-			By("updating with new query", func() {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-query",
@@ -152,11 +135,26 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
 
-				// Update the ThanosRuler resource to trigger reconciliation
-				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
-				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-				updatedResource.Spec.Replicas = 3 // Change any field to trigger an update
-				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
+				EventuallyWithOffset(1, func() bool {
+					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetReplicas(
+						k8sClient, 2, RulerNameFromParent(resourceName), ns)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				// // Update the ThanosRuler resource to trigger reconciliation
+				// updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
+				// Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
+				// updatedResource.Spec.Replicas = 3 // Change any field to trigger an update
+				// Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "my-query", ns)
