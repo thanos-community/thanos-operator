@@ -204,7 +204,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 }
 
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
-	opts := make([]manifests.Buildable, 1, len(receiver.Spec.Ingester.Hashrings))
+	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
 		if v.Paused != nil && *v.Paused {
 			r.logger.Info("ingester is paused", "ingester", v.Name)
