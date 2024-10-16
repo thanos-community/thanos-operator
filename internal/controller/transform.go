@@ -193,6 +193,11 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 	}
 }
 
+// CompactNameFromParent returns the name of the Thanos Compact component.
+func CompactNameFromParent(resourceName string) string {
+	return manifestscompact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+}
+
 // StoreNameFromParent returns the name of the Thanos Store component.
 func StoreNameFromParent(resourceName string, index *int32) string {
 	return manifestsstore.Options{Options: manifests.Options{Owner: resourceName}, ShardIndex: index}.GetGeneratedResourceName()

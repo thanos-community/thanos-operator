@@ -590,6 +590,7 @@ var _ = Describe("controller", Ordered, func() {
 					controller.QueryNameFromParent(queryName): {},
 					firstShard:  {},
 					secondShard: {},
+					controller.CompactNameFromParent(compactName): {},
 				}
 				for component := range componentMap {
 					_, err := utils.QueryPrometheus("up{service=\"" + component + "\"}")
