@@ -3,7 +3,7 @@ kind: ThanosReceive
 metadata:
   name: example-receive
 spec:
-  ingestorSpec:
+  ingesterSpec:
     defaultObjectStorageConfig:
       name: thanos-object-storage
       key: thanos.yaml

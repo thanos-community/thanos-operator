@@ -39,21 +39,12 @@ type Options struct {
 	Endpoints []Endpoint
 }
 
-type EndpointType string
-
-const (
-	RegularLabel     EndpointType = "operator.thanos.io/endpoint"
-	StrictLabel      EndpointType = "operator.thanos.io/endpoint-strict"
-	GroupLabel       EndpointType = "operator.thanos.io/endpoint-group"
-	GroupStrictLabel EndpointType = "operator.thanos.io/endpoint-group-strict"
-)
-
 // Endpoint represents a single StoreAPI DNS formatted address.
 // TODO(saswatamcode): Add validation.
 type Endpoint struct {
 	ServiceName string
 	Namespace   string
-	Type        EndpointType
+	Type        manifests.EndpointType
 	Port        int32
 }
 
@@ -265,14 +256,14 @@ func queryArgs(opts Options) []string {
 
 	for _, ep := range opts.Endpoints {
 		switch ep.Type {
-		case RegularLabel:
+		case manifests.RegularLabel:
 			// TODO(saswatamcode): For regular probably use SD file.
 			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case StrictLabel:
+		case manifests.StrictLabel:
 			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.cluster.local", ep.ServiceName, ep.Namespace))
-		case GroupLabel:
+		case manifests.GroupLabel:
 			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		case GroupStrictLabel:
+		case manifests.GroupStrictLabel:
 			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc.cluster.local:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		default:
 			panic("unknown endpoint type")
