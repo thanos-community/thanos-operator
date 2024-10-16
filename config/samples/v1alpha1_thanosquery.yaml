@@ -10,7 +10,7 @@ spec:
   labels:
     some-label: xyz
   logFormat: logfmt
-  querierReplicaLabels:
+  replicaLabels:
     - prometheus_replica
     - replica
     - rule_replica

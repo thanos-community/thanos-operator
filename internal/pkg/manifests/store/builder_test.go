@@ -176,8 +176,9 @@ func TestNewStoreService(t *testing.T) {
 	)
 
 	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
+		"some-custom-label":          someCustomLabelValue,
+		"some-other-label":           someOtherLabelValue,
+		string(manifests.GroupLabel): "true",
 	}
 
 	opts := Options{
@@ -189,6 +190,7 @@ func TestNewStoreService(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Replicas: int32(3),
 		},
 	}
 

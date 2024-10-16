@@ -138,7 +138,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
 				labels := requiredStoreServiceLabels
-				labels[string(manifestquery.StrictLabel)] = manifests.DefaultStoreAPIValue
+				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
 
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -281,7 +281,7 @@ config:
 
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				labels := requiredStoreServiceLabels
-				labels[string(manifestquery.StrictLabel)] = manifests.DefaultStoreAPIValue
+				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
 				svcPaused := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "paused-svc",

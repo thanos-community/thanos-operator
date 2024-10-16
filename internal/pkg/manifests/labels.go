@@ -39,6 +39,16 @@ const (
 	OwnerLabel = "operator.thanos.io/owner"
 )
 
+// EndpointType is the type of endpoint flag to be used for attaching the StoreAPI to Querier.
+type EndpointType string
+
+const (
+	RegularLabel     EndpointType = "operator.thanos.io/endpoint"
+	StrictLabel      EndpointType = "operator.thanos.io/endpoint-strict"
+	GroupLabel       EndpointType = "operator.thanos.io/endpoint-group"
+	GroupStrictLabel EndpointType = "operator.thanos.io/endpoint-group-strict"
+)
+
 // MergeLabels merges the provided labels with the default labels for a component.
 // Returns a new map with the merged labels leaving the original maps unchanged.
 func MergeLabels(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {

@@ -307,15 +307,15 @@ func (r *ThanosQueryReconciler) isQueueableStoreService(obj client.Object) bool 
 	return ok
 }
 
-func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMeta) manifestquery.EndpointType {
-	etype := manifestquery.RegularLabel
+func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMeta) manifests.EndpointType {
+	etype := manifests.RegularLabel
 
-	if metav1.HasLabel(objMeta, string(manifestquery.StrictLabel)) {
-		etype = manifestquery.StrictLabel
-	} else if metav1.HasLabel(objMeta, string(manifestquery.GroupStrictLabel)) {
-		etype = manifestquery.GroupStrictLabel
-	} else if metav1.HasLabel(objMeta, string(manifestquery.GroupLabel)) {
-		etype = manifestquery.GroupLabel
+	if metav1.HasLabel(objMeta, string(manifests.StrictLabel)) {
+		etype = manifests.StrictLabel
+	} else if metav1.HasLabel(objMeta, string(manifests.GroupStrictLabel)) {
+		etype = manifests.GroupStrictLabel
+	} else if metav1.HasLabel(objMeta, string(manifests.GroupLabel)) {
+		etype = manifests.GroupLabel
 	}
 	return etype
 }

@@ -374,7 +374,11 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 // GetLabels returns the labels that will be set as ObjectMeta labels for store resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	lbls := manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	if opts.Replicas > 1 {
+		lbls[string(manifests.GroupLabel)] = "true"
+	}
+	return lbls
 }
 
 func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
