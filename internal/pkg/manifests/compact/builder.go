@@ -61,7 +61,7 @@ func (opts Options) Build() []client.Object {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 
-	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels))
+	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
 
@@ -132,9 +132,10 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: opts.Namespace,
-			Labels:    metaLabels,
+			Name:        name,
+			Namespace:   opts.Namespace,
+			Labels:      metaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			PersistentVolumeClaimRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
@@ -251,9 +252,10 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.GetGeneratedResourceName(),
-			Namespace: opts.Namespace,
-			Labels:    objectMetaLabels,
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: selectorLabels,

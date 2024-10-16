@@ -71,6 +71,9 @@ func TestNewStoreStatefulSet(t *testing.T) {
 					"some-other-label":        someOtherLabelValue,
 					"app.kubernetes.io/owner": "expect-to-be-discarded",
 				},
+				Annotations: map[string]string{
+					"test": "annotation",
+				},
 			},
 		}
 	}
@@ -138,6 +141,10 @@ func TestNewStoreStatefulSet(t *testing.T) {
 
 			if len(store.Spec.Template.Spec.Containers) != (len(builtOpts.Additional.Containers) + 1) {
 				t.Errorf("expected store statefulset to have %d containers, got %d", len(builtOpts.Additional.Containers)+1, len(store.Spec.Template.Spec.Containers))
+			}
+
+			if store.Annotations["test"] != "annotation" {
+				t.Errorf("expected store statefulset annotation test to be annotation, got %s", store.Annotations["test"])
 			}
 
 			expectArgs := storeArgsFrom(builtOpts)

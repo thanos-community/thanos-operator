@@ -72,6 +72,9 @@ func TestNewQueryDeployment(t *testing.T) {
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
 				},
 				Timeout:       "15m",
 				LookbackDelta: "5m",
@@ -88,6 +91,9 @@ func TestNewQueryDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -113,6 +119,9 @@ func TestNewQueryDeployment(t *testing.T) {
 						"some-custom-label":      someCustomLabelValue,
 						"some-other-label":       someOtherLabelValue,
 						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -147,6 +156,12 @@ func TestNewQueryDeployment(t *testing.T) {
 			}
 			if len(query.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
 				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(query.Spec.Template.Spec.Containers))
+			}
+			if len(query.Annotations) != 1 {
+				t.Errorf("expected deployment to have 1 annotation, got %d", len(query.Annotations))
+			}
+			if query.Annotations["test"] != "annotation" {
+				t.Errorf("expected deployment annotation test to be annotation, got %s", query.Annotations["test"])
 			}
 
 			expectArgs := queryArgs(tc.opts)

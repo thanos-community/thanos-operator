@@ -18,7 +18,7 @@ import (
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestquery.Options{
 		Options:       opts,
 		ReplicaLabels: in.Spec.ReplicaLabels,
@@ -36,8 +36,9 @@ func QueryNameFromParent(resourceName string) string {
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
 func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryfrontend.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
+
 	frontend := in.Spec.QueryFrontend
-	opts := commonToOpts(&in, frontend.Replicas, labels, frontend.CommonThanosFields, frontend.Additional)
+	opts := commonToOpts(&in, frontend.Replicas, labels, in.GetAnnotations(), frontend.CommonThanosFields, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -61,7 +62,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), nil)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestruler.Options{
 		Options:            opts,
 		ObjStoreSecret:     in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -88,7 +89,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(&in, spec.Replicas, labels, common, additional)
+	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, additional)
 	return manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -103,7 +104,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.RouterOptions {
 	router := in.Spec.Router
 	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
-	opts := commonToOpts(&in, router.Replicas, labels, router.CommonThanosFields, router.Additional)
+	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonThanosFields, router.Additional)
 
 	return manifestreceive.RouterOptions{
 		Options:           opts,
@@ -124,7 +125,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.GetAnnotations(), in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
@@ -139,7 +140,7 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, 1, labels, in.Spec.CommonThanosFields, in.Spec.Additional)
+	opts := commonToOpts(&in, 1, labels, in.GetAnnotations(), in.Spec.CommonThanosFields, in.Spec.Additional)
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.Spec.DownsamplingConfig == nil {
@@ -201,6 +202,7 @@ func commonToOpts(
 	owner client.Object,
 	replicas int32,
 	labels map[string]string,
+	annotations map[string]string,
 	common v1alpha1.CommonThanosFields,
 	additional v1alpha1.Additional) manifests.Options {
 
@@ -209,6 +211,7 @@ func commonToOpts(
 		Namespace:            owner.GetNamespace(),
 		Replicas:             replicas,
 		Labels:               labels,
+		Annotations:          annotations,
 		Image:                common.Image,
 		ResourceRequirements: common.ResourceRequirements,
 		LogLevel:             common.LogLevel,
