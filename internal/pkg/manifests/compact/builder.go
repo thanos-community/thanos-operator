@@ -60,10 +60,15 @@ func (opts Options) Build() []client.Object {
 	var objs []client.Object
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	name := opts.GetGeneratedResourceName()
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
+
+	if opts.ServiceMonitorConfig.Enabled {
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+	}
 
 	return objs
 }
@@ -435,4 +440,11 @@ func (do *DownsamplingOptions) toArgs() []string {
 		args = append(args, fmt.Sprintf("--downsampling.concurrency=%d", *do.Concurrency))
 	}
 	return args
+}
+
+func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+	return manifests.ServiceMonitorOptions{
+		Port:     ptr.To(HTTPPortName),
+		Interval: from.Interval,
+	}
 }

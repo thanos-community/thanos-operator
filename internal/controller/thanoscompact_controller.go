@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/go-logr/logr"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -147,7 +150,22 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
+	if !r.hasServiceMonitorsEnabled(compact) {
+		objs := make([]client.Object, len(expectResources))
+		for i, resource := range expectResources {
+			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: compact.GetNamespace()}}
+		}
+		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
+		}
+	}
+
 	return nil
+}
+
+func (r *ThanosCompactReconciler) hasServiceMonitorsEnabled(compact monitoringthanosiov1alpha1.ThanosCompact) bool {
+	return compact.Spec.ServiceMonitorConfig != nil && compact.Spec.ServiceMonitorConfig.Enable != nil && *compact.Spec.ServiceMonitorConfig.Enable
 }
 
 func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
