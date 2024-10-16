@@ -159,6 +159,10 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		return []client.Object{}, err
 	}
 
+	if len(endpoints) == 0 {
+		return []client.Object{}, fmt.Errorf("no query API services found")
+	}
+
 	ruleFiles, err := r.getRuleConfigMaps(ctx, ruler)
 	if err != nil {
 		return []client.Object{}, err
