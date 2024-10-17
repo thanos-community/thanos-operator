@@ -1003,6 +1003,13 @@ func (in *ThanosRulerList) DeepCopyObject() runtime.Object {
 func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 	*out = *in
 	in.CommonThanosFields.DeepCopyInto(&out.CommonThanosFields)
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.QueryLabelSelector != nil {
 		in, out := &in.QueryLabelSelector, &out.QueryLabelSelector
 		*out = new(v1.LabelSelector)

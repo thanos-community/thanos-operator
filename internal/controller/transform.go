@@ -61,7 +61,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 }
 
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
-	labels := manifests.MergeLabels(in.GetLabels(), nil)
+	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonThanosFields, in.Spec.Additional)
 	return manifestruler.Options{
 		Options:            opts,

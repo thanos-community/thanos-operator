@@ -380,7 +380,7 @@ func GetLabels(opts Options) map[string]string {
 	if opts.Replicas > 1 {
 		lbls[string(manifests.GroupLabel)] = "true"
 	}
-	return lbls
+	return manifests.SanitizeStoreAPIEndpointLabels(lbls)
 }
 
 func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {

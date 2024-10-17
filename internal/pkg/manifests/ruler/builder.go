@@ -413,7 +413,7 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
-	return manifests.MergeLabels(lbls, manifestsstore.GetRequiredStoreServiceLabel())
+	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeLabels(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
 }
 
 func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
