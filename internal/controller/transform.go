@@ -298,7 +298,3 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 		FromSecret:          nil,
 	}
 }
-
-func hasServiceMonitorEnabled(in *v1alpha1.ServiceMonitorConfig) bool {
-	return in != nil && in.Enable != nil && *in.Enable
-}

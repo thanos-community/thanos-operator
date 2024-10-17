@@ -150,7 +150,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
-	if !hasServiceMonitorEnabled(compact.Spec.ServiceMonitorConfig) {
+	if !manifests.HasServiceMonitorEnabled(compact.Spec.ServiceMonitorConfig) {
 		objs := make([]client.Object, len(expectResources))
 		for i, resource := range expectResources {
 			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: compact.GetNamespace()}}
