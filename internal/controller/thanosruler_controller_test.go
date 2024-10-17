@@ -150,12 +150,6 @@ config:
 						k8sClient, 2, RulerNameFromParent(resourceName), ns)
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
-				// // Update the ThanosRuler resource to trigger reconciliation
-				// updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
-				// Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-				// updatedResource.Spec.Replicas = 3 // Change any field to trigger an update
-				// Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
-
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)

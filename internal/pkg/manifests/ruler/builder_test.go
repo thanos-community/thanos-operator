@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -76,6 +77,7 @@ func TestBuildRuler(t *testing.T) {
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
+	wantLabels = manifests.MergeLabels(wantLabels, manifestsstore.GetRequiredStoreServiceLabel())
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
