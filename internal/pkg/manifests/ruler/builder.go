@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -411,7 +412,8 @@ func (opts Options) GetSelectorLabels() map[string]string {
 }
 
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	lbls := manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	return manifests.MergeLabels(lbls, manifestsstore.GetRequiredStoreServiceLabel())
 }
 
 func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
