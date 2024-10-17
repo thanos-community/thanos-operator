@@ -2,6 +2,7 @@ package manifests
 
 import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -68,4 +69,8 @@ func (opts ServiceMonitorOptions) applyDefaults() ServiceMonitorOptions {
 		opts.Path = ptr.To("/metrics")
 	}
 	return opts
+}
+
+func HasServiceMonitorEnabled(in *v1alpha1.ServiceMonitorConfig) bool {
+	return in != nil && in.Enable != nil && *in.Enable
 }

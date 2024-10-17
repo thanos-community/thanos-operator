@@ -145,7 +145,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
-	if query.Spec.ServiceMonitorConfig != nil && query.Spec.ServiceMonitorConfig.Enable != nil && !*query.Spec.ServiceMonitorConfig.Enable {
+	if !manifests.HasServiceMonitorEnabled(query.Spec.ServiceMonitorConfig) {
 		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName(),

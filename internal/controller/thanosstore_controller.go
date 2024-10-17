@@ -139,7 +139,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
 	}
 
-	if !r.hasServiceMonitorsEnabled(store) {
+	if !manifests.HasServiceMonitorEnabled(store.Spec.ServiceMonitorConfig) {
 		objs := make([]client.Object, len(expectShards))
 		for i, shard := range expectShards {
 			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: shard, Namespace: store.GetNamespace()}}
@@ -151,10 +151,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		}
 	}
 	return nil
-}
-
-func (r *ThanosStoreReconciler) hasServiceMonitorsEnabled(store monitoringthanosiov1alpha1.ThanosStore) bool {
-	return store.Spec.ServiceMonitorConfig != nil && store.Spec.ServiceMonitorConfig.Enable != nil && *store.Spec.ServiceMonitorConfig.Enable
 }
 
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
