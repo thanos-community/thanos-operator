@@ -1,6 +1,7 @@
 package manifests
 
 import (
+	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,6 +87,88 @@ func TestBuildLabelSelectorFrom(t *testing.T) {
 
 			if !result.Matches(labels.Set(tc.expect)) {
 				t.Errorf("expected label selector to match %v", tc.expect)
+			}
+		})
+	}
+}
+
+func TestSanitizeStoreAPIEndpointLabels(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]string
+		expected map[string]string
+	}{
+		{
+			name: "Keep GroupStrictLabel and remove others",
+			input: map[string]string{
+				"operator.thanos.io/endpoint":              "value1",
+				"operator.thanos.io/endpoint-strict":       "value2",
+				"operator.thanos.io/endpoint-group":        "value3",
+				"operator.thanos.io/endpoint-group-strict": "value4",
+			},
+			expected: map[string]string{
+				"operator.thanos.io/endpoint-group-strict": "value4",
+			},
+		},
+		{
+			name: "Keep GroupLabel when GroupStrictLabel is absent",
+			input: map[string]string{
+				"operator.thanos.io/endpoint":       "value1",
+				"operator.thanos.io/endpoint-group": "value3",
+			},
+			expected: map[string]string{
+				"operator.thanos.io/endpoint-group": "value3",
+			},
+		},
+		{
+			name: "Keep StrictLabel when no group labels present",
+			input: map[string]string{
+				"operator.thanos.io/endpoint":        "value1",
+				"operator.thanos.io/endpoint-strict": "value2",
+			},
+			expected: map[string]string{
+				"operator.thanos.io/endpoint-strict": "value2",
+			},
+		},
+		{
+			name: "Keep RegularLabel when no other labels present",
+			input: map[string]string{
+				"operator.thanos.io/endpoint": "value1",
+			},
+			expected: map[string]string{
+				"operator.thanos.io/endpoint": "value1",
+			},
+		},
+		{
+			name: "Do not remove unrelated labels",
+			input: map[string]string{
+				"operator.thanos.io/endpoint":              "value1",
+				"operator.thanos.io/endpoint-strict":       "value2",
+				"operator.thanos.io/endpoint-group":        "value3",
+				"some.other/label":                         "otherValue",
+				"operator.thanos.io/endpoint-group-strict": "value4",
+			},
+			expected: map[string]string{
+				"operator.thanos.io/endpoint-group-strict": "value4",
+				"some.other/label":                         "otherValue",
+			},
+		},
+		{
+			name: "Do not remove labels when no endpoint labels are set",
+			input: map[string]string{
+				"some.other/label": "otherValue",
+			},
+			expected: map[string]string{
+				"some.other/label": "otherValue",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			SanitizeStoreAPIEndpointLabels(test.input)
+			if !reflect.DeepEqual(test.input, test.expected) {
+				t.Errorf("got %v, want %v", test.input, test.expected)
 			}
 		})
 	}

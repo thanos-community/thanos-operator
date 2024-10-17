@@ -614,7 +614,7 @@ func (opts IngesterOptions) GetSelectorLabels() map[string]string {
 
 func GetIngesterLabels(opts IngesterOptions) map[string]string {
 	l := opts.GetSelectorLabels()
-	return manifests.MergeLabels(opts.Labels, l)
+	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeLabels(opts.Labels, l))
 }
 
 // GetRequiredRouterLabels returns a map of labels that can be used to look up thanos receive router resources.
@@ -622,7 +622,7 @@ func GetIngesterLabels(opts IngesterOptions) map[string]string {
 func GetRequiredRouterLabels() map[string]string {
 	l := GetRequiredLabels()
 	l[manifests.ComponentLabel] = RouterComponentName
-	return l
+	return manifests.SanitizeStoreAPIEndpointLabels(l)
 }
 
 func (opts RouterOptions) GetSelectorLabels() map[string]string {

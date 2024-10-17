@@ -23,6 +23,9 @@ import (
 // ThanosRulerSpec defines the desired state of ThanosRuler
 type ThanosRulerSpec struct {
 	CommonThanosFields `json:",inline"`
+	// Labels are additional labels to add to the Ruler component.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
 	// Replicas is the number of Ruler replicas.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1

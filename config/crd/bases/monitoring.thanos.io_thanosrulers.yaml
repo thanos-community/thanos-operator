@@ -3610,6 +3610,11 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels are additional labels to add to the Ruler component.
+                type: object
               logFormat:
                 default: logfmt
                 description: Log format for Thanos.
