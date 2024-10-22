@@ -116,9 +116,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-						Labels:             map[string]string{"test": "my-router-test"},
-						ReplicationFactor:  3,
+						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
+						Labels:            map[string]string{"test": "my-router-test"},
+						ReplicationFactor: 3,
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
 						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -171,9 +171,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-						Labels:             map[string]string{"test": "my-router-test"},
-						ReplicationFactor:  3,
+						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
+						Labels:            map[string]string{"test": "my-router-test"},
+						ReplicationFactor: 3,
 						Additional: monitoringthanosiov1alpha1.Additional{
 							Containers: []corev1.Container{
 								{
@@ -351,6 +351,30 @@ config:
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
+			By("removing service monitor from ingester and router when disabled", func() {
+				workloads := []string{ingesterName, routerName}
+
+				for _, workload := range workloads {
+					Expect(utils.VerifyServiceMonitorExists(k8sClient, workload, ns)).To(BeTrue())
+				}
+
+				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
+					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
+						Enable: ptr.To(false),
+					},
+				}
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				Eventually(func() bool {
+					for _, workload := range workloads {
+						if utils.VerifyServiceMonitorExists(k8sClient, workload, ns) {
+							return true
+						}
+					}
+					return false
+				}, time.Minute*1, time.Second*10).Should(BeFalse())
+			})
+
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.Ingester.Hashrings = []monitoringthanosiov1alpha1.IngesterHashringSpec{
 					{
@@ -388,8 +412,8 @@ config:
 			})
 
 			By("checking paused state", func() {
-				resource.Spec.Router.Paused = ptr.To(true)
-				resource.Spec.Router.CommonThanosFields.LogLevel = ptr.To("debug")
+				resource.Spec.Paused = ptr.To(true)
+				resource.Spec.Router.CommonFields.LogLevel = ptr.To("debug")
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Consistently(func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")

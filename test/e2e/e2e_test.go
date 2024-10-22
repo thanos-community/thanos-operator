@@ -301,8 +301,8 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosQuerySpec{
-						CommonThanosFields: v1alpha1.CommonThanosFields{},
-						Replicas:           1,
+						CommonFields: v1alpha1.CommonFields{},
+						Replicas:     1,
 						Labels: map[string]string{
 							"some-label": "xyz",
 						},
@@ -421,8 +421,8 @@ var _ = Describe("controller", Ordered, func() {
 								manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
 							},
 						},
-						CommonThanosFields: v1alpha1.CommonThanosFields{},
-						StorageSize:        "100Mi",
+						CommonFields: v1alpha1.CommonFields{},
+						StorageSize:  "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -497,8 +497,8 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosStoreSpec{
-						CommonThanosFields: v1alpha1.CommonThanosFields{},
-						Labels:             map[string]string{"some-label": "xyz"},
+						CommonFields: v1alpha1.CommonFields{},
+						Labels:       map[string]string{"some-label": "xyz"},
 						ShardingStrategy: v1alpha1.ShardingStrategy{
 							Type:          v1alpha1.Block,
 							Shards:        2,
@@ -546,8 +546,8 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosCompactSpec{
-						CommonThanosFields: v1alpha1.CommonThanosFields{},
-						StorageSize:        "100Mi",
+						CommonFields: v1alpha1.CommonFields{},
+						StorageSize:  "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,

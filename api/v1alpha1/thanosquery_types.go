@@ -22,7 +22,7 @@ import (
 
 // ThanosQuerySpec defines the desired state of ThanosQuery
 type ThanosQuerySpec struct {
-	CommonThanosFields `json:",inline"`
+	CommonFields `json:",inline"`
 	// Replicas is the number of querier replicas.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
@@ -47,6 +47,14 @@ type ThanosQuerySpec struct {
 	// If you specify this, the operator will create a Query Frontend in front of your query deployment.
 	// +kubebuilder:validation:Optional
 	QueryFrontend *QueryFrontendSpec `json:"queryFrontend,omitempty"`
+	// When a resource is paused, no actions except for deletion
+	// will be performed on the underlying objects.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// FeatureGates are feature gates for the compact component.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
+	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
@@ -56,7 +64,7 @@ type ThanosQuerySpec struct {
 
 // QueryFrontendSpec defines the desired state of ThanosQueryFrontend
 type QueryFrontendSpec struct {
-	CommonThanosFields `json:",inline"`
+	CommonFields `json:",inline"`
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	Replicas int32 `json:"replicas,omitempty"`

@@ -22,6 +22,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -104,6 +106,13 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	if receiver.Spec.Paused != nil && *receiver.Spec.Paused {
+		r.logger.Info("receiver is paused")
+		r.recorder.Event(receiver, corev1.EventTypeNormal, "Paused",
+			"Reconciliation is paused for ThanosReceive resource")
+		return ctrl.Result{}, nil
+	}
+
 	// handle object being deleted - inferred from the existence of DeletionTimestamp
 	if !receiver.GetDeletionTimestamp().IsZero() {
 		return r.handleDeletionTimestamp(receiver)
@@ -171,7 +180,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	var errCount int
 
 	ingestOpts := r.specToIngestOptions(receiver)
-	expectIngesters := make([]string, 1, len(ingestOpts))
+	expectIngesters := make([]string, len(ingestOpts))
 	for i, opt := range ingestOpts {
 		expectIngesters[i] = opt.GetGeneratedResourceName()
 		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, opt.Build())
@@ -193,11 +202,22 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	if err != nil {
 		return fmt.Errorf("failed to build hashring config: %w", err)
 	}
-	objs := r.buildRouter(receiver, string(hashringConfig))
+	routerOpts := r.specToRouterOptions(receiver, string(hashringConfig))
 
-	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objs); errs > 0 {
+	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errs))
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
+	}
+
+	if !manifests.HasServiceMonitorEnabled(receiver.Spec.FeatureGates) {
+		smObjs := make([]client.Object, len(expectIngesters)+1)
+		for i, resource := range append(expectIngesters, routerOpts.GetGeneratedResourceName()) {
+			smObjs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: receiver.GetNamespace()}}
+		}
+		if errCount = r.handler.DeleteResource(ctx, smObjs); errCount > 0 {
+			r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
+			return fmt.Errorf("failed to delete %d ServiceMonitors for the receiver", errCount)
+		}
 	}
 
 	return nil
@@ -206,16 +226,16 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
 	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
-		if v.Paused != nil && *v.Paused {
-			r.logger.Info("ingester is paused", "ingester", v.Name)
-			r.recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
-				"Reconciliation is paused for ThanosReceive resource - ingester "+v.Name)
-			continue
-		}
 		opt := receiverV1Alpha1ToIngesterOptions(receiver, v)
 		opt.HashringName = v.Name
 		opts[i] = opt
 	}
+	return opts
+}
+
+func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) manifests.Buildable {
+	opts := receiverV1Alpha1ToRouterOptions(receiver)
+	opts.HashringConfig = hashringConfig
 	return opts
 }
 
@@ -270,19 +290,6 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 	}
 
 	return json.MarshalIndent(out, "", "    ")
-}
-
-// build hashring builds out the ingesters for the ThanosReceive resource.
-func (r *ThanosReceiveReconciler) buildRouter(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) []client.Object {
-	if receiver.Spec.Router.Paused != nil && *receiver.Spec.Router.Paused {
-		r.logger.Info("router is paused")
-		r.recorder.Event(&receiver, corev1.EventTypeNormal, "Paused",
-			"Reconciliation is paused for ThanosReceive resource - router")
-		return nil
-	}
-	opts := receiverV1Alpha1ToRouterOptions(receiver)
-	opts.HashringConfig = hashringConfig
-	return opts.Build()
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {

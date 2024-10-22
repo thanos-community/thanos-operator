@@ -39,6 +39,31 @@ spec:
           spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
+              featureGates:
+                default:
+                  serviceMonitor:
+                    enable: true
+                description: FeatureGates are feature gates for the compact component.
+                properties:
+                  serviceMonitor:
+                    default:
+                      enable: true
+                    description: |-
+                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                      This setting requires the feature gate for ServiceMonitor management to be enabled.
+                    properties:
+                      enable:
+                        description: |-
+                          Enable the management of ServiceMonitors for the Thanos component.
+                          If not specified, the operator will default to true.
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                    type: object
+                type: object
               ingesterSpec:
                 description: Ingester is the configuration for the ingestor.
                 properties:
@@ -3676,11 +3701,6 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
-                        paused:
-                          description: |-
-                            When a resource is paused, no actions except for deletion
-                            will be performed on the underlying objects.
-                          type: boolean
                         replicas:
                           default: 1
                           description: Replicas is the number of replicas/members
@@ -3749,25 +3769,6 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                               type: object
                           type: object
-                        serviceMonitor:
-                          default:
-                            enable: true
-                          description: |-
-                            ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                            This setting requires the feature gate for ServiceMonitor management to be enabled.
-                          properties:
-                            enable:
-                              default: true
-                              description: |-
-                                Enable the management of ServiceMonitors for the Thanos component.
-                                If not specified, the operator will default to true.
-                              type: boolean
-                            labels:
-                              additionalProperties:
-                                type: string
-                              description: Labels to add to the ServiceMonitor.
-                              type: object
-                          type: object
                         storageSize:
                           description: StorageSize is the size of the storage to be
                             used by the Thanos Receive StatefulSet.
@@ -3822,6 +3823,11 @@ spec:
                 - defaultObjectStorageConfig
                 - hashrings
                 type: object
+              paused:
+                description: |-
+                  When a resource is paused, no actions except for deletion
+                  will be performed on the underlying objects.
+                type: boolean
               routerSpec:
                 description: Router is the configuration for the router.
                 properties:
@@ -7394,11 +7400,6 @@ spec:
                     - warn
                     - error
                     type: string
-                  paused:
-                    description: |-
-                      When a resource is paused, no actions except for deletion
-                      will be performed on the underlying objects.
-                    type: boolean
                   replicas:
                     default: 1
                     description: Replicas is the number of router replicas.
@@ -7472,25 +7473,6 @@ spec:
                           If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                           otherwise to an implementation-defined value. Requests cannot exceed Limits.
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-                        type: object
-                    type: object
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        default: true
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
                         type: object
                     type: object
                   version:

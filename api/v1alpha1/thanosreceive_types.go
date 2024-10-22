@@ -22,9 +22,9 @@ import (
 
 // RouterSpec represents the configuration for the router
 type RouterSpec struct {
-	// CommonThanosFields are the options available to all Thanos components.
+	// CommonFields are the options available to all Thanos components.
 	// +kubebuilder:validation:Optional
-	CommonThanosFields `json:",inline"`
+	CommonFields `json:",inline"`
 	// Labels are additional labels to add to the router components.
 	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
 	// +kubebuilder:validation:Optional
@@ -71,9 +71,9 @@ type IngesterSpec struct {
 
 // IngesterHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.
 type IngesterHashringSpec struct {
-	// CommonThanosFields are the options available to all Thanos components.
+	// CommonFields are the options available to all Thanos components.
 	// +kubebuilder:validation:Optional
-	CommonThanosFields `json:",inline"`
+	CommonFields `json:",inline"`
 	// Name is the name of the hashring.
 	// Name will be used to generate the names for the resources created for the hashring.
 	// +kubebuilder:validation:Required
@@ -122,6 +122,14 @@ type ThanosReceiveSpec struct {
 	// Ingester is the configuration for the ingestor.
 	// +kubebuilder:validation:Required
 	Ingester IngesterSpec `json:"ingesterSpec,omitempty"`
+	// When a resource is paused, no actions except for deletion
+	// will be performed on the underlying objects.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// FeatureGates are feature gates for the compact component.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
+	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive

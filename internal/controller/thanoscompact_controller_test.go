@@ -105,8 +105,8 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-					Labels:             map[string]string{"some-label": "xyz"},
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					Labels:       map[string]string{"some-label": "xyz"},
 					ShardingConfig: &monitoringthanosiov1alpha1.ShardingConfig{
 						ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
 							{
@@ -189,10 +189,9 @@ config:
 					Expect(utils.VerifyServiceMonitorExists(k8sClient, shard, ns)).To(BeTrue())
 				}
 
-				enableSelfMonitor := false
-				resource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: &enableSelfMonitor,
+						Enable: ptr.To(false),
 					},
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())

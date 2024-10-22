@@ -22,7 +22,7 @@ import (
 
 // ThanosRulerSpec defines the desired state of ThanosRuler
 type ThanosRulerSpec struct {
-	CommonThanosFields `json:",inline"`
+	CommonFields `json:",inline"`
 	// Labels are additional labels to add to the Ruler component.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
@@ -69,6 +69,14 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
 	StorageSize string `json:"storageSize"`
+	// When a resource is paused, no actions except for deletion
+	// will be performed on the underlying objects.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// FeatureGates are feature gates for the compact component.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
+	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.

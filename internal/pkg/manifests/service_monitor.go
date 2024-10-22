@@ -71,6 +71,6 @@ func (opts ServiceMonitorOptions) applyDefaults() ServiceMonitorOptions {
 	return opts
 }
 
-func HasServiceMonitorEnabled(in *v1alpha1.ServiceMonitorConfig) bool {
-	return in != nil && in.Enable != nil && *in.Enable
+func HasServiceMonitorEnabled(in *v1alpha1.FeatureGates) bool {
+	return in != nil && in.ServiceMonitorConfig != nil && *in.ServiceMonitorConfig.Enable
 }

@@ -97,8 +97,8 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-					Labels:             map[string]string{"some-label": "xyz"},
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					Labels:       map[string]string{"some-label": "xyz"},
 					ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
 						Type:          monitoringthanosiov1alpha1.Block,
 						Shards:        3,
@@ -243,11 +243,9 @@ config:
 				updatedName := StoreNameFromParent(resourceName, nil)
 				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-
-				enableSelfMonitor := false
-				updatedResource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+				updatedResource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: &enableSelfMonitor,
+						Enable: ptr.To(false),
 					},
 				}
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
@@ -263,7 +261,7 @@ config:
 				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
 
 				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.CommonThanosFields.LogLevel = ptr.To("debug")
+				resource.Spec.CommonFields.LogLevel = ptr.To("debug")
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Consistently(func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, "--log.level=debug")

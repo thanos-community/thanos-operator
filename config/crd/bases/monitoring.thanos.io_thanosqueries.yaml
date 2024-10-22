@@ -3574,6 +3574,31 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              featureGates:
+                default:
+                  serviceMonitor:
+                    enable: true
+                description: FeatureGates are feature gates for the compact component.
+                properties:
+                  serviceMonitor:
+                    default:
+                      enable: true
+                    description: |-
+                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                      This setting requires the feature gate for ServiceMonitor management to be enabled.
+                    properties:
+                      enable:
+                        description: |-
+                          Enable the management of ServiceMonitors for the Thanos component.
+                          If not specified, the operator will default to true.
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                    type: object
+                type: object
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -7216,11 +7241,6 @@ spec:
                       for logging long queries
                     pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
-                  paused:
-                    description: |-
-                      When a resource is paused, no actions except for deletion
-                      will be performed on the underlying objects.
-                    type: boolean
                   queryLabelSelector:
                     default:
                       matchLabels:
@@ -7393,25 +7413,6 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        default: true
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                   version:
                     description: |-
                       Version of Thanos to be deployed.
@@ -7493,25 +7494,6 @@ spec:
                       If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
                       otherwise to an implementation-defined value. Requests cannot exceed Limits.
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-                    type: object
-                type: object
-              serviceMonitor:
-                default:
-                  enable: true
-                description: |-
-                  ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                  This setting requires the feature gate for ServiceMonitor management to be enabled.
-                properties:
-                  enable:
-                    default: true
-                    description: |-
-                      Enable the management of ServiceMonitors for the Thanos component.
-                      If not specified, the operator will default to true.
-                    type: boolean
-                  labels:
-                    additionalProperties:
-                      type: string
-                    description: Labels to add to the ServiceMonitor.
                     type: object
                 type: object
               version:

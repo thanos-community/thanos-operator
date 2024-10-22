@@ -35,8 +35,8 @@ const (
 
 // ThanosCompactSpec defines the desired state of ThanosCompact
 type ThanosCompactSpec struct {
-	// CommonThanosFields are the options available to all Thanos components.
-	CommonThanosFields `json:",inline"`
+	// CommonFields are the options available to all Thanos components.
+	CommonFields `json:",inline"`
 	// Labels are additional labels to add to the Compact component.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
@@ -69,6 +69,14 @@ type ThanosCompactSpec struct {
 	// If not set, will be set as max value, so all blocks will be served.
 	// +kubebuilder:validation:Optional
 	MaxTime *Duration `json:"maxTime,omitempty"`
+	// When a resource is paused, no actions except for deletion
+	// will be performed on the underlying objects.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// FeatureGates are feature gates for the compact component.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
+	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.

@@ -137,7 +137,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
-	if !manifests.HasServiceMonitorEnabled(ruler.Spec.ServiceMonitorConfig) {
+	if !manifests.HasServiceMonitorEnabled(ruler.Spec.FeatureGates) {
 		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      RulerNameFromParent(ruler.GetName()),
