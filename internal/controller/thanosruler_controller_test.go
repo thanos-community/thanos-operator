@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -94,9 +95,9 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
-					Replicas:           2,
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-					StorageSize:        "1Gi",
+					Replicas:     2,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					StorageSize:  "1Gi",
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
@@ -188,10 +189,9 @@ config:
 
 				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-				enableSelfMonitor := false
-				updatedResource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+				updatedResource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: &enableSelfMonitor,
+						Enable: ptr.To(false),
 					},
 				}
 				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())

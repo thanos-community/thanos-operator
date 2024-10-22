@@ -3604,6 +3604,31 @@ spec:
                     description: Disable downsampling.
                     type: boolean
                 type: object
+              featureGates:
+                default:
+                  serviceMonitor:
+                    enable: true
+                description: FeatureGates are feature gates for the compact component.
+                properties:
+                  serviceMonitor:
+                    default:
+                      enable: true
+                    description: |-
+                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
+                      This setting requires the feature gate for ServiceMonitor management to be enabled.
+                    properties:
+                      enable:
+                        description: |-
+                          Enable the management of ServiceMonitors for the Thanos component.
+                          If not specified, the operator will default to true.
+                        type: boolean
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to add to the ServiceMonitor.
+                        type: object
+                    type: object
+                type: object
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -3791,25 +3816,6 @@ spec:
                 - fiveMinutes
                 - oneHour
                 - raw
-                type: object
-              serviceMonitor:
-                default:
-                  enable: true
-                description: |-
-                  ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                  This setting requires the feature gate for ServiceMonitor management to be enabled.
-                properties:
-                  enable:
-                    default: true
-                    description: |-
-                      Enable the management of ServiceMonitors for the Thanos component.
-                      If not specified, the operator will default to true.
-                    type: boolean
-                  labels:
-                    additionalProperties:
-                      type: string
-                    description: Labels to add to the ServiceMonitor.
-                    type: object
                 type: object
               shardingConfig:
                 description: ShardingConfig is the sharding configuration for the

@@ -22,15 +22,12 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/utils/ptr"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
-
-	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -39,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosQuery Controller", Ordered, func() {
@@ -94,10 +92,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
-					CommonThanosFields: monitoringthanosiov1alpha1.CommonThanosFields{},
-					Replicas:           3,
-					ReplicaLabels:      []string{"replica"},
-					Labels:             map[string]string{"some-label": "xyz"},
+					CommonFields:  monitoringthanosiov1alpha1.CommonFields{},
+					Replicas:      3,
+					ReplicaLabels: []string{"replica"},
+					Labels:        map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -260,12 +258,9 @@ config:
 
 			By("removing service monitor when disabled", func() {
 				Expect(utils.VerifyServiceMonitorExists(k8sClient, name, ns)).To(BeTrue())
-
-				enableSelfMonitor := false
-
-				resource.Spec.CommonThanosFields = monitoringthanosiov1alpha1.CommonThanosFields{
+				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: &enableSelfMonitor,
+						Enable: ptr.To(false),
 					},
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())

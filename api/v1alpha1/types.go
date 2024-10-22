@@ -56,9 +56,11 @@ type TSDBConfig struct {
 	Retention Duration `json:"retention,omitempty"`
 }
 
-// CommonThanosFields are the options available to all Thanos components.
+// CommonFields are the options available to all Thanos components.
+// These fields reflect runtime changes to managed StatefulSet and Deployment resources.
+// +kubebuilder:validation:Optional
 // +k8s:deepcopy-gen=true
-type CommonThanosFields struct {
+type CommonFields struct {
 	// Version of Thanos to be deployed.
 	// If not specified, the operator assumes the latest upstream version of
 	// Thanos available at the time when the version of the operator was released.
@@ -81,10 +83,6 @@ type CommonThanosFields struct {
 	// ResourceRequirements for the Thanos component container.
 	// +kubebuilder:validation:Optional
 	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
-	// When a resource is paused, no actions except for deletion
-	// will be performed on the underlying objects.
-	// +kubebuilder:validation:Optional
-	Paused *bool `json:"paused,omitempty"`
 	// Log level for Thanos.
 	// +kubebuilder:validation:Enum=debug;info;warn;error
 	// +kubebuilder:validation:Optional
@@ -94,13 +92,9 @@ type CommonThanosFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
-	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
-	// This setting requires the feature gate for ServiceMonitor management to be enabled.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={enable: true}
-	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
 }
 
+// Additional holds additional configuration for the Thanos components.
 type Additional struct {
 	// Additional arguments to pass to the Thanos components.
 	// +kubebuilder:validation:Optional
@@ -128,11 +122,20 @@ type Additional struct {
 	ServicePorts []corev1.ServicePort `json:"additionalServicePorts,omitempty"`
 }
 
+// FeatureGates holds the configuration for behaviour that is behind feature flags in the operator.
+type FeatureGates struct {
+	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
+	// This setting requires the feature gate for ServiceMonitor management to be enabled.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={enable: true}
+	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
+}
+
+// ServiceMonitorConfig is the configuration for the ServiceMonitor.
 type ServiceMonitorConfig struct {
 	// Enable the management of ServiceMonitors for the Thanos component.
 	// If not specified, the operator will default to true.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=true
 	Enable *bool `json:"enable,omitempty"`
 	// Labels to add to the ServiceMonitor.
 	// +kubebuilder:validation:Optional

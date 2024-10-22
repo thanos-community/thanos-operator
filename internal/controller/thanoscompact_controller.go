@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 
@@ -33,9 +32,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -150,7 +151,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(compact.Spec.ServiceMonitorConfig) {
+	if !manifests.HasServiceMonitorEnabled(compact.Spec.FeatureGates) {
 		objs := make([]client.Object, len(expectResources))
 		for i, resource := range expectResources {
 			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: compact.GetNamespace()}}
