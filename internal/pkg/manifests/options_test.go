@@ -30,6 +30,7 @@ func TestOptions_GetContainerImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.o.GetContainerImage(); got != tt.want {
 				t.Errorf("Options.GetContainerImage() = %v, want %v", got, tt.want)
 			}
@@ -65,6 +66,7 @@ func TestOptions_ToFlags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if !reflect.DeepEqual(tt.o.ToFlags(), tt.want) {
 				t.Errorf("Options.ToFlags() = %v, want %v", tt.o.ToFlags(), tt.want)
 			}
@@ -109,6 +111,7 @@ func TestRelabelConfig_String(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.r.String(); got != tt.want {
 				t.Errorf("RelabelConfig.String() = %v, want %v", got, tt.want)
 			}
@@ -151,6 +154,7 @@ func TestRelabelConfigs_ToFlags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.rc.ToFlags(); got != tt.want {
 				t.Errorf("RelabelConfigs.ToFlags() = %v, want %v", got, tt.want)
 			}
@@ -200,6 +204,7 @@ config:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := tt.config.String(); got != tt.expected {
 				t.Errorf("InMemoryCacheConfig.String() = %v, want %v", got, tt.expected)
 			}

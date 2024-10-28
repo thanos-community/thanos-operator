@@ -27,6 +27,7 @@ func TestBuildServiceAccount(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			sa := BuildServiceAccount(name, tc.opts.Namespace, tc.opts.Labels, tc.opts.Annotations)
 			if sa.GetName() != name {
 				t.Errorf("expected service account name to be %s, got %s", name, sa.GetName())

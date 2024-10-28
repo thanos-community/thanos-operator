@@ -121,6 +121,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			builtOpts := tc.opts()
 			store := NewStoreStatefulSet(builtOpts)
 			objectMetaLabels := GetLabels(builtOpts)
@@ -213,6 +214,7 @@ func TestNewStoreService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			builtOpts := tc.opts()
 			storeSvc := NewStoreService(builtOpts)
 			objectMetaLabels := GetLabels(builtOpts)

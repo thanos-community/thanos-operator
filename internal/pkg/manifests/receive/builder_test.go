@@ -165,6 +165,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ingester := NewIngestorStatefulSet(tc.opts)
 			objectMetaLabels := GetIngesterLabels(tc.opts)
 			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
@@ -302,6 +303,7 @@ func TestNewRouterDeployment(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			router := NewRouterDeployment(tc.opts)
 			objectMetaLabels := GetRouterLabels(tc.opts)
 			utils.ValidateNameNamespaceAndLabels(t, router, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
@@ -377,6 +379,7 @@ func TestNewIngestorService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ingester := NewIngestorService(tc.opts)
 			objectMetaLabels := GetIngesterLabels(tc.opts)
 			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
@@ -416,6 +419,7 @@ func TestNewRouterService(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			router := NewRouterService(tc.opts)
 			objectMetaLabels := GetRouterLabels(opts)
 			utils.ValidateNameNamespaceAndLabels(t, router, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)

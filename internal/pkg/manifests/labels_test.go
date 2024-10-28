@@ -32,6 +32,7 @@ func TestMergeLabels(t *testing.T) {
 			}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result := MergeLabels(tc.labels, tc.mergeWith)
 			if len(result) != len(tc.expect) {
 				t.Fatalf("expected %d labels, got %d", len(tc.expect), len(result))
@@ -77,6 +78,7 @@ func TestBuildLabelSelectorFrom(t *testing.T) {
 			}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			result, err := BuildLabelSelectorFrom(tc.labelSelector, tc.required)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -166,6 +168,7 @@ func TestSanitizeStoreAPIEndpointLabels(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			SanitizeStoreAPIEndpointLabels(test.input)
 			if !reflect.DeepEqual(test.input, test.expected) {
 				t.Errorf("got %v, want %v", test.input, test.expected)
