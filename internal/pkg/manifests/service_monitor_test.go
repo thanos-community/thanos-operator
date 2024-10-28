@@ -27,6 +27,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			sm := BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.opts)
 			if sm.GetName() != name {
 				t.Errorf("expected service monitor name to be %s, got %s", name, sm.GetName())
