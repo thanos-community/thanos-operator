@@ -138,7 +138,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	errCount = r.pruneOrphanedResources(ctx, compact.GetNamespace(), compact.GetName(), expectResources)
 	if errCount > 0 {
 		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
-		return fmt.Errorf("failed to prune %d orphaned resources for compact or compact shard(s)", errCount)
+		return fmt.Errorf("Test failed to prune %d orphaned resources for compact or compact shard(s)", errCount)
 	}
 
 	// now we can create what we expect to be built based on the spec
