@@ -40,6 +40,12 @@ type ThanosCompactMetrics struct {
 	*BaseMetrics
 }
 
+type ConfigMapSyncerMetrics struct {
+	*BaseMetrics
+	LastWriteSuccessTime *prometheus.GaugeVec
+	ConfigMapHash        *prometheus.GaugeVec
+}
+
 func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
 	return &BaseMetrics{
 		ReconciliationsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
@@ -123,5 +129,19 @@ func NewThanosStoreMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) 
 func NewThanosCompactMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosCompactMetrics {
 	return ThanosCompactMetrics{
 		BaseMetrics: baseMetrics,
+	}
+}
+
+func NewConfigMapSyncerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ConfigMapSyncerMetrics {
+	return ConfigMapSyncerMetrics{
+		BaseMetrics: baseMetrics,
+		LastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
+		ConfigMapHash: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_configmap_hash",
+			Help: "Hash of the last created or updated configmap",
+		}, []string{"resource", "namespace"}),
 	}
 }
