@@ -53,6 +53,11 @@ type ThanosCompactMetrics struct {
 	ShardCreationUpdateFailures *prometheus.CounterVec
 }
 
+type ConfigMapSyncerMetrics struct {
+	LastWriteSuccessTime *prometheus.GaugeVec
+	ConfigMapHash        *prometheus.GaugeVec
+}
+
 var (
 	commonMetricsInstance *CommonMetrics
 	commonMetricsOnce     sync.Once
@@ -184,6 +189,19 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 		ShardCreationUpdateFailures: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
 			Name: "thanos_operator_compact_shards_creation_update_failures_total",
 			Help: "Number of shard creation/update failures for ThanosCompact resources",
+		}, []string{"resource", "namespace"}),
+	}
+}
+
+func NewConfigMapSyncerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ConfigMapSyncerMetrics {
+	return ConfigMapSyncerMetrics{
+		LastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
+		ConfigMapHash: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_configmap_hash",
+			Help: "Hash of the last created or updated configmap",
 		}, []string{"resource", "namespace"}),
 	}
 }
