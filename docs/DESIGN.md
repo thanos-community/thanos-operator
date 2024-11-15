@@ -43,7 +43,7 @@ The following sections outline the identified use cases and stories per componen
 
 We propose that there should be a single CRD for Thanos Receive.
 
-*ThanosReceive* will be responsible for managing the lifecycle Receive routing and ingest components. It will manage the hashring configuration for the ingest components that it deploys.
+*ThanosReceive* will be responsible for managing the lifecycle of Receive routing and ingest components. It will manage the hashring configuration for the ingest components that it deploys.
 
 **Option One - Split routing and metrics ingest components**
 
