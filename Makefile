@@ -26,6 +26,9 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 FILES_TO_FMT      	 ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
+MD_FILES_TO_FORMAT = $(filter-out docs/api.md, $(shell find docs -name "*.md")) $(shell ls *.md)
+MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
+CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
 .PHONY: all
 all: build
@@ -115,6 +118,46 @@ lint: $(FAILLINT) $(GOLANGCI_LINT) format deps
 .PHONY: lint-fix
 lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
+
+##@ Docs
+
+define require_clean_work_tree
+	@git update-index -q --ignore-submodules --refresh
+
+	@if ! git diff-files --quiet --ignore-submodules --; then \
+		echo >&2 "cannot $1: you have unstaged changes."; \
+		git diff -r --ignore-submodules -- >&2; \
+		echo >&2 "Please commit or stash them."; \
+		exit 1; \
+	fi
+
+	@if ! git diff-index --cached --quiet HEAD --ignore-submodules --; then \
+		echo >&2 "cannot $1: your index contains uncommitted changes."; \
+		git diff --cached -r --ignore-submodules HEAD -- >&2; \
+		echo >&2 "Please commit or stash them."; \
+		exit 1; \
+	fi
+
+endef
+
+.PHONY: generate-api-docs
+generate-api-docs: ## Generate documentation from CRD
+generate-api-docs: $(CRD_REF_DOCS) generate
+	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
+	mv ./docs/monitoring.thanos.io.md ./docs/api.md
+
+.PHONY: docs
+docs: ## Generates docs for all commands, localise links, ensure GitHub format.
+docs: build generate-api-docs $(MDOX)
+	@echo ">> generating docs"
+	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt $(MD_FILES_TO_FORMAT)
+
+.PHONY: check-docs
+check-docs: ## Checks docs against discrepancy with flags, links, white noise.
+check-docs: build generate-api-docs $(MDOX)
+	@echo ">> checking docs"
+	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
+	$(call require_clean_work_tree,'run make docs and commit changes')
 
 ##@ Build
 
