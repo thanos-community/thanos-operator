@@ -237,6 +237,12 @@ install-example: ## Ensure you run make install and make deploy in ns of choice 
 	$(KUBECTL) apply -f test/utils/testdata/
 	$(KUSTOMIZE) build config/samples | $(KUBECTL) apply -f -
 
+
+.PHONY: install-sample
+install-sample: install deploy
+	$(KUSTOMIZE) build config/samples | $(KUBECTL) apply -f -
+
+
 .PHONY: uninstall-example
 uninstall-example: manifests kustomize ## Uninstall example definitions from K8s cluster specified in ~/.kube/config.
 	$(KUBECTL) delete -f test/utils/testdata/
