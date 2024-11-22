@@ -62,7 +62,8 @@ const (
 
 	prometheusPort = 9090
 
-	hashringName = "default"
+	hashringName    = "default"
+	hashringTwoName = "two"
 )
 
 var _ = Describe("controller", Ordered, func() {
@@ -206,6 +207,7 @@ var _ = Describe("controller", Ordered, func() {
 	Describe("Thanos Receive", Ordered, func() {
 		routerName := controller.ReceiveRouterNameFromParent(receiveName)
 		ingesterName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
+		ingesterTwoName := controller.ReceiveIngesterNameFromParent(receiveName, hashringTwoName)
 
 		Context("When ThanosReceive is created with hashrings", func() {
 			It("should bring up the ingest components", func() {
@@ -226,6 +228,13 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name:        hashringName,
 									StorageSize: "100Mi",
+								},
+								{
+									Name:        hashringTwoName,
+									StorageSize: "100Mi",
+									Tenants: []string{
+										"tenant1",
+									},
 								},
 							},
 						},
@@ -248,7 +257,7 @@ var _ = Describe("controller", Ordered, func() {
 					//nolint:lll
 					expect := fmt.Sprintf(`[
     {
-        "hashring": "default",
+        "hashring": "%s",
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
@@ -256,8 +265,21 @@ var _ = Describe("controller", Ordered, func() {
                 "az": ""
             }
         ]
-    }
-]`, ingesterName, ingesterName)
+    },
+    {
+        "hashring": "%s",
+        "tenants": [
+            "tenant1"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+                "az": ""
+            }
+        ]
+    },
+]`, hashringName, ingesterName, ingesterName, hashringTwoName, ingesterTwoName, ingesterTwoName)
 					Eventually(func() bool {
 						return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
 					}, time.Minute*5, time.Second*10).Should(BeTrue())
