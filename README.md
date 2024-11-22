@@ -80,6 +80,18 @@ To deploy [example manifests](./config/samples/), which give you a local [MinIO]
 make install-example
 ```
 
+### Interactive Demo
+
+To test out the operator with a local Kubernetes cluster you can run an interactive demo in KinD. You will firstly need to install [mage](https://magefile.org/) and then run the following commands:
+
+```bash
+mage interactiveDemo
+```
+
+Once the workloads are ready, run `kubectl -n thanos-operator-system port-forward svc/thanos-query-frontend-example-query 9090` and visit `http://localhost:9090` to via the query UI.
+
+This demo consists of a Prometheus, deployed via Prometheus Operator, that scrapes metrics from the operator and the Thanos components themselves. It remote writes to the Thanos Receive component.
+
 ## Contributing and development
 
 Requirements to build, and test the project,
