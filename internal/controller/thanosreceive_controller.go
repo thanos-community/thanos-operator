@@ -23,8 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -78,7 +76,7 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics:  controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry),
 		recorder: conf.InstrumentationConfig.EventRecorder,
 		handler:  handler,
 	}
@@ -89,19 +87,15 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues(manifestreceive.Name).Inc()
-
 	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos receive resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
 		r.recorder.Event(receiver, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosReceive resource")
 		return ctrl.Result{}, err
 	}
@@ -120,7 +114,6 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestreceive.Name).Inc()
 		r.recorder.Event(receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
@@ -187,14 +180,12 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
 	}
 
 	// prune the ingest resources that are no longer needed/have changed
 	errCount = r.pruneOrphanedResources(ctx, receiver.GetNamespace(), receiver.GetName(), expectIngesters)
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to prune %d orphaned resources for receive ingester(s)", errCount)
 	}
 
@@ -205,7 +196,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	routerOpts := r.specToRouterOptions(receiver, string(hashringConfig))
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestreceive.Name).Add(float64(errs))
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
 
@@ -215,7 +205,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 			smObjs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: receiver.GetNamespace()}}
 		}
 		if errCount = r.handler.DeleteResource(ctx, smObjs); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d ServiceMonitors for the receiver", errCount)
 		}
 	}
@@ -289,7 +278,14 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		return []byte(""), nil
 	}
 
-	return json.MarshalIndent(out, "", "    ")
+	b, err := json.MarshalIndent(out, "", "    ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal hashring config: %w", err)
+	}
+
+	r.metrics.HashringHash.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(receive.HashAsMetricValue(b))
+	r.metrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(len(out)))
+	return b, nil
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {

@@ -1,6 +1,8 @@
 package receive
 
 import (
+	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -154,18 +156,20 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 func DynamicMerge(previousState Hashrings, desiredState HashringState, replicationFactor int) Hashrings {
 	var mergedState Hashrings
 	if isEmptyHashring(previousState) {
-		mergedState = handleUnseenHashrings(desiredState)
+		return handleUnseenHashrings(desiredState)
 	}
 	for k, v := range desiredState {
 		// we first check that the hashring can meet the desired replication factor
 		// secondly, we allow to tolerate a single missing member. this allows us to account for
 		// voluntary disruptions to the hashring.
 		// todo - allow for more than one missing member based on input from PDB settings etc
-		if len(v.Config.Endpoints) >= replicationFactor && v.DesiredReplicas-1 >= len(v.Config.Endpoints) {
+		if len(v.Config.Endpoints) >= replicationFactor && len(v.Config.Endpoints) >= v.DesiredReplicas-1 {
 			mergedState = append(mergedState, metaToHashring(k, v))
 			continue
 		}
 		// otherwise we look for previous state and merge if it exists
+		// this means that if the hashring is having issues, we don't interfere with it
+		// since doing so could cause further disruptions and frequent reshuffling
 		for _, hr := range previousState {
 			if hr.Name == k {
 				mergedState = append(mergedState, hr)
@@ -173,7 +177,7 @@ func DynamicMerge(previousState Hashrings, desiredState HashringState, replicati
 		}
 	}
 	sort.Slice(mergedState, func(i, j int) bool {
-		return mergedState[i].Name > mergedState[j].Name
+		return mergedState[i].Name < mergedState[j].Name
 	})
 
 	return mergedState
@@ -226,4 +230,13 @@ func (e *Endpoint) UnmarshalJSON(data []byte) error {
 		e.AZ = configEndpoint.AZ
 	}
 	return err
+}
+
+// HashAsMetricValue hashes the given data and returns a float64 value.
+func HashAsMetricValue(data []byte) float64 {
+	sum := md5.Sum(data)
+	smallSum := sum[0:6]
+	var bytes = make([]byte, 8)
+	copy(bytes, smallSum)
+	return float64(binary.LittleEndian.Uint64(bytes))
 }
