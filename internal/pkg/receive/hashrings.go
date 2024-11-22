@@ -156,7 +156,7 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 func DynamicMerge(previousState Hashrings, desiredState HashringState, replicationFactor int) Hashrings {
 	var mergedState Hashrings
 	if isEmptyHashring(previousState) {
-		mergedState = handleUnseenHashrings(desiredState)
+		return handleUnseenHashrings(desiredState)
 	}
 	for k, v := range desiredState {
 		// we first check that the hashring can meet the desired replication factor
