@@ -22,6 +22,7 @@ type ThanosReceiveMetrics struct {
 	HashringsConfigured                 *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal prometheus.Counter
 	HashringHash                        *prometheus.GaugeVec
+	HashringLastWriteSuccessTime        *prometheus.GaugeVec
 }
 
 type ThanosRulerMetrics struct {
@@ -41,7 +42,6 @@ type ThanosCompactMetrics struct {
 }
 
 type ConfigMapSyncerMetrics struct {
-	*BaseMetrics
 	LastWriteSuccessTime *prometheus.GaugeVec
 	ConfigMapHash        *prometheus.GaugeVec
 }
@@ -95,6 +95,10 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer) ThanosReceiveMetrics {
 			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
 		}),
+		HashringLastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_receive_hashring_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
 	}
 }
 
@@ -132,9 +136,8 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics
 	}
 }
 
-func NewConfigMapSyncerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ConfigMapSyncerMetrics {
+func NewConfigMapSyncerMetrics(reg prometheus.Registerer) ConfigMapSyncerMetrics {
 	return ConfigMapSyncerMetrics{
-		BaseMetrics: baseMetrics,
 		LastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_configmap_syncer_last_write_success_timestamp_seconds",
 			Help: "Unix timestamp of the last successful write to disk",

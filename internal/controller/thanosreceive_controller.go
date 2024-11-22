@@ -198,6 +198,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
+	r.metrics.HashringLastWriteSuccessTime.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).SetToCurrentTime()
 
 	if !manifests.HasServiceMonitorEnabled(receiver.Spec.FeatureGates) {
 		smObjs := make([]client.Object, len(expectIngesters)+1)

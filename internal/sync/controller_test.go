@@ -97,7 +97,7 @@ var _ = BeforeSuite(func() {
 		Scheme: scheme.Scheme,
 		Metrics: server.Options{
 			SecureServing: false,
-			BindAddress:   "5432",
+			BindAddress:   ":5432",
 		},
 	})
 	Expect(err).ToNot(HaveOccurred())
