@@ -22,6 +22,7 @@ type ThanosReceiveMetrics struct {
 	HashringsConfigured                 *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal prometheus.Counter
 	HashringHash                        *prometheus.GaugeVec
+	HashringLastWriteSuccessTime        *prometheus.GaugeVec
 }
 
 type ThanosRulerMetrics struct {
@@ -38,6 +39,11 @@ type ThanosStoreMetrics struct {
 
 type ThanosCompactMetrics struct {
 	*BaseMetrics
+}
+
+type ConfigMapSyncerMetrics struct {
+	LastWriteSuccessTime *prometheus.GaugeVec
+	ConfigMapHash        *prometheus.GaugeVec
 }
 
 func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
@@ -89,6 +95,10 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer) ThanosReceiveMetrics {
 			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
 		}),
+		HashringLastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_receive_hashring_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
 	}
 }
 
@@ -123,5 +133,18 @@ func NewThanosStoreMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) 
 func NewThanosCompactMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosCompactMetrics {
 	return ThanosCompactMetrics{
 		BaseMetrics: baseMetrics,
+	}
+}
+
+func NewConfigMapSyncerMetrics(reg prometheus.Registerer) ConfigMapSyncerMetrics {
+	return ConfigMapSyncerMetrics{
+		LastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
+		ConfigMapHash: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_configmap_hash",
+			Help: "Hash of the last created or updated configmap",
+		}, []string{"resource", "namespace"}),
 	}
 }
