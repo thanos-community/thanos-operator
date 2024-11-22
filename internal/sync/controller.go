@@ -2,13 +2,12 @@ package sync
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/binary"
 	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/thanos-community/thanos-operator/internal/controller"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
+	"github.com/thanos-community/thanos-operator/internal/pkg/receive"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,7 +51,7 @@ func NewController(conf ConfigMapSyncerOptions, client client.Client, scheme *ru
 		Scheme:  scheme,
 		conf:    conf.ConfigMapOptions,
 		logger:  conf.InstrumentationConfig.Logger,
-		metrics: controllermetrics.NewConfigMapSyncerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics: controllermetrics.NewConfigMapSyncerMetrics(conf.InstrumentationConfig.MetricsRegistry),
 	}
 }
 
@@ -60,8 +59,6 @@ func NewController(conf ConfigMapSyncerOptions, client client.Client, scheme *ru
 
 // Reconcile reads that state of the cluster for a ConfigMap object and syncs it to disk.
 func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues("configmap-sync-controller").Inc()
-
 	if r.conf.Name != req.NamespacedName.Name {
 		r.logger.Info("ignoring ConfigMap", "name", req.NamespacedName.Name)
 		return ctrl.Result{}, nil
@@ -74,7 +71,6 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "unable to fetch ConfigMap")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues("configmap-sync-controller").Inc()
 		return ctrl.Result{}, err
 	}
 
@@ -86,13 +82,11 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	data := []byte(cm.Data[r.conf.Key])
 	if err := os.WriteFile(r.conf.Path, data, 0644); err != nil {
 		r.logger.Error(err, "failed to write file")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues("configmap-sync-controller").Inc()
 		return ctrl.Result{}, err
 	}
 
 	r.metrics.LastWriteSuccessTime.WithLabelValues(cm.GetName(), cm.GetNamespace()).SetToCurrentTime()
-	r.metrics.ConfigMapHash.WithLabelValues(cm.GetName(), cm.GetNamespace()).Set(hashAsMetricValue(data))
-
+	r.metrics.ConfigMapHash.WithLabelValues(cm.GetName(), cm.GetNamespace()).Set(receive.HashAsMetricValue(data))
 	return ctrl.Result{}, nil
 }
 
@@ -103,15 +97,4 @@ func (r *Controller) SetupWithManager(mgr ctrl.Manager) error {
 			predicate.GenerationChangedPredicate{},
 		)).
 		Complete(r)
-}
-
-// hashAsMetricValue generates metric value from hash of data.
-func hashAsMetricValue(data []byte) float64 {
-	sum := md5.Sum(data)
-	// We only want 48 bits as a float64 only has a 53 bit mantissa.
-	smallSum := sum[0:6]
-	bytes := make([]byte, 8)
-	copy(bytes, smallSum)
-
-	return float64(binary.LittleEndian.Uint64(bytes))
 }

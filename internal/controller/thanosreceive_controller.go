@@ -226,6 +226,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
+	r.metrics.HashringLastWriteSuccessTime.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).SetToCurrentTime()
 
 	if errCount = r.handler.DeleteResource(ctx,
 		getDisabledFeatureGatedResources(receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
