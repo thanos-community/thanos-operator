@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/thanos-community/thanos-operator/internal/controller"
-	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 	"github.com/thanos-community/thanos-operator/internal/sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -89,7 +88,6 @@ func main() {
 	)
 
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
-	baseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
 
 	conf := sync.ConfigMapSyncerOptions{
 		ConfigMapOptions: sync.ConfigMapOptions{
@@ -100,7 +98,6 @@ func main() {
 		InstrumentationConfig: controller.InstrumentationConfig{
 			Logger:          ctrl.Log.WithName(name),
 			MetricsRegistry: ctrlmetrics.Registry,
-			BaseMetrics:     baseMetrics,
 		},
 	}
 

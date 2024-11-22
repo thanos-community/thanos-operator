@@ -242,6 +242,7 @@ kind: Prometheus
 metadata:
   name: prometheus-dev
 spec:
+  scrapeInterval: 5s
   serviceAccountName: prometheus
   serviceMonitorNamespaceSelector:
     matchLabels:
