@@ -423,6 +423,19 @@ func VerifyConfigMapContents(c client.Client, name, namespace, key, expect strin
 	}
 
 	data := cm.Data[key]
+
+	if json.Valid([]byte(data)) && json.Valid([]byte(expect)) {
+		var jData interface{}
+		if err := json.Unmarshal([]byte(data), &jData); err != nil {
+			return false
+		}
+		var jExpect interface{}
+		if err := json.Unmarshal([]byte(expect), &jExpect); err != nil {
+			return false
+		}
+		return equality.Semantic.DeepEqual(jData, jExpect)
+
+	}
 	return data == expect
 }
 

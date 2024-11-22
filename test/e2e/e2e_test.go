@@ -278,7 +278,7 @@ var _ = Describe("controller", Ordered, func() {
                 "az": ""
             }
         ]
-    },
+    }
 ]`, hashringName, ingesterName, ingesterName, hashringTwoName, ingesterTwoName, ingesterTwoName)
 					Eventually(func() bool {
 						return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
