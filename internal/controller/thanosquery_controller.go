@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -216,6 +217,9 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 		r.metrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
 	}
 
+	sort.Slice(endpoints, func(i, j int) bool {
+		return endpoints[i].ServiceName < endpoints[j].ServiceName
+	})
 	return endpoints, nil
 }
 
