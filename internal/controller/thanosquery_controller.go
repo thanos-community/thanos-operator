@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -71,7 +72,7 @@ func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry),
 		recorder: conf.InstrumentationConfig.EventRecorder,
 		handler:  handler,
 	}
@@ -91,18 +92,14 @@ func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues(manifestquery.Name).Inc()
-
 	query := &monitoringthanosiov1alpha1.ThanosQuery{}
 	err := r.Get(ctx, req.NamespacedName, query)
 	if err != nil {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos query resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
 		r.recorder.Event(query, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosQuery resource")
 		return ctrl.Result{}, err
 	}
@@ -115,7 +112,6 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestquery.Name).Inc()
 		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
@@ -141,7 +137,6 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	var errCount int
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
@@ -153,7 +148,6 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 			},
 		},
 		}); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestquery.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
 		}
 	}

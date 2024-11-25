@@ -72,7 +72,7 @@ func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry),
 		recorder: conf.InstrumentationConfig.EventRecorder,
 		handler:  handler,
 	}
@@ -91,18 +91,14 @@ func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues(manifestruler.Name).Inc()
-
 	ruler := &monitoringthanosiov1alpha1.ThanosRuler{}
 	err := r.Get(ctx, req.NamespacedName, ruler)
 	if err != nil {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos ruler resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosRuler")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
 		r.recorder.Event(ruler, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosRuler resource")
 		return ctrl.Result{}, err
 	}
@@ -115,7 +111,6 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestruler.Name).Inc()
 		r.recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
@@ -134,7 +129,6 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	objs = append(objs, desiredObjs...)
 
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
 	if !manifests.HasServiceMonitorEnabled(ruler.Spec.FeatureGates) {
@@ -145,7 +139,6 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 			},
 		},
 		}); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d resources for the ruler", errCount)
 		}
 	}

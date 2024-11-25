@@ -65,7 +65,7 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry),
 		recorder: conf.InstrumentationConfig.EventRecorder,
 		handler:  handler,
 	}
@@ -83,18 +83,14 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues(manifestsstore.Name).Inc()
-
 	store := &monitoringthanosiov1alpha1.ThanosStore{}
 	err := r.Get(ctx, req.NamespacedName, store)
 	if err != nil {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos store resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
 		r.recorder.Event(store, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosStore resource")
 		return ctrl.Result{}, err
 	}
@@ -109,7 +105,6 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	err = r.syncResources(ctx, *store)
 	if err != nil {
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestsstore.Name).Inc()
 		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
@@ -128,14 +123,12 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
 	// prune the store resources that are no longer needed/have changed
 	errCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
 	}
 
@@ -146,7 +139,6 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		}
 
 		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestsstore.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
 		}
 	}

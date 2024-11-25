@@ -27,10 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/prometheus/client_golang/prometheus"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
-	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -107,10 +104,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reg := prometheus.NewRegistry()
-	controllerBaseMetrics := controllermetrics.NewBaseMetrics(reg)
 	logger := ctrl.Log.WithName("suite-test")
-
 	buildConfig := func(component string) Config {
 		return Config{
 			FeatureGate: FeatureGate{EnableServiceMonitor: true},
@@ -118,7 +112,6 @@ var _ = BeforeSuite(func() {
 				Logger:          logger.WithName(component),
 				EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),
 				MetricsRegistry: ctrlmetrics.Registry,
-				BaseMetrics:     controllerBaseMetrics,
 			},
 		}
 	}

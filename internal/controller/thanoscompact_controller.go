@@ -20,10 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	"github.com/go-logr/logr"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -67,18 +66,14 @@ type ThanosCompactReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.metrics.ReconciliationsTotal.WithLabelValues(manifestcompact.Name).Inc()
-
 	compact := &monitoringthanosiov1alpha1.ThanosCompact{}
 	err := r.Get(ctx, req.NamespacedName, compact)
 	if err != nil {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Inc()
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("thanos compact resource not found. ignoring since object may be deleted")
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosCompact")
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
 		r.recorder.Event(compact, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosCompact resource")
 		return ctrl.Result{}, err
 	}
@@ -91,7 +86,6 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
-		r.metrics.ReconciliationsFailedTotal.WithLabelValues(manifestcompact.Name).Inc()
 		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		return ctrl.Result{}, err
 	}
@@ -111,7 +105,7 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.BaseMetrics),
+		metrics:  controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry),
 		recorder: conf.InstrumentationConfig.EventRecorder,
 		handler:  handler,
 	}
@@ -137,7 +131,6 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 
 	errCount = r.pruneOrphanedResources(ctx, compact.GetNamespace(), compact.GetName(), expectResources)
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to prune %d orphaned resources for compact or compact shard(s)", errCount)
 	}
 
@@ -147,7 +140,6 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
@@ -157,7 +149,6 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: compact.GetNamespace()}}
 		}
 		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
-			r.metrics.ClientErrorsTotal.WithLabelValues(manifestcompact.Name).Add(float64(errCount))
 			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
 		}
 	}
