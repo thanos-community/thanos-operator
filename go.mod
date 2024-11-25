@@ -9,7 +9,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/imdario/mergo v0.3.16
 	github.com/magefile/mage v1.15.0
-	github.com/onsi/ginkgo/v2 v2.21.0
+	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.35.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.76.1
 	github.com/prometheus/client_golang v1.20.5
