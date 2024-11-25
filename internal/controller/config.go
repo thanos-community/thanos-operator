@@ -3,8 +3,6 @@ package controller
 import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 )
@@ -43,5 +41,4 @@ type InstrumentationConfig struct {
 	EventRecorder record.EventRecorder
 
 	MetricsRegistry prometheus.Registerer
-	BaseMetrics     *metrics.BaseMetrics
 }

@@ -36,7 +36,6 @@ import (
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -155,7 +154,6 @@ func main() {
 	)
 
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
-	baseMetrics := controllermetrics.NewBaseMetrics(ctrlmetrics.Registry)
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
 	buildConfig := func(component string) controller.Config {
@@ -167,7 +165,6 @@ func main() {
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
 				MetricsRegistry: ctrlmetrics.Registry,
-				BaseMetrics:     baseMetrics,
 			},
 		}
 	}

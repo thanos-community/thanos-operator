@@ -5,14 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type BaseMetrics struct {
-	ReconciliationsTotal       *prometheus.CounterVec
-	ReconciliationsFailedTotal *prometheus.CounterVec
-	ClientErrorsTotal          *prometheus.CounterVec
-}
-
 type ThanosQueryMetrics struct {
-	*BaseMetrics
 	EndpointsConfigured                        *prometheus.GaugeVec
 	ServiceWatchesReconciliationsTotal         prometheus.Counter
 	FrontendServiceWatchesReconciliationsTotal prometheus.Counter
@@ -25,7 +18,6 @@ type ThanosReceiveMetrics struct {
 }
 
 type ThanosRulerMetrics struct {
-	*BaseMetrics
 	EndpointsConfigured                  *prometheus.GaugeVec
 	RuleFilesConfigured                  *prometheus.GaugeVec
 	ServiceWatchesReconciliationsTotal   prometheus.Counter
@@ -33,33 +25,13 @@ type ThanosRulerMetrics struct {
 }
 
 type ThanosStoreMetrics struct {
-	*BaseMetrics
 }
 
 type ThanosCompactMetrics struct {
-	*BaseMetrics
 }
 
-func NewBaseMetrics(reg prometheus.Registerer) *BaseMetrics {
-	return &BaseMetrics{
-		ReconciliationsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_reconciliations_total",
-			Help: "Total number of reconciliations for Thanos resources",
-		}, []string{"component"}),
-		ReconciliationsFailedTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_reconciliations_failed_total",
-			Help: "Total number of failed reconciliations for Thanos resources",
-		}, []string{"component"}),
-		ClientErrorsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_client_errors_total",
-			Help: "Total number of errors encountered during kube client calls of Thanos resources",
-		}, []string{"component"}),
-	}
-}
-
-func NewThanosQueryMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosQueryMetrics {
+func NewThanosQueryMetrics(reg prometheus.Registerer) ThanosQueryMetrics {
 	return ThanosQueryMetrics{
-		BaseMetrics: baseMetrics,
 		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_query_endpoints_configured",
 			Help: "Number of configured endpoints for ThanosQuery resources",
@@ -92,9 +64,8 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer) ThanosReceiveMetrics {
 	}
 }
 
-func NewThanosRulerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosRulerMetrics {
+func NewThanosRulerMetrics(reg prometheus.Registerer) ThanosRulerMetrics {
 	return ThanosRulerMetrics{
-		BaseMetrics: baseMetrics,
 		EndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_ruler_query_endpoints_configured",
 			Help: "Number of configured query endpoints for ThanosRuler resources",
@@ -114,14 +85,10 @@ func NewThanosRulerMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) 
 	}
 }
 
-func NewThanosStoreMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosStoreMetrics {
-	return ThanosStoreMetrics{
-		BaseMetrics: baseMetrics,
-	}
+func NewThanosStoreMetrics(reg prometheus.Registerer) ThanosStoreMetrics {
+	return ThanosStoreMetrics{}
 }
 
-func NewThanosCompactMetrics(reg prometheus.Registerer, baseMetrics *BaseMetrics) ThanosCompactMetrics {
-	return ThanosCompactMetrics{
-		BaseMetrics: baseMetrics,
-	}
+func NewThanosCompactMetrics(reg prometheus.Registerer) ThanosCompactMetrics {
+	return ThanosCompactMetrics{}
 }
