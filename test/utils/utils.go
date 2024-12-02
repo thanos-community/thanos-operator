@@ -264,6 +264,9 @@ func (v Verifier) Verify(c client.Client, name, ns string) bool {
 	if v.svcMon && !VerifyServiceMonitorExists(c, name, ns) {
 		return false
 	}
+	if v.sa && !VerifyServiceAccountExists(c, name, ns) {
+		return false
+	}
 	return true
 }
 

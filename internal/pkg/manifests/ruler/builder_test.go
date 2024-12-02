@@ -243,6 +243,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			name := tc.opts.GetGeneratedResourceName()
 			ruler := NewRulerStatefulSet(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
