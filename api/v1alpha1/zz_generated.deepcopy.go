@@ -1083,6 +1083,7 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		*out = new(FeatureGates)
 		(*in).DeepCopyInto(*out)
 	}
+	in.PrometheusRuleSelector.DeepCopyInto(&out.PrometheusRuleSelector)
 	in.Additional.DeepCopyInto(&out.Additional)
 }
 

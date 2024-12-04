@@ -169,7 +169,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}
 	r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 
-	// PrometheusRule-based configmaps take precendence.
+	// PrometheusRule-based configmaps take precedence.
 	uniqueRuleFiles := make(map[string]corev1.ConfigMapKeySelector)
 	for _, rf := range ruleFiles {
 		uniqueRuleFiles[rf.Name] = rf
@@ -344,7 +344,6 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 	}
 
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
-		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
 		return nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
 	}
 
