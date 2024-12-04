@@ -1,11 +1,13 @@
 package ruler
 
 import (
+	"encoding/json"
 	"fmt"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -421,4 +423,29 @@ func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMo
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,
 	}
+}
+
+// Convert PrometheusRule groups to YAML format
+func GenerateRuleFileContent(groups []monitoringv1.RuleGroup) string {
+	type ruleFile struct {
+		Groups []monitoringv1.RuleGroup `json:"groups"`
+	}
+
+	jsonData, err := json.Marshal(ruleFile{Groups: groups})
+	if err != nil {
+		return ""
+	}
+
+	var data interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return ""
+	}
+
+	content, err := yaml.Marshal(data)
+	if err != nil {
+		return ""
+	}
+
+	return string(content)
 }

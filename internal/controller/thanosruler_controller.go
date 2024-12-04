@@ -84,6 +84,7 @@ func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -160,6 +161,30 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	if err != nil {
 		return []client.Object{}, err
 	}
+	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
+
+	promRuleConfigMaps, err := r.getPrometheusRuleConfigMaps(ctx, ruler)
+	if err != nil {
+		return []client.Object{}, err
+	}
+	r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
+
+	// PrometheusRule-based configmaps take precendence.
+	uniqueRuleFiles := make(map[string]corev1.ConfigMapKeySelector)
+	for _, rf := range ruleFiles {
+		uniqueRuleFiles[rf.Name] = rf
+	}
+	for _, prf := range promRuleConfigMaps {
+		uniqueRuleFiles[prf.Name] = prf
+	}
+
+	ruleFiles = make([]corev1.ConfigMapKeySelector, 0, len(uniqueRuleFiles))
+	for _, rf := range uniqueRuleFiles {
+		ruleFiles = append(ruleFiles, rf)
+	}
+
+	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
+	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
 	opts := rulerV1Alpha1ToOptions(ruler)
 	opts.Endpoints = endpoints
@@ -225,9 +250,18 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 		return []corev1.ConfigMapKeySelector{}, nil
 	}
 
+	r.logger.Info("processing rule config maps",
+		"found", len(cfgmaps.Items),
+		"ruler", ruler.Name,
+		"namespace", ruler.Namespace)
+
 	ruleFiles := make([]corev1.ConfigMapKeySelector, 0, len(cfgmaps.Items))
 	for _, cfgmap := range cfgmaps.Items {
 		if cfgmap.Data == nil || len(cfgmap.Data) != 1 {
+			r.logger.Info("skipping invalid config map",
+				"name", cfgmap.Name,
+				"dataKeys", len(cfgmap.Data),
+				"ruler", ruler.Name)
 			continue
 		}
 
@@ -242,7 +276,77 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 		}
 	}
 
-	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
+	return ruleFiles, nil
+}
+
+// getPrometheusRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
+func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
+	if ruler.Spec.PrometheusRuleSelector.MatchLabels == nil {
+		r.logger.Info("no prometheus rule selector specified, skipping", "ruler", ruler.Name)
+		return []corev1.ConfigMapKeySelector{}, nil
+	}
+
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.PrometheusRuleSelector, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
+	}
+
+	promRules := &monitoringv1.PrometheusRuleList{}
+	if err := r.List(ctx, promRules,
+		client.InNamespace(ruler.Namespace),
+		client.MatchingLabelsSelector{Selector: labelSelector},
+	); err != nil {
+		return nil, err
+	}
+
+	if len(promRules.Items) == 0 {
+		return []corev1.ConfigMapKeySelector{}, nil
+	}
+
+	r.logger.Info("processing prometheus rules",
+		"found", len(promRules.Items),
+		"ruler", ruler.Name,
+		"namespace", ruler.Namespace)
+
+	ruleFiles := []corev1.ConfigMapKeySelector{}
+	objs := []client.Object{}
+	for _, rule := range promRules.Items {
+		cmName := fmt.Sprintf("%s-promrule-%s", ruler.Name, rule.Name)
+		objs = append(objs, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmName,
+				Namespace: ruler.Namespace,
+				Labels: map[string]string{
+					manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: ruler.APIVersion,
+						Kind:       ruler.Kind,
+						Name:       ruler.Name,
+						UID:        ruler.UID,
+						Controller: ptr.To(true),
+					},
+				},
+			},
+			Data: map[string]string{
+				cmName + ".yaml": manifestruler.GenerateRuleFileContent(rule.Spec.Groups),
+			},
+		})
+
+		ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: cmName,
+			},
+			Key:      cmName + ".yaml",
+			Optional: ptr.To(true),
+		})
+	}
+
+	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
+		r.metrics.ClientErrorsTotal.WithLabelValues(manifestruler.Name).Add(float64(errCount))
+		return nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
+	}
 
 	return ruleFiles, nil
 }
@@ -276,9 +380,15 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&policyv1.PodDisruptionBudget{}).
 		Owns(&monitoringv1.ServiceMonitor{}).
 		Watches(
+			&monitoringv1.PrometheusRule{},
+			r.enqueueForPrometheusRule(),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
 			builder.WithPredicates(svcPredicate),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&corev1.ConfigMap{},
@@ -390,4 +500,37 @@ var requiredQueryServiceLabels = map[string]string{
 
 var requiredRuleConfigMapLabels = map[string]string{
 	manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+}
+
+// Add this new function to handle PrometheusRule events
+func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+		rulers := &monitoringthanosiov1alpha1.ThanosRulerList{}
+		err := r.List(ctx, rulers, client.InNamespace(obj.GetNamespace()))
+		if err != nil {
+			return []reconcile.Request{}
+		}
+
+		requests := []reconcile.Request{}
+		for _, ruler := range rulers.Items {
+			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.PrometheusRuleSelector, nil)
+			if err != nil {
+				r.logger.Error(err, "failed to build label selector from ruler PrometheusRule selector",
+					"ruler", ruler.GetName())
+				continue
+			}
+
+			if selector.Matches(labels.Set(obj.GetLabels())) {
+				r.logger.Info("found prometheus rule enqueueing", "ruler", ruler.GetName())
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      ruler.GetName(),
+						Namespace: ruler.GetNamespace(),
+					},
+				})
+			}
+		}
+
+		return requests
+	})
 }

@@ -77,6 +77,12 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
+	// PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
+	// If not specified, no PrometheusRules will be loaded.
+	// Once detected, these rules are made into configmaps and added to the Ruler.
+	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/prometheus-rule": "true"}}
+	// +kubebuilder:validation:Required
+	PrometheusRuleSelector metav1.LabelSelector `json:"prometheusRuleSelector,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
