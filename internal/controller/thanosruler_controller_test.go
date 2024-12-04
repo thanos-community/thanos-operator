@@ -28,6 +28,7 @@ import (
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -180,6 +181,40 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("updating with new PrometheusRule object", func() {
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-promrule",
+						Namespace: ns,
+						Labels: map[string]string{
+							"operator.thanos.io/prometheus-rule": "true",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "example",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "HighRequestLatency",
+										Expr:  intstr.FromString(`job:request_latency_seconds:mean5m{job="myjob"} > 0.5`),
+										Labels: map[string]string{
+											"severity": "page",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resourceName + "-promrule-test-promrule.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})

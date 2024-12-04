@@ -72,6 +72,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			filepath.Join("..", "..", "test", "configs", "service-monitor.yaml"),
+			filepath.Join("..", "..", "test", "configs", "prometheus-rule.yaml"),
 		},
 
 		ErrorIfCRDPathMissing: true,

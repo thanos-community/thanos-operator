@@ -503,7 +503,7 @@ var _ = Describe("controller", Ordered, func() {
 						Name:      "example-prometheus-rule",
 						Namespace: namespace,
 						Labels: map[string]string{
-							manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+							"operator.thanos.io/prometheus-rule": "true",
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -543,7 +543,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/example-prometheus-rule-example-prometheus.yaml",
+						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-example-prometheus-rule.yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
