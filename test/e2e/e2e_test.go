@@ -445,6 +445,11 @@ var _ = Describe("controller", Ordered, func() {
 						},
 						CommonFields: v1alpha1.CommonFields{},
 						StorageSize:  "100Mi",
+						PrometheusRuleSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							},
+						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -503,7 +508,7 @@ var _ = Describe("controller", Ordered, func() {
 						Name:      "example-prometheus-rule",
 						Namespace: namespace,
 						Labels: map[string]string{
-							"operator.thanos.io/prometheus-rule": "true",
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -543,7 +548,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-example-prometheus-rule.yaml",
+						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-"+promRule.Name+".yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})

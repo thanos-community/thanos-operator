@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -105,6 +106,11 @@ config:
 						},
 						Key: "thanos.yaml",
 					},
+					PrometheusRuleSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
@@ -179,19 +185,12 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
 
-				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*2).Should(BeTrue())
-			})
-
-			By("updating with new PrometheusRule object", func() {
 				promRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-promrule",
 						Namespace: ns,
 						Labels: map[string]string{
-							"operator.thanos.io/prometheus-rule": "true",
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -214,7 +213,12 @@ config:
 				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/" + resourceName + "-promrule-test-promrule.yaml"
+					arg := "--rule-file=/etc/thanos/rules/" + resourceName + "-promrule-" + promRule.Name + ".yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
