@@ -20,6 +20,9 @@ type FeatureGate struct {
 	// EnableServiceMonitor enables the management of ServiceMonitor objects.
 	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor
 	EnableServiceMonitor bool
+	// EnablePrometheusRuleDiscovery enables the discovery of PrometheusRule objects to set on Thanos Ruler.
+	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule
+	EnablePrometheusRuleDiscovery bool
 }
 
 // ToGVK returns the GroupVersionKind for all enabled features.
@@ -30,6 +33,13 @@ func (fg FeatureGate) ToGVK() []schema.GroupVersionKind {
 			Group:   "monitoring.coreos.com",
 			Version: "v1",
 			Kind:    "ServiceMonitor",
+		})
+	}
+	if !fg.EnablePrometheusRuleDiscovery {
+		gvk = append(gvk, schema.GroupVersionKind{
+			Group:   "monitoring.coreos.com",
+			Version: "v1",
+			Kind:    "PrometheusRule",
 		})
 	}
 	return gvk

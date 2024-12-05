@@ -32,8 +32,8 @@ Thanos Operator binary CLI Options include,
 Usage of ./bin/manager:
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
-  -feature-gate.enable-service-monitors
-    	If set, the operator will manage ServiceMonitors for Prometheus Operator (default true)
+  -feature-gate.enable-prometheus-operator-crds
+    	If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator. (default true)
   -health-probe-bind-address string
     	The address the probe endpoint binds to. (default ":8081")
   -kubeconfig string

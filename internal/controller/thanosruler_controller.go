@@ -311,7 +311,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 	ruleFiles := []corev1.ConfigMapKeySelector{}
 	objs := []client.Object{}
 	for _, rule := range promRules.Items {
-		cmName := fmt.Sprintf("%s-promrule-%s", ruler.Name, rule.Name)
+		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%s", ruler.Name, rule.Name))
 		objs = append(objs, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,

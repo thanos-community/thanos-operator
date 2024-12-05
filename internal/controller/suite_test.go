@@ -108,7 +108,10 @@ var _ = BeforeSuite(func() {
 	logger := ctrl.Log.WithName("suite-test")
 	buildConfig := func(component string) Config {
 		return Config{
-			FeatureGate: FeatureGate{EnableServiceMonitor: true},
+			FeatureGate: FeatureGate{
+				EnableServiceMonitor:          true,
+				EnablePrometheusRuleDiscovery: true,
+			},
 			InstrumentationConfig: InstrumentationConfig{
 				Logger:          logger.WithName(component),
 				EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),

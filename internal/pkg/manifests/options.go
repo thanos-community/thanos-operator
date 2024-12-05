@@ -137,6 +137,29 @@ func sanitizeToLength(value string, length int) string {
 	return value
 }
 
+var badChars = []rune{
+	'.',
+	'_',
+}
+
+// SanitizeName sanitizes the name to make it clean for writing kubernetes objects
+// The core of this function was copied from https://github.com/solo-io/k8s-utils
+func SanitizeName(name string) string {
+	name = strings.Map(func(r rune) rune {
+		for _, badChar := range badChars {
+			if r == badChar {
+				return '-'
+			}
+		}
+		return r
+	}, name)
+	if len(name) > 63 {
+		hash := md5.Sum([]byte(name))
+		name = fmt.Sprintf("%s-%x", name[:46], hash[:8])
+	}
+	return name
+}
+
 // ToFlags returns the flags for the Options
 func (o Options) ToFlags() []string {
 	if o.LogLevel == nil || *o.LogLevel == "" {
