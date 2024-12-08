@@ -269,6 +269,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `serviceMonitor` _[ServiceMonitorConfig](#servicemonitorconfig)_ | ServiceMonitorConfig is the configuration for the ServiceMonitor.<br />This setting requires the feature gate for ServiceMonitor management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
+| `prometheusRuleEnabled` _boolean_ | PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.<br />This setting is only applicable to ThanosRuler CRD, will be ignored for other components. | true | Optional: \{\} <br /> |
 
 
 #### InMemoryCacheConfig
@@ -898,7 +899,8 @@ _Appears in:_
 | `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
 | `storageSize` _string_ | StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `prometheusRuleSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler. | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |

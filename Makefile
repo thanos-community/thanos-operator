@@ -70,7 +70,7 @@ format: ## Formats Go code.
 format: $(GOIMPORTS)
 	go fmt ./...
 	@echo ">> formatting code"
-	@$(GOIMPORTS) -w $(FILES_TO_FMT)
+	@$(GOIMPORTS) -local github.com/thanos-community/thanos-operator -w $(FILES_TO_FMT)
 
 .PHONY: vet
 vet: ## Run go vet against code.

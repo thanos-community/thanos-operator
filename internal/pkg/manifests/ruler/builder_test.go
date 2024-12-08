@@ -4,12 +4,14 @@ import (
 	"reflect"
 	"testing"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -358,6 +360,57 @@ func TestNewRulerService(t *testing.T) {
 
 			if ruler.Spec.ClusterIP != corev1.ClusterIPNone {
 				t.Errorf("expected ruler service to have ClusterIP 'None', got %s", ruler.Spec.ClusterIP)
+			}
+		})
+	}
+}
+
+func TestGenerateRuleFileContent(t *testing.T) {
+	duration10m := monitoringv1.Duration("10m")
+	tests := []struct {
+		name     string
+		groups   []monitoringv1.RuleGroup
+		expected string
+	}{
+		{
+			name: "basic rule group",
+			groups: []monitoringv1.RuleGroup{
+				{
+					Name: "example",
+					Rules: []monitoringv1.Rule{
+						{
+							Alert: "HighRequestLatency",
+							Expr:  intstr.IntOrString{Type: intstr.String, StrVal: "job:request_latency_seconds:mean5m{job=\"myjob\"} > 0.5"},
+							For:   &duration10m,
+							Labels: map[string]string{
+								"severity": "page",
+							},
+						},
+					},
+				},
+			},
+			expected: `groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page
+`,
+		},
+		{
+			name:     "empty groups",
+			groups:   []monitoringv1.RuleGroup{},
+			expected: "groups: []\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GenerateRuleFileContent(tt.groups)
+			if got != tt.expected {
+				t.Errorf("GenerateRuleFileContent() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

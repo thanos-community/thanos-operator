@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/sh"
+
 	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
@@ -55,6 +56,10 @@ func InteractiveDemo() error {
 	}
 
 	if err := InstallSamples(); err != nil {
+		return err
+	}
+
+	if err := ConfigurePrometheusRules(); err != nil {
 		return err
 	}
 	return nil
@@ -241,5 +246,44 @@ spec:
       name: thanos-receive-router-green
 `
 	_, err := applyNamespacedKubeResources(content, "default")
+	return err
+}
+
+// ConfigurePrometheusRules creates a PrometheusRule object with basic alerts
+func ConfigurePrometheusRules() error {
+	content := `
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: thanos-operator-alerts
+  namespace: thanos-operator-system
+  labels:
+    operator.thanos.io/prometheus-rule: "true"
+    app.kubernetes.io/part-of: thanos-operator
+spec:
+  groups:
+  - name: thanos-operator
+    rules:
+    - alert: ThanosOperatorPodDown
+      expr: up{job="thanos-operator-metrics"} == 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        description: "Thanos Operator pod has been down for more than 5 minutes"
+        summary: "Thanos Operator pod is down"
+    - alert: ThanosQueryHighErrorRate
+      expr: |
+        sum(rate(grpc_server_handled_total{grpc_code=~"Unknown|Internal|Unavailable|DataLoss",job="thanos-query"}[5m]))
+        /
+        sum(rate(grpc_server_handled_total{job="thanos-query"}[5m])) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        description: "Thanos Query is experiencing high error rate"
+        summary: "Thanos Query error rate > 5%"
+`
+	_, err := applyNamespacedKubeResources(content, operatorNamespace)
 	return err
 }

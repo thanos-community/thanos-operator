@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -72,6 +73,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			filepath.Join("..", "..", "test", "configs", "service-monitor.yaml"),
+			filepath.Join("..", "..", "test", "configs", "prometheus-rule.yaml"),
 		},
 
 		ErrorIfCRDPathMissing: true,
@@ -107,7 +109,10 @@ var _ = BeforeSuite(func() {
 	logger := ctrl.Log.WithName("suite-test")
 	buildConfig := func(component string) Config {
 		return Config{
-			FeatureGate: FeatureGate{EnableServiceMonitor: true},
+			FeatureGate: FeatureGate{
+				EnableServiceMonitor:          true,
+				EnablePrometheusRuleDiscovery: true,
+			},
 			InstrumentationConfig: InstrumentationConfig{
 				Logger:          logger.WithName(component),
 				EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),

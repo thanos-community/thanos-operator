@@ -84,8 +84,8 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-service-monitors", true,
-		"If set, the operator will manage ServiceMonitors for Prometheus Operator")
+	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
+		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -159,7 +159,8 @@ func main() {
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
 			FeatureGate: controller.FeatureGate{
-				EnableServiceMonitor: featureGatePrometheusOperator,
+				EnableServiceMonitor:          featureGatePrometheusOperator,
+				EnablePrometheusRuleDiscovery: featureGatePrometheusOperator,
 			},
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),

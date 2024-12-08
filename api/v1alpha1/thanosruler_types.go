@@ -73,10 +73,16 @@ type ThanosRulerSpec struct {
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
-	// FeatureGates are feature gates for the compact component.
+	// FeatureGates are feature gates for the rule component.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
+	// +kubebuilder:default:={"serviceMonitor":{"enable":true}, "prometheusRuleEnabled":true}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
+	// PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
+	// Once detected, these rules are made into configmaps and added to the Ruler.
+	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/prometheus-rule": "true"}}
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="PrometheusRuleSelector must have at least one label selector"
+	PrometheusRuleSelector metav1.LabelSelector `json:"prometheusRuleSelector,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.

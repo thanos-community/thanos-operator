@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -445,6 +446,11 @@ var _ = Describe("controller", Ordered, func() {
 						},
 						CommonFields: v1alpha1.CommonFields{},
 						StorageSize:  "100Mi",
+						PrometheusRuleSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							},
+						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -498,12 +504,52 @@ var _ = Describe("controller", Ordered, func() {
 				err = c.Create(context.Background(), cfgmap, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "example-prometheus-rule",
+						Namespace: namespace,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "example-prometheus",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "HighCPUUsage",
+										Expr:  intstr.FromString("process_cpu_seconds_total > 10"),
+										Labels: map[string]string{
+											"severity": "warning",
+										},
+										Annotations: map[string]string{
+											"summary": "High CPU usage detected",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				err = c.Create(context.Background(), promRule, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
 						namespace,
 						0,
 						"--rule-file=/etc/thanos/rules/my-rules.yaml",
+					)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(c,
+						statefulSetName,
+						namespace,
+						0,
+						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-"+promRule.Name+".yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
