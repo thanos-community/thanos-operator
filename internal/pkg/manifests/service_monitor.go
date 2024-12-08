@@ -74,3 +74,7 @@ func (opts ServiceMonitorOptions) applyDefaults() ServiceMonitorOptions {
 func HasServiceMonitorEnabled(in *v1alpha1.FeatureGates) bool {
 	return in != nil && in.ServiceMonitorConfig != nil && *in.ServiceMonitorConfig.Enable
 }
+
+func HasPrometheusRuleEnabled(in *v1alpha1.FeatureGates) bool {
+	return in != nil && in.PrometheusRuleEnabled != nil && *in.PrometheusRuleEnabled
+}

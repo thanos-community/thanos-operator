@@ -3577,10 +3577,17 @@ spec:
                 type: object
               featureGates:
                 default:
+                  prometheusRuleEnabled: true
                   serviceMonitor:
                     enable: true
-                description: FeatureGates are feature gates for the compact component.
+                description: FeatureGates are feature gates for the rule component.
                 properties:
+                  prometheusRuleEnabled:
+                    default: true
+                    description: |-
+                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
+                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
+                    type: boolean
                   serviceMonitor:
                     default:
                       enable: true
@@ -3666,7 +3673,6 @@ spec:
                     operator.thanos.io/prometheus-rule: "true"
                 description: |-
                   PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
-                  If not specified, no PrometheusRules will be loaded.
                   Once detected, these rules are made into configmaps and added to the Ruler.
                 properties:
                   matchExpressions:
@@ -3712,6 +3718,10 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: PrometheusRuleSelector must have at least one label selector
+                  rule: self.matchLabels.size() >= 1 || self.matchExpressions.size()
+                    >= 1
               queryLabelSelector:
                 description: |-
                   QueryLabelSelector is the label selector to discover Queriers.

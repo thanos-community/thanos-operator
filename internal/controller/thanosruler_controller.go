@@ -163,11 +163,14 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
-	promRuleConfigMaps, err := r.getPrometheusRuleConfigMaps(ctx, ruler)
-	if err != nil {
-		return []client.Object{}, err
+	promRuleConfigMaps := []corev1.ConfigMapKeySelector{}
+	if manifests.HasPrometheusRuleEnabled(ruler.Spec.FeatureGates) {
+		promRuleConfigMaps, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
+		if err != nil {
+			return []client.Object{}, err
+		}
+		r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 	}
-	r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 
 	// PrometheusRule-based configmaps take precedence.
 	uniqueRuleFiles := make(map[string]corev1.ConfigMapKeySelector)
@@ -370,7 +373,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	err = ctrl.NewControllerManagedBy(mgr).
+	bldr := ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosRuler{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
@@ -378,11 +381,6 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
 		Owns(&monitoringv1.ServiceMonitor{}).
-		Watches(
-			&monitoringv1.PrometheusRule{},
-			r.enqueueForPrometheusRule(),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
-		).
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
@@ -393,10 +391,17 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.ConfigMap{},
 			r.enqueueForConfigMap(),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}, configMapPredicate),
-		).
-		Complete(r)
+		)
 
-	if err != nil {
+	if !r.handler.IsFeatureGated(&monitoringv1.PrometheusRule{}) {
+		bldr.Watches(
+			&monitoringv1.PrometheusRule{},
+			r.enqueueForPrometheusRule(),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		)
+	}
+
+	if err := bldr.Complete(r); err != nil {
 		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosRuler{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
 		return err
 	}

@@ -65,7 +65,7 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 	var errCount int
 	for _, obj := range objs {
 		logger := loggerForObj(h.logger, obj)
-		if h.isFeatureGated(obj) {
+		if h.IsFeatureGated(obj) {
 			logger.V(1).Info("resource is feature gated, skipping")
 			continue
 		}
@@ -94,7 +94,8 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 	return errCount
 }
 
-func (h *handler) isFeatureGated(obj client.Object) bool {
+// IsFeatureGated returns true if the given object is feature gated.
+func (h *handler) IsFeatureGated(obj client.Object) bool {
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	for _, gatedGVK := range h.gatedGVK {
 		if gvk == gatedGVK {
@@ -112,7 +113,7 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 	for _, obj := range objs {
 		logger := loggerForObj(h.logger, obj)
 
-		if h.isFeatureGated(obj) {
+		if h.IsFeatureGated(obj) {
 			logger.V(1).Info("resource is feature gated, skipping")
 			continue
 		}

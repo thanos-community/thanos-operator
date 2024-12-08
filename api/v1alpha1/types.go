@@ -129,6 +129,11 @@ type FeatureGates struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={enable: true}
 	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
+	// PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
+	// This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=true
+	PrometheusRuleEnabled *bool `json:"prometheusRuleEnabled,omitempty"`
 }
 
 // ServiceMonitorConfig is the configuration for the ServiceMonitor.
