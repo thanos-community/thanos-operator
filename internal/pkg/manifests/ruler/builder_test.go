@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	"github.com/thanos-community/thanos-operator/test/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

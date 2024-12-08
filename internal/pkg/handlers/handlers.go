@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"

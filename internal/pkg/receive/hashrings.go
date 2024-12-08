@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/prometheus/prometheus/model/labels"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 
 	discoveryv1 "k8s.io/api/discovery/v1"

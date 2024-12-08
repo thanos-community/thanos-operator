@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/magefile/mage/sh"
+
 	"github.com/thanos-community/thanos-operator/test/utils"
 )
 

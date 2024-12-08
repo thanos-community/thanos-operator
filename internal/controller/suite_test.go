@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 
 	"k8s.io/client-go/kubernetes/scheme"

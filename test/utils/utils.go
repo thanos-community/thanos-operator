@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/prometheus/prometheus/util/fmtutil"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"

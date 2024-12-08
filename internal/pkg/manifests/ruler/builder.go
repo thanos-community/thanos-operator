@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +12,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
