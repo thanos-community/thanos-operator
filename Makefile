@@ -197,7 +197,9 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 
-# Add a bundle.yaml file with CRDs and deployment, with customize flag.
+##@ Deployment
+
+# Add a bundle.yaml file with CRDs and deployment, with kustomize config.
 .PHONY: bundle
 bundle: manifests generate format kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p dist
@@ -208,7 +210,6 @@ bundle: manifests generate format kustomize ## Generate a consolidated YAML with
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default >> bundle.yaml
 
-##@ Deployment
 
 ifndef ignore-not-found
   ignore-not-found = false
