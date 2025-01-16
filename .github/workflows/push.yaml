@@ -37,11 +37,4 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build and push multi-platform image
-        run: |
-          # Build with unique tag
-          make docker-buildx
-          
-          # If on main branch, also tag as 'main'
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            DOCKER_IMAGE_TAG=main make docker-buildx
-          fi
+        run: make docker-buildx 

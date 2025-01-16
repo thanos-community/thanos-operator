@@ -4,6 +4,7 @@ include .bingo/Variables.mk
 DOCKER_IMAGE_REPO ?= quay.io/thanos/thanos-operator
 DOCKER_IMAGE_TAG  ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
 IMG ?= ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
+IMG_MAIN ?= ${DOCKER_IMAGE_REPO}:main
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31.0
 
@@ -172,6 +173,7 @@ run: manifests generate format vet ## Run a controller from your host.
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+# Used for e2e testing.
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
@@ -186,6 +188,7 @@ docker-push: ## Push docker image with the manager.
 # - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 # - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
+# Used for CI pushing.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
@@ -193,7 +196,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --tag ${IMG_MAIN} -f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 
@@ -202,12 +205,13 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 # Add a bundle.yaml file with CRDs and deployment, with kustomize config.
 .PHONY: bundle
 bundle: manifests generate format kustomize ## Generate a consolidated YAML with CRDs and deployment.
+	@echo ">> generating bundle.yaml (override image using IMG_MAIN)"
 	mkdir -p dist
 	@if [ -d "config/crd" ]; then \
 		$(KUSTOMIZE) build config/crd > bundle.yaml; \
 	fi
 	echo "---" >> bundle.yaml  # Add a document separator before appending
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
 	$(KUSTOMIZE) build config/default >> bundle.yaml
 
 
@@ -225,7 +229,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	@echo ">> deploying controller (override image using IMG_MAIN)"
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply --server-side -f -
 
 .PHONY: undeploy
