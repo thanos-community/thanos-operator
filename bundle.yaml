@@ -54488,7 +54488,7 @@ spec:
         - --leader-elect
         command:
         - /manager
-        image: quay.io/thanos/thanos-operator:main-2025-01-15-5e131ef
+        image: quay.io/thanos/thanos-operator:main
         livenessProbe:
           httpGet:
             path: /healthz
