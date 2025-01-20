@@ -415,3 +415,131 @@ func TestGenerateRuleFileContent(t *testing.T) {
 		})
 	}
 }
+
+func TestMakeRulesConfigMaps(t *testing.T) {
+	tests := []struct {
+		name      string
+		ruleFiles map[string]string
+		want      []corev1.ConfigMap
+		wantErr   bool
+	}{
+		{
+			name: "single rule file within size limit",
+			ruleFiles: map[string]string{
+				"test.yaml": `groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page`,
+			},
+			want: []corev1.ConfigMap{
+				{
+					Data: map[string]string{
+						"test.yaml": `groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page`,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple rule files within size limit",
+			ruleFiles: map[string]string{
+				"test1.yaml": `groups:
+- name: example1
+  rules:
+  - alert: Alert1
+    expr: metric1 > 0.5`,
+				"test2.yaml": `groups:
+- name: example2
+  rules:
+  - alert: Alert2
+    expr: metric2 > 0.5`,
+			},
+			want: []corev1.ConfigMap{
+				{
+					Data: map[string]string{
+						"test1.yaml": `groups:
+- name: example1
+  rules:
+  - alert: Alert1
+    expr: metric1 > 0.5`,
+						"test2.yaml": `groups:
+- name: example2
+  rules:
+  - alert: Alert2
+    expr: metric2 > 0.5`,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "rule file exceeding size limit",
+			ruleFiles: map[string]string{
+				"large.yaml": string(make([]byte, maxConfigMapDataSize+1)),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := MakeRulesConfigMaps(tt.ruleFiles)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MakeRulesConfigMaps() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MakeRulesConfigMaps() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBucketSize(t *testing.T) {
+	tests := []struct {
+		name   string
+		bucket map[string]string
+		want   int
+	}{
+		{
+			name:   "empty bucket",
+			bucket: map[string]string{},
+			want:   0,
+		},
+		{
+			name: "single file bucket",
+			bucket: map[string]string{
+				"test.yaml": "content",
+			},
+			want: 7,
+		},
+		{
+			name: "multiple files bucket",
+			bucket: map[string]string{
+				"test1.yaml": "content1",
+				"test2.yaml": "content2",
+			},
+			want: 16,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := bucketSize(tt.bucket); got != tt.want {
+				t.Errorf("bucketSize() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

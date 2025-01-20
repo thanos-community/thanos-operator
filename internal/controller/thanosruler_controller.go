@@ -311,11 +311,27 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
-	ruleFiles := []corev1.ConfigMapKeySelector{}
-	objs := []client.Object{}
+	// Collect all rule files first
+	allRuleFiles := make(map[string]string)
 	for _, rule := range promRules.Items {
-		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%s", ruler.Name, rule.Name))
-		objs = append(objs, &corev1.ConfigMap{
+		ruleContent := manifestruler.GenerateRuleFileContent(rule.Spec.Groups)
+		allRuleFiles[fmt.Sprintf("%s.yaml", rule.Name)] = ruleContent
+	}
+
+	// Now create ConfigMaps from all rules together
+	configMaps, err := manifestruler.MakeRulesConfigMaps(allRuleFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config maps for rules: %w", err)
+	}
+
+	var ruleFileCfgMaps []corev1.ConfigMapKeySelector
+	objs := []client.Object{}
+
+	// Create ConfigMaps with proper names and metadata
+	for i, cm := range configMaps {
+		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%d", ruler.Name, i))
+
+		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,
 				Namespace: ruler.Namespace,
@@ -332,25 +348,28 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 					},
 				},
 			},
-			Data: map[string]string{
-				cmName + ".yaml": manifestruler.GenerateRuleFileContent(rule.Spec.Groups),
-			},
-		})
+			Data: cm.Data,
+		}
 
-		ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: cmName,
-			},
-			Key:      cmName + ".yaml",
-			Optional: ptr.To(true),
-		})
+		objs = append(objs, configMap)
+
+		// Add each file in the ConfigMap to the rule files list
+		for key := range cm.Data {
+			ruleFileCfgMaps = append(ruleFileCfgMaps, corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: cmName,
+				},
+				Key:      key,
+				Optional: ptr.To(true),
+			})
+		}
 	}
 
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
 	}
 
-	return ruleFiles, nil
+	return ruleFileCfgMaps, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
