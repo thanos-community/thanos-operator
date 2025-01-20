@@ -11,7 +11,7 @@ require (
 	github.com/magefile/mage v1.15.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.76.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.79.2
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.62.0
 	github.com/prometheus/prometheus v0.301.0
@@ -20,7 +20,7 @@ require (
 	k8s.io/api v0.32.1
 	k8s.io/apimachinery v0.32.1
 	k8s.io/client-go v0.32.1
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.20.0
 )
 
@@ -116,7 +116,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.32.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
-	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
