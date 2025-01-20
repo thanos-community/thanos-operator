@@ -3,6 +3,7 @@ package ruler
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"gopkg.in/yaml.v2"
@@ -449,4 +450,68 @@ func GenerateRuleFileContent(groups []monitoringv1.RuleGroup) string {
 	}
 
 	return string(content)
+}
+
+var maxConfigMapDataSize = int(float64(corev1.MaxSecretSize) * 0.5)
+
+// makeRulesConfigMaps takes a rule files and
+// returns a list of Kubernetes ConfigMaps to be later on mounted into the
+// Thanos Ruler instance.
+// If the total size of rule files exceeds the Kubernetes ConfigMap limit,
+// they are split up via the simple first-fit [1] bin packing algorithm. In the
+// future this can be replaced by a more sophisticated algorithm, but for now
+// simplicity should be sufficient.
+// [1] https://en.wikipedia.org/wiki/Bin_packing_problem#First-fit_algorithm
+func MakeRulesConfigMaps(ruleFiles map[string]string) ([]corev1.ConfigMap, error) {
+	//check if none of the rule files is too large for a single ConfigMap
+	for filename, file := range ruleFiles {
+		if len(file) > maxConfigMapDataSize {
+			return nil, fmt.Errorf(
+				"rule file '%v' is too large for a single Kubernetes ConfigMap",
+				filename,
+			)
+		}
+	}
+
+	buckets := []map[string]string{
+		{},
+	}
+	currBucketIndex := 0
+
+	// To make bin packing algorithm deterministic, sort ruleFiles filenames and
+	// iterate over filenames instead of ruleFiles map (not deterministic).
+	fileNames := []string{}
+	for n := range ruleFiles {
+		fileNames = append(fileNames, n)
+	}
+	sort.Strings(fileNames)
+
+	for _, filename := range fileNames {
+		// If rule file doesn't fit into current bucket, create new bucket.
+		if bucketSize(buckets[currBucketIndex])+len(ruleFiles[filename]) > maxConfigMapDataSize {
+			buckets = append(buckets, map[string]string{})
+			currBucketIndex++
+		}
+		buckets[currBucketIndex][filename] = ruleFiles[filename]
+	}
+
+	ruleFileConfigMaps := []corev1.ConfigMap{}
+	for _, bucket := range buckets {
+		cm := corev1.ConfigMap{
+			Data: bucket,
+		}
+
+		ruleFileConfigMaps = append(ruleFileConfigMaps, cm)
+	}
+
+	return ruleFileConfigMaps, nil
+}
+
+func bucketSize(bucket map[string]string) int {
+	totalSize := 0
+	for _, v := range bucket {
+		totalSize += len(v)
+	}
+
+	return totalSize
 }

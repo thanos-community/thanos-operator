@@ -214,7 +214,7 @@ config:
 				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
 
 				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/" + resourceName + "-promrule-" + promRule.Name + ".yaml"
+					arg := "--rule-file=/etc/thanos/rules/" + promRule.Name + ".yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
