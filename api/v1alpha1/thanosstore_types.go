@@ -58,6 +58,14 @@ type ThanosStoreSpec struct {
 	// If not set, will be set as max value, so all blocks will be served.
 	// +kubebuilder:validation:Optional
 	MaxTime *Duration `json:"maxTime,omitempty"`
+	// StoreLimitsOptions allows configuration of the store API limits.
+	StoreLimitsOptions StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
+	// IndexHeaderConfig allows configuration of the Store Gateway index header.
+	// +kubebuilder:validation:Optional
+	IndexHeaderConfig *IndexHeaderConfig `json:"indexHeaderConfig,omitempty"`
+	// BlockConfig defines settings for block handling.
+	// +kubebuilder:validation:Optional
+	BlockConfig *BlockConfig `json:"blockConfig,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
@@ -96,6 +104,24 @@ type ShardingStrategy struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	ShardReplicas int32 `json:"shardReplicas,omitempty"`
+}
+
+// IndexHeaderOptions allows configuration of the Store Gateway index header.
+type IndexHeaderConfig struct {
+	// If true, Store Gateway will lazy memory map index-header only once the block is required by a query.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	EnableLazyReader *bool `json:"enableLazyReader,omitempty"`
+	// If index-header lazy reader is enabled and this idle timeout setting is > 0, memory map-ed index-headers will be automatically released after 'idle timeout' inactivity
+	// +kubebuilder:default="5m"
+	// +kubebuilder:validation:Optional
+	LazyReaderIdleTimeout *Duration `json:"lazyReaderIdleTimeout,omitempty"`
+	// Strategy of how to download index headers lazily.
+	// If eager, always download index header during initial load. If lazy, download index header during query time.
+	// +kubebuilder:validation:Enum=eager;lazy
+	// +kubebuilder:default=eager
+	// +kubebuilder:validation:Optional
+	LazyDownloadStrategy *string `json:"lazyDownloadStrategy,omitempty"`
 }
 
 // ThanosStoreStatus defines the observed state of ThanosStore

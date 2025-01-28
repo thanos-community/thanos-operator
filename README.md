@@ -92,7 +92,7 @@ Once the workloads are ready, run `kubectl -n thanos-operator-system port-forwar
 
 This demo consists of a Prometheus, deployed via Prometheus Operator, that scrapes metrics from the operator and the Thanos components themselves. It remote writes to the Thanos Receive component.
 
-## Feature Gates
+### Feature Gates
 
 The CRDs within Thanos Operator have the ability to create/read certain Prometheus Operator objects, such as ServiceMonitors and PrometheusRules. However not all environments may have Prometheus Operator installed.
 

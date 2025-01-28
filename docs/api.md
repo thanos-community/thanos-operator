@@ -60,14 +60,13 @@ BlockConfig defines settings for block handling.
 
 _Appears in:_
 - [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosStoreSpec](#thanosstorespec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `blockDiscoveryStrategy` _[BlockDiscoveryStrategy](#blockdiscoverystrategy)_ | BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage. | concurrent | Enum: [concurrent recursive] <br /> |
 | `blockFilesConcurrency` _integer_ | BlockFilesConcurrency is the number of goroutines to use when to use when<br />fetching/uploading block files from object storage. | 1 | Optional: \{\} <br /> |
 | `blockMetaFetchConcurrency` _integer_ | BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage. | 32 | Optional: \{\} <br /> |
-| `blockViewerGlobalSync` _[Duration](#duration)_ | BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI. | 1m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `blockViewerGlobalSyncTimeout` _[Duration](#duration)_ | BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks<br />between local and remote view for /global Block Viewer UI. | 5m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 
 
 #### BlockDiscoveryStrategy
@@ -85,6 +84,23 @@ _Appears in:_
 | --- | --- |
 | `concurrent` | BlockDiscoveryStrategyConcurrent means stores will concurrently issue one call<br />per directory to discover active blocks storage.<br /> |
 | `recursive` | BlockDiscoveryStrategyRecursive means stores iterate through all objects in storage<br />recursively traversing into each directory.<br />This avoids N+1 calls at the expense of having slower bucket iterations.<br /> |
+
+
+#### BlockViewerGlobalSyncConfig
+
+
+
+BlockViewerGlobalSyncConfig is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.
+
+
+
+_Appears in:_
+- [ThanosCompactSpec](#thanoscompactspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `blockViewerGlobalSync` _[Duration](#duration)_ | BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI. | 1m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `blockViewerGlobalSyncTimeout` _[Duration](#duration)_ | BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks<br />between local and remote view for /global Block Viewer UI. | 5m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 
 
 #### CacheConfig
@@ -148,9 +164,28 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `compactConcurrency` _integer_ | CompactConcurrency is the number of goroutines to use when compacting blocks. | 1 | Optional: \{\} <br /> |
 | `blockFetchConcurrency` _integer_ | BlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage. | 1 | Optional: \{\} <br /> |
 | `cleanupInterval` _[Duration](#duration)_ | CleanupInterval configures how often we should clean up partially uploaded blocks and blocks<br />that are marked for deletion.<br />Cleaning happens at the end of an iteration.<br />Setting this to 0s disables the cleanup. | 5m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 | `blockConsistencyDelay` _[Duration](#duration)_ | ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.<br />Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed. | 30m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+
+
+#### DebugConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosCompactSpec](#thanoscompactspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `acceptMalformedIndex` _boolean_ | AcceptMalformedIndex allows compact to accept blocks with malformed index. | false | Optional: \{\} <br /> |
+| `maxCompactionLevel` _integer_ | MaxCompactionLevel is the maximum compaction level to use when compacting blocks. | 5 | Optional: \{\} <br /> |
+| `haltOnError` _boolean_ | HaltOnError halts the compact process on critical compaction error. | false | Optional: \{\} <br /> |
 
 
 #### DownsamplingConfig
@@ -182,8 +217,10 @@ _Validation:_
 - Pattern: `^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$`
 
 _Appears in:_
-- [BlockConfig](#blockconfig)
+- [BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)
 - [CompactConfig](#compactconfig)
+- [IndexHeaderConfig](#indexheaderconfig)
+- [IngesterHashringSpec](#ingesterhashringspec)
 - [QueryFrontendSpec](#queryfrontendspec)
 - [RetentionResolutionConfig](#retentionresolutionconfig)
 - [TSDBConfig](#tsdbconfig)
@@ -289,6 +326,24 @@ _Appears in:_
 | `maxItemSize` _[StorageSize](#storagesize)_ |  |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br /> |
 
 
+#### IndexHeaderConfig
+
+
+
+IndexHeaderOptions allows configuration of the Store Gateway index header.
+
+
+
+_Appears in:_
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enableLazyReader` _boolean_ | If true, Store Gateway will lazy memory map index-header only once the block is required by a query. | true | Optional: \{\} <br /> |
+| `lazyReaderIdleTimeout` _[Duration](#duration)_ | If index-header lazy reader is enabled and this idle timeout setting is > 0, memory map-ed index-headers will be automatically released after 'idle timeout' inactivity | 5m | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `lazyDownloadStrategy` _string_ | Strategy of how to download index headers lazily.<br />If eager, always download index header during initial load. If lazy, download index header during query time. | eager | Enum: [eager lazy] <br />Optional: \{\} <br /> |
+
+
 #### IngesterHashringSpec
 
 
@@ -316,8 +371,10 @@ _Appears in:_
 | `tsdbConfig` _[TSDBConfig](#tsdbconfig)_ | TSDB configuration for the ingestor. |  | Required: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for the hashring. |  | Optional: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
-| `tenants` _string array_ | Tenants is a list of tenants that should be matched by the hashring.<br />An empty list matches all tenants. |  | Optional: \{\} <br /> |
-| `tenantMatcherType` _string_ | TenantMatcherType is the type of tenant matching to use. | exact | Enum: [exact glob] <br /> |
+| `tenancyConfig` _[TenancyConfig](#tenancyconfig)_ | TenancyConfig is the configuration for the tenancy options. |  |  |
+| `asyncForwardWorkerCount` _integer_ | AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests. | 5 |  |
+| `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  |  |
+| `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 
 
 #### IngesterSpec
@@ -538,6 +595,24 @@ _Appears in:_
 
 
 
+#### StoreLimitsOptions
+
+
+
+StoreLimitsOptions is the configuration for the store API limits options.
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `storeLimitsRequestSamples` _integer_ | StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.<br />0 means no limit. | 0 |  |
+| `storeLimitsRequestSeries` _integer_ | StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.<br />0 means no limit. | 0 |  |
+
+
 #### TSDBConfig
 
 
@@ -553,6 +628,47 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `retention` _[Duration](#duration)_ | Retention is the duration for which a particular TSDB will retain data. | 2h | Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
+
+
+#### TelemetryQuantiles
+
+
+
+TelemetryQuantiles is the configuration for the request telemetry quantiles.
+Float usage is discouraged by controller-runtime, so we use string instead.
+
+
+
+_Appears in:_
+- [ThanosQuerySpec](#thanosqueryspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `duration` _string array_ | Duration is the quantiles for exporting metrics about the request duration. |  | Optional: \{\} <br /> |
+| `samples` _string array_ | Samples is the quantiles for exporting metrics about the samples count. |  | Optional: \{\} <br /> |
+| `series` _string array_ | Series is the quantiles for exporting metrics about the series count. |  | Optional: \{\} <br /> |
+
+
+#### TenancyConfig
+
+
+
+TenancyConfig is the configuration for the tenancy options.
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `tenants` _string array_ | Tenants is a list of tenants that should be matched by the hashring.<br />An empty list matches all tenants. |  | Optional: \{\} <br /> |
+| `tenantMatcherType` _string_ | TenantMatcherType is the type of tenant matching to use. | exact | Enum: [exact glob] <br /> |
+| `tenantHeader` _string_ | TenantHeader is the HTTP header to determine tenant for write requests. | THANOS-TENANT |  |
+| `tenantCertificateField` _string_ | TenantCertificateField is the TLS client's certificate field to determine tenant for write requests. |  | Enum: [organization organizationalUnit commonName] <br />Optional: \{\} <br /> |
+| `defaultTenantID` _string_ | DefaultTenantID is the default tenant ID to use when none is provided via a header. | default-tenant |  |
+| `splitTenantLabelName` _string_ | SplitTenantLabelName is the label name through which the request will be split into multiple tenants. |  | Optional: \{\} <br /> |
+| `tenantLabelName` _string_ | TenantLabelName is the label name through which the tenant will be announced. | tenant_id |  |
 
 
 #### ThanosCompact
@@ -622,9 +738,11 @@ _Appears in:_
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
 | `retentionConfig` _[RetentionResolutionConfig](#retentionresolutionconfig)_ | RetentionConfig is the retention configuration for the compact component. |  | Required: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
+| `blockViewerGlobalSync` _[BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)_ | BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI. |  | Optional: \{\} <br /> |
 | `shardingConfig` _[ShardingConfig](#shardingconfig)_ | ShardingConfig is the sharding configuration for the compact component. |  | Optional: \{\} <br /> |
 | `compactConfig` _[CompactConfig](#compactconfig)_ | CompactConfig is the configuration for the compact component. |  | Optional: \{\} <br /> |
 | `downsamplingConfig` _[DownsamplingConfig](#downsamplingconfig)_ | DownsamplingConfig is the downsampling configuration for the compact component. |  | Optional: \{\} <br /> |
+| `debugConfig` _[DebugConfig](#debugconfig)_ | DebugConfig is the debug configuration for the compact component. |  | Optional: \{\} <br /> |
 | `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 | `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
@@ -720,6 +838,9 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Querier component. |  | Optional: \{\} <br /> |
 | `replicaLabels` _string array_ | ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.<br />Data can still be queried without deduplication using 'dedup=false' parameter.<br />Data includes time series, recording rules, and alerting rules.<br />Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels | [replica] | Optional: \{\} <br /> |
 | `customStoreLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | StoreLabelSelector enables adding additional labels to build a custom label selector<br />for discoverable StoreAPIs. Values provided here will be appended to the default which are<br />\{"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
+| `telemetryQuantiles` _[TelemetryQuantiles](#telemetryquantiles)_ | TelemetryQuantiles is the configuration for the request telemetry quantiles. |  | Optional: \{\} <br /> |
+| `webConfig` _[WebConfig](#webconfig)_ | WebConfig is the configuration for the Query UI and API web options. |  | Optional: \{\} <br /> |
+| `grpcProxyStrategy` _string_ | GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes. | eager | Enum: [eager lazy] <br /> |
 | `queryFrontend` _[QueryFrontendSpec](#queryfrontendspec)_ | QueryFrontend is the configuration for the Query Frontend<br />If you specify this, the operator will create a Query Frontend in front of your query deployment. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
@@ -997,6 +1118,9 @@ _Appears in:_
 | `shardingStrategy` _[ShardingStrategy](#shardingstrategy)_ | ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks. |  | Required: \{\} <br /> |
 | `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
 | `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions allows configuration of the store API limits. |  |  |
+| `indexHeaderConfig` _[IndexHeaderConfig](#indexheaderconfig)_ | IndexHeaderConfig allows configuration of the Store Gateway index header. |  | Optional: \{\} <br /> |
+| `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
@@ -1022,5 +1146,24 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+
+
+#### WebConfig
+
+
+
+WebConfig is the configuration for the Query UI and API web options.
+
+
+
+_Appears in:_
+- [ThanosQuerySpec](#thanosqueryspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `routePrefix` _string_ | RoutePrefix is the prefix for API and UI endpoints.<br />This allows thanos UI to be served on a sub-path.<br />Defaults to the value of --web.external-prefix.<br />This option is analogous to --web.route-prefix of Prometheus. |  | Optional: \{\} <br /> |
+| `externalPrefix` _string_ | ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.<br />Actual endpoints are still served on / or the web.route-prefix.<br />This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path. |  | Optional: \{\} <br /> |
+| `prefixHeader` _string_ | PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.<br />This option is ignored if web.external-prefix argument is set.<br />Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.<br />This allows thanos UI to be served on a sub-path. |  | Optional: \{\} <br /> |
+| `disableCORS` _boolean_ | DisableCORS is the flag to disable CORS headers to be set by Thanos.<br />By default Thanos sets CORS headers to be allowed by all. | false |  |
 
 

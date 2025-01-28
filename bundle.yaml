@@ -3548,6 +3548,12 @@ spec:
                       to use when fetching block metadata from object storage.
                     format: int32
                     type: integer
+                type: object
+              blockViewerGlobalSync:
+                description: BlockViewerGlobalSync is the configuration for syncing
+                  the blocks between local and remote view for /global Block Viewer
+                  UI.
+                properties:
                   blockViewerGlobalSync:
                     default: 1m
                     description: BlockViewerGlobalSyncInterval for syncing the blocks
@@ -3587,6 +3593,33 @@ spec:
                       Setting this to 0s disables the cleanup.
                     pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
+                  compactConcurrency:
+                    default: 1
+                    description: CompactConcurrency is the number of goroutines to
+                      use when compacting blocks.
+                    format: int32
+                    type: integer
+                type: object
+              debugConfig:
+                description: DebugConfig is the debug configuration for the compact
+                  component.
+                properties:
+                  acceptMalformedIndex:
+                    default: false
+                    description: AcceptMalformedIndex allows compact to accept blocks
+                      with malformed index.
+                    type: boolean
+                  haltOnError:
+                    default: false
+                    description: HaltOnError halts the compact process on critical
+                      compaction error.
+                    type: boolean
+                  maxCompactionLevel:
+                    default: 5
+                    description: MaxCompactionLevel is the maximum compaction level
+                      to use when compacting blocks.
+                    format: int32
+                    type: integer
                 type: object
               downsamplingConfig:
                 description: DownsamplingConfig is the downsampling configuration
@@ -7563,6 +7596,14 @@ spec:
                         type: object
                     type: object
                 type: object
+              grpcProxyStrategy:
+                default: eager
+                description: GRPCProxyStrategy is the strategy to use when proxying
+                  Series requests to leaf nodes.
+                enum:
+                - eager
+                - lazy
+                type: string
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -11460,12 +11501,66 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              telemetryQuantiles:
+                description: TelemetryQuantiles is the configuration for the request
+                  telemetry quantiles.
+                properties:
+                  duration:
+                    description: Duration is the quantiles for exporting metrics about
+                      the request duration.
+                    items:
+                      type: string
+                    type: array
+                  samples:
+                    description: Samples is the quantiles for exporting metrics about
+                      the samples count.
+                    items:
+                      type: string
+                    type: array
+                  series:
+                    description: Series is the quantiles for exporting metrics about
+                      the series count.
+                    items:
+                      type: string
+                    type: array
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string
+              webConfig:
+                description: WebConfig is the configuration for the Query UI and API
+                  web options.
+                properties:
+                  disableCORS:
+                    default: false
+                    description: |-
+                      DisableCORS is the flag to disable CORS headers to be set by Thanos.
+                      By default Thanos sets CORS headers to be allowed by all.
+                    type: boolean
+                  externalPrefix:
+                    description: |-
+                      ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.
+                      Actual endpoints are still served on / or the web.route-prefix.
+                      This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path.
+                    type: string
+                  prefixHeader:
+                    description: |-
+                      PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.
+                      This option is ignored if web.external-prefix argument is set.
+                      Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.
+                      This allows thanos UI to be served on a sub-path.
+                    type: string
+                  routePrefix:
+                    description: |-
+                      RoutePrefix is the prefix for API and UI endpoints.
+                      This allows thanos UI to be served on a sub-path.
+                      Defaults to the value of --web.external-prefix.
+                      This option is analogous to --web.route-prefix of Prometheus.
+                    type: string
+                type: object
             required:
             - replicas
             type: object
@@ -15146,6 +15241,12 @@ spec:
                       description: IngesterHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
+                        asyncForwardWorkerCount:
+                          default: 5
+                          description: AsyncForwardWorkerCount is the number of concurrent
+                            workers processing forwarding of remote-write requests.
+                          format: int64
+                          type: integer
                         externalLabels:
                           additionalProperties:
                             type: string
@@ -15318,21 +15419,80 @@ spec:
                             used by the Thanos Receive StatefulSet.
                           pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                           type: string
-                        tenantMatcherType:
-                          default: exact
-                          description: TenantMatcherType is the type of tenant matching
-                            to use.
-                          enum:
-                          - exact
-                          - glob
-                          type: string
-                        tenants:
+                        storeLimitsOptions:
+                          description: StoreLimitsOptions is the configuration for
+                            the store API limits options.
+                          properties:
+                            storeLimitsRequestSamples:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                            storeLimitsRequestSeries:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                          type: object
+                        tenancyConfig:
+                          description: TenancyConfig is the configuration for the
+                            tenancy options.
+                          properties:
+                            defaultTenantID:
+                              default: default-tenant
+                              description: DefaultTenantID is the default tenant ID
+                                to use when none is provided via a header.
+                              type: string
+                            splitTenantLabelName:
+                              description: SplitTenantLabelName is the label name
+                                through which the request will be split into multiple
+                                tenants.
+                              type: string
+                            tenantCertificateField:
+                              description: TenantCertificateField is the TLS client's
+                                certificate field to determine tenant for write requests.
+                              enum:
+                              - organization
+                              - organizationalUnit
+                              - commonName
+                              type: string
+                            tenantHeader:
+                              default: THANOS-TENANT
+                              description: TenantHeader is the HTTP header to determine
+                                tenant for write requests.
+                              type: string
+                            tenantLabelName:
+                              default: tenant_id
+                              description: TenantLabelName is the label name through
+                                which the tenant will be announced.
+                              type: string
+                            tenantMatcherType:
+                              default: exact
+                              description: TenantMatcherType is the type of tenant
+                                matching to use.
+                              enum:
+                              - exact
+                              - glob
+                              type: string
+                            tenants:
+                              description: |-
+                                Tenants is a list of tenants that should be matched by the hashring.
+                                An empty list matches all tenants.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        tooFarInFutureTimeWindow:
+                          default: 0s
                           description: |-
-                            Tenants is a list of tenants that should be matched by the hashring.
-                            An empty list matches all tenants.
-                          items:
-                            type: string
-                          type: array
+                            TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
+                            0s means disabled.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          type: string
                         tsdbConfig:
                           description: TSDB configuration for the ingestor.
                           properties:
@@ -26615,6 +26775,31 @@ spec:
                   - name
                   type: object
                 type: array
+              blockConfig:
+                description: BlockConfig defines settings for block handling.
+                properties:
+                  blockDiscoveryStrategy:
+                    default: concurrent
+                    description: BlockDiscoveryStrategy is the discovery strategy
+                      to use for block discovery in storage.
+                    enum:
+                    - concurrent
+                    - recursive
+                    type: string
+                  blockFilesConcurrency:
+                    default: 1
+                    description: |-
+                      BlockFilesConcurrency is the number of goroutines to use when to use when
+                      fetching/uploading block files from object storage.
+                    format: int32
+                    type: integer
+                  blockMetaFetchConcurrency:
+                    default: 32
+                    description: BlockMetaFetchConcurrency is the number of goroutines
+                      to use when fetching block metadata from object storage.
+                    format: int32
+                    type: integer
+                type: object
               cachingBucketConfig:
                 description: |-
                   CachingBucketConfig allows configuration of the caching bucket.
@@ -26783,6 +26968,32 @@ spec:
                         type: string
                     type: object
                 type: object
+              indexHeaderConfig:
+                description: IndexHeaderConfig allows configuration of the Store Gateway
+                  index header.
+                properties:
+                  enableLazyReader:
+                    default: true
+                    description: If true, Store Gateway will lazy memory map index-header
+                      only once the block is required by a query.
+                    type: boolean
+                  lazyDownloadStrategy:
+                    default: eager
+                    description: |-
+                      Strategy of how to download index headers lazily.
+                      If eager, always download index header during initial load. If lazy, download index header during query time.
+                    enum:
+                    - eager
+                    - lazy
+                    type: string
+                  lazyReaderIdleTimeout:
+                    default: 5m
+                    description: If index-header lazy reader is enabled and this idle
+                      timeout setting is > 0, memory map-ed index-headers will be
+                      automatically released after 'idle timeout' inactivity
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string
@@ -26934,6 +27145,25 @@ spec:
                   the Thanos Store StatefulSets.
                 pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                 type: string
+              storeLimitsOptions:
+                description: StoreLimitsOptions allows configuration of the store
+                  API limits.
+                properties:
+                  storeLimitsRequestSamples:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                  storeLimitsRequestSeries:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
@@ -30576,6 +30806,12 @@ spec:
                       to use when fetching block metadata from object storage.
                     format: int32
                     type: integer
+                type: object
+              blockViewerGlobalSync:
+                description: BlockViewerGlobalSync is the configuration for syncing
+                  the blocks between local and remote view for /global Block Viewer
+                  UI.
+                properties:
                   blockViewerGlobalSync:
                     default: 1m
                     description: BlockViewerGlobalSyncInterval for syncing the blocks
@@ -30615,6 +30851,33 @@ spec:
                       Setting this to 0s disables the cleanup.
                     pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
+                  compactConcurrency:
+                    default: 1
+                    description: CompactConcurrency is the number of goroutines to
+                      use when compacting blocks.
+                    format: int32
+                    type: integer
+                type: object
+              debugConfig:
+                description: DebugConfig is the debug configuration for the compact
+                  component.
+                properties:
+                  acceptMalformedIndex:
+                    default: false
+                    description: AcceptMalformedIndex allows compact to accept blocks
+                      with malformed index.
+                    type: boolean
+                  haltOnError:
+                    default: false
+                    description: HaltOnError halts the compact process on critical
+                      compaction error.
+                    type: boolean
+                  maxCompactionLevel:
+                    default: 5
+                    description: MaxCompactionLevel is the maximum compaction level
+                      to use when compacting blocks.
+                    format: int32
+                    type: integer
                 type: object
               downsamplingConfig:
                 description: DownsamplingConfig is the downsampling configuration
@@ -34591,6 +34854,14 @@ spec:
                         type: object
                     type: object
                 type: object
+              grpcProxyStrategy:
+                default: eager
+                description: GRPCProxyStrategy is the strategy to use when proxying
+                  Series requests to leaf nodes.
+                enum:
+                - eager
+                - lazy
+                type: string
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -38488,12 +38759,66 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              telemetryQuantiles:
+                description: TelemetryQuantiles is the configuration for the request
+                  telemetry quantiles.
+                properties:
+                  duration:
+                    description: Duration is the quantiles for exporting metrics about
+                      the request duration.
+                    items:
+                      type: string
+                    type: array
+                  samples:
+                    description: Samples is the quantiles for exporting metrics about
+                      the samples count.
+                    items:
+                      type: string
+                    type: array
+                  series:
+                    description: Series is the quantiles for exporting metrics about
+                      the series count.
+                    items:
+                      type: string
+                    type: array
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string
+              webConfig:
+                description: WebConfig is the configuration for the Query UI and API
+                  web options.
+                properties:
+                  disableCORS:
+                    default: false
+                    description: |-
+                      DisableCORS is the flag to disable CORS headers to be set by Thanos.
+                      By default Thanos sets CORS headers to be allowed by all.
+                    type: boolean
+                  externalPrefix:
+                    description: |-
+                      ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.
+                      Actual endpoints are still served on / or the web.route-prefix.
+                      This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path.
+                    type: string
+                  prefixHeader:
+                    description: |-
+                      PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.
+                      This option is ignored if web.external-prefix argument is set.
+                      Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.
+                      This allows thanos UI to be served on a sub-path.
+                    type: string
+                  routePrefix:
+                    description: |-
+                      RoutePrefix is the prefix for API and UI endpoints.
+                      This allows thanos UI to be served on a sub-path.
+                      Defaults to the value of --web.external-prefix.
+                      This option is analogous to --web.route-prefix of Prometheus.
+                    type: string
+                type: object
             required:
             - replicas
             type: object
@@ -42174,6 +42499,12 @@ spec:
                       description: IngesterHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
+                        asyncForwardWorkerCount:
+                          default: 5
+                          description: AsyncForwardWorkerCount is the number of concurrent
+                            workers processing forwarding of remote-write requests.
+                          format: int64
+                          type: integer
                         externalLabels:
                           additionalProperties:
                             type: string
@@ -42346,21 +42677,80 @@ spec:
                             used by the Thanos Receive StatefulSet.
                           pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                           type: string
-                        tenantMatcherType:
-                          default: exact
-                          description: TenantMatcherType is the type of tenant matching
-                            to use.
-                          enum:
-                          - exact
-                          - glob
-                          type: string
-                        tenants:
+                        storeLimitsOptions:
+                          description: StoreLimitsOptions is the configuration for
+                            the store API limits options.
+                          properties:
+                            storeLimitsRequestSamples:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                            storeLimitsRequestSeries:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                          type: object
+                        tenancyConfig:
+                          description: TenancyConfig is the configuration for the
+                            tenancy options.
+                          properties:
+                            defaultTenantID:
+                              default: default-tenant
+                              description: DefaultTenantID is the default tenant ID
+                                to use when none is provided via a header.
+                              type: string
+                            splitTenantLabelName:
+                              description: SplitTenantLabelName is the label name
+                                through which the request will be split into multiple
+                                tenants.
+                              type: string
+                            tenantCertificateField:
+                              description: TenantCertificateField is the TLS client's
+                                certificate field to determine tenant for write requests.
+                              enum:
+                              - organization
+                              - organizationalUnit
+                              - commonName
+                              type: string
+                            tenantHeader:
+                              default: THANOS-TENANT
+                              description: TenantHeader is the HTTP header to determine
+                                tenant for write requests.
+                              type: string
+                            tenantLabelName:
+                              default: tenant_id
+                              description: TenantLabelName is the label name through
+                                which the tenant will be announced.
+                              type: string
+                            tenantMatcherType:
+                              default: exact
+                              description: TenantMatcherType is the type of tenant
+                                matching to use.
+                              enum:
+                              - exact
+                              - glob
+                              type: string
+                            tenants:
+                              description: |-
+                                Tenants is a list of tenants that should be matched by the hashring.
+                                An empty list matches all tenants.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        tooFarInFutureTimeWindow:
+                          default: 0s
                           description: |-
-                            Tenants is a list of tenants that should be matched by the hashring.
-                            An empty list matches all tenants.
-                          items:
-                            type: string
-                          type: array
+                            TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
+                            0s means disabled.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          type: string
                         tsdbConfig:
                           description: TSDB configuration for the ingestor.
                           properties:
@@ -53643,6 +54033,31 @@ spec:
                   - name
                   type: object
                 type: array
+              blockConfig:
+                description: BlockConfig defines settings for block handling.
+                properties:
+                  blockDiscoveryStrategy:
+                    default: concurrent
+                    description: BlockDiscoveryStrategy is the discovery strategy
+                      to use for block discovery in storage.
+                    enum:
+                    - concurrent
+                    - recursive
+                    type: string
+                  blockFilesConcurrency:
+                    default: 1
+                    description: |-
+                      BlockFilesConcurrency is the number of goroutines to use when to use when
+                      fetching/uploading block files from object storage.
+                    format: int32
+                    type: integer
+                  blockMetaFetchConcurrency:
+                    default: 32
+                    description: BlockMetaFetchConcurrency is the number of goroutines
+                      to use when fetching block metadata from object storage.
+                    format: int32
+                    type: integer
+                type: object
               cachingBucketConfig:
                 description: |-
                   CachingBucketConfig allows configuration of the caching bucket.
@@ -53811,6 +54226,32 @@ spec:
                         type: string
                     type: object
                 type: object
+              indexHeaderConfig:
+                description: IndexHeaderConfig allows configuration of the Store Gateway
+                  index header.
+                properties:
+                  enableLazyReader:
+                    default: true
+                    description: If true, Store Gateway will lazy memory map index-header
+                      only once the block is required by a query.
+                    type: boolean
+                  lazyDownloadStrategy:
+                    default: eager
+                    description: |-
+                      Strategy of how to download index headers lazily.
+                      If eager, always download index header during initial load. If lazy, download index header during query time.
+                    enum:
+                    - eager
+                    - lazy
+                    type: string
+                  lazyReaderIdleTimeout:
+                    default: 5m
+                    description: If index-header lazy reader is enabled and this idle
+                      timeout setting is > 0, memory map-ed index-headers will be
+                      automatically released after 'idle timeout' inactivity
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string
@@ -53962,6 +54403,25 @@ spec:
                   the Thanos Store StatefulSets.
                 pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                 type: string
+              storeLimitsOptions:
+                description: StoreLimitsOptions allows configuration of the store
+                  API limits.
+                properties:
+                  storeLimitsRequestSamples:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                  storeLimitsRequestSeries:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.

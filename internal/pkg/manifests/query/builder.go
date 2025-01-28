@@ -31,12 +31,27 @@ const (
 // Options for Thanos Query
 type Options struct {
 	manifests.Options
-	ReplicaLabels []string
-	Timeout       string
-	LookbackDelta string
-	MaxConcurrent int
+	ReplicaLabels      []string
+	Timeout            string
+	LookbackDelta      string
+	MaxConcurrent      int
+	WebOptions         WebOptions
+	TelemetryQuantiles TelemetryQuantiles
+	GRPCProxyStrategy  string
+	Endpoints          []Endpoint
+}
 
-	Endpoints []Endpoint
+type WebOptions struct {
+	RoutePrefix    string
+	ExternalPrefix string
+	PrefixHeader   string
+	DisableCORS    bool
+}
+
+type TelemetryQuantiles struct {
+	Duration []string
+	Samples  []string
+	Series   []string
 }
 
 // Endpoint represents a single StoreAPI DNS formatted address.
@@ -250,7 +265,25 @@ func queryArgs(opts Options) []string {
 		"--grpc.proxy-strategy=eager",
 		"--query.promql-engine=thanos",
 		fmt.Sprintf("--query.max-concurrent=%d", opts.MaxConcurrent),
+		fmt.Sprintf("--web.route-prefix=%s", opts.WebOptions.RoutePrefix),
+		fmt.Sprintf("--web.external-prefix=%s", opts.WebOptions.ExternalPrefix),
+		fmt.Sprintf("--web.prefix-header=%s", opts.WebOptions.PrefixHeader),
+		fmt.Sprintf("--grpc.proxy-strategy=%s", opts.GRPCProxyStrategy),
 	)
+
+	for _, duration := range opts.TelemetryQuantiles.Duration {
+		args = append(args, fmt.Sprintf("--query.telemetry.request-duration-seconds-quantiles=%s", duration))
+	}
+	for _, samples := range opts.TelemetryQuantiles.Samples {
+		args = append(args, fmt.Sprintf("--query.telemetry.request-samples-quantiles=%s", samples))
+	}
+	for _, series := range opts.TelemetryQuantiles.Series {
+		args = append(args, fmt.Sprintf("--query.telemetry.request-series-seconds-quantiles=%s", series))
+	}
+
+	if opts.WebOptions.DisableCORS {
+		args = append(args, "--web.disable-cors")
+	}
 
 	for _, label := range opts.ReplicaLabels {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))

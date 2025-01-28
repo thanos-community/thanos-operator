@@ -365,3 +365,19 @@ config:
 	}
 	return base
 }
+
+type StoreLimitsOpts struct {
+	StoreLimitsRequestSamples uint64
+	StoreLimitsRequestSeries  uint64
+}
+
+func (sl StoreLimitsOpts) ToFlags() []string {
+	var flags []string
+	if sl.StoreLimitsRequestSamples > 0 {
+		flags = append(flags, fmt.Sprintf("--store.limits.request-samples=%d", sl.StoreLimitsRequestSamples))
+	}
+	if sl.StoreLimitsRequestSeries > 0 {
+		flags = append(flags, fmt.Sprintf("--store.limits.request-series=%d", sl.StoreLimitsRequestSeries))
+	}
+	return flags
+}

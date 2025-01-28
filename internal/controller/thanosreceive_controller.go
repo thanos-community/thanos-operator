@@ -268,8 +268,8 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			DesiredReplicas: int(hashring.Replicas),
 			Config: receive.HashringConfig{
 				Name:              hashring.Name,
-				Tenants:           hashring.Tenants,
-				TenantMatcherType: receive.TenantMatcher(hashring.TenantMatcherType),
+				Tenants:           hashring.TenancyConfig.Tenants,
+				TenantMatcherType: receive.TenantMatcher(hashring.TenancyConfig.TenantMatcherType),
 				Endpoints:         receive.EndpointSliceListToEndpoints(receive.DefaultEndpointConverter, *eps, filters...),
 			},
 		}

@@ -43,6 +43,16 @@ type ThanosQuerySpec struct {
 	// {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
+	// TelemetryQuantiles is the configuration for the request telemetry quantiles.
+	// +kubebuilder:validation:Optional
+	TelemetryQuantiles *TelemetryQuantiles `json:"telemetryQuantiles,omitempty"`
+	// WebConfig is the configuration for the Query UI and API web options.
+	// +kubebuilder:validation:Optional
+	WebConfig *WebConfig `json:"webConfig,omitempty"`
+	// GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes.
+	// +kubebuilder:validation:Enum=eager;lazy
+	// +kubebuilder:default=eager
+	GRPCProxyStrategy string `json:"grpcProxyStrategy,omitempty"`
 	// QueryFrontend is the configuration for the Query Frontend
 	// If you specify this, the operator will create a Query Frontend in front of your query deployment.
 	// +kubebuilder:validation:Optional
@@ -102,6 +112,45 @@ type QueryFrontendSpec struct {
 	LabelsDefaultTimeRange *Duration `json:"labelsDefaultTimeRange,omitempty"`
 	// Additional configuration for the Thanos components
 	Additional `json:",inline"`
+}
+
+// TelemetryQuantiles is the configuration for the request telemetry quantiles.
+// Float usage is discouraged by controller-runtime, so we use string instead.
+type TelemetryQuantiles struct {
+	// Duration is the quantiles for exporting metrics about the request duration.
+	// +kubebuilder:validation:Optional
+	Duration []string `json:"duration,omitempty"`
+	// Samples is the quantiles for exporting metrics about the samples count.
+	// +kubebuilder:validation:Optional
+	Samples []string `json:"samples,omitempty"`
+	// Series is the quantiles for exporting metrics about the series count.
+	// +kubebuilder:validation:Optional
+	Series []string `json:"series,omitempty"`
+}
+
+// WebConfig is the configuration for the Query UI and API web options.
+type WebConfig struct {
+	// RoutePrefix is the prefix for API and UI endpoints.
+	// This allows thanos UI to be served on a sub-path.
+	// Defaults to the value of --web.external-prefix.
+	// This option is analogous to --web.route-prefix of Prometheus.
+	// +kubebuilder:validation:Optional
+	RoutePrefix *string `json:"routePrefix,omitempty"`
+	// ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.
+	// Actual endpoints are still served on / or the web.route-prefix.
+	// This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path.
+	// +kubebuilder:validation:Optional
+	ExternalPrefix *string `json:"externalPrefix,omitempty"`
+	// PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.
+	// This option is ignored if web.external-prefix argument is set.
+	// Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.
+	// This allows thanos UI to be served on a sub-path.
+	// +kubebuilder:validation:Optional
+	PrefixHeader *string `json:"prefixHeader,omitempty"`
+	// DisableCORS is the flag to disable CORS headers to be set by Thanos.
+	// By default Thanos sets CORS headers to be allowed by all.
+	// +kubebuilder:default=false
+	DisableCORS *bool `json:"disableCORS,omitempty"`
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery

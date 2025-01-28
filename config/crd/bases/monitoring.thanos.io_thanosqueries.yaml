@@ -3631,6 +3631,14 @@ spec:
                         type: object
                     type: object
                 type: object
+              grpcProxyStrategy:
+                default: eager
+                description: GRPCProxyStrategy is the strategy to use when proxying
+                  Series requests to leaf nodes.
+                enum:
+                - eager
+                - lazy
+                type: string
               image:
                 description: Container image to use for the Thanos components.
                 type: string
@@ -7555,12 +7563,66 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              telemetryQuantiles:
+                description: TelemetryQuantiles is the configuration for the request
+                  telemetry quantiles.
+                properties:
+                  duration:
+                    description: Duration is the quantiles for exporting metrics about
+                      the request duration.
+                    items:
+                      type: string
+                    type: array
+                  samples:
+                    description: Samples is the quantiles for exporting metrics about
+                      the samples count.
+                    items:
+                      type: string
+                    type: array
+                  series:
+                    description: Series is the quantiles for exporting metrics about
+                      the series count.
+                    items:
+                      type: string
+                    type: array
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string
+              webConfig:
+                description: WebConfig is the configuration for the Query UI and API
+                  web options.
+                properties:
+                  disableCORS:
+                    default: false
+                    description: |-
+                      DisableCORS is the flag to disable CORS headers to be set by Thanos.
+                      By default Thanos sets CORS headers to be allowed by all.
+                    type: boolean
+                  externalPrefix:
+                    description: |-
+                      ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.
+                      Actual endpoints are still served on / or the web.route-prefix.
+                      This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path.
+                    type: string
+                  prefixHeader:
+                    description: |-
+                      PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.
+                      This option is ignored if web.external-prefix argument is set.
+                      Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.
+                      This allows thanos UI to be served on a sub-path.
+                    type: string
+                  routePrefix:
+                    description: |-
+                      RoutePrefix is the prefix for API and UI endpoints.
+                      This allows thanos UI to be served on a sub-path.
+                      Defaults to the value of --web.external-prefix.
+                      This option is analogous to --web.route-prefix of Prometheus.
+                    type: string
+                type: object
             required:
             - replicas
             type: object

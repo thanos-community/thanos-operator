@@ -20,19 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BlockDiscoveryStrategy represents the strategy to use for block discovery.
-type BlockDiscoveryStrategy string
-
-const (
-	// BlockDiscoveryStrategyConcurrent means stores will concurrently issue one call
-	// per directory to discover active blocks storage.
-	BlockDiscoveryStrategyConcurrent BlockDiscoveryStrategy = "concurrent"
-	// BlockDiscoveryStrategyRecursive means stores iterate through all objects in storage
-	// recursively traversing into each directory.
-	// This avoids N+1 calls at the expense of having slower bucket iterations.
-	BlockDiscoveryStrategyRecursive BlockDiscoveryStrategy = "recursive"
-)
-
 // ThanosCompactSpec defines the desired state of ThanosCompact
 type ThanosCompactSpec struct {
 	// CommonFields are the options available to all Thanos components.
@@ -52,6 +39,9 @@ type ThanosCompactSpec struct {
 	// BlockConfig defines settings for block handling.
 	// +kubebuilder:validation:Optional
 	BlockConfig *BlockConfig `json:"blockConfig,omitempty"`
+	// BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.
+	// +kubebuilder:validation:Optional
+	BlockViewerGlobalSync *BlockViewerGlobalSyncConfig `json:"blockViewerGlobalSync,omitempty"`
 	// ShardingConfig is the sharding configuration for the compact component.
 	// +kubebuilder:validation:Optional
 	ShardingConfig *ShardingConfig `json:"shardingConfig,omitempty"`
@@ -61,6 +51,9 @@ type ThanosCompactSpec struct {
 	// DownsamplingConfig is the downsampling configuration for the compact component.
 	// +kubebuilder:validation:Optional
 	DownsamplingConfig *DownsamplingConfig `json:"downsamplingConfig,omitempty"`
+	// DebugConfig is the debug configuration for the compact component.
+	// +kubebuilder:validation:Optional
+	DebugConfig *DebugConfig `json:"debugConfig,omitempty"`
 	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
 	// If not set, will be set as zero value, so most recent blocks will be served.
 	// +kubebuilder:validation:Optional
@@ -90,21 +83,8 @@ type ThanosCompactStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
-// BlockConfig defines settings for block handling.
-type BlockConfig struct {
-	// BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.
-	// +kubebuilder:default="concurrent"
-	// +kubebuilder:validation:Enum=concurrent;recursive
-	BlockDiscoveryStrategy BlockDiscoveryStrategy `json:"blockDiscoveryStrategy,omitempty"`
-	// BlockFilesConcurrency is the number of goroutines to use when to use when
-	// fetching/uploading block files from object storage.
-	// +kubebuilder:default=1
-	// +kubebuilder:validation:Optional
-	BlockFilesConcurrency *int32 `json:"blockFilesConcurrency,omitempty"`
-	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
-	// +kubebuilder:default=32
-	// +kubebuilder:validation:Optional
-	BlockMetaFetchConcurrency *int32 `json:"blockMetaFetchConcurrency,omitempty"`
+// BlockViewerGlobalSyncConfig is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.
+type BlockViewerGlobalSyncConfig struct {
 	// BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI.
 	// +kubebuilder:default="1m"
 	// +kubebuilder:validation:Optional
@@ -117,6 +97,10 @@ type BlockConfig struct {
 }
 
 type CompactConfig struct {
+	// CompactConcurrency is the number of goroutines to use when compacting blocks.
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Optional
+	CompactConcurrency *int32 `json:"compactConcurrency,omitempty"`
 	// BlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
@@ -133,6 +117,21 @@ type CompactConfig struct {
 	// +kubebuilder:default="30m"
 	// +kubebuilder:validation:Optional
 	ConsistencyDelay *Duration `json:"blockConsistencyDelay,omitempty"`
+}
+
+type DebugConfig struct {
+	// AcceptMalformedIndex allows compact to accept blocks with malformed index.
+	// +kubebuilder:default=false
+	// +kubebuilder:validation:Optional
+	AcceptMalformedIndex *bool `json:"acceptMalformedIndex,omitempty"`
+	// MaxCompactionLevel is the maximum compaction level to use when compacting blocks.
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Optional
+	MaxCompactionLevel *int32 `json:"maxCompactionLevel,omitempty"`
+	// HaltOnError halts the compact process on critical compaction error.
+	// +kubebuilder:default=false
+	// +kubebuilder:validation:Optional
+	HaltOnError *bool `json:"haltOnError,omitempty"`
 }
 
 // DownsamplingConfig defines the downsampling configuration for the compact component.

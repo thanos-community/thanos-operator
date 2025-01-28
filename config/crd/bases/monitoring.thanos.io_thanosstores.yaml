@@ -3551,6 +3551,31 @@ spec:
                   - name
                   type: object
                 type: array
+              blockConfig:
+                description: BlockConfig defines settings for block handling.
+                properties:
+                  blockDiscoveryStrategy:
+                    default: concurrent
+                    description: BlockDiscoveryStrategy is the discovery strategy
+                      to use for block discovery in storage.
+                    enum:
+                    - concurrent
+                    - recursive
+                    type: string
+                  blockFilesConcurrency:
+                    default: 1
+                    description: |-
+                      BlockFilesConcurrency is the number of goroutines to use when to use when
+                      fetching/uploading block files from object storage.
+                    format: int32
+                    type: integer
+                  blockMetaFetchConcurrency:
+                    default: 32
+                    description: BlockMetaFetchConcurrency is the number of goroutines
+                      to use when fetching block metadata from object storage.
+                    format: int32
+                    type: integer
+                type: object
               cachingBucketConfig:
                 description: |-
                   CachingBucketConfig allows configuration of the caching bucket.
@@ -3719,6 +3744,32 @@ spec:
                         type: string
                     type: object
                 type: object
+              indexHeaderConfig:
+                description: IndexHeaderConfig allows configuration of the Store Gateway
+                  index header.
+                properties:
+                  enableLazyReader:
+                    default: true
+                    description: If true, Store Gateway will lazy memory map index-header
+                      only once the block is required by a query.
+                    type: boolean
+                  lazyDownloadStrategy:
+                    default: eager
+                    description: |-
+                      Strategy of how to download index headers lazily.
+                      If eager, always download index header during initial load. If lazy, download index header during query time.
+                    enum:
+                    - eager
+                    - lazy
+                    type: string
+                  lazyReaderIdleTimeout:
+                    default: 5m
+                    description: If index-header lazy reader is enabled and this idle
+                      timeout setting is > 0, memory map-ed index-headers will be
+                      automatically released after 'idle timeout' inactivity
+                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    type: string
+                type: object
               labels:
                 additionalProperties:
                   type: string
@@ -3870,6 +3921,25 @@ spec:
                   the Thanos Store StatefulSets.
                 pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                 type: string
+              storeLimitsOptions:
+                description: StoreLimitsOptions allows configuration of the store
+                  API limits.
+                properties:
+                  storeLimitsRequestSamples:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                  storeLimitsRequestSeries:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                type: object
               version:
                 description: |-
                   Version of Thanos to be deployed.
