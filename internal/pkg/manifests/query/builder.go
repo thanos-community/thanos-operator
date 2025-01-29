@@ -262,7 +262,6 @@ func queryArgs(opts Options) []string {
 		fmt.Sprintf("--query.timeout=%s", opts.Timeout),
 		fmt.Sprintf("--query.lookback-delta=%s", opts.LookbackDelta),
 		"--query.auto-downsampling",
-		"--grpc.proxy-strategy=eager",
 		"--query.promql-engine=thanos",
 		fmt.Sprintf("--query.max-concurrent=%d", opts.MaxConcurrent),
 		fmt.Sprintf("--web.route-prefix=%s", opts.WebOptions.RoutePrefix),

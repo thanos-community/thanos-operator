@@ -45,7 +45,7 @@ Usage of ./bin/manager:
   -metrics-secure
     	If set the metrics endpoint is served securely
   -zap-devel
-    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error) (default true)
+    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
   -zap-encoder value
     	Zap log encoding (one of 'json' or 'console')
   -zap-log-level value

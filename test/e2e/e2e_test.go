@@ -162,7 +162,7 @@ var _ = Describe("controller", Ordered, func() {
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			By("deploying the controller-manager")
-			cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectimage))
+			cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG_MAIN=%s", projectimage))
 			_, err = utils.Run(cmd)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
@@ -551,7 +551,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-"+promRule.Name+".yaml",
+						"--rule-file=/etc/thanos/rules/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
