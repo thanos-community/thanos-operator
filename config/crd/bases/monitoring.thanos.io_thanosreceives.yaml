@@ -3635,6 +3635,12 @@ spec:
                       description: IngesterHashringSpec represents the configuration
                         for a hashring to be used by the Thanos Receive StatefulSet.
                       properties:
+                        asyncForwardWorkerCount:
+                          default: 5
+                          description: AsyncForwardWorkerCount is the number of concurrent
+                            workers processing forwarding of remote-write requests.
+                          format: int64
+                          type: integer
                         externalLabels:
                           additionalProperties:
                             type: string
@@ -3807,21 +3813,80 @@ spec:
                             used by the Thanos Receive StatefulSet.
                           pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                           type: string
-                        tenantMatcherType:
-                          default: exact
-                          description: TenantMatcherType is the type of tenant matching
-                            to use.
-                          enum:
-                          - exact
-                          - glob
-                          type: string
-                        tenants:
+                        storeLimitsOptions:
+                          description: StoreLimitsOptions is the configuration for
+                            the store API limits options.
+                          properties:
+                            storeLimitsRequestSamples:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                            storeLimitsRequestSeries:
+                              default: 0
+                              description: |-
+                                StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                                0 means no limit.
+                              format: int64
+                              type: integer
+                          type: object
+                        tenancyConfig:
+                          description: TenancyConfig is the configuration for the
+                            tenancy options.
+                          properties:
+                            defaultTenantID:
+                              default: default-tenant
+                              description: DefaultTenantID is the default tenant ID
+                                to use when none is provided via a header.
+                              type: string
+                            splitTenantLabelName:
+                              description: SplitTenantLabelName is the label name
+                                through which the request will be split into multiple
+                                tenants.
+                              type: string
+                            tenantCertificateField:
+                              description: TenantCertificateField is the TLS client's
+                                certificate field to determine tenant for write requests.
+                              enum:
+                              - organization
+                              - organizationalUnit
+                              - commonName
+                              type: string
+                            tenantHeader:
+                              default: THANOS-TENANT
+                              description: TenantHeader is the HTTP header to determine
+                                tenant for write requests.
+                              type: string
+                            tenantLabelName:
+                              default: tenant_id
+                              description: TenantLabelName is the label name through
+                                which the tenant will be announced.
+                              type: string
+                            tenantMatcherType:
+                              default: exact
+                              description: TenantMatcherType is the type of tenant
+                                matching to use.
+                              enum:
+                              - exact
+                              - glob
+                              type: string
+                            tenants:
+                              description: |-
+                                Tenants is a list of tenants that should be matched by the hashring.
+                                An empty list matches all tenants.
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        tooFarInFutureTimeWindow:
+                          default: 0s
                           description: |-
-                            Tenants is a list of tenants that should be matched by the hashring.
-                            An empty list matches all tenants.
-                          items:
-                            type: string
-                          type: array
+                            TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
+                            0s means disabled.
+                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          type: string
                         tsdbConfig:
                           description: TSDB configuration for the ingestor.
                           properties:

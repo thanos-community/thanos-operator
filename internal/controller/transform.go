@@ -19,12 +19,32 @@ import (
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional)
+	var webOptions manifestquery.WebOptions
+	if in.Spec.WebConfig != nil {
+		webOptions = manifestquery.WebOptions{
+			RoutePrefix:    manifests.OptionalToString(in.Spec.WebConfig.RoutePrefix),
+			ExternalPrefix: manifests.OptionalToString(in.Spec.WebConfig.ExternalPrefix),
+			PrefixHeader:   manifests.OptionalToString(in.Spec.WebConfig.PrefixHeader),
+			DisableCORS:    in.Spec.WebConfig.DisableCORS != nil && *in.Spec.WebConfig.DisableCORS,
+		}
+	}
+	var telemetryQuantiles manifestquery.TelemetryQuantiles
+	if in.Spec.TelemetryQuantiles != nil {
+		telemetryQuantiles = manifestquery.TelemetryQuantiles{
+			Duration: in.Spec.TelemetryQuantiles.Duration,
+			Samples:  in.Spec.TelemetryQuantiles.Samples,
+			Series:   in.Spec.TelemetryQuantiles.Series,
+		}
+	}
 	return manifestquery.Options{
-		Options:       opts,
-		ReplicaLabels: in.Spec.ReplicaLabels,
-		Timeout:       "15m",
-		LookbackDelta: "5m",
-		MaxConcurrent: 20,
+		Options:            opts,
+		ReplicaLabels:      in.Spec.ReplicaLabels,
+		Timeout:            "15m",
+		LookbackDelta:      "5m",
+		MaxConcurrent:      20,
+		WebOptions:         webOptions,
+		TelemetryQuantiles: telemetryQuantiles,
+		GRPCProxyStrategy:  in.Spec.GRPCProxyStrategy,
 	}
 }
 
@@ -90,15 +110,36 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 	}
 
 	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, in.Spec.FeatureGates, additional)
-	return manifestreceive.IngesterOptions{
+	igops := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
 		TSDBOpts: manifestreceive.TSDBOpts{
 			Retention: string(spec.TSDBConfig.Retention),
 		},
-		StorageSize:    resource.MustParse(string(spec.StorageSize)),
-		ExternalLabels: spec.ExternalLabels,
+		AsyncForwardWorkerCount:  manifests.OptionalToString(spec.AsyncForwardWorkerCount),
+		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
+		StorageSize:              resource.MustParse(string(spec.StorageSize)),
+		ExternalLabels:           spec.ExternalLabels,
 	}
+
+	if spec.TenancyConfig != nil {
+		igops.TenancyOpts = manifestreceive.TenancyOpts{
+			TenantHeader:           spec.TenancyConfig.TenantHeader,
+			TenantCertificateField: manifests.OptionalToString(spec.TenancyConfig.TenantCertificateField),
+			DefaultTenantID:        spec.TenancyConfig.DefaultTenantID,
+			SplitTenantLabelName:   manifests.OptionalToString(spec.TenancyConfig.SplitTenantLabelName),
+			TenantLabelName:        spec.TenancyConfig.TenantLabelName,
+		}
+	}
+
+	if spec.StoreLimitsOptions != nil {
+		igops.StoreLimitsOpts = manifests.StoreLimitsOpts{
+			StoreLimitsRequestSamples: spec.StoreLimitsOptions.StoreLimitsRequestSamples,
+			StoreLimitsRequestSeries:  spec.StoreLimitsOptions.StoreLimitsRequestSeries,
+		}
+	}
+
+	return igops
 }
 
 func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.RouterOptions {
@@ -126,16 +167,43 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional)
-	return manifestsstore.Options{
+	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
+	if in.Spec.IndexHeaderConfig != nil {
+		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
+			EnableLazyReader:      in.Spec.IndexHeaderConfig.EnableLazyReader != nil && *in.Spec.IndexHeaderConfig.EnableLazyReader,
+			LazyReaderIdleTimeout: manifests.Duration(manifests.OptionalToString(in.Spec.IndexHeaderConfig.LazyReaderIdleTimeout)),
+			LazyDownloadStrategy:  manifests.OptionalToString(in.Spec.IndexHeaderConfig.LazyDownloadStrategy),
+		}
+	}
+	var blockConfigOpts *manifestsstore.BlockConfigOptions
+	if in.Spec.BlockConfig != nil {
+		blockConfigOpts = &manifestsstore.BlockConfigOptions{
+			BlockDiscoveryStrategy:    ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
+			BlockFilesConcurrency:     in.Spec.BlockConfig.BlockFilesConcurrency,
+			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
+		}
+	}
+	sops := manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
 		CachingBucketConfig:      toManifestCacheConfig(in.Spec.CachingBucketConfig),
 		Min:                      manifests.Duration(manifests.OptionalToString(in.Spec.MinTime)),
 		Max:                      manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime)),
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
+		IndexHeaderOptions:       indexHeaderOpts,
+		BlockConfigOptions:       blockConfigOpts,
 		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
 		Options:                  opts,
 	}
+
+	if in.Spec.StoreLimitsOptions != nil {
+		sops.StoreLimitsOpts = manifests.StoreLimitsOpts{
+			StoreLimitsRequestSamples: in.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
+			StoreLimitsRequestSeries:  in.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
+		}
+	}
+
+	return sops
 }
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
@@ -160,6 +228,7 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 			return nil
 		}
 		return &manifestscompact.CompactionOptions{
+			CompactConcurrency:           in.Spec.CompactConfig.CompactConcurrency,
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
@@ -169,12 +238,26 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		if in.Spec.BlockConfig == nil {
 			return nil
 		}
-		return &manifestscompact.BlockConfigOptions{
-			BlockDiscoveryStrategy:        ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
-			BlockFilesConcurrency:         in.Spec.BlockConfig.BlockFilesConcurrency,
-			BlockMetaFetchConcurrency:     in.Spec.BlockConfig.BlockMetaFetchConcurrency,
-			BlockViewerGlobalSyncInterval: ptr.To(manifests.Duration(*in.Spec.BlockConfig.BlockViewerGlobalSyncInterval)),
-			BlockViewerGlobalSyncTimeout:  ptr.To(manifests.Duration(*in.Spec.BlockConfig.BlockViewerGlobalSyncTimeout)),
+		opts := &manifestscompact.BlockConfigOptions{
+			BlockDiscoveryStrategy:    ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
+			BlockFilesConcurrency:     in.Spec.BlockConfig.BlockFilesConcurrency,
+			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
+		}
+
+		if in.Spec.BlockViewerGlobalSync != nil {
+			opts.BlockViewerGlobalSyncInterval = ptr.To(manifests.Duration(*in.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncInterval))
+			opts.BlockViewerGlobalSyncTimeout = ptr.To(manifests.Duration(*in.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncTimeout))
+		}
+		return opts
+	}
+	debugConfig := func() *manifestscompact.DebugConfigOptions {
+		if in.Spec.DebugConfig == nil {
+			return nil
+		}
+		return &manifestscompact.DebugConfigOptions{
+			AcceptMalformedIndex: in.Spec.DebugConfig.AcceptMalformedIndex != nil && *in.Spec.DebugConfig.AcceptMalformedIndex,
+			MaxCompactionLevel:   *in.Spec.DebugConfig.MaxCompactionLevel,
+			HaltOnError:          in.Spec.DebugConfig.HaltOnError != nil && *in.Spec.DebugConfig.HaltOnError,
 		}
 	}
 
@@ -188,6 +271,7 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		BlockConfig:    blockDiscovery(),
 		Compaction:     compaction(),
 		Downsampling:   downsamplingConfig(),
+		DebugConfig:    debugConfig(),
 		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
 		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 	}

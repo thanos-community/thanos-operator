@@ -159,3 +159,45 @@ func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
 func (s StorageSize) ToResourceQuantity() resource.Quantity {
 	return resource.MustParse(string(s))
 }
+
+// StoreLimitsOptions is the configuration for the store API limits options.
+type StoreLimitsOptions struct {
+	// StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+	// 0 means no limit.
+	// +kubebuilder:default=0
+	StoreLimitsRequestSamples uint64 `json:"storeLimitsRequestSamples,omitempty"`
+	// StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+	// 0 means no limit.
+	// +kubebuilder:default=0
+	StoreLimitsRequestSeries uint64 `json:"storeLimitsRequestSeries,omitempty"`
+}
+
+// BlockDiscoveryStrategy represents the strategy to use for block discovery.
+type BlockDiscoveryStrategy string
+
+const (
+	// BlockDiscoveryStrategyConcurrent means stores will concurrently issue one call
+	// per directory to discover active blocks storage.
+	BlockDiscoveryStrategyConcurrent BlockDiscoveryStrategy = "concurrent"
+	// BlockDiscoveryStrategyRecursive means stores iterate through all objects in storage
+	// recursively traversing into each directory.
+	// This avoids N+1 calls at the expense of having slower bucket iterations.
+	BlockDiscoveryStrategyRecursive BlockDiscoveryStrategy = "recursive"
+)
+
+// BlockConfig defines settings for block handling.
+type BlockConfig struct {
+	// BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.
+	// +kubebuilder:default="concurrent"
+	// +kubebuilder:validation:Enum=concurrent;recursive
+	BlockDiscoveryStrategy BlockDiscoveryStrategy `json:"blockDiscoveryStrategy,omitempty"`
+	// BlockFilesConcurrency is the number of goroutines to use when to use when
+	// fetching/uploading block files from object storage.
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Optional
+	BlockFilesConcurrency *int32 `json:"blockFilesConcurrency,omitempty"`
+	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
+	// +kubebuilder:default=32
+	// +kubebuilder:validation:Optional
+	BlockMetaFetchConcurrency *int32 `json:"blockMetaFetchConcurrency,omitempty"`
+}

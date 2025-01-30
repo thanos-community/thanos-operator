@@ -48,15 +48,27 @@ const (
 type IngesterOptions struct {
 	manifests.Options
 	TSDBOpts
-	StorageSize    resource.Quantity
-	ObjStoreSecret corev1.SecretKeySelector
-	ExternalLabels map[string]string
+	TenancyOpts
+	StoreLimitsOpts manifests.StoreLimitsOpts
+	StorageSize     resource.Quantity
+	ObjStoreSecret  corev1.SecretKeySelector
+	ExternalLabels  map[string]string
 	// HashringName is the name of the hashring and is a required field.
-	HashringName string
+	HashringName             string
+	AsyncForwardWorkerCount  string
+	TooFarInFutureTimeWindow manifests.Duration
 }
 
 type TSDBOpts struct {
 	Retention string
+}
+
+type TenancyOpts struct {
+	TenantHeader           string
+	TenantCertificateField string
+	DefaultTenantID        string
+	SplitTenantLabelName   string
+	TenantLabelName        string
 }
 
 // RouterOptions for Thanos Receive router
@@ -537,7 +549,16 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:%d",
 			opts.GetGeneratedResourceName(), GRPCPort),
 		"--receive.grpc-compression=none",
+		fmt.Sprintf("--receive.forward.async-workers=%s", opts.AsyncForwardWorkerCount),
+		fmt.Sprintf("--tsdb.too-far-in-future.time-window=%s", opts.TooFarInFutureTimeWindow),
+		fmt.Sprintf("--receive.tenant-header=%s", opts.TenancyOpts.TenantHeader),
+		fmt.Sprintf("--receive.tenant-certificate-field=%s", opts.TenancyOpts.TenantCertificateField),
+		fmt.Sprintf("--receive.default-tenant-id=%s", opts.TenancyOpts.DefaultTenantID),
+		fmt.Sprintf("--receive.split-tenant-label-name=%s", opts.TenancyOpts.SplitTenantLabelName),
+		fmt.Sprintf("--receive.tenant-label-name=%s", opts.TenancyOpts.TenantLabelName),
 	)
+
+	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
 
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))

@@ -103,6 +103,25 @@ type IngesterHashringSpec struct {
 	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Required
 	StorageSize StorageSize `json:"storageSize"`
+	// TenancyConfig is the configuration for the tenancy options.
+	// +kubebuilder:validation:Optional
+	TenancyConfig *TenancyConfig `json:"tenancyConfig,omitempty"`
+	// AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests.
+	// +kubebuilder:default:=5
+	// +kubebuilder:validation:Optional
+	AsyncForwardWorkerCount *uint64 `json:"asyncForwardWorkerCount,omitempty"`
+	// StoreLimitsOptions is the configuration for the store API limits options.
+	// +kubebuilder:validation:Optional
+	StoreLimitsOptions *StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
+	// TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
+	// 0s means disabled.
+	// +kubebuilder:default:="0s"
+	// +kubebuilder:validation:Optional
+	TooFarInFutureTimeWindow *Duration `json:"tooFarInFutureTimeWindow,omitempty"`
+}
+
+// TenancyConfig is the configuration for the tenancy options.
+type TenancyConfig struct {
 	// Tenants is a list of tenants that should be matched by the hashring.
 	// An empty list matches all tenants.
 	// +kubebuilder:validation:Optional
@@ -111,6 +130,22 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:default:="exact"
 	// +kubebuilder:validation:Enum=exact;glob
 	TenantMatcherType string `json:"tenantMatcherType,omitempty"`
+	// TenantHeader is the HTTP header to determine tenant for write requests.
+	// +kubebuilder:default="THANOS-TENANT"
+	TenantHeader string `json:"tenantHeader,omitempty"`
+	// TenantCertificateField is the TLS client's certificate field to determine tenant for write requests.
+	// +kubebuilder:validation:Enum=organization;organizationalUnit;commonName
+	// +kubebuilder:validation:Optional
+	TenantCertificateField *string `json:"tenantCertificateField,omitempty"`
+	// DefaultTenantID is the default tenant ID to use when none is provided via a header.
+	// +kubebuilder:default="default-tenant"
+	DefaultTenantID string `json:"defaultTenantID,omitempty"`
+	// SplitTenantLabelName is the label name through which the request will be split into multiple tenants.
+	// +kubebuilder:validation:Optional
+	SplitTenantLabelName *string `json:"splitTenantLabelName,omitempty"`
+	// TenantLabelName is the label name through which the tenant will be announced.
+	// +kubebuilder:default="tenant_id"
+	TenantLabelName string `json:"tenantLabelName,omitempty"`
 }
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive

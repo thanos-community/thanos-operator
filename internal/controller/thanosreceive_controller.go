@@ -264,14 +264,19 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			return nil, fmt.Errorf("failed to get endpoint slices for resource %s: %w", receiver.GetName(), err)
 		}
 
+		hc := receive.HashringConfig{
+			Name:      hashring.Name,
+			Endpoints: receive.EndpointSliceListToEndpoints(receive.DefaultEndpointConverter, *eps, filters...),
+		}
+
+		if hashring.TenancyConfig != nil {
+			hc.Tenants = hashring.TenancyConfig.Tenants
+			hc.TenantMatcherType = receive.TenantMatcher(hashring.TenancyConfig.TenantMatcherType)
+		}
+
 		desiredState[hashring.Name] = receive.HashringMeta{
 			DesiredReplicas: int(hashring.Replicas),
-			Config: receive.HashringConfig{
-				Name:              hashring.Name,
-				Tenants:           hashring.Tenants,
-				TenantMatcherType: receive.TenantMatcher(hashring.TenantMatcherType),
-				Endpoints:         receive.EndpointSliceListToEndpoints(receive.DefaultEndpointConverter, *eps, filters...),
-			},
+			Config:          hc,
 		}
 	}
 	out := receive.DynamicMerge(currentHashringState, desiredState, int(receiver.Spec.Router.ReplicationFactor))

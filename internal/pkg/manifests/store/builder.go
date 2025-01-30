@@ -44,6 +44,15 @@ type Options struct {
 	Min, Max                 manifests.Duration
 	RelabelConfigs           manifests.RelabelConfigs
 	ShardIndex               *int32
+	StoreLimitsOpts          manifests.StoreLimitsOpts
+	IndexHeaderOptions       *IndexHeaderOptions
+	BlockConfigOptions       *BlockConfigOptions
+}
+
+type IndexHeaderOptions struct {
+	EnableLazyReader      bool
+	LazyReaderIdleTimeout manifests.Duration
+	LazyDownloadStrategy  string
 }
 
 // Build builds Thanos Store shards.
@@ -321,6 +330,19 @@ func storeArgsFrom(opts Options) []string {
 		fmt.Sprintf("--max-time=%s", string(opts.Max)),
 	)
 
+	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
+	if opts.BlockConfigOptions != nil {
+		args = append(args, opts.BlockConfigOptions.toArgs()...)
+	}
+
+	if opts.IndexHeaderOptions != nil {
+		if opts.IndexHeaderOptions.EnableLazyReader {
+			args = append(args, "--store.enable-index-header-lazy-reader")
+		}
+		args = append(args, fmt.Sprintf("--store.index-header-lazy-reader-idle-timeout=%s", string(opts.IndexHeaderOptions.LazyReaderIdleTimeout)))
+		args = append(args, fmt.Sprintf("--store.index-header-lazy-download-strategy=%s", opts.IndexHeaderOptions.LazyDownloadStrategy))
+	}
+
 	if opts.IndexCacheConfig.FromSecret != nil {
 		args = append(args, fmt.Sprintf("--index-cache.config=$(%s)", indexCacheConfigEnvVarName))
 	} else if opts.IndexCacheConfig.InMemoryCacheConfig != nil {
@@ -343,6 +365,34 @@ func storeArgsFrom(opts Options) []string {
 	}
 
 	return manifests.PruneEmptyArgs(args)
+}
+
+// BlockConfigOptions for Thanos Store
+type BlockConfigOptions struct {
+	// BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.
+	BlockDiscoveryStrategy *string
+	// BlockFilesConcurrency is the number of goroutines to use when to use when
+	BlockFilesConcurrency *int32
+	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
+	BlockMetaFetchConcurrency *int32
+}
+
+func (bo *BlockConfigOptions) toArgs() []string {
+	var args []string
+	if bo == nil {
+		return args
+	}
+
+	if bo.BlockDiscoveryStrategy != nil {
+		args = append(args, fmt.Sprintf("--block-discovery-strategy=%s", *bo.BlockDiscoveryStrategy))
+	}
+	if bo.BlockFilesConcurrency != nil {
+		args = append(args, fmt.Sprintf("--block-files-concurrency=%d", *bo.BlockFilesConcurrency))
+	}
+	if bo.BlockMetaFetchConcurrency != nil {
+		args = append(args, fmt.Sprintf("--block-meta-fetch-concurrency=%d", *bo.BlockMetaFetchConcurrency))
+	}
+	return args
 }
 
 // GetRequiredStoreServiceLabel returns the minimum set of labels that can be used to look up Services

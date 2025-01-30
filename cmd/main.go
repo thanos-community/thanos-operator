@@ -86,9 +86,7 @@ func main() {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
 		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
-	opts := zap.Options{
-		Development: true,
-	}
+	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 

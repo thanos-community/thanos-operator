@@ -3575,6 +3575,12 @@ spec:
                       to use when fetching block metadata from object storage.
                     format: int32
                     type: integer
+                type: object
+              blockViewerGlobalSync:
+                description: BlockViewerGlobalSync is the configuration for syncing
+                  the blocks between local and remote view for /global Block Viewer
+                  UI.
+                properties:
                   blockViewerGlobalSync:
                     default: 1m
                     description: BlockViewerGlobalSyncInterval for syncing the blocks
@@ -3614,6 +3620,33 @@ spec:
                       Setting this to 0s disables the cleanup.
                     pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
+                  compactConcurrency:
+                    default: 1
+                    description: CompactConcurrency is the number of goroutines to
+                      use when compacting blocks.
+                    format: int32
+                    type: integer
+                type: object
+              debugConfig:
+                description: DebugConfig is the debug configuration for the compact
+                  component.
+                properties:
+                  acceptMalformedIndex:
+                    default: false
+                    description: AcceptMalformedIndex allows compact to accept blocks
+                      with malformed index.
+                    type: boolean
+                  haltOnError:
+                    default: false
+                    description: HaltOnError halts the compact process on critical
+                      compaction error.
+                    type: boolean
+                  maxCompactionLevel:
+                    default: 5
+                    description: MaxCompactionLevel is the maximum compaction level
+                      to use when compacting blocks.
+                    format: int32
+                    type: integer
                 type: object
               downsamplingConfig:
                 description: DownsamplingConfig is the downsampling configuration

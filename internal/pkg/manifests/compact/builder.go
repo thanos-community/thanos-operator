@@ -40,6 +40,7 @@ type Options struct {
 	BlockConfig      *BlockConfigOptions
 	Compaction       *CompactionOptions
 	Downsampling     *DownsamplingOptions
+	DebugConfig      *DebugConfigOptions
 	// RelabelConfig is the relabel configuration for the Thanos Compact shard.
 	RelabelConfigs manifests.RelabelConfigs
 	// StorageSize is the size of the PVC to create for the Thanos Compact shard.
@@ -295,6 +296,7 @@ func compactorArgsFrom(opts Options) []string {
 	args = append(args, opts.BlockConfig.toArgs()...)
 	args = append(args, opts.Compaction.toArgs()...)
 	args = append(args, opts.Downsampling.toArgs()...)
+	args = append(args, opts.DebugConfig.toArgs()...)
 
 	if opts.Additional.Args != nil {
 		args = append(args, opts.Additional.Args...)
@@ -393,6 +395,8 @@ func (bo *BlockConfigOptions) toArgs() []string {
 }
 
 type CompactionOptions struct {
+	// CompactConcurrency is the number of goroutines to use when compacting blocks.
+	CompactConcurrency *int32
 	// CompactBlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage.
 	CompactBlockFetchConcurrency *int32 `json:"compactBlockFetchConcurrency,omitempty"`
 	// CompactCleanupInterval configures how often we should clean up partially uploaded blocks and blocks that are marked for deletion.
@@ -408,8 +412,11 @@ func (co *CompactionOptions) toArgs() []string {
 		return args
 	}
 
+	if co.CompactConcurrency != nil {
+		args = append(args, fmt.Sprintf("--compact.concurrency=%d", *co.CompactConcurrency))
+	}
 	if co.CompactBlockFetchConcurrency != nil {
-		args = append(args, fmt.Sprintf("--compact.block-fetch-concurrency=%d", *co.CompactBlockFetchConcurrency))
+		args = append(args, fmt.Sprintf("--compact.blocks-fetch-concurrency=%d", *co.CompactBlockFetchConcurrency))
 	}
 	if co.CompactCleanupInterval != nil {
 		args = append(args, fmt.Sprintf("--compact.cleanup-interval=%s", string(*co.CompactCleanupInterval)))
@@ -437,7 +444,34 @@ func (do *DownsamplingOptions) toArgs() []string {
 		args = append(args, "--downsampling.disable")
 	}
 	if do.Concurrency != nil {
-		args = append(args, fmt.Sprintf("--downsampling.concurrency=%d", *do.Concurrency))
+		args = append(args, fmt.Sprintf("--downsample.concurrency=%d", *do.Concurrency))
+	}
+	return args
+}
+
+type DebugConfigOptions struct {
+	// AcceptMalformedIndex allows compact to accept blocks with malformed index.
+	AcceptMalformedIndex bool
+	// MaxCompactionLevel is the maximum compaction level to use when compacting blocks.
+	MaxCompactionLevel int32
+	// HaltOnError halts the compact process on critical compaction error.
+	HaltOnError bool
+}
+
+func (dc *DebugConfigOptions) toArgs() []string {
+	var args []string
+	if dc == nil {
+		return args
+	}
+
+	if dc.AcceptMalformedIndex {
+		args = append(args, "--debug.accept-malformed-index")
+	}
+	if dc.MaxCompactionLevel != 0 {
+		args = append(args, fmt.Sprintf("--debug.max-compaction-level=%d", dc.MaxCompactionLevel))
+	}
+	if dc.HaltOnError {
+		args = append(args, "--debug.halt-on-error")
 	}
 	return args
 }

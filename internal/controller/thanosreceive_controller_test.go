@@ -130,8 +130,10 @@ config:
 								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
-								Tenants:     []string{"test-tenant"},
-								Replicas:    2,
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+									Tenants: []string{"test-tenant"},
+								},
+								Replicas: 2,
 							},
 						},
 					},
@@ -153,8 +155,10 @@ config:
 						Name:        hashringName,
 						Labels:      map[string]string{"test": "my-ingester-test"},
 						StorageSize: "100Mi",
-						Tenants:     []string{"test-tenant"},
-						Replicas:    5,
+						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+							Tenants: []string{"test-tenant"},
+						},
+						Replicas: 5,
 					},
 				)
 				Expect(k8sClient.Update(context.Background(), resource)).ShouldNot(Succeed())
@@ -194,8 +198,11 @@ config:
 								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
-								Tenants:     []string{"test-tenant"},
-								Replicas:    3,
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+									TenantMatcherType: "exact",
+									Tenants:           []string{"test-tenant"},
+								},
+								Replicas: 3,
 							},
 						},
 						Additional: monitoringthanosiov1alpha1.Additional{
@@ -381,8 +388,10 @@ config:
 						Name:        updatedHashringName,
 						Labels:      map[string]string{"test": "my-ingester-test"},
 						StorageSize: "100Mi",
-						Tenants:     []string{"test-tenant"},
-						Replicas:    3,
+						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+							Tenants: []string{"test-tenant"},
+						},
+						Replicas: 3,
 					},
 				}
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())

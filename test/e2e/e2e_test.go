@@ -162,7 +162,7 @@ var _ = Describe("controller", Ordered, func() {
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			By("deploying the controller-manager")
-			cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectimage))
+			cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG_MAIN=%s", projectimage))
 			_, err = utils.Run(cmd)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
@@ -233,8 +233,11 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name:        hashringTwoName,
 									StorageSize: "100Mi",
-									Tenants: []string{
-										"tenant1",
+									TenancyConfig: &v1alpha1.TenancyConfig{
+										Tenants: []string{
+											"tenant1",
+										},
+										TenantMatcherType: "exact",
 									},
 								},
 							},
@@ -259,7 +262,6 @@ var _ = Describe("controller", Ordered, func() {
 					expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
-        "tenant_matcher_type": "exact",
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
@@ -549,7 +551,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/"+rulerName+"-promrule-"+promRule.Name+".yaml",
+						"--rule-file=/etc/thanos/rules/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})

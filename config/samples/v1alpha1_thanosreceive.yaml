@@ -12,7 +12,8 @@ spec:
         storageSize: "100Mi"
         tsdbConfig:
           retention: 2h
-        tenantMatcherType: exact
+        tenancyConfig:
+          tenantMatcherType: exact
         replicas: 1
         externalLabels:
           replica: $(POD_NAME)
@@ -20,7 +21,8 @@ spec:
         storageSize: "100Mi"
         tsdbConfig:
           retention: 2h
-        tenantMatcherType: exact
+        tenancyConfig:
+          tenantMatcherType: exact
         replicas: 1
         externalLabels:
           replica: $(POD_NAME)

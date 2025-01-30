@@ -45,7 +45,7 @@ Usage of ./bin/manager:
   -metrics-secure
     	If set the metrics endpoint is served securely
   -zap-devel
-    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error) (default true)
+    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
   -zap-encoder value
     	Zap log encoding (one of 'json' or 'console')
   -zap-log-level value
@@ -92,7 +92,7 @@ Once the workloads are ready, run `kubectl -n thanos-operator-system port-forwar
 
 This demo consists of a Prometheus, deployed via Prometheus Operator, that scrapes metrics from the operator and the Thanos components themselves. It remote writes to the Thanos Receive component.
 
-## Feature Gates
+### Feature Gates
 
 The CRDs within Thanos Operator have the ability to create/read certain Prometheus Operator objects, such as ServiceMonitors and PrometheusRules. However not all environments may have Prometheus Operator installed.
 
