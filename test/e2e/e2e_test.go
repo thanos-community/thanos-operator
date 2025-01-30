@@ -237,6 +237,7 @@ var _ = Describe("controller", Ordered, func() {
 										Tenants: []string{
 											"tenant1",
 										},
+										TenantMatcherType: "exact",
 									},
 								},
 							},
@@ -261,7 +262,6 @@ var _ = Describe("controller", Ordered, func() {
 					expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
-        "tenant_matcher_type": "exact",
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",

@@ -199,7 +199,8 @@ config:
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
-									Tenants: []string{"test-tenant"},
+									TenantMatcherType: "exact",
+									Tenants:           []string{"test-tenant"},
 								},
 								Replicas: 3,
 							},
