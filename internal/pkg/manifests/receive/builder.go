@@ -55,7 +55,7 @@ type IngesterOptions struct {
 	ExternalLabels  map[string]string
 	// HashringName is the name of the hashring and is a required field.
 	HashringName             string
-	AsyncForwardWorkerCount  uint64
+	AsyncForwardWorkerCount  string
 	TooFarInFutureTimeWindow manifests.Duration
 }
 
@@ -549,7 +549,7 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:%d",
 			opts.GetGeneratedResourceName(), GRPCPort),
 		"--receive.grpc-compression=none",
-		fmt.Sprintf("--receive.forward.async-workers=%d", opts.AsyncForwardWorkerCount),
+		fmt.Sprintf("--receive.forward.async-workers=%s", opts.AsyncForwardWorkerCount),
 		fmt.Sprintf("--tsdb.too-far-in-future.time-window=%s", opts.TooFarInFutureTimeWindow),
 		fmt.Sprintf("--receive.tenant-header=%s", opts.TenancyOpts.TenantHeader),
 		fmt.Sprintf("--receive.tenant-certificate-field=%s", opts.TenancyOpts.TenantCertificateField),

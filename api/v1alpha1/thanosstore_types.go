@@ -59,7 +59,8 @@ type ThanosStoreSpec struct {
 	// +kubebuilder:validation:Optional
 	MaxTime *Duration `json:"maxTime,omitempty"`
 	// StoreLimitsOptions allows configuration of the store API limits.
-	StoreLimitsOptions StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
+	// +kubebuilder:validation:Optional
+	StoreLimitsOptions *StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
 	// IndexHeaderConfig allows configuration of the Store Gateway index header.
 	// +kubebuilder:validation:Optional
 	IndexHeaderConfig *IndexHeaderConfig `json:"indexHeaderConfig,omitempty"`

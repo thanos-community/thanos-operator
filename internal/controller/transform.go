@@ -110,28 +110,36 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 	}
 
 	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, in.Spec.FeatureGates, additional)
-	return manifestreceive.IngesterOptions{
+	igops := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
 		TSDBOpts: manifestreceive.TSDBOpts{
 			Retention: string(spec.TSDBConfig.Retention),
 		},
-		AsyncForwardWorkerCount:  spec.AsyncForwardWorkerCount,
-		TooFarInFutureTimeWindow: manifests.Duration(spec.TooFarInFutureTimeWindow),
+		AsyncForwardWorkerCount:  manifests.OptionalToString(spec.AsyncForwardWorkerCount),
+		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
 		StorageSize:              resource.MustParse(string(spec.StorageSize)),
 		ExternalLabels:           spec.ExternalLabels,
-		TenancyOpts: manifestreceive.TenancyOpts{
+	}
+
+	if spec.TenancyConfig != nil {
+		igops.TenancyOpts = manifestreceive.TenancyOpts{
 			TenantHeader:           spec.TenancyConfig.TenantHeader,
 			TenantCertificateField: manifests.OptionalToString(spec.TenancyConfig.TenantCertificateField),
 			DefaultTenantID:        spec.TenancyConfig.DefaultTenantID,
 			SplitTenantLabelName:   manifests.OptionalToString(spec.TenancyConfig.SplitTenantLabelName),
 			TenantLabelName:        spec.TenancyConfig.TenantLabelName,
-		},
-		StoreLimitsOpts: manifests.StoreLimitsOpts{
+		}
+	}
+
+	if spec.StoreLimitsOptions != nil {
+		igops.StoreLimitsOpts = manifests.StoreLimitsOpts{
 			StoreLimitsRequestSamples: spec.StoreLimitsOptions.StoreLimitsRequestSamples,
 			StoreLimitsRequestSeries:  spec.StoreLimitsOptions.StoreLimitsRequestSeries,
-		},
+		}
 	}
+
+	return igops
 }
 
 func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.RouterOptions {
@@ -175,22 +183,27 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
 		}
 	}
-	return manifestsstore.Options{
+	sops := manifestsstore.Options{
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
 		CachingBucketConfig:      toManifestCacheConfig(in.Spec.CachingBucketConfig),
 		Min:                      manifests.Duration(manifests.OptionalToString(in.Spec.MinTime)),
 		Max:                      manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime)),
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
-		StoreLimitsOpts: manifests.StoreLimitsOpts{
+		IndexHeaderOptions:       indexHeaderOpts,
+		BlockConfigOptions:       blockConfigOpts,
+		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
+		Options:                  opts,
+	}
+
+	if in.Spec.StoreLimitsOptions != nil {
+		sops.StoreLimitsOpts = manifests.StoreLimitsOpts{
 			StoreLimitsRequestSamples: in.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
 			StoreLimitsRequestSeries:  in.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
-		},
-		IndexHeaderOptions: indexHeaderOpts,
-		BlockConfigOptions: blockConfigOpts,
-		StorageSize:        resource.MustParse(string(in.Spec.StorageSize)),
-		Options:            opts,
+		}
 	}
+
+	return sops
 }
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {

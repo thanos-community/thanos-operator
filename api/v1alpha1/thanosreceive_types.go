@@ -104,16 +104,20 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:validation:Required
 	StorageSize StorageSize `json:"storageSize"`
 	// TenancyConfig is the configuration for the tenancy options.
-	TenancyConfig TenancyConfig `json:"tenancyConfig,omitempty"`
+	// +kubebuilder:validation:Optional
+	TenancyConfig *TenancyConfig `json:"tenancyConfig,omitempty"`
 	// AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests.
 	// +kubebuilder:default:=5
-	AsyncForwardWorkerCount uint64 `json:"asyncForwardWorkerCount,omitempty"`
+	// +kubebuilder:validation:Optional
+	AsyncForwardWorkerCount *uint64 `json:"asyncForwardWorkerCount,omitempty"`
 	// StoreLimitsOptions is the configuration for the store API limits options.
-	StoreLimitsOptions StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
+	// +kubebuilder:validation:Optional
+	StoreLimitsOptions *StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
 	// TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
 	// 0s means disabled.
 	// +kubebuilder:default:="0s"
-	TooFarInFutureTimeWindow Duration `json:"tooFarInFutureTimeWindow,omitempty"`
+	// +kubebuilder:validation:Optional
+	TooFarInFutureTimeWindow *Duration `json:"tooFarInFutureTimeWindow,omitempty"`
 }
 
 // TenancyConfig is the configuration for the tenancy options.

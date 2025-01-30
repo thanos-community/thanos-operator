@@ -233,7 +233,7 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name:        hashringTwoName,
 									StorageSize: "100Mi",
-									TenancyConfig: v1alpha1.TenancyConfig{
+									TenancyConfig: &v1alpha1.TenancyConfig{
 										Tenants: []string{
 											"tenant1",
 										},

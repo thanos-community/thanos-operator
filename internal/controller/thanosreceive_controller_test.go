@@ -130,7 +130,7 @@ config:
 								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
-								TenancyConfig: monitoringthanosiov1alpha1.TenancyConfig{
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									Tenants: []string{"test-tenant"},
 								},
 								Replicas: 2,
@@ -155,7 +155,7 @@ config:
 						Name:        hashringName,
 						Labels:      map[string]string{"test": "my-ingester-test"},
 						StorageSize: "100Mi",
-						TenancyConfig: monitoringthanosiov1alpha1.TenancyConfig{
+						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
 						},
 						Replicas: 5,
@@ -198,7 +198,7 @@ config:
 								Name:        hashringName,
 								Labels:      map[string]string{"test": "my-ingester-test"},
 								StorageSize: "100Mi",
-								TenancyConfig: monitoringthanosiov1alpha1.TenancyConfig{
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									Tenants: []string{"test-tenant"},
 								},
 								Replicas: 3,
@@ -387,7 +387,7 @@ config:
 						Name:        updatedHashringName,
 						Labels:      map[string]string{"test": "my-ingester-test"},
 						StorageSize: "100Mi",
-						TenancyConfig: monitoringthanosiov1alpha1.TenancyConfig{
+						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
 						},
 						Replicas: 3,
