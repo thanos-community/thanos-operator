@@ -7276,7 +7276,7 @@ spec:
                   labelsDefaultTimeRange:
                     description: LabelsDefaultTimeRange sets the default time range
                       for label queries
-                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
                   labelsMaxRetries:
                     default: 5
@@ -7286,7 +7286,7 @@ spec:
                     type: integer
                   labelsSplitInterval:
                     description: LabelsSplitInterval sets the split interval for labels
-                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
                   logFormat:
                     default: logfmt
@@ -7306,7 +7306,7 @@ spec:
                   logQueriesLongerThan:
                     description: LogQueriesLongerThan sets the duration threshold
                       for logging long queries
-                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
                   queryLabelSelector:
                     default:
@@ -7414,7 +7414,7 @@ spec:
                   queryRangeSplitInterval:
                     description: QueryRangeSplitInterval sets the split interval for
                       query range
-                    pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                    pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                     type: string
                   replicas:
                     default: 1
