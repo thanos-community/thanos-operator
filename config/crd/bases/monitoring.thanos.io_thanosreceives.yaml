@@ -3885,7 +3885,7 @@ spec:
                           description: |-
                             TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.
                             0s means disabled.
-                          pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                          pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                           type: string
                         tsdbConfig:
                           description: TSDB configuration for the ingestor.
@@ -3894,7 +3894,7 @@ spec:
                               default: 2h
                               description: Retention is the duration for which a particular
                                 TSDB will retain data.
-                              pattern: ^(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
+                              pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
                               type: string
                           required:
                           - retention
