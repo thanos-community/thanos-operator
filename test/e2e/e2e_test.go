@@ -567,12 +567,12 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosStoreSpec{
+						Replicas:     2,
 						CommonFields: v1alpha1.CommonFields{},
 						Labels:       map[string]string{"some-label": "xyz"},
 						ShardingStrategy: v1alpha1.ShardingStrategy{
-							Type:          v1alpha1.Block,
-							Shards:        2,
-							ShardReplicas: 2,
+							Type:   v1alpha1.Block,
+							Shards: 2,
 						},
 						StorageSize: "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{

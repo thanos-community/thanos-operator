@@ -97,12 +97,12 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
+					Replicas:     2,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					Labels:       map[string]string{"some-label": "xyz"},
 					ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
-						Type:          monitoringthanosiov1alpha1.Block,
-						Shards:        3,
-						ShardReplicas: 2,
+						Type:   monitoringthanosiov1alpha1.Block,
+						Shards: 3,
 					},
 					StorageSize: "1Gi",
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{

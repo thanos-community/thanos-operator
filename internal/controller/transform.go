@@ -166,7 +166,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.ShardingStrategy.ShardReplicas, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
 	if in.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{

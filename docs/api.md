@@ -330,7 +330,7 @@ _Appears in:_
 
 
 
-IndexHeaderOptions allows configuration of the Store Gateway index header.
+IndexHeaderConfig allows configuration of the Store Gateway index header.
 
 
 
@@ -559,7 +559,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `type` _[ShardingStrategyType](#shardingstrategytype)_ | Type here is the type of sharding strategy. | block | Enum: [block] <br />Required: \{\} <br /> |
 | `shards` _integer_ | Shards is the number of shards to split the data into. | 1 | Minimum: 1 <br /> |
-| `shardReplicas` _integer_ | ReplicaPerShard is the number of replicas per shard. | 1 | Minimum: 1 <br /> |
 
 
 #### ShardingStrategyType
@@ -1109,6 +1108,7 @@ _Appears in:_
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | Log level for Thanos. |  | Enum: [debug info warn error] <br />Optional: \{\} <br /> |
 | `logFormat` _string_ | Log format for Thanos. | logfmt | Enum: [logfmt json] <br />Optional: \{\} <br /> |
+| `replicas` _integer_ | Replicas is the number of store or store shard replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Store StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
