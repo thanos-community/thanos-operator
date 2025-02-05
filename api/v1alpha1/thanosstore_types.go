@@ -23,6 +23,11 @@ import (
 // ThanosStoreSpec defines the desired state of ThanosStore
 type ThanosStoreSpec struct {
 	CommonFields `json:",inline"`
+	// Replicas is the number of store or store shard replicas.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
+	// +kubebuilder:validation:Required
+	Replicas int32 `json:"replicas,omitempty"`
 	// Labels are additional labels to add to the Store component.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
@@ -101,13 +106,9 @@ type ShardingStrategy struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	Shards int32 `json:"shards,omitempty"`
-	// ReplicaPerShard is the number of replicas per shard.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default=1
-	ShardReplicas int32 `json:"shardReplicas,omitempty"`
 }
 
-// IndexHeaderOptions allows configuration of the Store Gateway index header.
+// IndexHeaderConfig allows configuration of the Store Gateway index header.
 type IndexHeaderConfig struct {
 	// If true, Store Gateway will lazy memory map index-header only once the block is required by a query.
 	// +kubebuilder:validation:Optional

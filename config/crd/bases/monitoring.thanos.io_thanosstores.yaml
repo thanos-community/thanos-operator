@@ -3831,6 +3831,12 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              replicas:
+                default: 1
+                description: Replicas is the number of store or store shard replicas.
+                format: int32
+                minimum: 1
+                type: integer
               resourceRequirements:
                 description: ResourceRequirements for the Thanos component container.
                 properties:
@@ -3894,12 +3900,6 @@ spec:
                 description: ShardingStrategy defines the sharding strategy for the
                   Store Gateways across object storage blocks.
                 properties:
-                  shardReplicas:
-                    default: 1
-                    description: ReplicaPerShard is the number of replicas per shard.
-                    format: int32
-                    minimum: 1
-                    type: integer
                   shards:
                     default: 1
                     description: Shards is the number of shards to split the data
@@ -3948,6 +3948,7 @@ spec:
                 type: string
             required:
             - objectStorageConfig
+            - replicas
             - shardingStrategy
             - storageSize
             type: object
