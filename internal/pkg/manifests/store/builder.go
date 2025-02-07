@@ -371,8 +371,6 @@ func storeArgsFrom(opts Options) []string {
 type BlockConfigOptions struct {
 	// BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.
 	BlockDiscoveryStrategy *string
-	// BlockFilesConcurrency is the number of goroutines to use when to use when
-	BlockFilesConcurrency *int32
 	// BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.
 	BlockMetaFetchConcurrency *int32
 }
@@ -386,9 +384,7 @@ func (bo *BlockConfigOptions) toArgs() []string {
 	if bo.BlockDiscoveryStrategy != nil {
 		args = append(args, fmt.Sprintf("--block-discovery-strategy=%s", *bo.BlockDiscoveryStrategy))
 	}
-	if bo.BlockFilesConcurrency != nil {
-		args = append(args, fmt.Sprintf("--block-files-concurrency=%d", *bo.BlockFilesConcurrency))
-	}
+
 	if bo.BlockMetaFetchConcurrency != nil {
 		args = append(args, fmt.Sprintf("--block-meta-fetch-concurrency=%d", *bo.BlockMetaFetchConcurrency))
 	}

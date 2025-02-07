@@ -386,7 +386,7 @@ func rulerArgs(opts Options) []string {
 	}
 
 	for _, label := range opts.AlertLabelDrop {
-		args = append(args, fmt.Sprintf("---alert.label-drop=%s", label))
+		args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
 	}
 
 	// TODO(saswatamcode): Add some validation.

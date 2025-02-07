@@ -3567,6 +3567,7 @@ spec:
                     description: |-
                       BlockFilesConcurrency is the number of goroutines to use when to use when
                       fetching/uploading block files from object storage.
+                      Only used for Compactor, no-op for store gateway
                     format: int32
                     type: integer
                   blockMetaFetchConcurrency:

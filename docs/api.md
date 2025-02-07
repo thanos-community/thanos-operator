@@ -65,7 +65,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `blockDiscoveryStrategy` _[BlockDiscoveryStrategy](#blockdiscoverystrategy)_ | BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage. | concurrent | Enum: [concurrent recursive] <br /> |
-| `blockFilesConcurrency` _integer_ | BlockFilesConcurrency is the number of goroutines to use when to use when<br />fetching/uploading block files from object storage. | 1 | Optional: \{\} <br /> |
+| `blockFilesConcurrency` _integer_ | BlockFilesConcurrency is the number of goroutines to use when to use when<br />fetching/uploading block files from object storage.<br />Only used for Compactor, no-op for store gateway | 1 | Optional: \{\} <br /> |
 | `blockMetaFetchConcurrency` _integer_ | BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage. | 32 | Optional: \{\} <br /> |
 
 
