@@ -172,8 +172,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						return err
 					}
 
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 14 {
-						return fmt.Errorf("expected 14 args, got %d: %v",
+					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
+						return fmt.Errorf("expected 13 args, got %d: %v",
 							len(deployment.Spec.Template.Spec.Containers[0].Args),
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
@@ -297,9 +297,9 @@ config:
 						return err
 					}
 
-					// If not paused would end up with 15 args.
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 14 {
-						return fmt.Errorf("expected 14 args, got %d: %v",
+					// If not paused would end up with 14 args.
+					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
+						return fmt.Errorf("expected 13 args, got %d: %v",
 							len(deployment.Spec.Template.Spec.Containers[0].Args),
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
