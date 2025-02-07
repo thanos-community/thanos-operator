@@ -193,6 +193,7 @@ type BlockConfig struct {
 	BlockDiscoveryStrategy BlockDiscoveryStrategy `json:"blockDiscoveryStrategy,omitempty"`
 	// BlockFilesConcurrency is the number of goroutines to use when to use when
 	// fetching/uploading block files from object storage.
+	// Only used for Compactor, no-op for store gateway
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
 	BlockFilesConcurrency *int32 `json:"blockFilesConcurrency,omitempty"`

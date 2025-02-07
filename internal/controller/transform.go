@@ -179,7 +179,6 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 	if in.Spec.BlockConfig != nil {
 		blockConfigOpts = &manifestsstore.BlockConfigOptions{
 			BlockDiscoveryStrategy:    ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
-			BlockFilesConcurrency:     in.Spec.BlockConfig.BlockFilesConcurrency,
 			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
 		}
 	}
