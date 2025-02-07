@@ -303,6 +303,7 @@ func commonToOpts(
 		Labels:               labels,
 		Annotations:          annotations,
 		Image:                common.Image,
+		Version:              common.Version,
 		ResourceRequirements: common.ResourceRequirements,
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,

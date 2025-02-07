@@ -258,7 +258,6 @@ func queryArgs(opts Options) []string {
 	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
-		"--web.prefix-header=X-Forwarded-Prefix",
 		fmt.Sprintf("--query.timeout=%s", opts.Timeout),
 		fmt.Sprintf("--query.lookback-delta=%s", opts.LookbackDelta),
 		"--query.auto-downsampling",
