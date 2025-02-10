@@ -24,3 +24,10 @@ resources:
 - thanoscompact_viewer_role.yaml
 - thanosreceive_editor_role.yaml
 - thanosreceive_viewer_role.yaml
+- thanosruler_editor_role.yaml
+- thanosruler_viewer_role.yaml
+- thanosstore_editor_role.yaml
+- thanosstore_viewer_role.yaml
+- thanosquery_editor_role.yaml
+- thanosquery_viewer_role.yaml
+
