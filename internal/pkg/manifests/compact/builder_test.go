@@ -96,6 +96,7 @@ func TestNewStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			compact := NewStatefulSet(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
 			name := tc.opts.GetGeneratedResourceName()
@@ -216,6 +217,7 @@ func TestOptions_GetName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := tt.opts.GetGeneratedResourceName()
 			if result != tt.expected {
 				t.Errorf("expected %s, got %s", tt.expected, result)
