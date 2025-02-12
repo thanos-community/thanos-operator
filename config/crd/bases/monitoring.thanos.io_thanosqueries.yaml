@@ -3551,6 +3551,10 @@ spec:
                   - name
                   type: object
                 type: array
+              baseImage:
+                description: Base container image (without tags) to use for the Thanos
+                  components deployed via operator.
+                type: string
               customStoreLabelSelector:
                 description: |-
                   StoreLabelSelector enables adding additional labels to build a custom label selector
@@ -3638,9 +3642,6 @@ spec:
                 enum:
                 - eager
                 - lazy
-                type: string
-              image:
-                description: Container image to use for the Thanos components.
                 type: string
               imagePullPolicy:
                 default: IfNotPresent
@@ -7234,13 +7235,14 @@ spec:
                       - name
                       type: object
                     type: array
+                  baseImage:
+                    description: Base container image (without tags) to use for the
+                      Thanos components deployed via operator.
+                    type: string
                   compressResponses:
                     default: true
                     description: CompressResponses enables response compression
                     type: boolean
-                  image:
-                    description: Container image to use for the Thanos components.
-                    type: string
                   imagePullPolicy:
                     default: IfNotPresent
                     description: |-
@@ -7482,7 +7484,7 @@ spec:
                     type: object
                   version:
                     description: |-
-                      Version of Thanos to be deployed.
+                      Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                       If not specified, the operator assumes the latest upstream version of
                       Thanos available at the time when the version of the operator was released.
                     type: string
@@ -7588,7 +7590,7 @@ spec:
                 type: object
               version:
                 description: |-
-                  Version of Thanos to be deployed.
+                  Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string

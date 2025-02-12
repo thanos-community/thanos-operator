@@ -142,8 +142,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -357,8 +357,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -433,8 +433,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -490,8 +490,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -725,8 +725,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -826,8 +826,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -1000,8 +1000,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
@@ -1101,8 +1101,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Version of Thanos to be deployed.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
-| `image` _string_ | Container image to use for the Thanos components. |  | Optional: \{\} <br /> |
+| `version` _string_ | Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released. |  | Optional: \{\} <br /> |
+| `baseImage` _string_ | Base container image (without tags) to use for the Thanos components deployed via operator. |  | Optional: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core)_ | Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details. | IfNotPresent | Enum: [Always Never IfNotPresent] <br />Optional: \{\} <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core) array_ | An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod |  | Optional: \{\} <br /> |
 | `resourceRequirements` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core)_ | ResourceRequirements for the Thanos component container. |  | Optional: \{\} <br /> |
