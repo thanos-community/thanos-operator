@@ -3641,6 +3641,10 @@ spec:
                             workers processing forwarding of remote-write requests.
                           format: int64
                           type: integer
+                        baseImage:
+                          description: Base container image (without tags) to use
+                            for the Thanos components deployed via operator.
+                          type: string
                         externalLabels:
                           additionalProperties:
                             type: string
@@ -3650,9 +3654,6 @@ spec:
                             blocks.
                           minProperties: 1
                           type: object
-                        image:
-                          description: Container image to use for the Thanos components.
-                          type: string
                         imagePullPolicy:
                           default: IfNotPresent
                           description: |-
@@ -3901,7 +3902,7 @@ spec:
                           type: object
                         version:
                           description: |-
-                            Version of Thanos to be deployed.
+                            Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                             If not specified, the operator assumes the latest upstream version of
                             Thanos available at the time when the version of the operator was released.
                           type: string
@@ -7459,6 +7460,10 @@ spec:
                       - name
                       type: object
                     type: array
+                  baseImage:
+                    description: Base container image (without tags) to use for the
+                      Thanos components deployed via operator.
+                    type: string
                   externalLabels:
                     additionalProperties:
                       type: string
@@ -7468,9 +7473,6 @@ spec:
                       the ingesters.
                     minProperties: 1
                     type: object
-                  image:
-                    description: Container image to use for the Thanos components.
-                    type: string
                   imagePullPolicy:
                     default: IfNotPresent
                     description: |-
@@ -7602,7 +7604,7 @@ spec:
                     type: object
                   version:
                     description: |-
-                      Version of Thanos to be deployed.
+                      Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                       If not specified, the operator assumes the latest upstream version of
                       Thanos available at the time when the version of the operator was released.
                     type: string

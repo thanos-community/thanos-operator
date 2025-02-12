@@ -3551,6 +3551,10 @@ spec:
                   - name
                   type: object
                 type: array
+              baseImage:
+                description: Base container image (without tags) to use for the Thanos
+                  components deployed via operator.
+                type: string
               blockConfig:
                 description: BlockConfig defines settings for block handling.
                 properties:
@@ -3663,9 +3667,6 @@ spec:
                   If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json
                   file to mark after what duration the block should be deleted rather than deleting the block straight away.
                 pattern: ^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$
-                type: string
-              image:
-                description: Container image to use for the Thanos components.
                 type: string
               imagePullPolicy:
                 default: IfNotPresent
@@ -3943,7 +3944,7 @@ spec:
                 type: object
               version:
                 description: |-
-                  Version of Thanos to be deployed.
+                  Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string

@@ -3563,6 +3563,10 @@ spec:
                   'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.
                 pattern: ^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$
                 type: string
+              baseImage:
+                description: Base container image (without tags) to use for the Thanos
+                  components deployed via operator.
+                type: string
               defaultObjectStorageConfig:
                 description: ObjectStorageConfig is the secret that contains the object
                   storage configuration for Ruler to upload blocks.
@@ -3633,9 +3637,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              image:
-                description: Container image to use for the Thanos components.
-                type: string
               imagePullPolicy:
                 default: IfNotPresent
                 description: |-
@@ -3926,7 +3927,7 @@ spec:
                 type: string
               version:
                 description: |-
-                  Version of Thanos to be deployed.
+                  Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
                   If not specified, the operator assumes the latest upstream version of
                   Thanos available at the time when the version of the operator was released.
                 type: string

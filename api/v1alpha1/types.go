@@ -61,14 +61,14 @@ type TSDBConfig struct {
 // +kubebuilder:validation:Optional
 // +k8s:deepcopy-gen=true
 type CommonFields struct {
-	// Version of Thanos to be deployed.
+	// Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
 	// If not specified, the operator assumes the latest upstream version of
 	// Thanos available at the time when the version of the operator was released.
 	// +kubebuilder:validation:Optional
 	Version *string `json:"version,omitempty"`
-	// Container image to use for the Thanos components.
+	// Base container image (without tags) to use for the Thanos components deployed via operator.
 	// +kubebuilder:validation:Optional
-	Image *string `json:"image,omitempty"`
+	Image *string `json:"baseImage,omitempty"`
 	// Image pull policy for the Thanos containers.
 	// See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
