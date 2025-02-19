@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -32,7 +31,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -132,14 +130,16 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(store.Spec.FeatureGates) {
-		objs := make([]client.Object, len(expectShards))
-		for i, shard := range expectShards {
-			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: shard, Namespace: store.GetNamespace()}}
+	var featureGatedObjs []client.Object
+	for _, resource := range expectShards {
+		builder := manifestsstore.Options{Options: manifests.Options{Owner: resource, Namespace: store.GetNamespace()}}
+		if objs := getFeatureGatedObjectsToDelete(builder, store.Spec.FeatureGates); len(objs) > 0 {
+			featureGatedObjs = append(featureGatedObjs, objs...)
 		}
-
-		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
-			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
+	}
+	if len(featureGatedObjs) > 0 {
+		if errCount = r.handler.DeleteResource(ctx, featureGatedObjs); errCount > 0 {
+			return fmt.Errorf("failed to delete %d feature gated resources for the compactor shard(s)", errCount)
 		}
 	}
 	return nil

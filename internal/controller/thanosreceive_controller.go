@@ -20,10 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
 	"github.com/go-logr/logr"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -200,13 +197,16 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(receiver.Spec.FeatureGates) {
-		smObjs := make([]client.Object, len(expectIngesters)+1)
-		for i, resource := range append(expectIngesters, routerOpts.GetGeneratedResourceName()) {
-			smObjs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: receiver.GetNamespace()}}
+	var featureGatedObjs []client.Object
+	for _, resource := range expectIngesters {
+		builder := manifestreceive.IngesterOptions{Options: manifests.Options{Owner: resource, Namespace: receiver.GetNamespace()}}
+		if objs := getFeatureGatedObjectsToDelete(builder, receiver.Spec.FeatureGates); len(objs) > 0 {
+			featureGatedObjs = append(featureGatedObjs, objs...)
 		}
-		if errCount = r.handler.DeleteResource(ctx, smObjs); errCount > 0 {
-			return fmt.Errorf("failed to delete %d ServiceMonitors for the receiver", errCount)
+	}
+	if len(featureGatedObjs) > 0 {
+		if errCount = r.handler.DeleteResource(ctx, featureGatedObjs); errCount > 0 {
+			return fmt.Errorf("failed to delete %d feature gated resources for the receive ingester", errCount)
 		}
 	}
 

@@ -137,23 +137,17 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontendObjs...)
 	}
 
-	var errCount int
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(query.Spec.FeatureGates) {
-		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName(),
-				Namespace: query.GetNamespace(),
-			},
-		},
-		}); errCount > 0 {
+	builder := manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}
+	if objs := getFeatureGatedObjectsToDelete(builder, query.Spec.FeatureGates); len(objs) > 0 {
+		if errCount := r.handler.DeleteResource(ctx, objs); errCount > 0 {
 			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
 		}
 	}
-
+	
 	return nil
 }
 

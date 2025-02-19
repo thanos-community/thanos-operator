@@ -74,6 +74,11 @@ func (opts Options) Build() []client.Object {
 	return objs
 }
 
+// GetNamespace returns the namespace for the Thanos Compact shard.
+func (opts Options) GetNamespace() string {
+	return opts.Namespace
+}
+
 // GetGeneratedResourceName returns the generated name for the Thanos Compact or shard.
 // If no sharding is configured, the name will be generated from the Options.Owner.
 // If sharding is configured, the name will be generated from the Options.Owner, ShardName, and ShardIndex.
