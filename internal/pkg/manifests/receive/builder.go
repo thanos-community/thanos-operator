@@ -102,6 +102,11 @@ func (opts IngesterOptions) Build() []client.Object {
 	return objs
 }
 
+// GetNamespace returns the namespace for the Thanos Receive ingester component.
+func (opts IngesterOptions) GetNamespace() string {
+	return opts.Namespace
+}
+
 func (opts IngesterOptions) GetGeneratedResourceName() string {
 	name := fmt.Sprintf("%s-%s-%s", IngestComponentName, opts.Owner, opts.HashringName)
 	return manifests.ValidateAndSanitizeResourceName(name)
@@ -127,6 +132,11 @@ func (opts RouterOptions) Build() []client.Object {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
+}
+
+// GetNamespace returns the namespace for the Thanos Receive router component.
+func (opts RouterOptions) GetNamespace() string {
+	return opts.Namespace
 }
 
 func (opts RouterOptions) GetGeneratedResourceName() string {

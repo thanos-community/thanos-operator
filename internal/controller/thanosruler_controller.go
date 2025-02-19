@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -132,14 +131,10 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
-	if !manifests.HasServiceMonitorEnabled(ruler.Spec.FeatureGates) {
-		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      RulerNameFromParent(ruler.GetName()),
-				Namespace: ruler.GetNamespace(),
-			},
-		},
-		}); errCount > 0 {
+	
+	builder := manifestruler.Options{Options: manifests.Options{Owner: RulerNameFromParent(ruler.GetName()), Namespace: ruler.GetNamespace()}}
+	if objs := getFeatureGatedObjectsToDelete(builder, ruler.Spec.FeatureGates); len(objs) > 0 {
+		if errCount := r.handler.DeleteResource(ctx, objs); errCount > 0 {
 			return fmt.Errorf("failed to delete %d resources for the ruler", errCount)
 		}
 	}

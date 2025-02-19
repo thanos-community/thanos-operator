@@ -1,6 +1,8 @@
 package manifests
 
 import (
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -57,4 +59,8 @@ func (opts PodDisruptionBudgetOptions) getMinAndMax() (min *intstr.IntOrString, 
 	maxValue := intstr.FromInt32(*opts.MaxUnavailable)
 	max = &maxValue
 	return min, max
+}
+
+func HasPodDisruptionBudgetEnabled(in *v1alpha1.FeatureGates) bool {
+	return in != nil && in.PodDisruptionBudgetConfig != nil && *in.PodDisruptionBudgetConfig.Enable
 }

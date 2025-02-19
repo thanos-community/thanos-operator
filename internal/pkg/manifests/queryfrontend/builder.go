@@ -59,6 +59,11 @@ func (opts Options) Build() []client.Object {
 	return objs
 }
 
+// GetNamespace returns the namespace for the Thanos Query Frontend component.
+func (opts Options) GetNamespace() string {
+	return opts.Namespace
+}
+
 func (opts Options) GetGeneratedResourceName() string {
 	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
 	return manifests.ValidateAndSanitizeResourceName(name)
