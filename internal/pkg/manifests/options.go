@@ -39,6 +39,8 @@ type Buildable interface {
 	// - InstanceLabel
 	// - OwnerLabel
 	GetSelectorLabels() map[string]string
+	// Valid returns an error if the object is not valid.
+	Valid() error
 }
 
 // GetLabelSelectorForOwner is a convenience function to enable building a ListOption for the Owner label.

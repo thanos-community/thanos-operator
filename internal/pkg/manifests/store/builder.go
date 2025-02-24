@@ -76,6 +76,13 @@ func (opts Options) Build() []client.Object {
 	return objs
 }
 
+func (opts Options) Valid() error {
+	if opts.Owner == "" {
+		return fmt.Errorf("owner cannot be empty")
+	}
+	return nil
+}
+
 // GetGeneratedResourceName returns the name of the Thanos Store component.
 // If a shard index is provided, the name will be suffixed with the shard index.
 func (opts Options) GetGeneratedResourceName() string {

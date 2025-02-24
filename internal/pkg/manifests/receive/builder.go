@@ -102,6 +102,16 @@ func (opts IngesterOptions) Build() []client.Object {
 	return objs
 }
 
+func (opts IngesterOptions) Valid() error {
+	if opts.Owner == "" {
+		return fmt.Errorf("owner cannot be empty")
+	}
+	if opts.HashringName == "" {
+		return fmt.Errorf("hashring name cannot be empty")
+	}
+	return nil
+}
+
 func (opts IngesterOptions) GetGeneratedResourceName() string {
 	name := fmt.Sprintf("%s-%s-%s", IngestComponentName, opts.Owner, opts.HashringName)
 	return manifests.ValidateAndSanitizeResourceName(name)
@@ -127,6 +137,13 @@ func (opts RouterOptions) Build() []client.Object {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
+}
+
+func (opts RouterOptions) Valid() error {
+	if opts.Owner == "" {
+		return fmt.Errorf("owner cannot be empty")
+	}
+	return nil
 }
 
 func (opts RouterOptions) GetGeneratedResourceName() string {
