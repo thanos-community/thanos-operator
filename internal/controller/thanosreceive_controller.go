@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -200,14 +199,9 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(receiver.Spec.FeatureGates) {
-		smObjs := make([]client.Object, len(expectIngesters)+1)
-		for i, resource := range append(expectIngesters, routerOpts.GetGeneratedResourceName()) {
-			smObjs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: receiver.GetNamespace()}}
-		}
-		if errCount = r.handler.DeleteResource(ctx, smObjs); errCount > 0 {
-			return fmt.Errorf("failed to delete %d ServiceMonitors for the receiver", errCount)
-		}
+	if errCount = r.handler.DeleteResource(ctx,
+		getDisabledFeatureGatedResources(receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
+		return fmt.Errorf("failed to delete %d feature gated resources for the receiver", errCount)
 	}
 
 	return nil

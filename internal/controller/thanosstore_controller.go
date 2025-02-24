@@ -32,7 +32,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -132,16 +131,11 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(store.Spec.FeatureGates) {
-		objs := make([]client.Object, len(expectShards))
-		for i, shard := range expectShards {
-			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: shard, Namespace: store.GetNamespace()}}
-		}
-
-		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
-			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
-		}
+	if errCount = r.handler.DeleteResource(ctx,
+		getDisabledFeatureGatedResources(store.Spec.FeatureGates, expectShards, store.GetNamespace())); errCount > 0 {
+		return fmt.Errorf("failed to delete %d feature gated resources for the store", errCount)
 	}
+
 	return nil
 }
 

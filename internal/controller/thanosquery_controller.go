@@ -142,16 +142,9 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(query.Spec.FeatureGates) {
-		if errCount = r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName(),
-				Namespace: query.GetNamespace(),
-			},
-		},
-		}); errCount > 0 {
-			return fmt.Errorf("failed to delete %d resources for the querier and query frontend", errCount)
-		}
+	if errCount = r.handler.DeleteResource(ctx,
+		getDisabledFeatureGatedResources(query.Spec.FeatureGates, []string{query.GetName()}, query.GetNamespace())); errCount > 0 {
+		return fmt.Errorf("failed to delete %d feature gated resources for the query", errCount)
 	}
 
 	return nil

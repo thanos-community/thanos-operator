@@ -132,16 +132,10 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
-	if !manifests.HasServiceMonitorEnabled(ruler.Spec.FeatureGates) {
-		if errCount := r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      RulerNameFromParent(ruler.GetName()),
-				Namespace: ruler.GetNamespace(),
-			},
-		},
-		}); errCount > 0 {
-			return fmt.Errorf("failed to delete %d resources for the ruler", errCount)
-		}
+
+	if errCount := r.handler.DeleteResource(ctx,
+		getDisabledFeatureGatedResources(ruler.Spec.FeatureGates, []string{ruler.GetName()}, ruler.GetNamespace())); errCount > 0 {
+		return fmt.Errorf("failed to delete %d feature gated resources for the ruler", errCount)
 	}
 
 	return nil

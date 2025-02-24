@@ -79,3 +79,7 @@ func HasServiceMonitorEnabled(in *v1alpha1.FeatureGates) bool {
 func HasPrometheusRuleEnabled(in *v1alpha1.FeatureGates) bool {
 	return in != nil && in.PrometheusRuleEnabled != nil && *in.PrometheusRuleEnabled
 }
+
+func HasPodDisruptionBudgetEnabled(in *v1alpha1.FeatureGates) bool {
+	return in != nil && in.PodDisruptionBudgetConfig != nil && *in.PodDisruptionBudgetConfig.Enable
+}

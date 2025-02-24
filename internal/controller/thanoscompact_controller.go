@@ -22,8 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -32,7 +30,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -144,14 +141,9 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
-	if !manifests.HasServiceMonitorEnabled(compact.Spec.FeatureGates) {
-		objs := make([]client.Object, len(expectResources))
-		for i, resource := range expectResources {
-			objs[i] = &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: compact.GetNamespace()}}
-		}
-		if errCount = r.handler.DeleteResource(ctx, objs); errCount > 0 {
-			return fmt.Errorf("failed to delete %d ServiceMonitors for the store shard(s)", errCount)
-		}
+	if errCount = r.handler.DeleteResource(ctx,
+		getDisabledFeatureGatedResources(compact.Spec.FeatureGates, expectResources, compact.GetNamespace())); errCount > 0 {
+		return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
 	}
 
 	return nil
