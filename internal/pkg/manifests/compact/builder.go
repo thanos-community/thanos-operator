@@ -74,6 +74,13 @@ func (opts Options) Build() []client.Object {
 	return objs
 }
 
+func (opts Options) Valid() error {
+	if opts.getOwner() == "" {
+		return fmt.Errorf("owner cannot be empty")
+	}
+	return nil
+}
+
 // GetGeneratedResourceName returns the generated name for the Thanos Compact or shard.
 // If no sharding is configured, the name will be generated from the Options.Owner.
 // If sharding is configured, the name will be generated from the Options.Owner, ShardName, and ShardIndex.

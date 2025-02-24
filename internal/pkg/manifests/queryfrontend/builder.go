@@ -59,6 +59,13 @@ func (opts Options) Build() []client.Object {
 	return objs
 }
 
+func (opts Options) Valid() error {
+	if opts.getOwner() == "" {
+		return fmt.Errorf("owner cannot be empty")
+	}
+	return nil
+}
+
 func (opts Options) GetGeneratedResourceName() string {
 	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
 	return manifests.ValidateAndSanitizeResourceName(name)

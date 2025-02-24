@@ -50,7 +50,11 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery) manifestquery.Options {
 
 // QueryNameFromParent returns the name of the Thanos Query component.
 func QueryNameFromParent(resourceName string) string {
-	return manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+	opts := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}
+	if err := opts.Valid(); err != nil {
+		panic("invalid query options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
@@ -77,7 +81,11 @@ func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery) manifestqueryf
 
 // QueryFrontendNameFromParent returns the name of the Thanos Query Frontend component.
 func QueryFrontendNameFromParent(resourceName string) string {
-	return manifestqueryfrontend.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+	opts := manifestqueryfrontend.Options{Options: manifests.Options{Owner: resourceName}}
+	if err := opts.Valid(); err != nil {
+		panic("invalid query frontend options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
@@ -97,7 +105,11 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler) manifestruler.Options {
 
 // RulerNameFromParent returns the name of the Thanos Ruler component.
 func RulerNameFromParent(resourceName string) string {
-	return manifestruler.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+	opts := manifestruler.Options{Options: manifests.Options{Owner: resourceName}}
+	if err := opts.Valid(); err != nil {
+		panic("invalid ruler options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec) manifestreceive.IngesterOptions {
@@ -156,12 +168,20 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.
 
 // ReceiveIngesterNameFromParent returns the name of the Thanos Receive Ingester component.
 func ReceiveIngesterNameFromParent(resourceName, hashringName string) string {
-	return manifestreceive.IngesterOptions{Options: manifests.Options{Owner: resourceName}, HashringName: hashringName}.GetGeneratedResourceName()
+	opts := manifestreceive.IngesterOptions{Options: manifests.Options{Owner: resourceName}, HashringName: hashringName}
+	if err := opts.Valid(); err != nil {
+		panic("invalid ingester options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 // ReceiveRouterNameFromParent returns the name of the Thanos Receive Router component.
 func ReceiveRouterNameFromParent(resourceName string) string {
-	return manifestreceive.RouterOptions{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+	opts := manifestreceive.RouterOptions{Options: manifests.Options{Owner: resourceName}}
+	if err := opts.Valid(); err != nil {
+		panic("invalid router options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
@@ -278,12 +298,20 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 
 // CompactNameFromParent returns the name of the Thanos Compact component.
 func CompactNameFromParent(resourceName string) string {
-	return manifestscompact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+	opts := manifestscompact.Options{Options: manifests.Options{Owner: resourceName}}
+	if err := opts.Valid(); err != nil {
+		panic("invalid compact options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 // StoreNameFromParent returns the name of the Thanos Store component.
 func StoreNameFromParent(resourceName string, index *int32) string {
-	return manifestsstore.Options{Options: manifests.Options{Owner: resourceName}, ShardIndex: index}.GetGeneratedResourceName()
+	opts := manifestsstore.Options{Options: manifests.Options{Owner: resourceName}, ShardIndex: index}
+	if err := opts.Valid(); err != nil {
+		panic("invalid store options")
+	}
+	return opts.GetGeneratedResourceName()
 }
 
 func commonToOpts(
