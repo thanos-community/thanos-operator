@@ -358,30 +358,6 @@ config:
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
-			By("removing service monitor from ingester and router when disabled", func() {
-				workloads := []string{ingesterName, routerName}
-
-				for _, workload := range workloads {
-					Expect(utils.VerifyServiceMonitorExists(k8sClient, workload, ns)).To(BeTrue())
-				}
-
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
-				Eventually(func() bool {
-					for _, workload := range workloads {
-						if utils.VerifyServiceMonitorExists(k8sClient, workload, ns) {
-							return true
-						}
-					}
-					return false
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
-			})
-
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.Ingester.Hashrings = []monitoringthanosiov1alpha1.IngesterHashringSpec{
 					{

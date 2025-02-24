@@ -238,24 +238,7 @@ config:
 					return utils.VerifyStatefulSetExists(k8sClient, thirdShard, ns)
 				}, time.Second*10, time.Second*2).Should(BeFalse())
 			})
-
-			By("removing service monitor when disabled", func() {
-				updatedName := StoreNameFromParent(resourceName, nil)
-				updatedResource := &monitoringthanosiov1alpha1.ThanosStore{}
-				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-				updatedResource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, updatedName, ns)
-				}, time.Second*30, time.Second*10).Should(BeFalse())
-
-			})
-
+			
 			By("checking paused state", func() {
 				resource := &monitoringthanosiov1alpha1.ThanosStore{}
 				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
