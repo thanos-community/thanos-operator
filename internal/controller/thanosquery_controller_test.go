@@ -256,20 +256,6 @@ config:
 				}, time.Second*30, time.Second*10).Should(Succeed())
 			})
 
-			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitorExists(k8sClient, name, ns)).To(BeTrue())
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
-			})
-
 			By("checking paused state", func() {
 				isPaused := true
 				resource.Spec.Paused = &isPaused

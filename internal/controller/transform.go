@@ -228,6 +228,8 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	opts := commonToOpts(&in, 1, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional)
+	// we always set nil for compactor since it should run as single pod
+	opts.PodDisruptionConfig = nil
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.Spec.DownsamplingConfig == nil {
@@ -336,16 +338,8 @@ func commonToOpts(
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOpts(featureGates, labels),
-		PodDisruptionConfig:  getPodDisruptionBudget(replicas),
+		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(featureGates),
 	}
-}
-
-// getPodDisruptionBudget returns a PodDisruptionBudgetOptions if replicas is greater than 1 or nil otherwise.
-func getPodDisruptionBudget(replicas int32) *manifests.PodDisruptionBudgetOptions {
-	if replicas > 1 {
-		return &manifests.PodDisruptionBudgetOptions{}
-	}
-	return nil
 }
 
 func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
@@ -375,6 +369,28 @@ func serviceMonitorConfigToOpts(in *v1alpha1.FeatureGates, labels map[string]str
 	return manifests.ServiceMonitorConfig{
 		Enabled: *sm.Enable,
 		Labels:  manifests.MergeLabels(sm.Labels, labels),
+	}
+}
+
+func podDisruptionBudgetConfigToOpts(in *v1alpha1.FeatureGates) *manifests.PodDisruptionBudgetOptions {
+	if in == nil || in.PodDisruptionBudgetConfig == nil {
+		return nil
+	}
+
+	if in.PodDisruptionBudgetConfig.Enable == nil || !*in.PodDisruptionBudgetConfig.Enable {
+		return nil
+	}
+
+	// if enabled but no other config provided we set the default value of maxUnavailable to 1
+	if in.PodDisruptionBudgetConfig.MaxUnavailable == nil && in.PodDisruptionBudgetConfig.MinAvailable == nil {
+		return &manifests.PodDisruptionBudgetOptions{
+			MaxUnavailable: ptr.To(int32(1)),
+		}
+	}
+
+	return &manifests.PodDisruptionBudgetOptions{
+		MinAvailable:   in.PodDisruptionBudgetConfig.MinAvailable,
+		MaxUnavailable: in.PodDisruptionBudgetConfig.MaxUnavailable,
 	}
 }
 
