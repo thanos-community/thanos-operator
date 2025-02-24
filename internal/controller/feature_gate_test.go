@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	"os"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
+	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +21,8 @@ import (
 
 var _ = Describe("ServiceMonitor FeatureGate", Ordered, func() {
 	const (
-		ns = "feature-gate-service-monitor-test"
+		ns           = "feature-gate-service-monitor-test"
+		resourceName = "test-resource"
 	)
 
 	BeforeAll(func() {
@@ -61,14 +62,14 @@ config:
 	})
 
 	Context("When reconciling a ThanosCompact", func() {
-		resourceName := "test-compact-resource"
+		compactResourceName := "test-compact-resource"
 		shardName := "test-shard"
 
 		shardOne := compact.Options{
-			Options:   manifests.Options{Owner: resourceName},
+			Options:   manifests.Options{Owner: compactResourceName},
 			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetGeneratedResourceName()
 		shardTwo := compact.Options{
-			Options:   manifests.Options{Owner: resourceName},
+			Options:   manifests.Options{Owner: compactResourceName},
 			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetGeneratedResourceName()
 
 		It("should reconcile correctly", func() {
@@ -78,7 +79,7 @@ config:
 
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      resourceName,
+					Name:      compactResourceName,
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
@@ -137,15 +138,15 @@ config:
 	})
 
 	Context("When reconciling a ThanosQuery", func() {
-		resourceName := "test-resource"
+		queryResourceName := resourceName
 		It("should reconcile correctly", func() {
 			if os.Getenv("EXCLUDE_QUERY") == skipValue {
 				Skip("Skipping ThanosQuery controller tests")
 			}
-			name := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
+			name := manifestquery.Options{Options: manifests.Options{Owner: queryResourceName}}.GetGeneratedResourceName()
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      resourceName,
+					Name:      queryResourceName,
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
@@ -176,17 +177,17 @@ config:
 	})
 
 	Context("When reconciling a ThanosReceive", func() {
-		resourceName := "test-resource"
+		receiveResourceName := resourceName
 		hashringName := "test-hashring"
-		routerName := ReceiveRouterNameFromParent(resourceName)
-		ingesterName := ReceiveIngesterNameFromParent(resourceName, hashringName)
+		routerName := ReceiveRouterNameFromParent(receiveResourceName)
+		ingesterName := ReceiveIngesterNameFromParent(receiveResourceName, hashringName)
 		It("should reconcile correctly", func() {
 			if os.Getenv("EXCLUDE_RECEIVE") == skipValue {
 				Skip("Skipping ThanosReceive controller tests")
 			}
 			resource := &monitoringthanosiov1alpha1.ThanosReceive{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      resourceName,
+					Name:      receiveResourceName,
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
@@ -254,7 +255,7 @@ config:
 	})
 
 	Context("When reconciling a ThanosRuler", func() {
-		resourceName := "test-resource"
+		rulerResourceName := resourceName
 		It("should reconcile correctly", func() {
 			if os.Getenv("EXCLUDE_RULER") == skipValue {
 				Skip("Skipping ThanosRuler controller tests")
@@ -262,7 +263,7 @@ config:
 
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      resourceName,
+					Name:      rulerResourceName,
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
@@ -287,7 +288,7 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)
+					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
 				}).Should(BeTrue())
 			})
 
@@ -295,21 +296,21 @@ config:
 				resource.Spec.FeatureGates.ServiceMonitorConfig.Enable = ptr.To(false)
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)
+					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
 				}, time.Minute*1, time.Second*10).Should(BeFalse())
 			})
 		})
 
 		Context("When reconciling a ThanosStore", func() {
-			resourceName := "test-resource"
+			storeResourceName := resourceName
 			It("should reconcile correctly", func() {
 				if os.Getenv("EXCLUDE_STORE") == skipValue {
 					Skip("Skipping ThanosStore controller tests")
 				}
-				firstShard := StoreNameFromParent(resourceName, ptr.To(int32(0)))
+				firstShard := StoreNameFromParent(storeResourceName, ptr.To(int32(0)))
 				resource := &monitoringthanosiov1alpha1.ThanosStore{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
+						Name:      storeResourceName,
 						Namespace: ns,
 					},
 					Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
@@ -338,7 +339,7 @@ config:
 				})
 
 				By("removing service monitor when disabled", func() {
-					name := StoreNameFromParent(resourceName, nil)
+					name := StoreNameFromParent(storeResourceName, nil)
 					resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 						ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
 							Enable: ptr.To(false),

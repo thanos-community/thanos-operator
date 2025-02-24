@@ -183,7 +183,7 @@ config:
 					return len(statefulSet.Spec.Template.Spec.Containers) == 2
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
-			
+
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.ShardingConfig = nil
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())

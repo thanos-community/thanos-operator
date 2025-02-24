@@ -307,6 +307,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `serviceMonitor` _[ServiceMonitorConfig](#servicemonitorconfig)_ | ServiceMonitorConfig is the configuration for the ServiceMonitor.<br />This setting requires the feature gate for ServiceMonitor management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 | `prometheusRuleEnabled` _boolean_ | PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.<br />This setting is only applicable to ThanosRuler CRD, will be ignored for other components. | true | Optional: \{\} <br /> |
+| `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
 #### InMemoryCacheConfig
@@ -418,6 +419,24 @@ _Appears in:_
 - [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
 
+
+
+#### PodDisruptionBudgetConfig
+
+
+
+PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
+
+
+
+_Appears in:_
+- [FeatureGates](#featuregates)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enable` _boolean_ | Enabled enables the creation of a PodDisruptionBudget for the Thanos component. |  | Optional: \{\} <br /> |
+| `maxUnavailable` _integer_ | MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.<br />If neither MaxUnavailable nor MinAvailable is specified, the default is 1. |  | Optional: \{\} <br /> |
+| `minAvailable` _integer_ | MinAvailable is the minimum number of pods that must still be available during the disruption. |  | Optional: \{\} <br /> |
 
 
 #### QueryFrontendSpec
