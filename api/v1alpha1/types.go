@@ -134,6 +134,11 @@ type FeatureGates struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=true
 	PrometheusRuleEnabled *bool `json:"prometheusRuleEnabled,omitempty"`
+	// PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
+	// This setting requires the feature gate for PodDisruptionBudget management to be enabled.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={enable: true}
+	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudget,omitempty"`
 }
 
 // ServiceMonitorConfig is the configuration for the ServiceMonitor.
@@ -145,6 +150,20 @@ type ServiceMonitorConfig struct {
 	// Labels to add to the ServiceMonitor.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
+type PodDisruptionBudgetConfig struct {
+	// Enabled enables the creation of a PodDisruptionBudget for the Thanos component.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.
+	// If neither MaxUnavailable nor MinAvailable is specified, the default is 1.
+	// +kubebuilder:validation:Optional
+	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
+	// MinAvailable is the minimum number of pods that must still be available during the disruption.
+	// +kubebuilder:validation:Optional
+	MinAvailable *int32 `json:"minAvailable,omitempty"`
 }
 
 func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {

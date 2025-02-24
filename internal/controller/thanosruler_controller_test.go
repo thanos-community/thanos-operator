@@ -35,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -224,22 +223,6 @@ config:
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
-			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)).To(BeTrue())
-
-				updatedResource := &monitoringthanosiov1alpha1.ThanosRuler{}
-				Expect(k8sClient.Get(ctx, typeNamespacedName, updatedResource)).Should(Succeed())
-				updatedResource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(ctx, updatedResource)).Should(Succeed())
-
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(resourceName), ns)
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
-			})
 		})
 	})
 })

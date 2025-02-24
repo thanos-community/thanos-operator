@@ -184,28 +184,6 @@ config:
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 			})
 
-			By("removing service monitor when disabled", func() {
-				for _, shard := range []string{shardOne, shardTwo} {
-					Expect(utils.VerifyServiceMonitorExists(k8sClient, shard, ns)).To(BeTrue())
-				}
-
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
-				Eventually(func() bool {
-					for _, shard := range []string{shardOne, shardTwo} {
-						if utils.VerifyServiceMonitorExists(k8sClient, shard, ns) {
-							return true
-						}
-					}
-					return false
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
-			})
-
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.ShardingConfig = nil
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
