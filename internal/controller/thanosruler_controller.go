@@ -134,7 +134,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	}
 
 	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(ruler.Spec.FeatureGates, []string{ruler.GetName()}, ruler.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(ruler.Spec.FeatureGates, []string{RulerNameFromParent(ruler.GetName())}, ruler.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the ruler", errCount)
 	}
 

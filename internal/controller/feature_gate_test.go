@@ -19,9 +19,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var _ = Describe("ServiceMonitor FeatureGate", Ordered, func() {
+var _ = Describe("ServiceMonitor/PDB FeatureGate", Ordered, func() {
 	const (
-		ns           = "feature-gate-service-monitor-test"
+		ns           = "feature-gate-test"
 		resourceName = "test-resource"
 	)
 
@@ -113,7 +113,7 @@ config:
 						}
 					}
 					return false
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}).Should(BeTrue())
 
 			})
 
@@ -124,7 +124,6 @@ config:
 					},
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-
 				Eventually(func() bool {
 					for _, shard := range []string{shardOne, shardTwo} {
 						if utils.VerifyServiceMonitorExists(k8sClient, shard, ns) {
@@ -132,7 +131,7 @@ config:
 						}
 					}
 					return false
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
+				}).Should(BeFalse())
 			})
 		})
 	})
@@ -154,15 +153,15 @@ config:
 					ReplicaLabels: []string{"replica"},
 				},
 			}
+			Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
 			By("creating the service monitor when enabled", func() {
-				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}).Should(BeTrue())
 			})
 
 			By("removing service monitor when disabled", func() {
-				Expect(utils.VerifyServiceMonitorExists(k8sClient, name, ns)).To(BeTrue())
 				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
 						Enable: ptr.To(false),
@@ -171,8 +170,27 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
+				}).Should(BeFalse())
 			})
+
+			By("creating the PDB when enabled", func() {
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
+				}).Should(BeTrue())
+			})
+
+			By("removing PDB when disabled", func() {
+				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
+					PodDisruptionBudgetConfig: &monitoringthanosiov1alpha1.PodDisruptionBudgetConfig{
+						Enable: ptr.To(false),
+					},
+				}
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
+				}).Should(BeFalse())
+			})
+
 		})
 	})
 
@@ -216,11 +234,10 @@ config:
 					},
 				},
 			}
+			Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+			workloads := []string{ingesterName, routerName}
 
 			By("creating service monitor for ingester and router when enabled", func() {
-				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
-
-				workloads := []string{ingesterName, routerName}
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, workload, ns)
@@ -229,27 +246,39 @@ config:
 			})
 
 			By("removing service monitor from ingester and router when disabled", func() {
-				workloads := []string{ingesterName, routerName}
-
-				for _, workload := range workloads {
-					Expect(utils.VerifyServiceMonitorExists(k8sClient, workload, ns)).To(BeTrue())
-				}
-
 				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
 					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
 						Enable: ptr.To(false),
 					},
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				for _, workload := range workloads {
+					Eventually(func() bool {
+						return utils.VerifyServiceMonitorExists(k8sClient, workload, ns)
+					}).Should(BeFalse())
+				}
+			})
 
-				Eventually(func() bool {
-					for _, workload := range workloads {
-						if utils.VerifyServiceMonitorExists(k8sClient, workload, ns) {
-							return true
-						}
-					}
-					return false
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
+			By("creating the PDB when enabled", func() {
+				for _, workload := range workloads {
+					Eventually(func() bool {
+						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
+					}).Should(BeTrue())
+				}
+			})
+
+			By("removing PDB when disabled", func() {
+				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
+					PodDisruptionBudgetConfig: &monitoringthanosiov1alpha1.PodDisruptionBudgetConfig{
+						Enable: ptr.To(false),
+					},
+				}
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				for _, workload := range workloads {
+					Eventually(func() bool {
+						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
+					}).Should(BeFalse())
+				}
 			})
 		})
 	})
@@ -284,9 +313,9 @@ config:
 					AlertmanagerURL: "http://alertmanager.com:9093",
 				},
 			}
+			Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 			By("creating the service monitor when enabled", func() {
-				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
 				}).Should(BeTrue())
@@ -297,7 +326,21 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}, time.Minute*1, time.Second*10).Should(BeFalse())
+				}).Should(BeFalse())
+			})
+
+			By("creating the PDB when enabled", func() {
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
+				}).Should(BeTrue())
+			})
+
+			By("removing PDB when disabled", func() {
+				resource.Spec.FeatureGates.PodDisruptionBudgetConfig.Enable = ptr.To(false)
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
+				}).Should(BeFalse())
 			})
 		})
 
@@ -330,9 +373,9 @@ config:
 						},
 					},
 				}
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
 				By("creating the service monitor when enabled", func() {
-					Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, firstShard, ns)
 					}).Should(BeTrue())
@@ -349,6 +392,25 @@ config:
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
 					}, time.Second*30, time.Second*10).Should(BeFalse())
+				})
+
+				By("creating the PDB when enabled", func() {
+					Eventually(func() bool {
+						return utils.VerifyPodDisruptionBudgetExists(k8sClient, firstShard, ns)
+					}).Should(BeTrue())
+				})
+
+				By("removing PDB when disabled", func() {
+					name := StoreNameFromParent(storeResourceName, nil)
+					resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
+						PodDisruptionBudgetConfig: &monitoringthanosiov1alpha1.PodDisruptionBudgetConfig{
+							Enable: ptr.To(false),
+						},
+					}
+					Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
+					Eventually(func() bool {
+						return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
+					}).Should(BeFalse())
 				})
 			})
 		})

@@ -414,6 +414,15 @@ func VerifyStatefulSetExists(c client.Client, name string, namespace string) boo
 	return err == nil
 }
 
+func VerifyPodDisruptionBudgetExists(c client.Client, name string, namespace string) bool {
+	pdb := &policyv1.PodDisruptionBudget{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, pdb)
+	return err == nil
+}
+
 func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
 	cm := &corev1.ConfigMap{}
 	if err := c.Get(context.Background(), types.NamespacedName{
