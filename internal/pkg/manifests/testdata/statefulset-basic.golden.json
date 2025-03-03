@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "name": "thanos-store",
+    "namespace": "monitoring",
+    "creationTimestamp": null
+  },
+  "spec": {
+    "selector": {
+      "matchLabels": {
+        "app": "thanos-store"
+      }
+    },
+    "template": {
+      "metadata": {
+        "creationTimestamp": null,
+        "labels": {
+          "app": "thanos-store"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "thanos",
+            "image": "quay.io/thanos/thanos:v0.35.1",
+            "args": [
+              "store",
+              "--log.level=info"
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "2",
+                "memory": "2Gi"
+              },
+              "requests": {
+                "cpu": "1",
+                "memory": "1Gi"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "serviceName": "",
+    "updateStrategy": {}
+  },
+  "status": {
+    "replicas": 0,
+    "availableReplicas": 0
+  }
+}

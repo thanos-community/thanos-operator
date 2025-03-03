@@ -93,10 +93,19 @@ type Options struct {
 	// LogFormat is the log format for the component
 	LogFormat *string
 	//ServiceMonitorConfig is the configuration for the ServiceMonitor
-	ServiceMonitorConfig ServiceMonitorConfig
+	// If not set, the ServiceMonitor will not be created.
+	ServiceMonitorConfig *ServiceMonitorConfig
 	// PodDisruptionConfig is the configuration for the PodDisruptionBudget
 	// If not set, the PodDisruptionBudget will not be created.
 	PodDisruptionConfig *PodDisruptionBudgetOptions
+	PlacementConfig     *Placement
+}
+
+// Placement is a struct that holds the placement configuration for the component
+type Placement struct {
+	NodeSelector map[string]string
+	Affinity     *corev1.Affinity
+	Tolerations  []corev1.Toleration
 }
 
 // ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.
@@ -230,6 +239,13 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 				o.Spec.Template.Spec.Containers[0].Env,
 				opts.Additional.Env...)
 		}
+
+		if opts.PlacementConfig != nil {
+			o.Spec.Template.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
+			o.Spec.Template.Spec.Affinity = opts.PlacementConfig.Affinity
+			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -266,6 +282,13 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 				o.Spec.Template.Spec.Containers[0].Env,
 				opts.Additional.Env...)
 		}
+
+		if opts.PlacementConfig != nil {
+			o.Spec.Template.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
+			o.Spec.Template.Spec.Affinity = opts.PlacementConfig.Affinity
+			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
+		}
+
 	default:
 		//no-op
 	}

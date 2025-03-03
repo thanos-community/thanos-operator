@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "name": "thanos-store",
+    "namespace": "monitoring",
+    "creationTimestamp": null
+  },
+  "spec": {
+    "selector": {
+      "matchLabels": {
+        "app": "thanos-store"
+      }
+    },
+    "template": {
+      "metadata": {
+        "creationTimestamp": null,
+        "labels": {
+          "app": "thanos-store"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "config",
+            "configMap": {
+              "name": "thanos-store-config"
+            }
+          }
+        ],
+        "containers": [
+          {
+            "name": "thanos",
+            "image": "quay.io/thanos/thanos:v0.35.1",
+            "args": [
+              "store",
+              "--log.level=info"
+            ],
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 10902,
+                "protocol": "TCP"
+              },
+              {
+                "name": "grpc",
+                "containerPort": 10901,
+                "protocol": "TCP"
+              }
+            ],
+            "env": [
+              {
+                "name": "THANOS_LOG_FORMAT",
+                "value": "json"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "2",
+                "memory": "2Gi"
+              },
+              "requests": {
+                "cpu": "1",
+                "memory": "1Gi"
+              }
+            },
+            "volumeMounts": [
+              {
+                "name": "data",
+                "mountPath": "/data"
+              }
+            ]
+          },
+          {
+            "name": "sidecar",
+            "image": "sidecar:latest",
+            "args": [
+              "--verbose"
+            ],
+            "resources": {}
+          }
+        ],
+        "nodeSelector": {
+          "disktype": "ssd"
+        },
+        "affinity": {
+          "nodeAffinity": {
+            "requiredDuringSchedulingIgnoredDuringExecution": {
+              "nodeSelectorTerms": [
+                {
+                  "matchExpressions": [
+                    {
+                      "key": "kubernetes.io/e2e-az-name",
+                      "operator": "In",
+                      "values": [
+                        "e2e-az1",
+                        "e2e-az2"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "tolerations": [
+          {
+            "key": "example-key",
+            "operator": "Exists",
+            "effect": "NoSchedule"
+          }
+        ]
+      }
+    },
+    "serviceName": "",
+    "updateStrategy": {}
+  },
+  "status": {
+    "replicas": 0,
+    "availableReplicas": 0
+  }
+}
