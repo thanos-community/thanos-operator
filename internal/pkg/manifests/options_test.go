@@ -472,7 +472,7 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 			err = json.Unmarshal(bytes, &expected)
 			require.NoError(t, err)
 
-			assert.Equal(t, &expected, obj)
+			assert.Equal(t, expected.String(), obj.String())
 		})
 	}
 }
@@ -488,6 +488,10 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 			name: "statefulset-basic",
 			objInit: func() *appsv1.StatefulSet {
 				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "thanos-store",
 						Namespace: "monitoring",
@@ -545,6 +549,10 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 			name: "statefulset-complete",
 			objInit: func() *appsv1.StatefulSet {
 				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "thanos-store",
 						Namespace: "monitoring",
@@ -713,7 +721,7 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 			err = json.Unmarshal(bytes, &expected)
 			require.NoError(t, err)
 
-			assert.Equal(t, &expected, obj)
+			assert.Equal(t, expected.String(), obj.String())
 		})
 	}
 }
