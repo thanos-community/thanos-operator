@@ -95,7 +95,7 @@ func (opts IngesterOptions) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig != nil {
 		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
@@ -133,7 +133,7 @@ func (opts RouterOptions) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig != nil {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
@@ -683,7 +683,7 @@ func GetRouterLabels(opts RouterOptions) map[string]string {
 	return manifests.MergeLabels(opts.Labels, l)
 }
 
-func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
 	return manifests.ServiceMonitorOptions{
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,

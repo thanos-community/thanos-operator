@@ -70,7 +70,7 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig != nil {
 		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
@@ -427,7 +427,7 @@ func GetLabels(opts Options) map[string]string {
 	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeLabels(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
 }
 
-func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
 	return manifests.ServiceMonitorOptions{
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,

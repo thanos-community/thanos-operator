@@ -10,7 +10,6 @@ import (
 )
 
 type ServiceMonitorConfig struct {
-	Enabled   bool
 	Namespace string
 	Interval  *Duration
 	Labels    map[string]string

@@ -92,6 +92,15 @@ type CommonFields struct {
 	// +kubebuilder:default:=logfmt
 	// +kubebuilder:validation:Optional
 	LogFormat *string `json:"logFormat,omitempty"`
+	// NodeSelector defines on which Nodes the workloads are scheduled.
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// Affinity defines the workloads affinity scheduling rules if specified.
+	// +kubebuilder:validation:Optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// Tolerations defines the workloads tolerations if specified.
+	// +kubebuilder:validation:Optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // Additional holds additional configuration for the Thanos components.
