@@ -339,6 +339,11 @@ func commonToOpts(
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOpts(featureGates, labels),
 		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(featureGates),
+		PlacementConfig: &manifests.Placement{
+			NodeSelector: common.NodeSelector,
+			Affinity:     common.Affinity,
+			Tolerations:  common.Tolerations,
+		},
 	}
 }
 
@@ -354,21 +359,18 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 	}
 }
 
-func serviceMonitorConfigToOpts(in *v1alpha1.FeatureGates, labels map[string]string) manifests.ServiceMonitorConfig {
-	disable := manifests.ServiceMonitorConfig{Enabled: false}
-
+func serviceMonitorConfigToOpts(in *v1alpha1.FeatureGates, labels map[string]string) *manifests.ServiceMonitorConfig {
 	if in == nil {
-		return disable
+		return nil
 	}
 
 	if in.ServiceMonitorConfig == nil {
-		return disable
+		return nil
 	}
 
 	sm := in.ServiceMonitorConfig
-	return manifests.ServiceMonitorConfig{
-		Enabled: *sm.Enable,
-		Labels:  manifests.MergeLabels(sm.Labels, labels),
+	return &manifests.ServiceMonitorConfig{
+		Labels: manifests.MergeLabels(sm.Labels, labels),
 	}
 }
 

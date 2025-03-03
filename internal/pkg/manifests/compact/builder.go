@@ -67,7 +67,7 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
 
-	if opts.ServiceMonitorConfig.Enabled {
+	if opts.ServiceMonitorConfig != nil {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 
@@ -483,7 +483,7 @@ func (dc *DebugConfigOptions) toArgs() []string {
 	return args
 }
 
-func serviceMonitorOpts(from manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
+func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
 	return manifests.ServiceMonitorOptions{
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,
