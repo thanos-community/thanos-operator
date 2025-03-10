@@ -6,7 +6,7 @@ toolchain go1.23.1
 
 require (
 	github.com/go-logr/logr v1.4.2
-	github.com/golang/snappy v0.0.4
+	github.com/golang/snappy v1.0.0
 	github.com/imdario/mergo v0.3.16
 	github.com/magefile/mage v1.15.0
 	github.com/onsi/ginkgo/v2 v2.22.2
