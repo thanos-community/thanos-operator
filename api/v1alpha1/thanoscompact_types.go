@@ -125,7 +125,8 @@ type DebugConfig struct {
 	// +kubebuilder:validation:Optional
 	AcceptMalformedIndex *bool `json:"acceptMalformedIndex,omitempty"`
 	// MaxCompactionLevel is the maximum compaction level to use when compacting blocks.
-	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4
 	// +kubebuilder:validation:Optional
 	MaxCompactionLevel *int32 `json:"maxCompactionLevel,omitempty"`
 	// HaltOnError halts the compact process on critical compaction error.

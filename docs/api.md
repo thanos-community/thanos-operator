@@ -187,7 +187,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `acceptMalformedIndex` _boolean_ | AcceptMalformedIndex allows compact to accept blocks with malformed index. | false | Optional: \{\} <br /> |
-| `maxCompactionLevel` _integer_ | MaxCompactionLevel is the maximum compaction level to use when compacting blocks. | 5 | Optional: \{\} <br /> |
+| `maxCompactionLevel` _integer_ | MaxCompactionLevel is the maximum compaction level to use when compacting blocks. |  | Maximum: 4 <br />Minimum: 0 <br />Optional: \{\} <br /> |
 | `haltOnError` _boolean_ | HaltOnError halts the compact process on critical compaction error. | false | Optional: \{\} <br /> |
 
 

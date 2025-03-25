@@ -4568,10 +4568,11 @@ spec:
                       compaction error.
                     type: boolean
                   maxCompactionLevel:
-                    default: 5
                     description: MaxCompactionLevel is the maximum compaction level
                       to use when compacting blocks.
                     format: int32
+                    maximum: 4
+                    minimum: 0
                     type: integer
                 type: object
               downsamplingConfig:
