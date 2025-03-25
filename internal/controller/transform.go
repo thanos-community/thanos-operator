@@ -295,6 +295,8 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		DebugConfig:    debugConfig(),
 		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
 		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		Min:            ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.MinTime))),
+		Max:            ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime))),
 	}
 }
 
