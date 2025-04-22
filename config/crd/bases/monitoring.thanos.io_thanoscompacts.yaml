@@ -4838,54 +4838,44 @@ spec:
               shardingConfig:
                 description: ShardingConfig is the sharding configuration for the
                   compact component.
-                properties:
-                  externalLabelSharding:
-                    description: ExternalLabelSharding is the sharding configuration
-                      based on explicit external labels and their values.
-                    items:
-                      description: "ExternalLabelShardingConfig defines the sharding
-                        configuration based on explicit external labels and their
-                        values.\nThe keys are the external labels to shard on and
-                        the values are the values (as regular expressions) to shard
-                        on.\nEach value will be a configured and deployed as a separate
-                        compact component.\nFor example, if the 'label' is set to
-                        `tenant_id` with values `tenant-a` and `!tenant-a`\ntwo compact
-                        components will be deployed.\nThe resulting compact StatefulSets
-                        will have an appropriate --selection.relabel-config flag set
-                        to the value of the external label sharding.\nAnd named such
-                        that:\n\n\t\tThe first compact component will have the name
-                        {ThanosCompact.Name}-{shardName}-0 with the flag\n\t    --selector.relabel-config=\n\t
-                        \      - source_labels:\n\t         - tenant_id\n\t         regex:
-                        'tenant-a'\n\t         action: keep\n\n\t\tThe second compact
-                        component will have the name {ThanosCompact.Name}-{shardName}-1
-                        with the flag\n\t    --selector.relabel-config=\n\t       -
-                        source_labels:\n\t         - tenant_id\n\t         regex:
-                        '!tenant-a'\n\t         action: keep"
-                      properties:
-                        label:
-                          description: Label is the external label to shard on.
-                          type: string
-                        shardName:
-                          description: |-
-                            ShardName is the name of the shard.
-                            ShardName is used to identify the shard in the compact component.
-                          type: string
-                        values:
-                          description: Values are the values (as regular expressions)
-                            to shard on.
-                          items:
+                items:
+                  description: ShardingConfig defines the sharding configuration for
+                    the compact component.
+                  properties:
+                    externalLabelSharding:
+                      description: |-
+                        ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.
+                        Configuration is ANDed together per shard
+                      items:
+                        description: ExternalLabelShardingConfig defines the sharding
+                          configuration based on explicit external labels and their
+                          values.
+                        properties:
+                          label:
+                            description: Label is the external label to shard on.
                             type: string
-                          type: array
-                      required:
-                      - label
-                      - shardName
-                      - values
-                      type: object
-                    type: array
-                    x-kubernetes-list-map-keys:
-                    - shardName
-                    x-kubernetes-list-type: map
-                type: object
+                          value:
+                            description: Value is the value (as regular expression)
+                              to shard on.
+                            type: string
+                        required:
+                        - label
+                        - value
+                        type: object
+                      type: array
+                    shardName:
+                      description: |-
+                        ShardName is the name of the shard.
+                        ShardName is used to identify the shard in the compact component.
+                      type: string
+                  required:
+                  - externalLabelSharding
+                  - shardName
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - shardName
+                x-kubernetes-list-type: map
               storageSize:
                 description: StorageSize is the size of the storage to be used by
                   the Thanos Compact StatefulSets.

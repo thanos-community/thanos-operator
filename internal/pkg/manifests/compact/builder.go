@@ -48,9 +48,8 @@ type Options struct {
 	// ObjStoreSecret is the secret key selector for the object store configuration.
 	ObjStoreSecret corev1.SecretKeySelector
 	// Min and Max time for the compactor
-	Min, Max   *manifests.Duration
-	ShardName  *string
-	ShardIndex *int
+	Min, Max  *manifests.Duration
+	ShardName *string
 }
 
 // Build compiles all the Kubernetes objects for the Thanos Compact shard.
@@ -86,8 +85,8 @@ func (opts Options) Valid() error {
 // If sharding is configured, the name will be generated from the Options.Owner, ShardName, and ShardIndex.
 func (opts Options) GetGeneratedResourceName() string {
 	name := fmt.Sprintf("%s-%s", Name, opts.getOwner())
-	if opts.ShardName != nil && opts.ShardIndex != nil {
-		name = fmt.Sprintf("%s-%s-%d", name, *opts.ShardName, *opts.ShardIndex)
+	if opts.ShardName != nil {
+		name = fmt.Sprintf("%s-%s", name, *opts.ShardName)
 	}
 	return manifests.ValidateAndSanitizeResourceName(name)
 }
