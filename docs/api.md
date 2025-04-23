@@ -238,28 +238,6 @@ _Appears in:_
 
 
 ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.
-The keys are the external labels to shard on and the values are the values (as regular expressions) to shard on.
-Each value will be a configured and deployed as a separate compact component.
-For example, if the 'label' is set to `tenant_id` with values `tenant-a` and `!tenant-a`
-two compact components will be deployed.
-The resulting compact StatefulSets will have an appropriate --selection.relabel-config flag set to the value of the external label sharding.
-And named such that:
-
-
-		The first compact component will have the name {ThanosCompact.Name}-{shardName}-0 with the flag
-	    --selector.relabel-config=
-	       - source_labels:
-	         - tenant_id
-	         regex: 'tenant-a'
-	         action: keep
-
-
-		The second compact component will have the name {ThanosCompact.Name}-{shardName}-1 with the flag
-	    --selector.relabel-config=
-	       - source_labels:
-	         - tenant_id
-	         regex: '!tenant-a'
-	         action: keep
 
 
 
@@ -268,9 +246,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `shardName` _string_ | ShardName is the name of the shard.<br />ShardName is used to identify the shard in the compact component. |  | Required: \{\} <br /> |
 | `label` _string_ | Label is the external label to shard on. |  | Required: \{\} <br /> |
-| `values` _string array_ | Values are the values (as regular expressions) to shard on. |  |  |
+| `value` _string_ | Value is the value (as regular expression) to shard on. |  |  |
 
 
 #### ExternalLabels
@@ -571,7 +548,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `externalLabelSharding` _[ExternalLabelShardingConfig](#externallabelshardingconfig) array_ | ExternalLabelSharding is the sharding configuration based on explicit external labels and their values. |  | Optional: \{\} <br /> |
+| `shardName` _string_ | ShardName is the name of the shard.<br />ShardName is used to identify the shard in the compact component. |  | Required: \{\} <br /> |
+| `externalLabelSharding` _[ExternalLabelShardingConfig](#externallabelshardingconfig) array_ | ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.<br />Configuration is ANDed together per shard |  | Required: \{\} <br /> |
 
 
 #### ShardingStrategy
@@ -772,7 +750,7 @@ _Appears in:_
 | `retentionConfig` _[RetentionResolutionConfig](#retentionresolutionconfig)_ | RetentionConfig is the retention configuration for the compact component. |  | Required: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `blockViewerGlobalSync` _[BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)_ | BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI. |  | Optional: \{\} <br /> |
-| `shardingConfig` _[ShardingConfig](#shardingconfig)_ | ShardingConfig is the sharding configuration for the compact component. |  | Optional: \{\} <br /> |
+| `shardingConfig` _[ShardingConfig](#shardingconfig) array_ | ShardingConfig is the sharding configuration for the compact component. |  | Optional: \{\} <br /> |
 | `compactConfig` _[CompactConfig](#compactconfig)_ | CompactConfig is the configuration for the compact component. |  | Optional: \{\} <br /> |
 | `downsamplingConfig` _[DownsamplingConfig](#downsamplingconfig)_ | DownsamplingConfig is the downsampling configuration for the compact component. |  | Optional: \{\} <br /> |
 | `debugConfig` _[DebugConfig](#debugconfig)_ | DebugConfig is the debug configuration for the compact component. |  | Optional: \{\} <br /> |

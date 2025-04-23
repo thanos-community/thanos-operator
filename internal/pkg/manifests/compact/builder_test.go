@@ -207,10 +207,9 @@ func TestOptions_GetName(t *testing.T) {
 				Options: manifests.Options{
 					Owner: "valid-owner",
 				},
-				ShardName:  ptr.To("shard"),
-				ShardIndex: ptr.To(1),
+				ShardName: ptr.To("shard"),
 			},
-			expected: "thanos-compact-valid-owner-shard-1",
+			expected: "thanos-compact-valid-owner-shard",
 		},
 	}
 

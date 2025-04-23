@@ -44,7 +44,9 @@ type ThanosCompactSpec struct {
 	BlockViewerGlobalSync *BlockViewerGlobalSyncConfig `json:"blockViewerGlobalSync,omitempty"`
 	// ShardingConfig is the sharding configuration for the compact component.
 	// +kubebuilder:validation:Optional
-	ShardingConfig *ShardingConfig `json:"shardingConfig,omitempty"`
+	// +listType=map
+	// +listMapKey=shardName
+	ShardingConfig []ShardingConfig `json:"shardingConfig,omitempty"`
 	// CompactConfig is the configuration for the compact component.
 	// +kubebuilder:validation:Optional
 	CompactConfig *CompactConfig `json:"compactConfig,omitempty"`
@@ -170,44 +172,23 @@ type RetentionResolutionConfig struct {
 
 // ShardingConfig defines the sharding configuration for the compact component.
 type ShardingConfig struct {
-	// ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.
-	// +kubebuilder:validation:Optional
-	// +listType=map
-	// +listMapKey=shardName
-	ExternalLabelSharding []ExternalLabelShardingConfig `json:"externalLabelSharding,omitempty"`
-}
-
-// ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.
-// The keys are the external labels to shard on and the values are the values (as regular expressions) to shard on.
-// Each value will be a configured and deployed as a separate compact component.
-// For example, if the 'label' is set to `tenant_id` with values `tenant-a` and `!tenant-a`
-// two compact components will be deployed.
-// The resulting compact StatefulSets will have an appropriate --selection.relabel-config flag set to the value of the external label sharding.
-// And named such that:
-//
-//		The first compact component will have the name {ThanosCompact.Name}-{shardName}-0 with the flag
-//	    --selector.relabel-config=
-//	       - source_labels:
-//	         - tenant_id
-//	         regex: 'tenant-a'
-//	         action: keep
-//
-//		The second compact component will have the name {ThanosCompact.Name}-{shardName}-1 with the flag
-//	    --selector.relabel-config=
-//	       - source_labels:
-//	         - tenant_id
-//	         regex: '!tenant-a'
-//	         action: keep
-type ExternalLabelShardingConfig struct {
 	// ShardName is the name of the shard.
 	// ShardName is used to identify the shard in the compact component.
 	// +kubebuilder:validation:Required
 	ShardName string `json:"shardName"`
+	// ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.
+	// Configuration is ANDed together per shard
+	// +kubebuilder:validation:Required
+	ExternalLabelSharding []ExternalLabelShardingConfig `json:"externalLabelSharding"`
+}
+
+// ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.
+type ExternalLabelShardingConfig struct {
 	// Label is the external label to shard on.
 	// +kubebuilder:validation:Required
 	Label string `json:"label"`
-	// Values are the values (as regular expressions) to shard on.
-	Values []string `json:"values"`
+	// Value is the value (as regular expression) to shard on.
+	Value string `json:"value"`
 }
 
 //+kubebuilder:object:root=true

@@ -158,25 +158,25 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 }
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
-	if compact.Spec.ShardingConfig == nil || compact.Spec.ShardingConfig.ExternalLabelSharding == nil {
+	if len(compact.Spec.ShardingConfig) == 0 {
 		return []manifests.Buildable{compactV1Alpha1ToOptions(compact)}
 	}
 
-	var buildable []manifests.Buildable
-	for _, shard := range compact.Spec.ShardingConfig.ExternalLabelSharding {
-		for i, v := range shard.Values {
-			opts := compactV1Alpha1ToOptions(compact)
-			opts.ShardName = ptr.To(shard.ShardName)
-			opts.ShardIndex = ptr.To(i)
-			opts.RelabelConfigs = manifests.RelabelConfigs{
-				{
-					Action:      "keep",
-					SourceLabel: shard.Label,
-					Regex:       v,
-				},
-			}
-			buildable = append(buildable, opts)
+	buildable := make([]manifests.Buildable, 0, len(compact.Spec.ShardingConfig))
+	for _, shard := range compact.Spec.ShardingConfig {
+		relabelsConfigs := make(manifests.RelabelConfigs, 0, len(shard.ExternalLabelSharding))
+		for _, v := range shard.ExternalLabelSharding {
+			relabelsConfigs = append(relabelsConfigs, manifests.RelabelConfig{
+				Action:      "keep",
+				SourceLabel: v.Label,
+				Regex:       v.Value,
+			})
 		}
+		opts := compactV1Alpha1ToOptions(compact)
+		opts.ShardName = ptr.To(shard.ShardName)
+		opts.RelabelConfigs = relabelsConfigs
+		buildable = append(buildable, opts)
 	}
+
 	return buildable
 }

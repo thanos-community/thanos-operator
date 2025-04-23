@@ -41,7 +41,6 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 		const (
 			ns           = "thanos-compact-test"
 			resourceName = "test-compact-resource"
-			shardName    = "test-shard"
 		)
 
 		ctx := context.Background()
@@ -53,10 +52,10 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 
 		shardOne := compact.Options{
 			Options:   manifests.Options{Owner: resourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetGeneratedResourceName()
+			ShardName: ptr.To("someone")}.GetGeneratedResourceName()
 		shardTwo := compact.Options{
 			Options:   manifests.Options{Owner: resourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetGeneratedResourceName()
+			ShardName: ptr.To("anyone-else")}.GetGeneratedResourceName()
 
 		BeforeAll(func() {
 			By("creating the namespace and objstore secret")
@@ -107,12 +106,25 @@ config:
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					Labels:       map[string]string{"some-label": "xyz"},
-					ShardingConfig: &monitoringthanosiov1alpha1.ShardingConfig{
-						ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
-							{
-								ShardName: shardName,
-								Label:     "tenant_id",
-								Values:    []string{"someone", "anyone-else"},
+					ShardingConfig: []monitoringthanosiov1alpha1.ShardingConfig{
+						{
+							ShardName: "someone",
+							ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
+								{
+
+									Label: "tenant_id",
+									Value: "someone",
+								},
+							},
+						},
+						{
+							ShardName: "anyone-else",
+							ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
+								{
+
+									Label: "tenant_id",
+									Value: "anyone-else",
+								},
 							},
 						},
 					},

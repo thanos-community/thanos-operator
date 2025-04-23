@@ -67,10 +67,7 @@ config:
 
 		shardOne := compact.Options{
 			Options:   manifests.Options{Owner: compactResourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(0)}.GetGeneratedResourceName()
-		shardTwo := compact.Options{
-			Options:   manifests.Options{Owner: compactResourceName},
-			ShardName: ptr.To(shardName), ShardIndex: ptr.To(1)}.GetGeneratedResourceName()
+			ShardName: ptr.To(shardName)}.GetGeneratedResourceName()
 
 		It("should reconcile correctly", func() {
 			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
@@ -85,12 +82,14 @@ config:
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					Labels:       map[string]string{"some-label": "xyz"},
-					ShardingConfig: &monitoringthanosiov1alpha1.ShardingConfig{
-						ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
-							{
-								ShardName: shardName,
-								Label:     "tenant_id",
-								Values:    []string{"someone", "anyone-else"},
+					ShardingConfig: []monitoringthanosiov1alpha1.ShardingConfig{
+						{
+							ShardName: shardName,
+							ExternalLabelSharding: []monitoringthanosiov1alpha1.ExternalLabelShardingConfig{
+								{
+									Label: "tenant_id",
+									Value: "someone",
+								},
 							},
 						},
 					},
@@ -107,7 +106,7 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
-					for _, shard := range []string{shardOne, shardTwo} {
+					for _, shard := range []string{shardOne} {
 						if utils.VerifyServiceMonitorExists(k8sClient, shard, ns) {
 							return true
 						}
@@ -125,7 +124,7 @@ config:
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
-					for _, shard := range []string{shardOne, shardTwo} {
+					for _, shard := range []string{shardOne} {
 						if utils.VerifyServiceMonitorExists(k8sClient, shard, ns) {
 							return true
 						}
