@@ -4579,16 +4579,16 @@ spec:
                 description: DownsamplingConfig is the downsampling configuration
                   for the compact component.
                 properties:
+                  disable:
+                    default: false
+                    description: Disable downsampling.
+                    type: boolean
                   downsamplingConcurrency:
                     default: 1
                     description: Concurrency is the number of goroutines to use when
                       downsampling blocks.
                     format: int32
                     type: integer
-                  downsamplingEnabled:
-                    default: false
-                    description: Disable downsampling.
-                    type: boolean
                 type: object
               featureGates:
                 default:

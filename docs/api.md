@@ -204,7 +204,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `downsamplingEnabled` _boolean_ | Disable downsampling. | false |  |
+| `disable` _boolean_ | Disable downsampling. | false |  |
 | `downsamplingConcurrency` _integer_ | Concurrency is the number of goroutines to use when downsampling blocks. | 1 | Optional: \{\} <br /> |
 
 

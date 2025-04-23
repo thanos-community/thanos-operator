@@ -141,7 +141,7 @@ type DebugConfig struct {
 type DownsamplingConfig struct {
 	// Disable downsampling.
 	// +kubebuilder:default=false
-	Disable *bool `json:"downsamplingEnabled,omitempty"`
+	Disable *bool `json:"disable,omitempty"`
 	// Concurrency is the number of goroutines to use when downsampling blocks.
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Optional
