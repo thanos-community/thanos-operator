@@ -150,7 +150,7 @@ type WebConfig struct {
 	// DisableCORS is the flag to disable CORS headers to be set by Thanos.
 	// By default Thanos sets CORS headers to be allowed by all.
 	// +kubebuilder:default=false
-	DisableCORS *bool `json:"disableCORS,omitempty"`
+	DisableCORS *bool `json:"disableCORS,omitempty"` //nolint:tagliatelle // CORS
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery

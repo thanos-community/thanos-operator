@@ -50,7 +50,7 @@ type ThanosRulerSpec struct {
 	// 'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$`
-	AlertmanagerURL string `json:"alertmanagerURL,omitempty"`
+	AlertmanagerURL string `json:"alertmanagerURL,omitempty"` //nolint:tagliatelle
 	// ExternalLabels set on Ruler TSDB, for query time deduplication.
 	// +kubebuilder:default={rule_replica: "$(NAME)"}
 	// +kubebuilder:validation:Required

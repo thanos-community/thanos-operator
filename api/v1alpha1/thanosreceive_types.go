@@ -139,7 +139,7 @@ type TenancyConfig struct {
 	TenantCertificateField *string `json:"tenantCertificateField,omitempty"`
 	// DefaultTenantID is the default tenant ID to use when none is provided via a header.
 	// +kubebuilder:default="default-tenant"
-	DefaultTenantID string `json:"defaultTenantID,omitempty"`
+	DefaultTenantID string `json:"defaultTenantID,omitempty"` //nolint:tagliatelle
 	// SplitTenantLabelName is the label name through which the request will be split into multiple tenants.
 	// +kubebuilder:validation:Optional
 	SplitTenantLabelName *string `json:"splitTenantLabelName,omitempty"`
