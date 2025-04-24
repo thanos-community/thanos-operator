@@ -275,9 +275,14 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		if in.Spec.DebugConfig == nil {
 			return nil
 		}
+
+		var mcl int32
+		if in.Spec.DebugConfig.MaxCompactionLevel != nil {
+			mcl = *in.Spec.DebugConfig.MaxCompactionLevel
+		}
 		return &manifestscompact.DebugConfigOptions{
 			AcceptMalformedIndex: in.Spec.DebugConfig.AcceptMalformedIndex != nil && *in.Spec.DebugConfig.AcceptMalformedIndex,
-			MaxCompactionLevel:   *in.Spec.DebugConfig.MaxCompactionLevel,
+			MaxCompactionLevel:   mcl,
 			HaltOnError:          in.Spec.DebugConfig.HaltOnError != nil && *in.Spec.DebugConfig.HaltOnError,
 		}
 	}
