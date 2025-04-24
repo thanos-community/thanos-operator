@@ -476,8 +476,11 @@ func (dc *DebugConfigOptions) toArgs() []string {
 	if dc.MaxCompactionLevel != 0 {
 		args = append(args, fmt.Sprintf("--debug.max-compaction-level=%d", dc.MaxCompactionLevel))
 	}
-
-	args = append(args, fmt.Sprintf("--debug.halt-on-error=%t", dc.HaltOnError))
+	if dc.HaltOnError {
+		args = append(args, "--debug.halt-on-error")
+	} else {
+		args = append(args, "--no-debug.halt-on-error")
+	}
 
 	return args
 }
