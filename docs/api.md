@@ -99,8 +99,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `blockViewerGlobalSync` _[Duration](#duration)_ | BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI. | 1m | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `blockViewerGlobalSyncTimeout` _[Duration](#duration)_ | BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks<br />between local and remote view for /global Block Viewer UI. | 5m | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `blockViewerGlobalSync` _[Duration](#duration)_ | BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI. | 1m | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `blockViewerGlobalSyncTimeout` _[Duration](#duration)_ | BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks<br />between local and remote view for /global Block Viewer UI. | 5m | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 
 
 #### CacheConfig
@@ -169,8 +169,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `compactConcurrency` _integer_ | CompactConcurrency is the number of goroutines to use when compacting blocks. | 1 | Optional: \{\} <br /> |
 | `blockFetchConcurrency` _integer_ | BlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage. | 1 | Optional: \{\} <br /> |
-| `cleanupInterval` _[Duration](#duration)_ | CleanupInterval configures how often we should clean up partially uploaded blocks and blocks<br />that are marked for deletion.<br />Cleaning happens at the end of an iteration.<br />Setting this to 0s disables the cleanup. | 5m | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `blockConsistencyDelay` _[Duration](#duration)_ | ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.<br />Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed. | 30m | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `cleanupInterval` _[Duration](#duration)_ | CleanupInterval configures how often we should clean up partially uploaded blocks and blocks<br />that are marked for deletion.<br />Cleaning happens at the end of an iteration.<br />Setting this to 0s disables the cleanup. | 5m | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `blockConsistencyDelay` _[Duration](#duration)_ | ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.<br />Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed. | 30m | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 
 
 #### DebugConfig
@@ -217,7 +217,7 @@ Supported units: y, w, d, h, m, s, ms
 Examples: `30s`, `1m`, `1h20m15s`, `15d`
 
 _Validation:_
-- Pattern: `^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$`
+- Pattern: `^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})))$`
 
 _Appears in:_
 - [BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)
@@ -227,9 +227,9 @@ _Appears in:_
 - [QueryFrontendSpec](#queryfrontendspec)
 - [RetentionResolutionConfig](#retentionresolutionconfig)
 - [TSDBConfig](#tsdbconfig)
-- [ThanosCompactSpec](#thanoscompactspec)
 - [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
+- [TimeRangeConfig](#timerangeconfig)
 
 
 
@@ -321,7 +321,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enableLazyReader` _boolean_ | If true, Store Gateway will lazy memory map index-header only once the block is required by a query. | true | Optional: \{\} <br /> |
-| `lazyReaderIdleTimeout` _[Duration](#duration)_ | If index-header lazy reader is enabled and this idle timeout setting is > 0, memory map-ed index-headers will be automatically released after 'idle timeout' inactivity | 5m | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `lazyReaderIdleTimeout` _[Duration](#duration)_ | If index-header lazy reader is enabled and this idle timeout setting is > 0, memory map-ed index-headers will be automatically released after 'idle timeout' inactivity | 5m | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `lazyDownloadStrategy` _string_ | Strategy of how to download index headers lazily.<br />If eager, always download index header during initial load. If lazy, download index header during query time. | eager | Enum: [eager lazy] <br />Optional: \{\} <br /> |
 
 
@@ -358,7 +358,7 @@ _Appears in:_
 | `tenancyConfig` _[TenancyConfig](#tenancyconfig)_ | TenancyConfig is the configuration for the tenancy options. |  | Optional: \{\} <br /> |
 | `asyncForwardWorkerCount` _integer_ | AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests. | 5 | Optional: \{\} <br /> |
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  | Optional: \{\} <br /> |
-| `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 
 
 #### IngesterSpec
@@ -448,13 +448,13 @@ _Appears in:_
 | `replicas` _integer_ |  | 1 | Minimum: 1 <br /> |
 | `compressResponses` _boolean_ | CompressResponses enables response compression | true |  |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | By default, the operator will add the first discoverable Query API to the<br />Query Frontend, if they have query labels. You can optionally choose to override default<br />Query selector labels, to select a subset of QueryAPIs to query. | \{ matchLabels:map[operator.thanos.io/query-api:true] \} | Optional: \{\} <br /> |
-| `logQueriesLongerThan` _[Duration](#duration)_ | LogQueriesLongerThan sets the duration threshold for logging long queries |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `logQueriesLongerThan` _[Duration](#duration)_ | LogQueriesLongerThan sets the duration threshold for logging long queries |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `queryRangeResponseCacheConfig` _[CacheConfig](#cacheconfig)_ | QueryRangeResponseCacheConfig holds the configuration for the query range response cache |  | Optional: \{\} <br /> |
-| `queryRangeSplitInterval` _[Duration](#duration)_ | QueryRangeSplitInterval sets the split interval for query range |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `labelsSplitInterval` _[Duration](#duration)_ | LabelsSplitInterval sets the split interval for labels |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `queryRangeSplitInterval` _[Duration](#duration)_ | QueryRangeSplitInterval sets the split interval for query range |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `labelsSplitInterval` _[Duration](#duration)_ | LabelsSplitInterval sets the split interval for labels |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `queryRangeMaxRetries` _integer_ | QueryRangeMaxRetries sets the maximum number of retries for query range requests | 5 | Minimum: 0 <br /> |
 | `labelsMaxRetries` _integer_ | LabelsMaxRetries sets the maximum number of retries for label requests | 5 | Minimum: 0 <br /> |
-| `labelsDefaultTimeRange` _[Duration](#duration)_ | LabelsDefaultTimeRange sets the default time range for label queries |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `labelsDefaultTimeRange` _[Duration](#duration)_ | LabelsDefaultTimeRange sets the default time range for label queries |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
@@ -477,9 +477,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `raw` _[Duration](#duration)_ | Raw is the retention configuration for the raw samples.<br />This configures how long to retain raw samples in the storage.<br />The default value is 0d, which means samples are retained indefinitely. | 0d | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
-| `fiveMinutes` _[Duration](#duration)_ | FiveMinutes is the retention configuration for samples of resolution 1 (5 minutes).<br />This configures how long to retain samples of resolution 1 (5 minutes) in storage.<br />The default value is 0d, which means these samples are retained indefinitely. | 0d | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
-| `oneHour` _[Duration](#duration)_ | OneHour is the retention configuration for samples of resolution 2 (1 hour).<br />This configures how long to retain samples of resolution 2 (1 hour) in storage.<br />The default value is 0d, which means these samples are retained indefinitely. | 0d | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
+| `raw` _[Duration](#duration)_ | Raw is the retention configuration for the raw samples.<br />This configures how long to retain raw samples in the storage.<br />The default value is 0d, which means samples are retained indefinitely. | 0d | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
+| `fiveMinutes` _[Duration](#duration)_ | FiveMinutes is the retention configuration for samples of resolution 1 (5 minutes).<br />This configures how long to retain samples of resolution 1 (5 minutes) in storage.<br />The default value is 0d, which means these samples are retained indefinitely. | 0d | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
+| `oneHour` _[Duration](#duration)_ | OneHour is the retention configuration for samples of resolution 2 (1 hour).<br />This configures how long to retain samples of resolution 2 (1 hour) in storage.<br />The default value is 0d, which means these samples are retained indefinitely. | 0d | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 
 
 #### RouterSpec
@@ -635,7 +635,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `retention` _[Duration](#duration)_ | Retention is the duration for which a particular TSDB will retain data. | 2h | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
+| `retention` _[Duration](#duration)_ | Retention is the duration for which a particular TSDB will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 
 
 #### TelemetryQuantiles
@@ -754,8 +754,7 @@ _Appears in:_
 | `compactConfig` _[CompactConfig](#compactconfig)_ | CompactConfig is the configuration for the compact component. |  | Optional: \{\} <br /> |
 | `downsamplingConfig` _[DownsamplingConfig](#downsamplingconfig)_ | DownsamplingConfig is the downsampling configuration for the compact component. |  | Optional: \{\} <br /> |
 | `debugConfig` _[DebugConfig](#debugconfig)_ | DebugConfig is the debug configuration for the compact component. |  | Optional: \{\} <br /> |
-| `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `timeRangeConfig` _[TimeRangeConfig](#timerangeconfig)_ | TimeRangeConfig configures the time range of data to serve for the compact component.. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
@@ -1032,9 +1031,9 @@ _Appears in:_
 | `ruleConfigSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is:<br />\{"operator.thanos.io/rule-file": "true"\}. |  |  |
 | `alertmanagerURL` _string_ | AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups. |  | Pattern: `^((dns\+)?(dnssrv\+)?(http\|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$` <br />Required: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
-| `evaluationInterval` _[Duration](#duration)_ | EvaluationInterval is the default interval at which rules are evaluated. | 1m | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `evaluationInterval` _[Duration](#duration)_ | EvaluationInterval is the default interval at which rules are evaluated. | 1m | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `alertLabelDrop` _string array_ | Labels to drop before Ruler sends alerts to alertmanager. |  | Optional: \{\} <br /> |
-| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br />Required: \{\} <br /> |
+| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `storageSize` _string_ | StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
@@ -1133,12 +1132,11 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Store StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
-| `ignoreDeletionMarksDelay` _[Duration](#duration)_ | Duration after which the blocks marked for deletion will be filtered out while fetching blocks.<br />The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.<br />This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.<br />If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json<br />file to mark after what duration the block should be deleted rather than deleting the block straight away. | 24h | Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `ignoreDeletionMarksDelay` _[Duration](#duration)_ | Duration after which the blocks marked for deletion will be filtered out while fetching blocks.<br />The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.<br />This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.<br />If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json<br />file to mark after what duration the block should be deleted rather than deleting the block straight away. | 24h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `indexCacheConfig` _[CacheConfig](#cacheconfig)_ | IndexCacheConfig allows configuration of the index cache.<br />See format details: https://thanos.io/tip/components/store.md/#index-cache |  | Optional: \{\} <br /> |
 | `cachingBucketConfig` _[CacheConfig](#cacheconfig)_ | CachingBucketConfig allows configuration of the caching bucket.<br />See format details: https://thanos.io/tip/components/store.md/#caching-bucket |  | Optional: \{\} <br /> |
 | `shardingStrategy` _[ShardingStrategy](#shardingstrategy)_ | ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks. |  | Required: \{\} <br /> |
-| `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
-| `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$` <br /> |
+| `timeRangeConfig` _[TimeRangeConfig](#timerangeconfig)_ | TimeRangeConfig configures the time range of data to serve for the store component. |  | Optional: \{\} <br /> |
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions allows configuration of the store API limits. |  | Optional: \{\} <br /> |
 | `indexHeaderConfig` _[IndexHeaderConfig](#indexheaderconfig)_ | IndexHeaderConfig allows configuration of the Store Gateway index header. |  | Optional: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
@@ -1167,6 +1165,24 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+
+
+#### TimeRangeConfig
+
+
+
+TimeRangeConfig configures the time range of data to serve.
+
+
+
+_Appears in:_
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 
 
 #### WebConfig

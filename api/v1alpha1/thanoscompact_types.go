@@ -56,14 +56,9 @@ type ThanosCompactSpec struct {
 	// DebugConfig is the debug configuration for the compact component.
 	// +kubebuilder:validation:Optional
 	DebugConfig *DebugConfig `json:"debugConfig,omitempty"`
-	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
-	// If not set, will be set as zero value, so most recent blocks will be served.
+	// TimeRangeConfig configures the time range of data to serve for the compact component..
 	// +kubebuilder:validation:Optional
-	MinTime *Duration `json:"minTime,omitempty"`
-	// Maximum time range to serve. Any data after this upper time range will be ignored.
-	// If not set, will be set as max value, so all blocks will be served.
-	// +kubebuilder:validation:Optional
-	MaxTime *Duration `json:"maxTime,omitempty"`
+	TimeRangeConfig *TimeRangeConfig `json:"timeRangeConfig,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
