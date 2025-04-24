@@ -26,7 +26,16 @@ linters:
     - prealloc
     - promlinter
     - staticcheck
+    - tagliatelle
     - typecheck
     - unconvert
     - unparam
     - unused
+
+  settings:
+    tagliatelle:
+      case:
+        rules:
+          json: goCamel
+          yaml: goCamel
+        use-field-name: true

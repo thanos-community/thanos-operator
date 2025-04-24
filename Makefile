@@ -32,7 +32,7 @@ MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
 CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
 .PHONY: all
-all: build
+all: build bundle docs
 
 ##@ General
 
@@ -106,7 +106,8 @@ define require_clean_work_tree
 endef
 
 .PHONY: lint ## Runs various static analysis against our code.
-lint: $(FAILLINT) $(GOLANGCI_LINT) format deps
+lint: all
+lint: $(FAILLINT) $(GOLANGCI_LINT) deps
 	$(call require_clean_work_tree,"detected not clean main before running lint")
 	@echo ">> verifying modules being imported"
 	@$(FAILLINT) -paths "fmt.{Print,Printf,Println}" -ignore-tests ./...

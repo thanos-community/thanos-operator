@@ -61,13 +61,13 @@ type HashringConfig struct {
 	// Tenants is a list of tenants that match on this hashring.
 	Tenants []string `json:"tenants,omitempty"`
 	// TenantMatcherType is the type of tenant matching to use.
-	TenantMatcherType TenantMatcher `json:"tenant_matcher_type,omitempty"`
+	TenantMatcherType TenantMatcher `json:"tenant_matcher_type,omitempty"` //nolint:tagliatelle // tenant_matcher_type is from thanos config
 	// Endpoints is a list of endpoints that are part of this hashring.
 	Endpoints []Endpoint `json:"endpoints"`
 	// Algorithm is the hashing algorithm to use.
 	Algorithm HashringAlgorithm `json:"algorithm,omitempty"`
 	// ExternalLabels are the external labels to use for this hashring.
-	ExternalLabels labels.Labels `json:"external_labels,omitempty"`
+	ExternalLabels labels.Labels `json:"external_labels,omitempty"` //nolint:tagliatelle // external_labels is from thanos config
 }
 
 // MapToExternalLabels converts a map to external labels.
