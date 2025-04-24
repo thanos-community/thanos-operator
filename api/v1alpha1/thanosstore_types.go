@@ -55,14 +55,9 @@ type ThanosStoreSpec struct {
 	// ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks.
 	// +kubebuilder:validation:Required
 	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`
-	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
-	// If not set, will be set as zero value, so most recent blocks will be served.
+	// TimeRangeConfig configures the time range of data to serve for the store component.
 	// +kubebuilder:validation:Optional
-	MinTime *Duration `json:"minTime,omitempty"`
-	// Maximum time range to serve. Any data after this upper time range will be ignored.
-	// If not set, will be set as max value, so all blocks will be served.
-	// +kubebuilder:validation:Optional
-	MaxTime *Duration `json:"maxTime,omitempty"`
+	TimeRangeConfig *TimeRangeConfig `json:"timeRangeConfig,omitempty"`
 	// StoreLimitsOptions allows configuration of the store API limits.
 	// +kubebuilder:validation:Optional
 	StoreLimitsOptions *StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`

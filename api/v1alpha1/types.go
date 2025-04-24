@@ -9,7 +9,7 @@ import (
 // Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
 // Supported units: y, w, d, h, m, s, ms
 // Examples: `30s`, `1m`, `1h20m15s`, `15d`
-// +kubebuilder:validation:Pattern:="^-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)$"
+// +kubebuilder:validation:Pattern="^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})))$"
 type Duration string
 
 // ObjectStorageConfig is the secret that contains the object storage configuration.
@@ -229,4 +229,16 @@ type BlockConfig struct {
 	// +kubebuilder:default=32
 	// +kubebuilder:validation:Optional
 	BlockMetaFetchConcurrency *int32 `json:"blockMetaFetchConcurrency,omitempty"`
+}
+
+// TimeRangeConfig configures the time range of data to serve.
+type TimeRangeConfig struct {
+	// Minimum time range to serve. Any data earlier than this lower time range will be ignored.
+	// If not set, will be set as zero value, so most recent blocks will be served.
+	// +kubebuilder:validation:Optional
+	MinTime *Duration `json:"minTime,omitempty"`
+	// Maximum time range to serve. Any data after this upper time range will be ignored.
+	// If not set, will be set as max value, so all blocks will be served.
+	// +kubebuilder:validation:Optional
+	MaxTime *Duration `json:"maxTime,omitempty"`
 }

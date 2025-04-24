@@ -206,8 +206,6 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
 		CachingBucketConfig:      toManifestCacheConfig(in.Spec.CachingBucketConfig),
-		Min:                      manifests.Duration(manifests.OptionalToString(in.Spec.MinTime)),
-		Max:                      manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime)),
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
 		IndexHeaderOptions:       indexHeaderOpts,
 		BlockConfigOptions:       blockConfigOpts,
@@ -220,6 +218,11 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore) manifestsstore.Options {
 			StoreLimitsRequestSamples: in.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
 			StoreLimitsRequestSeries:  in.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
 		}
+	}
+
+	if in.Spec.TimeRangeConfig != nil {
+		sops.Min = manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MinTime))
+		sops.Max = manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MaxTime))
 	}
 
 	return sops
@@ -287,7 +290,7 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		}
 	}
 
-	return manifestscompact.Options{
+	cops := manifestscompact.Options{
 		Options: opts,
 		RetentionOptions: &manifestscompact.RetentionOptions{
 			Raw:         ptr.To(manifests.Duration(in.Spec.RetentionConfig.Raw)),
@@ -300,9 +303,14 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact) manifestscompact.Option
 		DebugConfig:    debugConfig(),
 		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
 		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Min:            ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.MinTime))),
-		Max:            ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.MaxTime))),
 	}
+
+	if in.Spec.TimeRangeConfig != nil {
+		cops.Min = ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MinTime)))
+		cops.Max = ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MaxTime)))
+	}
+
+	return cops
 }
 
 // CompactNameFromParent returns the name of the Thanos Compact component.
