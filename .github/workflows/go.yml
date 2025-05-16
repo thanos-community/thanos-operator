@@ -10,7 +10,7 @@ on:
 
 env:
   golang-version: '1.23'
-  kind-version: 'v0.24.0'
+  kind-version: 'v0.27.0'
 
 jobs:
   lint:
