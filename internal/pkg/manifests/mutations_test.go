@@ -9,6 +9,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -49,8 +50,8 @@ func TestGetMutateFunc_MutateObjectMeta(t *testing.T) {
 }
 
 func TestGetMutateFunc_ReturnErrOnNotSupportedType(t *testing.T) {
-	got := &corev1.Endpoints{}
-	want := &corev1.Endpoints{}
+	got := &discoveryv1.EndpointSlice{}
+	want := &discoveryv1.EndpointSlice{}
 	f := MutateFuncFor(got, want)
 
 	require.Error(t, f())
