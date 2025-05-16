@@ -211,6 +211,7 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			name := tc.opts.GetGeneratedResourceName()
 			deployment := NewQueryFrontendDeployment(tc.opts)
 			objectMetaLabels := GetLabels(tc.opts)
