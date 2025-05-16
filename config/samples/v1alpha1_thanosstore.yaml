@@ -9,7 +9,6 @@ spec:
     name: thanos-object-storage
     key: thanos.yaml
   shardingStrategy:
-    shardReplicas: 2
     shards: 2
     type: block
   storageSize: 1Gi
