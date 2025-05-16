@@ -23,11 +23,11 @@ $(CRD_REF_DOCS): $(BINGO_DIR)/crd-ref-docs.mod
 	@echo "(re)installing $(GOBIN)/crd-ref-docs-v0.1.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=crd-ref-docs.mod -o=$(GOBIN)/crd-ref-docs-v0.1.0 "github.com/elastic/crd-ref-docs"
 
-FAILLINT := $(GOBIN)/faillint-v1.13.0
+FAILLINT := $(GOBIN)/faillint-v1.15.0
 $(FAILLINT): $(BINGO_DIR)/faillint.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/faillint-v1.13.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=faillint.mod -o=$(GOBIN)/faillint-v1.13.0 "github.com/fatih/faillint"
+	@echo "(re)installing $(GOBIN)/faillint-v1.15.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=faillint.mod -o=$(GOBIN)/faillint-v1.15.0 "github.com/fatih/faillint"
 
 GOIMPORTS := $(GOBIN)/goimports-v0.20.0
 $(GOIMPORTS): $(BINGO_DIR)/goimports.mod
