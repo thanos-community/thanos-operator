@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  golang-version: '1.23'
+  golang-version: '1.24'
   kind-version: 'v0.27.0'
 
 jobs:
