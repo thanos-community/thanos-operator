@@ -5,10 +5,10 @@ metadata:
 spec:
   storageSize: "100Mi"
   shardingConfig:
-    externalLabelSharding:
-      - shardName: example
-        label: tenant_id
-        values: ["a", "b"]
+    - shardName: example
+      externalLabelSharding:
+        - label: tenant_id
+          value: "a"
   objectStorageConfig:
     name: thanos-object-storage
     key: thanos.yaml
