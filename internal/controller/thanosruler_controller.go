@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,14 +108,32 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if ruler.Spec.Paused != nil && *ruler.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosRuler resource")
 		r.recorder.Event(ruler, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosRuler resource")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.updateCondition(ctx, ruler, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 	}
 
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
 		r.recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, ruler, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, ruler, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -550,4 +569,15 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 
 		return requests
 	})
+}
+
+// updateCondition updates the status conditions of the ThanosRuler resource
+func (r *ThanosRulerReconciler) updateCondition(ctx context.Context, ruler *monitoringthanosiov1alpha1.ThanosRuler, condition metav1.Condition) error {
+	conditions := ruler.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	ruler.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		ruler.Status.Paused = ptr.To(true)
+	}
+	return r.Status().Update(ctx, ruler)
 }

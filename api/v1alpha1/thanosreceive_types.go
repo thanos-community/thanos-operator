@@ -169,8 +169,43 @@ type ThanosReceiveSpec struct {
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive
 type ThanosReceiveStatus struct {
-	// Conditions represent the latest available observations of the state of the hashring.
+	// Conditions represent the latest available observations of the state of the ThanosReceive CRD.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is a flag that indicates if the ThanosReceive is paused.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// RouterStatus is the status of the Receive router.
+	Router RouterStatus `json:"routerStatus,omitempty"`
+	// HashringStatus is a map of ingester statuses to hashring names.
+	HashringStatus map[string]IngesterStatus `json:"hashringStatus,omitempty"`
+}
+
+// RouterStatus is the status of the Receive router.
+type RouterStatus struct {
+	// Replicas is the number of replicas of the Receive router.
+	Replicas int32 `json:"replicas,omitempty"`
+	// UpdatedReplicas is the number of Pods created by the Receive router.
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this Receive router.
+	AvailableReplicas int32 `json:"availableReplicas,omitempty"`
+	// UnavailableReplicas is the number of pods that are needed for router to have 100% capacity.
+	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty"`
+	// ReadyReplicas is the number of pods created for this Receive router with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+}
+
+// IngesterStatus is the status of the Ingester.
+type IngesterStatus struct {
+	// Replicas is the number of replicas of the Ingester.
+	Replicas int32 `json:"replicas,omitempty"`
+	// Total number of non-terminating pods targeted by Ingester that have the desired template spec.
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this Ingester.
+	AvailableReplicas int32 `json:"availableReplicas,omitempty"`
+	// ReadyReplicas is the number of pods created for this Ingester with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	// CurrentReplicas is the number of Pods created by the Ingester.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
 }
 
 //+kubebuilder:object:root=true

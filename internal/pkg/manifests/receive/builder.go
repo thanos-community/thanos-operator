@@ -655,6 +655,7 @@ func (opts IngesterOptions) GetSelectorLabels() map[string]string {
 	l := GetRequiredIngesterLabels()
 	l[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
 	l[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	l[manifests.HashringLabel] = opts.HashringName
 	return l
 }
 

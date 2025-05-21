@@ -242,3 +242,16 @@ type TimeRangeConfig struct {
 	// +kubebuilder:validation:Optional
 	MaxTime *Duration `json:"maxTime,omitempty"`
 }
+
+type ShardStatus struct {
+	// Replicas is the number of replicas of the shard.
+	Replicas int32 `json:"replicas,omitempty"`
+	//  Total number of non-terminating pods targeted by Shard that have the desired template spec..
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this shard.
+	AvailableReplicas int32 `json:"availableReplicas,omitempty"`
+	// ReadyReplicas is the number of pods created for this shard with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	// currentReplicas is the number of Pods created by the shard.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+}

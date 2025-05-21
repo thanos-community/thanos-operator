@@ -36,11 +36,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -109,14 +111,32 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
 		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.updateCondition(ctx, query, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 	}
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
 		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, query, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, query, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -314,3 +334,14 @@ func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMet
 }
 
 var requiredStoreServiceLabels = manifestsstore.GetRequiredStoreServiceLabel()
+
+// updateCondition updates the status conditions of the ThanosQuery resource
+func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *monitoringthanosiov1alpha1.ThanosQuery, condition metav1.Condition) error {
+	conditions := query.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	query.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		query.Status.Paused = ptr.To(true)
+	}
+	return r.Status().Update(ctx, query)
+}

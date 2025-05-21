@@ -34,6 +34,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -79,14 +81,32 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
 		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.updateCondition(ctx, compact, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 	}
 
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
 		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, compact, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, compact, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -179,4 +199,15 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 	}
 
 	return buildable
+}
+
+// updateCondition updates the status conditions of the ThanosCompact resource
+func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *monitoringthanosiov1alpha1.ThanosCompact, condition metav1.Condition) error {
+	conditions := compact.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	compact.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		compact.Status.Paused = ptr.To(true)
+	}
+	return r.Status().Update(ctx, compact)
 }

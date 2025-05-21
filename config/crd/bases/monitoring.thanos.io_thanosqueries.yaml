@@ -9588,7 +9588,9 @@ spec:
             - replicas
             type: object
           status:
-            description: ThanosQueryStatus defines the observed state of ThanosQuery
+            description: |-
+              ThanosQueryStatus defines the observed state of ThanosQuery
+              Enhanced to include reconciliation state, deployment status, pod status, and last reconciled statistics.
             properties:
               conditions:
                 description: Conditions represent the latest available observations
@@ -9648,6 +9650,77 @@ spec:
                   - type
                   type: object
                 type: array
+              paused:
+                description: Paused is the flag to pause the Querier.
+                type: boolean
+              querierStatus:
+                description: Querier is the status of the Querier.
+                properties:
+                  availableReplicas:
+                    description: Total number of available pods (ready for at least
+                      minReadySeconds) targeted by this Querier.
+                    format: int32
+                    type: integer
+                  readyReplicas:
+                    description: ReadyReplicas is the number of pods created for this
+                      Querier with a Ready Condition.
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Replicas is the number of replicas of the Querier.
+                    format: int32
+                    type: integer
+                  unavailableReplicas:
+                    description: UnavailableReplicas is the number of pods that are
+                      needed for querier to have 100% capacity.
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: UpdatedReplicas is the number of Pods created by
+                      the Querier.
+                    format: int32
+                    type: integer
+                required:
+                - availableReplicas
+                - readyReplicas
+                - replicas
+                - unavailableReplicas
+                - updatedReplicas
+                type: object
+              queryFrontendStatus:
+                description: QueryFrontend is the status of the Query Frontend.
+                properties:
+                  availableReplicas:
+                    description: Total number of available pods (ready for at least
+                      minReadySeconds) targeted by this Query Frontend.
+                    format: int32
+                    type: integer
+                  readyReplicas:
+                    description: ReadyReplicas is the number of pods created for this
+                      Query Frontend with a Ready Condition.
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Replicas is the number of replicas of the Query Frontend.
+                    format: int32
+                    type: integer
+                  unavailableReplicas:
+                    description: UnavailableReplicas is the number of pods that are
+                      needed for queryFrontend to have 100% capacity.
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: UpdatedReplicas is the number of Pods created by
+                      the Query Frontend.
+                    format: int32
+                    type: integer
+                required:
+                - availableReplicas
+                - readyReplicas
+                - replicas
+                - unavailableReplicas
+                - updatedReplicas
+                type: object
             type: object
         type: object
     served: true

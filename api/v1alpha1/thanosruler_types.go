@@ -96,6 +96,19 @@ type ThanosRulerSpec struct {
 type ThanosRulerStatus struct {
 	// Conditions represent the latest available observations of the state of the Ruler.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is a flag that indicates if the Ruler is paused.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// Replicas is the number of replicas of the Ruler.
+	Replicas int32 `json:"replicas,omitempty"`
+	//  Total number of non-terminating pods targeted by Ruler that have the desired template spec.
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this Ruler.
+	AvailableReplicas int32 `json:"availableReplicas,omitempty"`
+	// ReadyReplicas is the number of pods created for this Ruler with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	// CurrentReplicas is the number of Pods created by the Ruler.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
 }
 
 //+kubebuilder:object:root=true

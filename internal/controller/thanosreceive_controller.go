@@ -34,10 +34,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -87,7 +89,6 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Fetch the ThanosReceive instance to validate it is applied on the cluster.
 	receiver := &monitoringthanosiov1alpha1.ThanosReceive{}
 	err := r.Get(ctx, req.NamespacedName, receiver)
 	if err != nil {
@@ -104,10 +105,14 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.logger.Info("receiver is paused")
 		r.recorder.Event(receiver, corev1.EventTypeNormal, "Paused",
 			"Reconciliation is paused for ThanosReceive resource")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, r.updateCondition(ctx, receiver, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 	}
 
-	// handle object being deleted - inferred from the existence of DeletionTimestamp
 	if !receiver.GetDeletionTimestamp().IsZero() {
 		return r.handleDeletionTimestamp(receiver)
 	}
@@ -115,8 +120,21 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
 		r.recorder.Event(receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, receiver, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, receiver, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -328,4 +346,15 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			},
 		}
 	})
+}
+
+// updateCondition updates the status conditions of the ThanosReceive resource
+func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver *monitoringthanosiov1alpha1.ThanosReceive, condition metav1.Condition) error {
+	conditions := receiver.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	receiver.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		receiver.Status.Paused = ptr.To(true)
+	}
+	return r.Status().Update(ctx, receiver)
 }

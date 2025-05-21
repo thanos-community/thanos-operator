@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
@@ -424,6 +425,9 @@ func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
 	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.Owner)
+	if opts.ShardIndex != nil {
+		labels[manifests.ShardLabel] = strconv.Itoa(int(*opts.ShardIndex))
+	}
 	return labels
 }
 
