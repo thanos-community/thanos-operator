@@ -129,7 +129,7 @@ type ThanosStoreStatus struct {
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
 	// ShardStatuses is a map of shard statuses to shard numbers.
-	ShardStatuses map[string]ShardStatus `json:"shardStatuses,omitempty"`
+	ShardStatuses map[string]StatefulSetStatus `json:"shardStatuses,omitempty"`
 }
 
 //+kubebuilder:object:root=true

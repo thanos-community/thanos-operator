@@ -346,14 +346,14 @@ func (r *ObjectStatusReconciler) updateAllThanosReceiveStatuses(ctx context.Cont
 			}
 		}
 
-		receive.Status.HashringStatus = make(map[string]monitoringthanosiov1alpha1.IngesterStatus)
+		receive.Status.HashringStatus = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
 
 		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &receive)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == receivebldr.IngestComponentName {
 					hashringName := status.labels[manifests.HashringLabel]
-					receive.Status.HashringStatus[hashringName] = monitoringthanosiov1alpha1.IngesterStatus{
+					receive.Status.HashringStatus[hashringName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 						AvailableReplicas: status.availableReplicas,
 						Replicas:          status.replicas,
 						UpdatedReplicas:   status.updatedReplicas,
@@ -379,14 +379,14 @@ func (r *ObjectStatusReconciler) updateAllThanosCompactStatuses(ctx context.Cont
 
 	for _, compact := range compactList.Items {
 		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &compact)
-		compact.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.ShardStatus)
+		compact.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == compactbldr.Name {
 					r.logger.Info("Updating ThanosCompact statuses", "containerName", containerName, "status", status)
 					shardName, ok := status.labels[manifests.ShardLabel]
 					if !ok {
-						compact.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.ShardStatus{
+						compact.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.StatefulSetStatus{
 							AvailableReplicas: status.availableReplicas,
 							Replicas:          status.replicas,
 							UpdatedReplicas:   status.updatedReplicas,
@@ -394,7 +394,7 @@ func (r *ObjectStatusReconciler) updateAllThanosCompactStatuses(ctx context.Cont
 							CurrentReplicas:   status.currentReplicas,
 						}
 					} else {
-						compact.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.ShardStatus{
+						compact.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 							AvailableReplicas: status.availableReplicas,
 							Replicas:          status.replicas,
 							UpdatedReplicas:   status.updatedReplicas,
@@ -447,13 +447,13 @@ func (r *ObjectStatusReconciler) updateAllThanosStoreStatuses(ctx context.Contex
 
 	for _, store := range storeList.Items {
 		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &store)
-		store.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.ShardStatus)
+		store.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == storebldr.Name {
 					shardName, ok := status.labels[manifests.ShardLabel]
 					if !ok {
-						store.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.ShardStatus{
+						store.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.StatefulSetStatus{
 							AvailableReplicas: status.availableReplicas,
 							Replicas:          status.replicas,
 							UpdatedReplicas:   status.updatedReplicas,
@@ -461,7 +461,7 @@ func (r *ObjectStatusReconciler) updateAllThanosStoreStatuses(ctx context.Contex
 							CurrentReplicas:   status.currentReplicas,
 						}
 					} else {
-						store.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.ShardStatus{
+						store.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 							AvailableReplicas: status.availableReplicas,
 							Replicas:          status.replicas,
 							UpdatedReplicas:   status.updatedReplicas,

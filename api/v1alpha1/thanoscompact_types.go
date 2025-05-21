@@ -82,7 +82,7 @@ type ThanosCompactStatus struct {
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
 	// ShardStatuses is the status of the shards in the compact component.
-	ShardStatuses map[string]ShardStatus `json:"shardStatuses,omitempty"`
+	ShardStatuses map[string]StatefulSetStatus `json:"shardStatuses,omitempty"`
 }
 
 // BlockViewerGlobalSyncConfig is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.

@@ -5015,26 +5015,26 @@ spec:
                   properties:
                     availableReplicas:
                       description: Total number of available pods (ready for at least
-                        minReadySeconds) targeted by this shard.
+                        minReadySeconds) targeted by this StatefulSet.
                       format: int32
                       type: integer
                     currentReplicas:
                       description: currentReplicas is the number of Pods created by
-                        the shard.
+                        the StatefulSet.
                       format: int32
                       type: integer
                     readyReplicas:
                       description: ReadyReplicas is the number of pods created for
-                        this shard with a Ready Condition.
+                        this StatefulSet with a Ready Condition.
                       format: int32
                       type: integer
                     replicas:
-                      description: Replicas is the number of replicas of the shard.
+                      description: Replicas is the number of replicas of the StatefulSet.
                       format: int32
                       type: integer
                     updatedReplicas:
                       description: ' Total number of non-terminating pods targeted
-                        by Shard that have the desired template spec..'
+                        by StatefulSet that have the desired template spec..'
                       format: int32
                       type: integer
                   type: object

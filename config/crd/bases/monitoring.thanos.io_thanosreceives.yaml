@@ -9657,30 +9657,29 @@ spec:
                 type: array
               hashringStatus:
                 additionalProperties:
-                  description: IngesterStatus is the status of the Ingester.
                   properties:
                     availableReplicas:
                       description: Total number of available pods (ready for at least
-                        minReadySeconds) targeted by this Ingester.
+                        minReadySeconds) targeted by this StatefulSet.
                       format: int32
                       type: integer
                     currentReplicas:
-                      description: CurrentReplicas is the number of Pods created by
-                        the Ingester.
+                      description: currentReplicas is the number of Pods created by
+                        the StatefulSet.
                       format: int32
                       type: integer
                     readyReplicas:
                       description: ReadyReplicas is the number of pods created for
-                        this Ingester with a Ready Condition.
+                        this StatefulSet with a Ready Condition.
                       format: int32
                       type: integer
                     replicas:
-                      description: Replicas is the number of replicas of the Ingester.
+                      description: Replicas is the number of replicas of the StatefulSet.
                       format: int32
                       type: integer
                     updatedReplicas:
-                      description: Total number of non-terminating pods targeted by
-                        Ingester that have the desired template spec.
+                      description: ' Total number of non-terminating pods targeted
+                        by StatefulSet that have the desired template spec..'
                       format: int32
                       type: integer
                   type: object
@@ -9696,29 +9695,34 @@ spec:
                 properties:
                   availableReplicas:
                     description: Total number of available pods (ready for at least
-                      minReadySeconds) targeted by this Receive router.
+                      minReadySeconds) targeted by this Deployment.
                     format: int32
                     type: integer
                   readyReplicas:
                     description: ReadyReplicas is the number of pods created for this
-                      Receive router with a Ready Condition.
+                      Deployment with a Ready Condition.
                     format: int32
                     type: integer
                   replicas:
-                    description: Replicas is the number of replicas of the Receive
-                      router.
+                    description: Replicas is the number of replicas of the Deployment.
                     format: int32
                     type: integer
                   unavailableReplicas:
                     description: UnavailableReplicas is the number of pods that are
-                      needed for router to have 100% capacity.
+                      needed for Deployment to have 100% capacity.
                     format: int32
                     type: integer
                   updatedReplicas:
                     description: UpdatedReplicas is the number of Pods created by
-                      the Receive router.
+                      the Deployment.
                     format: int32
                     type: integer
+                required:
+                - availableReplicas
+                - readyReplicas
+                - replicas
+                - unavailableReplicas
+                - updatedReplicas
                 type: object
             type: object
         type: object

@@ -4932,7 +4932,7 @@ spec:
             properties:
               availableReplicas:
                 description: Total number of available pods (ready for at least minReadySeconds)
-                  targeted by this Ruler.
+                  targeted by this StatefulSet.
                 format: int32
                 type: integer
               conditions:
@@ -4994,8 +4994,8 @@ spec:
                   type: object
                 type: array
               currentReplicas:
-                description: CurrentReplicas is the number of Pods created by the
-                  Ruler.
+                description: currentReplicas is the number of Pods created by the
+                  StatefulSet.
                 format: int32
                 type: integer
               paused:
@@ -5003,16 +5003,16 @@ spec:
                 type: boolean
               readyReplicas:
                 description: ReadyReplicas is the number of pods created for this
-                  Ruler with a Ready Condition.
+                  StatefulSet with a Ready Condition.
                 format: int32
                 type: integer
               replicas:
-                description: Replicas is the number of replicas of the Ruler.
+                description: Replicas is the number of replicas of the StatefulSet.
                 format: int32
                 type: integer
               updatedReplicas:
-                description: ' Total number of non-terminating pods targeted by Ruler
-                  that have the desired template spec.'
+                description: ' Total number of non-terminating pods targeted by StatefulSet
+                  that have the desired template spec..'
                 format: int32
                 type: integer
             type: object

@@ -154,7 +154,7 @@ type WebConfig struct {
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery
-// Enhanced to include reconciliation state, deployment status, pod status, and last reconciled statistics.
+// Includes reconciliation state, deployment status, pod status, and last reconciled statistics.
 type ThanosQueryStatus struct {
 	// Conditions represent the latest available observations of the state of the Querier.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
@@ -162,37 +162,9 @@ type ThanosQueryStatus struct {
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
 	// Querier is the status of the Querier.
-	Querier QuerierStatus `json:"querierStatus,omitempty"`
+	Querier DeploymentStatus `json:"querierStatus,omitempty"`
 	// QueryFrontend is the status of the Query Frontend.
-	QueryFrontend QueryFrontendStatus `json:"queryFrontendStatus,omitempty"`
-}
-
-// QuerierStatus is the status of the Querier.
-type QuerierStatus struct {
-	// Replicas is the number of replicas of the Querier.
-	Replicas int32 `json:"replicas"`
-	// UpdatedReplicas is the number of Pods created by the Querier.
-	UpdatedReplicas int32 `json:"updatedReplicas"`
-	// Total number of available pods (ready for at least minReadySeconds) targeted by this Querier.
-	AvailableReplicas int32 `json:"availableReplicas"`
-	// UnavailableReplicas is the number of pods that are needed for querier to have 100% capacity.
-	UnavailableReplicas int32 `json:"unavailableReplicas"`
-	// ReadyReplicas is the number of pods created for this Querier with a Ready Condition.
-	ReadyReplicas int32 `json:"readyReplicas"`
-}
-
-// QueryFrontendStatus is the status of the Query Frontend.
-type QueryFrontendStatus struct {
-	// Replicas is the number of replicas of the Query Frontend.
-	Replicas int32 `json:"replicas"`
-	// UpdatedReplicas is the number of Pods created by the Query Frontend.
-	UpdatedReplicas int32 `json:"updatedReplicas"`
-	// Total number of available pods (ready for at least minReadySeconds) targeted by this Query Frontend.
-	AvailableReplicas int32 `json:"availableReplicas"`
-	// UnavailableReplicas is the number of pods that are needed for queryFrontend to have 100% capacity.
-	UnavailableReplicas int32 `json:"unavailableReplicas"`
-	// ReadyReplicas is the number of pods created for this Query Frontend with a Ready Condition.
-	ReadyReplicas int32 `json:"readyReplicas"`
+	QueryFrontend DeploymentStatus `json:"queryFrontendStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
