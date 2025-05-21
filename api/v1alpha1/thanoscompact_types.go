@@ -76,8 +76,13 @@ type ThanosCompactSpec struct {
 
 // ThanosCompactStatus defines the observed state of ThanosCompact
 type ThanosCompactStatus struct {
-	// Conditions represent the latest available observations of the state of the hashring.
+	// Conditions represent the latest available observations of the state of the Compactor.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is the flag to pause the Compactor.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// ShardStatuses is the status of the shards in the compact component.
+	ShardStatuses map[string]StatefulSetStatus `json:"shardStatuses,omitempty"`
 }
 
 // BlockViewerGlobalSyncConfig is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.

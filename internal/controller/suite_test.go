@@ -125,35 +125,35 @@ var _ = BeforeSuite(func() {
 		buildConfig("receive"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-	).SetupWithManager(k8sManager)
+	).DisableConditionUpdate().SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosQueryReconciler(
 		buildConfig("query"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-	).SetupWithManager(k8sManager)
+	).DisableConditionUpdate().SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosStoreReconciler(
 		buildConfig("store"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-	).SetupWithManager(k8sManager)
+	).DisableConditionUpdate().SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosRulerReconciler(
 		buildConfig("ruler"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-	).SetupWithManager(k8sManager)
+	).DisableConditionUpdate().SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = NewThanosCompactReconciler(
 		buildConfig("compact"),
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
-	).SetupWithManager(k8sManager)
+	).DisableConditionUpdate().SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {

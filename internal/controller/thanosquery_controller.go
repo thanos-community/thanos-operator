@@ -36,11 +36,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -59,7 +61,8 @@ type ThanosQueryReconciler struct {
 	metrics  controllermetrics.ThanosQueryMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
@@ -109,14 +112,33 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
 		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
+		r.updateCondition(ctx, query, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *query)
 	if err != nil {
 		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, query, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, query, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -314,3 +336,24 @@ func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMet
 }
 
 var requiredStoreServiceLabels = manifestsstore.GetRequiredStoreServiceLabel()
+
+func (r *ThanosQueryReconciler) DisableConditionUpdate() *ThanosQueryReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
+// updateCondition updates the status conditions of the ThanosQuery resource
+func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *monitoringthanosiov1alpha1.ThanosQuery, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
+	conditions := query.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	query.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		query.Status.Paused = ptr.To(true)
+	}
+	if err := r.Status().Update(ctx, query); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosQuery", "name", query.Name)
+	}
+}

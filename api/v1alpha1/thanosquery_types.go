@@ -154,9 +154,17 @@ type WebConfig struct {
 }
 
 // ThanosQueryStatus defines the observed state of ThanosQuery
+// Includes reconciliation state, deployment status, pod status, and last reconciled statistics.
 type ThanosQueryStatus struct {
 	// Conditions represent the latest available observations of the state of the Querier.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is the flag to pause the Querier.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// Querier is the status of the Querier.
+	Querier DeploymentStatus `json:"querierStatus,omitempty"`
+	// QueryFrontend is the status of the Query Frontend.
+	QueryFrontend DeploymentStatus `json:"queryFrontendStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
