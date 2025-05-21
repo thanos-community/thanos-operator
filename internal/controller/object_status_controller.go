@@ -22,6 +22,11 @@ import (
 
 	"github.com/go-logr/logr"
 
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	manifests "github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -31,10 +36,6 @@ import (
 	receivebldr "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	rulerbldr "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	storebldr "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -385,6 +385,26 @@ _Appears in:_
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
 
 
+#### IngesterStatus
+
+
+
+IngesterStatus is the status of the Ingester.
+
+
+
+_Appears in:_
+- [ThanosReceiveStatus](#thanosreceivestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the Ingester. |  |  |
+| `updatedReplicas` _integer_ | Total number of non-terminating pods targeted by Ingester that have the desired template spec. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Ingester. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Ingester with a Ready Condition. |  |  |
+| `currentReplicas` _integer_ | CurrentReplicas is the number of Pods created by the Ingester. |  |  |
+
+
 #### ObjectStorageConfig
 
 _Underlying type:_ _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#secretkeyselector-v1-core)_
@@ -420,6 +440,26 @@ _Appears in:_
 | `enable` _boolean_ | Enabled enables the creation of a PodDisruptionBudget for the Thanos component. |  | Optional: \{\} <br /> |
 | `maxUnavailable` _integer_ | MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.<br />If neither MaxUnavailable nor MinAvailable is specified, the default is 1. |  | Optional: \{\} <br /> |
 | `minAvailable` _integer_ | MinAvailable is the minimum number of pods that must still be available during the disruption. |  | Optional: \{\} <br /> |
+
+
+#### QuerierStatus
+
+
+
+QuerierStatus is the status of the Querier.
+
+
+
+_Appears in:_
+- [ThanosQueryStatus](#thanosquerystatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the Querier. |  |  |
+| `updatedReplicas` _integer_ | UpdatedReplicas is the number of Pods created by the Querier. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Querier. |  |  |
+| `unavailableReplicas` _integer_ | UnavailableReplicas is the number of pods that are needed for querier to have 100% capacity. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Querier with a Ready Condition. |  |  |
 
 
 #### QueryFrontendSpec
@@ -462,6 +502,26 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+
+
+#### QueryFrontendStatus
+
+
+
+QueryFrontendStatus is the status of the Query Frontend.
+
+
+
+_Appears in:_
+- [ThanosQueryStatus](#thanosquerystatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the Query Frontend. |  |  |
+| `updatedReplicas` _integer_ | UpdatedReplicas is the number of Pods created by the Query Frontend. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Query Frontend. |  |  |
+| `unavailableReplicas` _integer_ | UnavailableReplicas is the number of pods that are needed for queryFrontend to have 100% capacity. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Query Frontend with a Ready Condition. |  |  |
 
 
 #### RetentionResolutionConfig
@@ -518,6 +578,26 @@ _Appears in:_
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
 
 
+#### RouterStatus
+
+
+
+RouterStatus is the status of the Receive router.
+
+
+
+_Appears in:_
+- [ThanosReceiveStatus](#thanosreceivestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the Receive router. |  |  |
+| `updatedReplicas` _integer_ | UpdatedReplicas is the number of Pods created by the Receive router. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Receive router. |  |  |
+| `unavailableReplicas` _integer_ | UnavailableReplicas is the number of pods that are needed for router to have 100% capacity. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Receive router with a Ready Condition. |  |  |
+
+
 #### ServiceMonitorConfig
 
 
@@ -533,6 +613,27 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `enable` _boolean_ | Enable the management of ServiceMonitors for the Thanos component.<br />If not specified, the operator will default to true. |  | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels to add to the ServiceMonitor. |  | Optional: \{\} <br /> |
+
+
+#### ShardStatus
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosCompactStatus](#thanoscompactstatus)
+- [ThanosStoreStatus](#thanosstorestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the shard. |  |  |
+| `updatedReplicas` _integer_ |  Total number of non-terminating pods targeted by Shard that have the desired template spec.. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this shard. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this shard with a Ready Condition. |  |  |
+| `currentReplicas` _integer_ | currentReplicas is the number of Pods created by the shard. |  |  |
 
 
 #### ShardingConfig
@@ -779,7 +880,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the hashring. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Compactor. |  |  |
+| `paused` _boolean_ | Paused is the flag to pause the Compactor. |  | Optional: \{\} <br /> |
+| `shardStatuses` _object (keys:string, values:[ShardStatus](#shardstatus))_ | ShardStatuses is the status of the shards in the compact component. |  |  |
 
 
 #### ThanosQuery
@@ -871,6 +974,7 @@ _Appears in:_
 
 
 ThanosQueryStatus defines the observed state of ThanosQuery
+Enhanced to include reconciliation state, deployment status, pod status, and last reconciled statistics.
 
 
 
@@ -880,6 +984,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+| `paused` _boolean_ | Paused is the flag to pause the Querier. |  | Optional: \{\} <br /> |
+| `querierStatus` _[QuerierStatus](#querierstatus)_ | Querier is the status of the Querier. |  |  |
+| `queryFrontendStatus` _[QueryFrontendStatus](#queryfrontendstatus)_ | QueryFrontend is the status of the Query Frontend. |  |  |
 
 
 #### ThanosReceive
@@ -956,7 +1063,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the hashring. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the ThanosReceive CRD. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the ThanosReceive is paused. |  | Optional: \{\} <br /> |
+| `routerStatus` _[RouterStatus](#routerstatus)_ | RouterStatus is the status of the Receive router. |  |  |
+| `hashringStatus` _object (keys:string, values:[IngesterStatus](#ingesterstatus))_ | HashringStatus is a map of ingester statuses to hashring names. |  |  |
 
 
 #### ThanosRuler
@@ -1061,6 +1171,12 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Ruler. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the Ruler is paused. |  | Optional: \{\} <br /> |
+| `replicas` _integer_ | Replicas is the number of replicas of the Ruler. |  |  |
+| `updatedReplicas` _integer_ |  Total number of non-terminating pods targeted by Ruler that have the desired template spec. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Ruler. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Ruler with a Ready Condition. |  |  |
+| `currentReplicas` _integer_ | CurrentReplicas is the number of Pods created by the Ruler. |  |  |
 
 
 #### ThanosStore
@@ -1164,7 +1280,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Store. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the Store is paused. |  | Optional: \{\} <br /> |
+| `shardStatuses` _object (keys:string, values:[ShardStatus](#shardstatus))_ | ShardStatuses is a map of shard statuses to shard numbers. |  |  |
 
 
 #### TimeRangeConfig
