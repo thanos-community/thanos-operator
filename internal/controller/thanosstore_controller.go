@@ -51,7 +51,8 @@ type ThanosStoreReconciler struct {
 	metrics  controllermetrics.ThanosStoreMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
@@ -100,12 +101,13 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if store.Spec.Paused != nil && *store.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosStore")
 		r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
-		return ctrl.Result{}, r.updateCondition(ctx, store, metav1.Condition{
+		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonPaused,
 			Message: "Reconciliation is paused",
 		})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *store)
@@ -214,13 +216,23 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
+func (r *ThanosStoreReconciler) DisableConditionUpdate() *ThanosStoreReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
 // updateCondition updates the status conditions of the ThanosStore resource
-func (r *ThanosStoreReconciler) updateCondition(ctx context.Context, store *monitoringthanosiov1alpha1.ThanosStore, condition metav1.Condition) error {
+func (r *ThanosStoreReconciler) updateCondition(ctx context.Context, store *monitoringthanosiov1alpha1.ThanosStore, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
 	conditions := store.Status.Conditions
 	meta.SetStatusCondition(&conditions, condition)
 	store.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
 		store.Status.Paused = ptr.To(true)
 	}
-	return r.Status().Update(ctx, store)
+	if err := r.Status().Update(ctx, store); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosStore", "name", store.Name)
+	}
 }

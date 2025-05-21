@@ -58,7 +58,8 @@ type ThanosRulerReconciler struct {
 	metrics  controllermetrics.ThanosRulerMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
@@ -108,12 +109,13 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if ruler.Spec.Paused != nil && *ruler.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosRuler resource")
 		r.recorder.Event(ruler, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosRuler resource")
-		return ctrl.Result{}, r.updateCondition(ctx, ruler, metav1.Condition{
+		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonPaused,
 			Message: "Reconciliation is paused",
 		})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *ruler)
@@ -571,13 +573,23 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 	})
 }
 
+func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
 // updateCondition updates the status conditions of the ThanosRuler resource
-func (r *ThanosRulerReconciler) updateCondition(ctx context.Context, ruler *monitoringthanosiov1alpha1.ThanosRuler, condition metav1.Condition) error {
+func (r *ThanosRulerReconciler) updateCondition(ctx context.Context, ruler *monitoringthanosiov1alpha1.ThanosRuler, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
 	conditions := ruler.Status.Conditions
 	meta.SetStatusCondition(&conditions, condition)
 	ruler.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
 		ruler.Status.Paused = ptr.To(true)
 	}
-	return r.Status().Update(ctx, ruler)
+	if err := r.Status().Update(ctx, ruler); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosRuler", "name", ruler.Name)
+	}
 }

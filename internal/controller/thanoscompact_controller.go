@@ -49,7 +49,8 @@ type ThanosCompactReconciler struct {
 	metrics  controllermetrics.ThanosCompactMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
@@ -81,12 +82,13 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
 		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
-		return ctrl.Result{}, r.updateCondition(ctx, compact, metav1.Condition{
+		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonPaused,
 			Message: "Reconciliation is paused",
 		})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *compact)
@@ -201,13 +203,24 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 	return buildable
 }
 
+func (r *ThanosCompactReconciler) DisableConditionUpdate() *ThanosCompactReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
 // updateCondition updates the status conditions of the ThanosCompact resource
-func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *monitoringthanosiov1alpha1.ThanosCompact, condition metav1.Condition) error {
+func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *monitoringthanosiov1alpha1.ThanosCompact, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
 	conditions := compact.Status.Conditions
 	meta.SetStatusCondition(&conditions, condition)
 	compact.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
 		compact.Status.Paused = ptr.To(true)
 	}
-	return r.Status().Update(ctx, compact)
+
+	if err := r.Status().Update(ctx, compact); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosCompact", "name", compact.Name)
+	}
 }

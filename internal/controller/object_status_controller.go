@@ -207,7 +207,7 @@ func (r *ObjectStatusReconciler) getDeploymentStatuses(ctx context.Context, obje
 		return nil
 	}
 
-	var s []stats
+	s := make([]stats, 0)
 	for _, deployment := range deploymentList.Items {
 		isOwned := false
 		for _, ownerRef := range deployment.OwnerReferences {
@@ -254,7 +254,7 @@ func (r *ObjectStatusReconciler) getStatefulsetStatuses(ctx context.Context, obj
 		return nil
 	}
 
-	var s []stats
+	s := make([]stats, 0)
 	for _, statefulset := range statefulsetList.Items {
 		isOwned := false
 		for _, ownerRef := range statefulset.OwnerReferences {

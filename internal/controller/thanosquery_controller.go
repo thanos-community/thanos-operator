@@ -61,7 +61,8 @@ type ThanosQueryReconciler struct {
 	metrics  controllermetrics.ThanosQueryMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
@@ -111,12 +112,13 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
 		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
-		return ctrl.Result{}, r.updateCondition(ctx, query, metav1.Condition{
+		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonPaused,
 			Message: "Reconciliation is paused",
 		})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *query)
@@ -335,13 +337,23 @@ func (r *ThanosQueryReconciler) getServiceTypeFromLabel(objMeta metav1.ObjectMet
 
 var requiredStoreServiceLabels = manifestsstore.GetRequiredStoreServiceLabel()
 
+func (r *ThanosQueryReconciler) DisableConditionUpdate() *ThanosQueryReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
 // updateCondition updates the status conditions of the ThanosQuery resource
-func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *monitoringthanosiov1alpha1.ThanosQuery, condition metav1.Condition) error {
+func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *monitoringthanosiov1alpha1.ThanosQuery, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
 	conditions := query.Status.Conditions
 	meta.SetStatusCondition(&conditions, condition)
 	query.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
 		query.Status.Paused = ptr.To(true)
 	}
-	return r.Status().Update(ctx, query)
+	if err := r.Status().Update(ctx, query); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosQuery", "name", query.Name)
+	}
 }

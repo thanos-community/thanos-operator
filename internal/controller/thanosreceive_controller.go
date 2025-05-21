@@ -63,7 +63,8 @@ type ThanosReceiveReconciler struct {
 	metrics  controllermetrics.ThanosReceiveMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
@@ -105,12 +106,13 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.logger.Info("receiver is paused")
 		r.recorder.Event(receiver, corev1.EventTypeNormal, "Paused",
 			"Reconciliation is paused for ThanosReceive resource")
-		return ctrl.Result{}, r.updateCondition(ctx, receiver, metav1.Condition{
+		r.updateCondition(ctx, receiver, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
 			Reason:  ReasonPaused,
 			Message: "Reconciliation is paused",
 		})
+		return ctrl.Result{}, nil
 	}
 
 	if !receiver.GetDeletionTimestamp().IsZero() {
@@ -348,13 +350,23 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 	})
 }
 
+func (r *ThanosReceiveReconciler) DisableConditionUpdate() *ThanosReceiveReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
 // updateCondition updates the status conditions of the ThanosReceive resource
-func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver *monitoringthanosiov1alpha1.ThanosReceive, condition metav1.Condition) error {
+func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver *monitoringthanosiov1alpha1.ThanosReceive, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
 	conditions := receiver.Status.Conditions
 	meta.SetStatusCondition(&conditions, condition)
 	receiver.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
 		receiver.Status.Paused = ptr.To(true)
 	}
-	return r.Status().Update(ctx, receiver)
+	if err := r.Status().Update(ctx, receiver); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosReceive", "name", receiver.Name)
+	}
 }
