@@ -112,6 +112,10 @@ config:
 						},
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
+					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
+						TenantLabel:      "tenant",
+						TenantValueLabel: "operator.thanos.io/tenant",
+					},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{
@@ -191,6 +195,7 @@ config:
 						Namespace: ns,
 						Labels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"operator.thanos.io/tenant":          "test",
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -221,6 +226,22 @@ config:
 					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "test-promrule.yaml",
+						`groups:
+- labels:
+    tenant: test
+  name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob",tenant="test"} > 0.5
+    labels:
+      severity: page
+`)
+				}, time.Second*10, time.Second*2).Should(BeTrue())
+
 			})
 
 		})

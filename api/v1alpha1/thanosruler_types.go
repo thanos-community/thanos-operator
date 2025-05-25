@@ -83,11 +83,27 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="PrometheusRuleSelector must have at least one label selector"
 	PrometheusRuleSelector metav1.LabelSelector `json:"prometheusRuleSelector,omitempty"`
+	// RuleTenancyConfig is the configuration for the rule tenancy.
+	// +kubebuilder:validation:Optional
+	RuleTenancyConfig *RuleTenancyConfig `json:"ruleTenancyConfig,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
+}
+
+type RuleTenancyConfig struct {
+	// TenantLabel is the label that will be used to identify the tenant.
+	// Setting this value will mean, that all rules configured on ThanosRuler will
+	// have this labelname (with value to set the tenant label value).
+	// effectively <tenantLabelName> = <value of tenantValueLabel key>
+	// +kubebuilder:validation:Required
+	TenantLabel string `json:"tenantLabel,omitempty"`
+	// TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label
+	// for particular rules configured on ThanosRuler.
+	// +kubebuilder:validation:Required
+	TenantValueLabel string `json:"tenantValueLabel,omitempty"`
 }
 
 // TODO(saswatamcode): Add stateless mode
