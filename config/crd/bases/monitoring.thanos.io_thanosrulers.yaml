@@ -4868,6 +4868,12 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              ruleShardReplication:
+                description: RuleShardReplication determines how many replicas each
+                  ConfigMap should be assigned to.
+                format: int32
+                minimum: 1
+                type: integer
               storageSize:
                 description: StorageSize is the size of the storage to be used by
                   the Thanos Ruler StatefulSet.
