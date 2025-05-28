@@ -42,11 +42,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
-<<<<<<< HEAD
 	"k8s.io/apimachinery/pkg/api/meta"
-=======
 	"k8s.io/apimachinery/pkg/util/intstr"
->>>>>>> 3a6b367 (Add tenancy options to ruler)
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -332,7 +329,6 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
-	// Check if RuleTenancyConfig is provided
 	if ruler.Spec.RuleTenancyConfig != nil {
 		tenantLabel := ruler.Spec.RuleTenancyConfig.TenantLabel
 		tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
@@ -348,21 +344,19 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 				continue
 			}
 
-			// Set the tenant label on each rule group
 			for i, group := range rule.Spec.Groups {
+				// Set the tenant label on each rule group
 				if group.Labels == nil {
 					group.Labels = make(map[string]string)
 				}
 				group.Labels[tenantLabel] = value
 				rule.Spec.Groups[i] = group
-			}
-
-			// Enforce tenant label in PromQL expressions
-			for i, group := range rule.Spec.Groups {
+				// Enforce tenant label in PromQL expressions
 				for j, ru := range group.Rules {
-					expr, err := enforceTenantLabelInPromQL(ru.Expr.String(), tenantLabel, value)
+					exprStr := ru.Expr.String()
+					expr, err := enforceTenantLabelInPromQL(exprStr, tenantLabel, value)
 					if err != nil {
-						r.logger.Error(err, "failed to enforce tenant label in PromQL", "expr", ru.Expr.String(), "tenantLabel", tenantLabel, "tenantValue", value)
+						r.logger.Error(err, "failed to enforce tenant label in PromQL", "expr", exprStr, "tenantLabel", tenantLabel, "tenantValue", value)
 						continue
 					}
 					ru.Expr = intstr.FromString(expr)
