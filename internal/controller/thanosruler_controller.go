@@ -21,7 +21,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus-community/prom-label-proxy/injectproxy"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	promlabels "github.com/prometheus/prometheus/model/labels"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -41,6 +43,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -326,6 +329,44 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
+	if ruler.Spec.RuleTenancyConfig != nil {
+		tenantLabel := ruler.Spec.RuleTenancyConfig.TenantLabel
+		tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
+
+		// Modify PrometheusRule objects to include tenant label
+		for _, rule := range promRules.Items {
+			if rule.Labels == nil {
+				rule.Labels = make(map[string]string)
+			}
+			value, exists := rule.Labels[tenantValueLabel]
+			if !exists {
+				r.logger.Info("tenant value label key not found in PrometheusRule labels", "tenantValueLabel", tenantValueLabel, "ruler", ruler.Name)
+				continue
+			}
+
+			for i, group := range rule.Spec.Groups {
+				// Set the tenant label on each rule group
+				if group.Labels == nil {
+					group.Labels = make(map[string]string)
+				}
+				group.Labels[tenantLabel] = value
+				rule.Spec.Groups[i] = group
+				// Enforce tenant label in PromQL expressions
+				for j, ru := range group.Rules {
+					exprStr := ru.Expr.String()
+					expr, err := enforceTenantLabelInPromQL(exprStr, tenantLabel, value)
+					if err != nil {
+						r.logger.Error(err, "failed to enforce tenant label in PromQL", "expr", exprStr, "tenantLabel", tenantLabel, "tenantValue", value)
+						continue
+					}
+					ru.Expr = intstr.FromString(expr)
+					group.Rules[j] = ru
+				}
+				rule.Spec.Groups[i] = group
+			}
+		}
+	}
+
 	// Collect all rule files first
 	allRuleFiles := make(map[string]string)
 	for _, rule := range promRules.Items {
@@ -571,6 +612,20 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 
 		return requests
 	})
+}
+
+func enforceTenantLabelInPromQL(expr string, tenantLabel string, tenantValue string) (string, error) {
+	matcher := promlabels.Matcher{
+		Type:  promlabels.MatchEqual,
+		Name:  tenantLabel,
+		Value: tenantValue,
+	}
+	enforcer := injectproxy.NewPromQLEnforcer(true, &matcher)
+	expr, err := enforcer.Enforce(expr)
+	if err != nil {
+		return "", err
+	}
+	return expr, nil
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {

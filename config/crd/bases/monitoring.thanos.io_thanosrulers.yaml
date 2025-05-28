@@ -4868,6 +4868,25 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              ruleTenancyConfig:
+                description: RuleTenancyConfig is the configuration for the rule tenancy.
+                properties:
+                  tenantLabel:
+                    description: |-
+                      TenantLabel is the label that will be used to identify the tenant.
+                      Setting this value will mean, that all rules configured on ThanosRuler will
+                      have this labelname (with value to set the tenant label value).
+                      effectively <tenantLabelName> = <value of tenantValueLabel key>
+                    type: string
+                  tenantValueLabel:
+                    description: |-
+                      TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label
+                      for particular rules configured on ThanosRuler.
+                    type: string
+                required:
+                - tenantLabel
+                - tenantValueLabel
+                type: object
               storageSize:
                 description: StorageSize is the size of the storage to be used by
                   the Thanos Ruler StatefulSet.
