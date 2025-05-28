@@ -201,12 +201,34 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		ruleFiles = append(ruleFiles, rf)
 	}
 
-	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
-	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
-
+	replicas := int(ruler.Spec.Replicas)
 	opts := rulerV1Alpha1ToOptions(ruler)
 	opts.Endpoints = endpoints
-	opts.RuleFiles = ruleFiles
+
+	n := 1 // Default to 1 if not set
+	if ruler.Spec.RuleShardReplication != nil {
+		n = int(*ruler.Spec.RuleShardReplication)
+	}
+
+	if ruler.Spec.RuleShardReplication != nil {
+		// Distribute rule files to n different replicas
+		shardedRuleFiles := make([][]corev1.ConfigMapKeySelector, replicas)
+		for i, rf := range ruleFiles {
+			for j := 0; j < n; j++ {
+				replicaIndex := (i + j) % replicas
+				shardedRuleFiles[replicaIndex] = append(shardedRuleFiles[replicaIndex], rf)
+			}
+		}
+
+		for i, shard := range shardedRuleFiles {
+			r.logger.Info("sharded rule files for replica", "replica", i, "count", len(shard), "ruler", ruler.Name)
+		}
+
+		opts.RuleFileShards = shardedRuleFiles
+	} else {
+		// If not set, assign all rule files to all replicas
+		opts.RuleFiles = ruleFiles
+	}
 
 	return opts.Build(), nil
 }

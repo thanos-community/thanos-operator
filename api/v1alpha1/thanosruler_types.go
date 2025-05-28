@@ -88,6 +88,10 @@ type ThanosRulerSpec struct {
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
+	// RuleShardReplication determines how many replicas each ConfigMap should be assigned to.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	RuleShardReplication *int32 `json:"ruleShardReplication,omitempty"`
 }
 
 // TODO(saswatamcode): Add stateless mode

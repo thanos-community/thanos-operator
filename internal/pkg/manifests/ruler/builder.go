@@ -46,6 +46,7 @@ type Options struct {
 	AlertLabelDrop     []string
 	StorageSize        resource.Quantity
 	EvaluationInterval manifests.Duration
+	RuleFileShards     [][]corev1.ConfigMapKeySelector
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -63,7 +64,18 @@ func (opts Options) Build() []client.Object {
 	name := opts.GetGeneratedResourceName()
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
-	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
+
+	if len(opts.RuleFileShards) > 0 {
+		for i, shard := range opts.RuleFileShards {
+			opts.RuleFiles = shard
+			opts.Owner = fmt.Sprintf("%s-shard-%d", opts.Owner, i)
+			objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
+		}
+	} else {
+		// Fallback to using RuleFiles if RuleFileShards is not populated
+		objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
+	}
+
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.PodDisruptionConfig != nil {
