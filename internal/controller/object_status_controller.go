@@ -353,6 +353,9 @@ func (r *ObjectStatusReconciler) updateAllThanosReceiveStatuses(ctx context.Cont
 			for _, containerName := range status.containerNames {
 				if containerName == receivebldr.IngestComponentName {
 					hashringName := status.labels[manifests.HashringLabel]
+					if hashringName == "" {
+						hashringName = "default"
+					}
 					receive.Status.HashringStatus[hashringName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 						AvailableReplicas: status.availableReplicas,
 						Replicas:          status.replicas,
