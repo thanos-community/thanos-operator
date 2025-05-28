@@ -191,6 +191,27 @@ _Appears in:_
 | `haltOnError` _boolean_ | HaltOnError halts the compact process on critical compaction error. | false | Optional: \{\} <br /> |
 
 
+#### DeploymentStatus
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosQueryStatus](#thanosquerystatus)
+- [ThanosReceiveStatus](#thanosreceivestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the Deployment. |  |  |
+| `updatedReplicas` _integer_ | UpdatedReplicas is the number of Pods created by the Deployment. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this Deployment. |  |  |
+| `unavailableReplicas` _integer_ | UnavailableReplicas is the number of pods that are needed for Deployment to have 100% capacity. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this Deployment with a Ready Condition. |  |  |
+
+
 #### DownsamplingConfig
 
 
@@ -586,6 +607,29 @@ _Appears in:_
 | `block` | Block is the block modulo sharding strategy for sharding Stores according to block ids.<br /> |
 
 
+#### StatefulSetStatus
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosCompactStatus](#thanoscompactstatus)
+- [ThanosReceiveStatus](#thanosreceivestatus)
+- [ThanosRulerStatus](#thanosrulerstatus)
+- [ThanosStoreStatus](#thanosstorestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicas` _integer_ | Replicas is the number of replicas of the StatefulSet. |  |  |
+| `updatedReplicas` _integer_ |  Total number of non-terminating pods targeted by StatefulSet that have the desired template spec.. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition. |  |  |
+| `currentReplicas` _integer_ | currentReplicas is the number of Pods created by the StatefulSet. |  |  |
+
+
 #### StorageSize
 
 _Underlying type:_ _string_
@@ -779,7 +823,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the hashring. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Compactor. |  |  |
+| `paused` _boolean_ | Paused is the flag to pause the Compactor. |  | Optional: \{\} <br /> |
+| `shardStatuses` _object (keys:string, values:[StatefulSetStatus](#statefulsetstatus))_ | ShardStatuses is the status of the shards in the compact component. |  |  |
 
 
 #### ThanosQuery
@@ -871,6 +917,7 @@ _Appears in:_
 
 
 ThanosQueryStatus defines the observed state of ThanosQuery
+Includes reconciliation state, deployment status, pod status, and last reconciled statistics.
 
 
 
@@ -880,6 +927,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+| `paused` _boolean_ | Paused is the flag to pause the Querier. |  | Optional: \{\} <br /> |
+| `querierStatus` _[DeploymentStatus](#deploymentstatus)_ | Querier is the status of the Querier. |  |  |
+| `queryFrontendStatus` _[DeploymentStatus](#deploymentstatus)_ | QueryFrontend is the status of the Query Frontend. |  |  |
 
 
 #### ThanosReceive
@@ -956,7 +1006,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the hashring. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the ThanosReceive CRD. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the ThanosReceive is paused. |  | Optional: \{\} <br /> |
+| `routerStatus` _[DeploymentStatus](#deploymentstatus)_ | RouterStatus is the status of the Receive router. |  |  |
+| `hashringStatus` _object (keys:string, values:[StatefulSetStatus](#statefulsetstatus))_ | HashringStatus is a map of ingester statuses to hashring names. |  |  |
 
 
 #### ThanosRuler
@@ -1061,6 +1114,12 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Ruler. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the Ruler is paused. |  | Optional: \{\} <br /> |
+| `replicas` _integer_ | Replicas is the number of replicas of the StatefulSet. |  |  |
+| `updatedReplicas` _integer_ |  Total number of non-terminating pods targeted by StatefulSet that have the desired template spec.. |  |  |
+| `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet. |  |  |
+| `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition. |  |  |
+| `currentReplicas` _integer_ | currentReplicas is the number of Pods created by the StatefulSet. |  |  |
 
 
 #### ThanosStore
@@ -1164,7 +1223,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Querier. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta) array_ | Conditions represent the latest available observations of the state of the Store. |  |  |
+| `paused` _boolean_ | Paused is a flag that indicates if the Store is paused. |  | Optional: \{\} <br /> |
+| `shardStatuses` _object (keys:string, values:[StatefulSetStatus](#statefulsetstatus))_ | ShardStatuses is a map of shard statuses to shard numbers. |  |  |
 
 
 #### TimeRangeConfig

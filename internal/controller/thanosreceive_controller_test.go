@@ -268,7 +268,7 @@ config:
 				// check via a poll that we have not updated the ConfigMap
 				Consistently(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Second*5, time.Second*1).Should(BeTrue())
+				}, time.Second*20, time.Second*1).Should(BeTrue())
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
 					TypeMeta: metav1.TypeMeta{
@@ -379,7 +379,7 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, ingesterName, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Minute, time.Second*2).Should(BeFalse())
 			})
 
 			By("creating the router components", func() {

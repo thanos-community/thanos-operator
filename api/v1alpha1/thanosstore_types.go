@@ -123,8 +123,13 @@ type IndexHeaderConfig struct {
 
 // ThanosStoreStatus defines the observed state of ThanosStore
 type ThanosStoreStatus struct {
-	// Conditions represent the latest available observations of the state of the Querier.
+	// Conditions represent the latest available observations of the state of the Store.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is a flag that indicates if the Store is paused.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// ShardStatuses is a map of shard statuses to shard numbers.
+	ShardStatuses map[string]StatefulSetStatus `json:"shardStatuses,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -34,6 +34,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -47,7 +49,8 @@ type ThanosCompactReconciler struct {
 	metrics  controllermetrics.ThanosCompactMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
@@ -79,14 +82,33 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
 		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
+		r.updateCondition(ctx, compact, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
 		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
 		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, compact, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, compact, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -179,4 +201,26 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 	}
 
 	return buildable
+}
+
+func (r *ThanosCompactReconciler) DisableConditionUpdate() *ThanosCompactReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
+// updateCondition updates the status conditions of the ThanosCompact resource
+func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *monitoringthanosiov1alpha1.ThanosCompact, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
+	conditions := compact.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	compact.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		compact.Status.Paused = ptr.To(true)
+	}
+
+	if err := r.Status().Update(ctx, compact); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosCompact", "name", compact.Name)
+	}
 }

@@ -96,6 +96,10 @@ type ThanosRulerSpec struct {
 type ThanosRulerStatus struct {
 	// Conditions represent the latest available observations of the state of the Ruler.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is a flag that indicates if the Ruler is paused.
+	// +kubebuilder:validation:Optional
+	Paused            *bool `json:"paused,omitempty"`
+	StatefulSetStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

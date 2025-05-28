@@ -42,6 +42,9 @@ const (
 	// OwnerLabel is the label used to identify the owner of the object.
 	// This relates to the CustomResource or entity that created the object.
 	OwnerLabel = "operator.thanos.io/owner"
+
+	HashringLabel = "operator.thanos.io/hashring"
+	ShardLabel    = "operator.thanos.io/shard"
 )
 
 // MergeLabels merges the provided labels with the default labels for a component.

@@ -169,8 +169,15 @@ type ThanosReceiveSpec struct {
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive
 type ThanosReceiveStatus struct {
-	// Conditions represent the latest available observations of the state of the hashring.
+	// Conditions represent the latest available observations of the state of the ThanosReceive CRD.
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Paused is a flag that indicates if the ThanosReceive is paused.
+	// +kubebuilder:validation:Optional
+	Paused *bool `json:"paused,omitempty"`
+	// RouterStatus is the status of the Receive router.
+	Router DeploymentStatus `json:"routerStatus,omitempty"`
+	// HashringStatus is a map of ingester statuses to hashring names.
+	HashringStatus map[string]StatefulSetStatus `json:"hashringStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true

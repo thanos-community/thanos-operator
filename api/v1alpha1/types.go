@@ -242,3 +242,29 @@ type TimeRangeConfig struct {
 	// +kubebuilder:validation:Optional
 	MaxTime *Duration `json:"maxTime,omitempty"`
 }
+
+type StatefulSetStatus struct {
+	// Replicas is the number of replicas of the StatefulSet.
+	Replicas int32 `json:"replicas,omitempty"`
+	//  Total number of non-terminating pods targeted by StatefulSet that have the desired template spec..
+	UpdatedReplicas int32 `json:"updatedReplicas,omitempty"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet.
+	AvailableReplicas int32 `json:"availableReplicas,omitempty"`
+	// ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	// currentReplicas is the number of Pods created by the StatefulSet.
+	CurrentReplicas int32 `json:"currentReplicas,omitempty"`
+}
+
+type DeploymentStatus struct {
+	// Replicas is the number of replicas of the Deployment.
+	Replicas int32 `json:"replicas"`
+	// UpdatedReplicas is the number of Pods created by the Deployment.
+	UpdatedReplicas int32 `json:"updatedReplicas"`
+	// Total number of available pods (ready for at least minReadySeconds) targeted by this Deployment.
+	AvailableReplicas int32 `json:"availableReplicas"`
+	// UnavailableReplicas is the number of pods that are needed for Deployment to have 100% capacity.
+	UnavailableReplicas int32 `json:"unavailableReplicas"`
+	// ReadyReplicas is the number of pods created for this Deployment with a Ready Condition.
+	ReadyReplicas int32 `json:"readyReplicas"`
+}

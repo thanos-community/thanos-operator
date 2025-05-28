@@ -36,6 +36,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,7 +51,8 @@ type ThanosStoreReconciler struct {
 	metrics  controllermetrics.ThanosStoreMetrics
 	recorder record.EventRecorder
 
-	handler *handlers.Handler
+	handler                *handlers.Handler
+	disableConditionUpdate bool
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
@@ -95,19 +98,36 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	if store.Spec.Paused != nil {
-		if *store.Spec.Paused {
-			r.logger.Info("reconciliation is paused for ThanosStore")
-			r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
-			return ctrl.Result{}, nil
-		}
+	if store.Spec.Paused != nil && *store.Spec.Paused {
+		r.logger.Info("reconciliation is paused for ThanosStore")
+		r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
+		r.updateCondition(ctx, store, metav1.Condition{
+			Type:    ConditionPaused,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonPaused,
+			Message: "Reconciliation is paused",
+		})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.syncResources(ctx, *store)
 	if err != nil {
 		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.updateCondition(ctx, store, metav1.Condition{
+			Type:    ConditionReconcileFailed,
+			Status:  metav1.ConditionTrue,
+			Reason:  ReasonReconcileError,
+			Message: err.Error(),
+		})
 		return ctrl.Result{}, err
 	}
+
+	r.updateCondition(ctx, store, metav1.Condition{
+		Type:    ConditionReconcileSuccess,
+		Status:  metav1.ConditionTrue,
+		Reason:  ReasonReconcileComplete,
+		Message: "Reconciliation completed successfully",
+	})
 
 	return ctrl.Result{}, nil
 }
@@ -194,4 +214,25 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return nil
+}
+
+func (r *ThanosStoreReconciler) DisableConditionUpdate() *ThanosStoreReconciler {
+	r.disableConditionUpdate = true
+	return r
+}
+
+// updateCondition updates the status conditions of the ThanosStore resource
+func (r *ThanosStoreReconciler) updateCondition(ctx context.Context, store *monitoringthanosiov1alpha1.ThanosStore, condition metav1.Condition) {
+	if r.disableConditionUpdate {
+		return
+	}
+	conditions := store.Status.Conditions
+	meta.SetStatusCondition(&conditions, condition)
+	store.Status.Conditions = conditions
+	if condition.Type == ConditionPaused {
+		store.Status.Paused = ptr.To(true)
+	}
+	if err := r.Status().Update(ctx, store); err != nil {
+		r.logger.Error(err, "failed to update status for ThanosStore", "name", store.Name)
+	}
 }

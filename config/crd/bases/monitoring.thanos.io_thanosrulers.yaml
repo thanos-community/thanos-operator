@@ -4930,6 +4930,11 @@ spec:
           status:
             description: ThanosRulerStatus defines the observed state of ThanosRuler
             properties:
+              availableReplicas:
+                description: Total number of available pods (ready for at least minReadySeconds)
+                  targeted by this StatefulSet.
+                format: int32
+                type: integer
               conditions:
                 description: Conditions represent the latest available observations
                   of the state of the Ruler.
@@ -4988,6 +4993,28 @@ spec:
                   - type
                   type: object
                 type: array
+              currentReplicas:
+                description: currentReplicas is the number of Pods created by the
+                  StatefulSet.
+                format: int32
+                type: integer
+              paused:
+                description: Paused is a flag that indicates if the Ruler is paused.
+                type: boolean
+              readyReplicas:
+                description: ReadyReplicas is the number of pods created for this
+                  StatefulSet with a Ready Condition.
+                format: int32
+                type: integer
+              replicas:
+                description: Replicas is the number of replicas of the StatefulSet.
+                format: int32
+                type: integer
+              updatedReplicas:
+                description: ' Total number of non-terminating pods targeted by StatefulSet
+                  that have the desired template spec..'
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

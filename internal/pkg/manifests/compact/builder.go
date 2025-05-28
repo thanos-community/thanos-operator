@@ -326,6 +326,9 @@ func (opts Options) GetSelectorLabels() map[string]string {
 	labels := GetRequiredLabels()
 	labels[manifests.InstanceLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.GetGeneratedResourceName())
 	labels[manifests.OwnerLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(opts.getOwner())
+	if opts.ShardName != nil {
+		labels[manifests.ShardLabel] = manifests.ValidateAndSanitizeNameToValidLabelValue(*opts.ShardName)
+	}
 	return labels
 }
 
