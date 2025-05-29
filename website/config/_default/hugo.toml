@@ -1,4 +1,4 @@
-title = "My Docs"
+title = "Thanos Operator"
 baseurl = "http://localhost/"
 canonifyURLs = false
 disableAliases = true
@@ -17,7 +17,7 @@ defaultContentLanguage = "en"
 disableLanguages = ["de", "nl"]
 defaultContentLanguageInSubdir = false
 
-copyRight = "Copyright (c) 2020-2024 Thulite"
+copyRight = "Copyright (c) Thanos Operator Authors"
 
 [build.buildStats]
   enable = true
@@ -57,7 +57,6 @@ copyRight = "Copyright (c) 2020-2024 Thulite"
   tag = "tags"
 
 [permalinks]
-  blog = "/blog/:slug/"
   docs = "/docs/:sections[1:]/:slug/"
 # docs = "/docs/1.0/:sections[1:]/:slug/"
 

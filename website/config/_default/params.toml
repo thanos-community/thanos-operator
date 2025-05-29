@@ -1,5 +1,5 @@
 # Hugo
-title = "My Docs"
+title = "Thanos Operator"
 description = "Congrats on setting up a new Doks project!"
 images = ["cover.png"]
 
@@ -22,7 +22,7 @@ mainSections = ["docs"]
   ## Button
   navBarButton = false # false (default) or true
   navBarButtonUrl = "/docs/prologue/introduction/"
-  navBarButtonText = "Get started"
+  navBarButtonText = "Get Started"
 
   # FlexSearch
   flexSearch = true # true (default) or false
@@ -129,10 +129,9 @@ mainSections = ["docs"]
   [seo.schemas]
     type = "Organization" # Organization (default) or Person
     logo = "favicon-512x512.png" # Logo of Organization — favicon-512x512.png (default)
-    name = "Thulite" # Name of Organization or Person
-    sameAs = [] # E.g. ["https://github.com/thuliteio/thulite", "https://fosstodon.org/@thulite"]
+    name = "Thanos Operator" # Name of Organization or Person
+    sameAs = ["https://github.com/thanos-community/thanos-operator"] # E.g. [, "https://fosstodon.org/@thanos-community"]
     images = ["cover.png"] # ["cover.png"] (default)
     article = [] # Article sections
     newsArticle = [] # NewsArticle sections
-    blogPosting = ["blog"] # BlogPosting sections
     product = [] # Product sections

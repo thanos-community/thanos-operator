@@ -8,10 +8,10 @@ RUN apt-get update && \
     wget && \
     update-ca-certificates
 
-ARG HUGO_VERSION="0.131.0"
-RUN wget --quiet "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_Linux-64bit.tar.gz" && \
-    tar xzf hugo_extended_${HUGO_VERSION}_Linux-64bit.tar.gz && \
-    rm -r hugo_extended_${HUGO_VERSION}_Linux-64bit.tar.gz && \
+ARG HUGO_VERSION="0.145.0"
+RUN wget --quiet "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_withdeploy_${HUGO_VERSION}_Linux-64bit.tar.gz" && \
+    tar xzf hugo_extended_withdeploy_${HUGO_VERSION}_Linux-64bit.tar.gz && \
+    rm -r hugo_extended_withdeploy_${HUGO_VERSION}_Linux-64bit.tar.gz && \
     mv hugo /usr/bin && \
     chmod 755 /usr/bin/hugo
 
