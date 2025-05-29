@@ -14,4 +14,3 @@ seo:
   robots: "" # custom robot tags (optional)
 ---
 
-Link to valuable, relevant resources.
