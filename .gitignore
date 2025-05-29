@@ -30,3 +30,4 @@ go.work
 manager
 
 .mdoxcache
+website/node_modules
