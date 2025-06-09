@@ -50,7 +50,8 @@
 <meta property="og:url" content="http://localhost:1313/docs/reference/api-reference/">
   <meta property="og:site_name" content="Thanos Operator">
   <meta property="og:title" content="API Reference">
-  <meta property="og:description" content="Congrats on setting up a new Doks project!">
+  <meta property="og:description" content="Packages monitoring.thanos.io/v1alpha1 monitoring.thanos.io/v1alpha1 Package v1alpha1 contains API Schema definitions for the v1alpha1 API group
+Resource Types ThanosCompact ThanosCompactList ThanosQuery ThanosQueryList ThanosReceive ThanosReceiveList ThanosRuler ThanosRulerList ThanosStore ThanosStoreList Additional Additional holds additional configuration for the Thanos components.">
   <meta property="og:locale" content="en">
   <meta property="og:type" content="article">
     <meta property="article:section" content="docs">
@@ -61,7 +62,8 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="http://localhost:1313/cover.png">
   <meta name="twitter:title" content="API Reference">
-  <meta name="twitter:description" content="Congrats on setting up a new Doks project!">
+  <meta name="twitter:description" content="Packages monitoring.thanos.io/v1alpha1 monitoring.thanos.io/v1alpha1 Package v1alpha1 contains API Schema definitions for the v1alpha1 API group
+Resource Types ThanosCompact ThanosCompactList ThanosQuery ThanosQueryList ThanosReceive ThanosReceiveList ThanosRuler ThanosRulerList ThanosStore ThanosStoreList Additional Additional holds additional configuration for the Thanos components.">
       <meta name="twitter:site" content="@getdoks">
 
     
@@ -145,7 +147,6 @@
         <aside class="doks-sidebar mt-n3">
           <nav id="doks-docs-nav" aria-label="Tertiary navigation">
             
-  
     
 <nav class="section-nav docs-links">
   <ul class="list-unstyled">
@@ -173,10 +174,13 @@
       </ul>
     </details>
   </li>
+
+  <li>
+      <a href="/docs/resources/">Resources</a>
+  </li>
   </ul>
 </nav>
 
-  
 
           </nav>
         </aside>
@@ -302,7 +306,6 @@
 	<div class="row flex-xl-nowrap">
 		<div class="col-lg-5 col-xl-4 docs-sidebar d-none d-lg-block">
 			
-  
     
 <nav class="section-nav docs-links">
   <ul class="list-unstyled">
@@ -330,16 +333,29 @@
       </ul>
     </details>
   </li>
+
+  <li>
+      <a href="/docs/resources/">Resources</a>
+  </li>
   </ul>
 </nav>
 
-  
 
 		</div>
 		
 		<nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
 			<div class="page-links">
-  
+  <h3>On this page</h3>
+    <nav id="toc">
+  <ul>
+    <li><a href="#packages">Packages</a></li>
+    <li><a href="#monitoringthanosiov1alpha1">monitoring.thanos.io/v1alpha1</a>
+      <ul>
+        <li><a href="#resource-types">Resource Types</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
 </div>
 
 		</nav>
@@ -348,9 +364,3301 @@
 			<h1>API Reference</h1>
 			
 			<nav class="toc-mobile d-xl-none" aria-label="Quaternary navigation">
-				
+				<details>
+    <summary>On this page</summary>
+    <div class="page-links">
+      <nav id="TableOfContents">
+  <ul>
+    <li><a href="#packages">Packages</a></li>
+    <li><a href="#monitoringthanosiov1alpha1">monitoring.thanos.io/v1alpha1</a>
+      <ul>
+        <li><a href="#resource-types">Resource Types</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+  </details>
+
 			</nav>
-			
+			<h2 id="packages">Packages<a href="#packages" class="anchor" aria-hidden="true">#</a> </h2>
+<ul>
+<li><a href="#monitoringthanosiov1alpha1">monitoring.thanos.io/v1alpha1</a></li>
+</ul>
+<h2 id="monitoringthanosiov1alpha1">monitoring.thanos.io/v1alpha1<a href="#monitoringthanosiov1alpha1" class="anchor" aria-hidden="true">#</a> </h2>
+<p>Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group</p>
+<h3 id="resource-types">Resource Types<a href="#resource-types" class="anchor" aria-hidden="true">#</a> </h3>
+<ul>
+<li><a href="#thanoscompact">ThanosCompact</a></li>
+<li><a href="#thanoscompactlist">ThanosCompactList</a></li>
+<li><a href="#thanosquery">ThanosQuery</a></li>
+<li><a href="#thanosquerylist">ThanosQueryList</a></li>
+<li><a href="#thanosreceive">ThanosReceive</a></li>
+<li><a href="#thanosreceivelist">ThanosReceiveList</a></li>
+<li><a href="#thanosruler">ThanosRuler</a></li>
+<li><a href="#thanosrulerlist">ThanosRulerList</a></li>
+<li><a href="#thanosstore">ThanosStore</a></li>
+<li><a href="#thanosstorelist">ThanosStoreList</a></li>
+</ul>
+<h4 id="additional">Additional<a href="#additional" class="anchor" aria-hidden="true">#</a> </h4>
+<p>Additional holds additional configuration for the Thanos components.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterspec">IngesterSpec</a></li>
+<li><a href="#queryfrontendspec">QueryFrontendSpec</a></li>
+<li><a href="#routerspec">RouterSpec</a></li>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="blockconfig">BlockConfig<a href="#blockconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>BlockConfig defines settings for block handling.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>blockDiscoveryStrategy</code> <em><a href="#blockdiscoverystrategy">BlockDiscoveryStrategy</a></em></td>
+          <td>BlockDiscoveryStrategy is the discovery strategy to use for block discovery in storage.</td>
+          <td>concurrent</td>
+          <td>Enum: [concurrent recursive] <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockFilesConcurrency</code> <em>integer</em></td>
+          <td>BlockFilesConcurrency is the number of goroutines to use when to use when<br />fetching/uploading block files from object storage.<br />Only used for Compactor, no-op for store gateway</td>
+          <td>1</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockMetaFetchConcurrency</code> <em>integer</em></td>
+          <td>BlockMetaFetchConcurrency is the number of goroutines to use when fetching block metadata from object storage.</td>
+          <td>32</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="blockdiscoverystrategy">BlockDiscoveryStrategy<a href="#blockdiscoverystrategy" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p>BlockDiscoveryStrategy represents the strategy to use for block discovery.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#blockconfig">BlockConfig</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>concurrent</code></td>
+          <td>BlockDiscoveryStrategyConcurrent means stores will concurrently issue one call<br />per directory to discover active blocks storage.<br /></td>
+      </tr>
+      <tr>
+          <td><code>recursive</code></td>
+          <td>BlockDiscoveryStrategyRecursive means stores iterate through all objects in storage<br />recursively traversing into each directory.<br />This avoids N+1 calls at the expense of having slower bucket iterations.<br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="blockviewerglobalsyncconfig">BlockViewerGlobalSyncConfig<a href="#blockviewerglobalsyncconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>BlockViewerGlobalSyncConfig is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>blockViewerGlobalSync</code> <em><a href="#duration">Duration</a></em></td>
+          <td>BlockViewerGlobalSyncInterval for syncing the blocks between local and remote view for /global Block Viewer UI.</td>
+          <td>1m</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockViewerGlobalSyncTimeout</code> <em><a href="#duration">Duration</a></em></td>
+          <td>BlockViewerGlobalSyncTimeout is the maximum time for syncing the blocks<br />between local and remote view for /global Block Viewer UI.</td>
+          <td>5m</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="cacheconfig">CacheConfig<a href="#cacheconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>CacheConfig is the configuration for the cache.
+If both InMemoryCacheConfig and ExternalCacheConfig are specified, the operator will prefer the ExternalCacheConfig.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#queryfrontendspec">QueryFrontendSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>inMemoryCacheConfig</code> <em><a href="#inmemorycacheconfig">InMemoryCacheConfig</a></em></td>
+          <td>InMemoryCacheConfig is the configuration for the in-memory cache.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalCacheConfig</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#secretkeyselector-v1-core">SecretKeySelector</a></em></td>
+          <td>ExternalCacheConfig is the configuration for the external cache.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="commonfields">CommonFields<a href="#commonfields" class="anchor" aria-hidden="true">#</a> </h4>
+<p>CommonFields are the options available to all Thanos components.
+These fields reflect runtime changes to managed StatefulSet and Deployment resources.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#queryfrontendspec">QueryFrontendSpec</a></li>
+<li><a href="#routerspec">RouterSpec</a></li>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="compactconfig">CompactConfig<a href="#compactconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>compactConcurrency</code> <em>integer</em></td>
+          <td>CompactConcurrency is the number of goroutines to use when compacting blocks.</td>
+          <td>1</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockFetchConcurrency</code> <em>integer</em></td>
+          <td>BlockFetchConcurrency is the number of goroutines to use when fetching blocks from object storage.</td>
+          <td>1</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>cleanupInterval</code> <em><a href="#duration">Duration</a></em></td>
+          <td>CleanupInterval configures how often we should clean up partially uploaded blocks and blocks<br />that are marked for deletion.<br />Cleaning happens at the end of an iteration.<br />Setting this to 0s disables the cleanup.</td>
+          <td>5m</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockConsistencyDelay</code> <em><a href="#duration">Duration</a></em></td>
+          <td>ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.<br />Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed.</td>
+          <td>30m</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="debugconfig">DebugConfig<a href="#debugconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>acceptMalformedIndex</code> <em>boolean</em></td>
+          <td>AcceptMalformedIndex allows compact to accept blocks with malformed index.</td>
+          <td>false</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>maxCompactionLevel</code> <em>integer</em></td>
+          <td>MaxCompactionLevel is the maximum compaction level to use when compacting blocks.</td>
+          <td></td>
+          <td>Maximum: 4 <br />Minimum: 0 <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>haltOnError</code> <em>boolean</em></td>
+          <td>HaltOnError halts the compact process on critical compaction error.</td>
+          <td>false</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="deploymentstatus">DeploymentStatus<a href="#deploymentstatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosquerystatus">ThanosQueryStatus</a></li>
+<li><a href="#thanosreceivestatus">ThanosReceiveStatus</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of replicas of the Deployment.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>updatedReplicas</code> <em>integer</em></td>
+          <td>UpdatedReplicas is the number of Pods created by the Deployment.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>availableReplicas</code> <em>integer</em></td>
+          <td>Total number of available pods (ready for at least minReadySeconds) targeted by this Deployment.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>unavailableReplicas</code> <em>integer</em></td>
+          <td>UnavailableReplicas is the number of pods that are needed for Deployment to have 100% capacity.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>readyReplicas</code> <em>integer</em></td>
+          <td>ReadyReplicas is the number of pods created for this Deployment with a Ready Condition.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="downsamplingconfig">DownsamplingConfig<a href="#downsamplingconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>DownsamplingConfig defines the downsampling configuration for the compact component.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>disable</code> <em>boolean</em></td>
+          <td>Disable downsampling.</td>
+          <td>false</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>downsamplingConcurrency</code> <em>integer</em></td>
+          <td>Concurrency is the number of goroutines to use when downsampling blocks.</td>
+          <td>1</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="duration">Duration<a href="#duration" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p>Duration is a valid time duration that can be parsed by Prometheus model.ParseDuration() function.
+Supported units: y, w, d, h, m, s, ms
+Examples: <code>30s</code>, <code>1m</code>, <code>1h20m15s</code>, <code>15d</code></p>
+<p><em>Validation:</em></p>
+<ul>
+<li>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})))$</code></li>
+</ul>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#blockviewerglobalsyncconfig">BlockViewerGlobalSyncConfig</a></li>
+<li><a href="#compactconfig">CompactConfig</a></li>
+<li><a href="#indexheaderconfig">IndexHeaderConfig</a></li>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#queryfrontendspec">QueryFrontendSpec</a></li>
+<li><a href="#retentionresolutionconfig">RetentionResolutionConfig</a></li>
+<li><a href="#tsdbconfig">TSDBConfig</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+<li><a href="#timerangeconfig">TimeRangeConfig</a></li>
+</ul>
+<h4 id="externallabelshardingconfig">ExternalLabelShardingConfig<a href="#externallabelshardingconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ExternalLabelShardingConfig defines the sharding configuration based on explicit external labels and their values.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#shardingconfig">ShardingConfig</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>label</code> <em>string</em></td>
+          <td>Label is the external label to shard on.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>value</code> <em>string</em></td>
+          <td>Value is the value (as regular expression) to shard on.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="externallabels">ExternalLabels<a href="#externallabels" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em>object</em></p>
+<p>ExternalLabels are the labels to add to the metrics.
+POD_NAME and POD_NAMESPACE are available via the downward API.
+https://thanos.io/tip/thanos/storage.md/#external-labels</p>
+<p><em>Validation:</em></p>
+<ul>
+<li>MinProperties: 1</li>
+</ul>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#routerspec">RouterSpec</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+</ul>
+<h4 id="featuregates">FeatureGates<a href="#featuregates" class="anchor" aria-hidden="true">#</a> </h4>
+<p>FeatureGates holds the configuration for behaviour that is behind feature flags in the operator.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+<li><a href="#thanosreceivespec">ThanosReceiveSpec</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>serviceMonitor</code> <em><a href="#servicemonitorconfig">ServiceMonitorConfig</a></em></td>
+          <td>ServiceMonitorConfig is the configuration for the ServiceMonitor.<br />This setting requires the feature gate for ServiceMonitor management to be enabled.</td>
+          <td>{ enable:true }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>prometheusRuleEnabled</code> <em>boolean</em></td>
+          <td>PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.<br />This setting is only applicable to ThanosRuler CRD, will be ignored for other components.</td>
+          <td>true</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>podDisruptionBudget</code> <em><a href="#poddisruptionbudgetconfig">PodDisruptionBudgetConfig</a></em></td>
+          <td>PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled.</td>
+          <td>{ enable:true }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="inmemorycacheconfig">InMemoryCacheConfig<a href="#inmemorycacheconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>InMemoryCacheConfig is the configuration for the in-memory cache.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#cacheconfig">CacheConfig</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>maxSize</code> <em><a href="#storagesize">StorageSize</a></em></td>
+          <td></td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>maxItemSize</code> <em><a href="#storagesize">StorageSize</a></em></td>
+          <td></td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="indexheaderconfig">IndexHeaderConfig<a href="#indexheaderconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>IndexHeaderConfig allows configuration of the Store Gateway index header.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>enableLazyReader</code> <em>boolean</em></td>
+          <td>If true, Store Gateway will lazy memory map index-header only once the block is required by a query.</td>
+          <td>true</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>lazyReaderIdleTimeout</code> <em><a href="#duration">Duration</a></em></td>
+          <td>If index-header lazy reader is enabled and this idle timeout setting is &gt; 0, memory map-ed index-headers will be automatically released after &lsquo;idle timeout&rsquo; inactivity</td>
+          <td>5m</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>lazyDownloadStrategy</code> <em>string</em></td>
+          <td>Strategy of how to download index headers lazily.<br />If eager, always download index header during initial load. If lazy, download index header during query time.</td>
+          <td>eager</td>
+          <td>Enum: [eager lazy] <br />Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="ingesterhashringspec">IngesterHashringSpec<a href="#ingesterhashringspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>IngesterHashringSpec represents the configuration for a hashring to be used by the Thanos Receive StatefulSet.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterspec">IngesterSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>name</code> <em>string</em></td>
+          <td>Name is the name of the hashring.<br />Name will be used to generate the names for the resources created for the hashring.</td>
+          <td></td>
+          <td>MaxLength: 253 <br />MinLength: 1 <br />Pattern: <code>^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the ingester components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalLabels</code> <em><a href="#externallabels">ExternalLabels</a></em></td>
+          <td>ExternalLabels to add to the ingesters tsdb blocks.</td>
+          <td>{ replica:$(POD_NAME) }</td>
+          <td>MinProperties: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tsdbConfig</code> <em><a href="#tsdbconfig">TSDBConfig</a></em></td>
+          <td>TSDB configuration for the ingestor.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>objectStorageConfig</code> <em><a href="#objectstorageconfig">ObjectStorageConfig</a></em></td>
+          <td>ObjectStorageConfig is the secret that contains the object storage configuration for the hashring.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storageSize</code> <em><a href="#storagesize">StorageSize</a></em></td>
+          <td>StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.</td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tenancyConfig</code> <em><a href="#tenancyconfig">TenancyConfig</a></em></td>
+          <td>TenancyConfig is the configuration for the tenancy options.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>asyncForwardWorkerCount</code> <em>integer</em></td>
+          <td>AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests.</td>
+          <td>5</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storeLimitsOptions</code> <em><a href="#storelimitsoptions">StoreLimitsOptions</a></em></td>
+          <td>StoreLimitsOptions is the configuration for the store API limits options.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tooFarInFutureTimeWindow</code> <em><a href="#duration">Duration</a></em></td>
+          <td>TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled.</td>
+          <td>0s</td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="ingesterspec">IngesterSpec<a href="#ingesterspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>IngesterSpec represents the configuration for the ingestor</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosreceivespec">ThanosReceiveSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>defaultObjectStorageConfig</code> <em><a href="#objectstorageconfig">ObjectStorageConfig</a></em></td>
+          <td>DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.<br />Can be overridden by the ObjectStorageConfig in the IngesterHashringSpec per hashring.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>hashrings</code> <em><a href="#ingesterhashringspec">IngesterHashringSpec</a> array</em></td>
+          <td>Hashrings is a list of hashrings to route to.</td>
+          <td></td>
+          <td>MaxItems: 100 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="objectstorageconfig">ObjectStorageConfig<a href="#objectstorageconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#secretkeyselector-v1-core">SecretKeySelector</a></em></p>
+<p>ObjectStorageConfig is the secret that contains the object storage configuration.
+The secret needs to be in the same namespace as the ReceiveHashring object.
+See https://thanos.io/tip/thanos/storage.md/#supported-clients for relevant documentation.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#ingesterspec">IngesterSpec</a></li>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<h4 id="poddisruptionbudgetconfig">PodDisruptionBudgetConfig<a href="#poddisruptionbudgetconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#featuregates">FeatureGates</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>enable</code> <em>boolean</em></td>
+          <td>Enabled enables the creation of a PodDisruptionBudget for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>maxUnavailable</code> <em>integer</em></td>
+          <td>MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.<br />If neither MaxUnavailable nor MinAvailable is specified, the default is 1.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>minAvailable</code> <em>integer</em></td>
+          <td>MinAvailable is the minimum number of pods that must still be available during the disruption.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="queryfrontendspec">QueryFrontendSpec<a href="#queryfrontendspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>QueryFrontendSpec defines the desired state of ThanosQueryFrontend</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td></td>
+          <td>1</td>
+          <td>Minimum: 1 <br /></td>
+      </tr>
+      <tr>
+          <td><code>compressResponses</code> <em>boolean</em></td>
+          <td>CompressResponses enables response compression</td>
+          <td>true</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>queryLabelSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta">LabelSelector</a></em></td>
+          <td>By default, the operator will add the first discoverable Query API to the<br />Query Frontend, if they have query labels. You can optionally choose to override default<br />Query selector labels, to select a subset of QueryAPIs to query.</td>
+          <td>{ matchLabels:map[operator.thanos.io/query-api:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logQueriesLongerThan</code> <em><a href="#duration">Duration</a></em></td>
+          <td>LogQueriesLongerThan sets the duration threshold for logging long queries</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>queryRangeResponseCacheConfig</code> <em><a href="#cacheconfig">CacheConfig</a></em></td>
+          <td>QueryRangeResponseCacheConfig holds the configuration for the query range response cache</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>queryRangeSplitInterval</code> <em><a href="#duration">Duration</a></em></td>
+          <td>QueryRangeSplitInterval sets the split interval for query range</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>labelsSplitInterval</code> <em><a href="#duration">Duration</a></em></td>
+          <td>LabelsSplitInterval sets the split interval for labels</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>queryRangeMaxRetries</code> <em>integer</em></td>
+          <td>QueryRangeMaxRetries sets the maximum number of retries for query range requests</td>
+          <td>5</td>
+          <td>Minimum: 0 <br /></td>
+      </tr>
+      <tr>
+          <td><code>labelsMaxRetries</code> <em>integer</em></td>
+          <td>LabelsMaxRetries sets the maximum number of retries for label requests</td>
+          <td>5</td>
+          <td>Minimum: 0 <br /></td>
+      </tr>
+      <tr>
+          <td><code>labelsDefaultTimeRange</code> <em><a href="#duration">Duration</a></em></td>
+          <td>LabelsDefaultTimeRange sets the default time range for label queries</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="retentionresolutionconfig">RetentionResolutionConfig<a href="#retentionresolutionconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>RetentionResolutionConfig defines the retention configuration for the compact component.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>raw</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Raw is the retention configuration for the raw samples.<br />This configures how long to retain raw samples in the storage.<br />The default value is 0d, which means samples are retained indefinitely.</td>
+          <td>0d</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>fiveMinutes</code> <em><a href="#duration">Duration</a></em></td>
+          <td>FiveMinutes is the retention configuration for samples of resolution 1 (5 minutes).<br />This configures how long to retain samples of resolution 1 (5 minutes) in storage.<br />The default value is 0d, which means these samples are retained indefinitely.</td>
+          <td>0d</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>oneHour</code> <em><a href="#duration">Duration</a></em></td>
+          <td>OneHour is the retention configuration for samples of resolution 2 (1 hour).<br />This configures how long to retain samples of resolution 2 (1 hour) in storage.<br />The default value is 0d, which means these samples are retained indefinitely.</td>
+          <td>0d</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br />Required: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="routerspec">RouterSpec<a href="#routerspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>RouterSpec represents the configuration for the router</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosreceivespec">ThanosReceiveSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the router components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of router replicas.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicationFactor</code> <em>integer</em></td>
+          <td>ReplicationFactor is the replication factor for the router.</td>
+          <td>1</td>
+          <td>Enum: [1 3 5] <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalLabels</code> <em><a href="#externallabels">ExternalLabels</a></em></td>
+          <td>ExternalLabels set and forwarded by the router to the ingesters.</td>
+          <td>{ receive:true }</td>
+          <td>MinProperties: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="ruletenancyconfig">RuleTenancyConfig<a href="#ruletenancyconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosrulerspec">ThanosRulerSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>tenantLabel</code> <em>string</em></td>
+          <td>TenantLabel is the label that will be used to identify the tenant.<br />Setting this value will mean, that all rules configured on ThanosRuler will<br />have this labelname (with value to set the tenant label value).<br />effectively <tenantLabelName> = <value of tenantValueLabel key></td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tenantValueLabel</code> <em>string</em></td>
+          <td>TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label<br />for particular rules configured on ThanosRuler.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="servicemonitorconfig">ServiceMonitorConfig<a href="#servicemonitorconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ServiceMonitorConfig is the configuration for the ServiceMonitor.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#featuregates">FeatureGates</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>enable</code> <em>boolean</em></td>
+          <td>Enable the management of ServiceMonitors for the Thanos component.<br />If not specified, the operator will default to true.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels to add to the ServiceMonitor.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="shardingconfig">ShardingConfig<a href="#shardingconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ShardingConfig defines the sharding configuration for the compact component.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>shardName</code> <em>string</em></td>
+          <td>ShardName is the name of the shard.<br />ShardName is used to identify the shard in the compact component.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalLabelSharding</code> <em><a href="#externallabelshardingconfig">ExternalLabelShardingConfig</a> array</em></td>
+          <td>ExternalLabelSharding is the sharding configuration based on explicit external labels and their values.<br />Configuration is ANDed together per shard</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="shardingstrategy">ShardingStrategy<a href="#shardingstrategy" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ShardingStrategy controls the automatic deployment of multiple store gateways sharded by block ID
+by hashmoding __block_id label value.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>type</code> <em><a href="#shardingstrategytype">ShardingStrategyType</a></em></td>
+          <td>Type here is the type of sharding strategy.</td>
+          <td>block</td>
+          <td>Enum: [block] <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>shards</code> <em>integer</em></td>
+          <td>Shards is the number of shards to split the data into.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="shardingstrategytype">ShardingStrategyType<a href="#shardingstrategytype" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#shardingstrategy">ShardingStrategy</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>block</code></td>
+          <td>Block is the block modulo sharding strategy for sharding Stores according to block ids.<br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="statefulsetstatus">StatefulSetStatus<a href="#statefulsetstatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactstatus">ThanosCompactStatus</a></li>
+<li><a href="#thanosreceivestatus">ThanosReceiveStatus</a></li>
+<li><a href="#thanosrulerstatus">ThanosRulerStatus</a></li>
+<li><a href="#thanosstorestatus">ThanosStoreStatus</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of replicas of the StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>updatedReplicas</code> <em>integer</em></td>
+          <td>Total number of non-terminating pods targeted by StatefulSet that have the desired template spec..</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>availableReplicas</code> <em>integer</em></td>
+          <td>Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>readyReplicas</code> <em>integer</em></td>
+          <td>ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>currentReplicas</code> <em>integer</em></td>
+          <td>currentReplicas is the number of Pods created by the StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="storagesize">StorageSize<a href="#storagesize" class="anchor" aria-hidden="true">#</a> </h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p>StorageSize is the size of the PV storage to be used by a Thanos component.</p>
+<p><em>Validation:</em></p>
+<ul>
+<li>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code></li>
+</ul>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#inmemorycacheconfig">InMemoryCacheConfig</a></li>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<h4 id="storelimitsoptions">StoreLimitsOptions<a href="#storelimitsoptions" class="anchor" aria-hidden="true">#</a> </h4>
+<p>StoreLimitsOptions is the configuration for the store API limits options.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>storeLimitsRequestSamples</code> <em>integer</em></td>
+          <td>StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.<br />0 means no limit.</td>
+          <td>0</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>storeLimitsRequestSeries</code> <em>integer</em></td>
+          <td>StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.<br />0 means no limit.</td>
+          <td>0</td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="tsdbconfig">TSDBConfig<a href="#tsdbconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>TSDBConfig specifies configuration for any particular Thanos TSDB.
+NOTE: Some of these options will not exist for all components, in which case, even if specified can be ignored.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>retention</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Retention is the duration for which a particular TSDB will retain data.</td>
+          <td>2h</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br />Required: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="telemetryquantiles">TelemetryQuantiles<a href="#telemetryquantiles" class="anchor" aria-hidden="true">#</a> </h4>
+<p>TelemetryQuantiles is the configuration for the request telemetry quantiles.
+Float usage is discouraged by controller-runtime, so we use string instead.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>duration</code> <em>string array</em></td>
+          <td>Duration is the quantiles for exporting metrics about the request duration.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>samples</code> <em>string array</em></td>
+          <td>Samples is the quantiles for exporting metrics about the samples count.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>series</code> <em>string array</em></td>
+          <td>Series is the quantiles for exporting metrics about the series count.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="tenancyconfig">TenancyConfig<a href="#tenancyconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>TenancyConfig is the configuration for the tenancy options.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#ingesterhashringspec">IngesterHashringSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>tenants</code> <em>string array</em></td>
+          <td>Tenants is a list of tenants that should be matched by the hashring.<br />An empty list matches all tenants.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tenantMatcherType</code> <em>string</em></td>
+          <td>TenantMatcherType is the type of tenant matching to use.</td>
+          <td>exact</td>
+          <td>Enum: [exact glob] <br /></td>
+      </tr>
+      <tr>
+          <td><code>tenantHeader</code> <em>string</em></td>
+          <td>TenantHeader is the HTTP header to determine tenant for write requests.</td>
+          <td>THANOS-TENANT</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>tenantCertificateField</code> <em>string</em></td>
+          <td>TenantCertificateField is the TLS client&rsquo;s certificate field to determine tenant for write requests.</td>
+          <td></td>
+          <td>Enum: [organization organizationalUnit commonName] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>defaultTenantID</code> <em>string</em></td>
+          <td>DefaultTenantID is the default tenant ID to use when none is provided via a header.</td>
+          <td>default-tenant</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>splitTenantLabelName</code> <em>string</em></td>
+          <td>SplitTenantLabelName is the label name through which the request will be split into multiple tenants.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tenantLabelName</code> <em>string</em></td>
+          <td>TenantLabelName is the label name through which the tenant will be announced.</td>
+          <td>tenant_id</td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanoscompact">ThanosCompact<a href="#thanoscompact" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosCompact is the Schema for the thanoscompacts API</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactlist">ThanosCompactList</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosCompact</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>spec</code> <em><a href="#thanoscompactspec">ThanosCompactSpec</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>status</code> <em><a href="#thanoscompactstatus">ThanosCompactStatus</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanoscompactlist">ThanosCompactList<a href="#thanoscompactlist" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosCompactList contains a list of ThanosCompact</p>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosCompactList</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#listmeta-v1-meta">ListMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>items</code> <em><a href="#thanoscompact">ThanosCompact</a> array</em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanoscompactspec">ThanosCompactSpec<a href="#thanoscompactspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosCompactSpec defines the desired state of ThanosCompact</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompact">ThanosCompact</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the Compact component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>objectStorageConfig</code> <em><a href="#objectstorageconfig">ObjectStorageConfig</a></em></td>
+          <td>ObjectStorageConfig is the object storage configuration for the compact component.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storageSize</code> <em><a href="#storagesize">StorageSize</a></em></td>
+          <td>StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets.</td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>retentionConfig</code> <em><a href="#retentionresolutionconfig">RetentionResolutionConfig</a></em></td>
+          <td>RetentionConfig is the retention configuration for the compact component.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockConfig</code> <em><a href="#blockconfig">BlockConfig</a></em></td>
+          <td>BlockConfig defines settings for block handling.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockViewerGlobalSync</code> <em><a href="#blockviewerglobalsyncconfig">BlockViewerGlobalSyncConfig</a></em></td>
+          <td>BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>shardingConfig</code> <em><a href="#shardingconfig">ShardingConfig</a> array</em></td>
+          <td>ShardingConfig is the sharding configuration for the compact component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>compactConfig</code> <em><a href="#compactconfig">CompactConfig</a></em></td>
+          <td>CompactConfig is the configuration for the compact component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>downsamplingConfig</code> <em><a href="#downsamplingconfig">DownsamplingConfig</a></em></td>
+          <td>DownsamplingConfig is the downsampling configuration for the compact component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>debugConfig</code> <em><a href="#debugconfig">DebugConfig</a></em></td>
+          <td>DebugConfig is the debug configuration for the compact component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>timeRangeConfig</code> <em><a href="#timerangeconfig">TimeRangeConfig</a></em></td>
+          <td>TimeRangeConfig configures the time range of data to serve for the compact component..</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>featureGates</code> <em><a href="#featuregates">FeatureGates</a></em></td>
+          <td>FeatureGates are feature gates for the compact component.</td>
+          <td>{ serviceMonitor:map[enable:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanoscompactstatus">ThanosCompactStatus<a href="#thanoscompactstatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosCompactStatus defines the observed state of ThanosCompact</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompact">ThanosCompact</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+          <td>Conditions represent the latest available observations of the state of the Compactor.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>Paused is the flag to pause the Compactor.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>shardStatuses</code> <em>object (keys:string, values:<a href="#statefulsetstatus">StatefulSetStatus</a>)</em></td>
+          <td>ShardStatuses is the status of the shards in the compact component.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosquery">ThanosQuery<a href="#thanosquery" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosQuery is the Schema for the thanosqueries API</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosquerylist">ThanosQueryList</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosQuery</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>spec</code> <em><a href="#thanosqueryspec">ThanosQuerySpec</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>status</code> <em><a href="#thanosquerystatus">ThanosQueryStatus</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosquerylist">ThanosQueryList<a href="#thanosquerylist" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosQueryList contains a list of ThanosQuery</p>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosQueryList</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#listmeta-v1-meta">ListMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>items</code> <em><a href="#thanosquery">ThanosQuery</a> array</em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosqueryspec">ThanosQuerySpec<a href="#thanosqueryspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosQuerySpec defines the desired state of ThanosQuery</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosquery">ThanosQuery</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of querier replicas.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the Querier component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicaLabels</code> <em>string array</em></td>
+          <td>ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.<br />Data can still be queried without deduplication using &lsquo;dedup=false&rsquo; parameter.<br />Data includes time series, recording rules, and alerting rules.<br />Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels</td>
+          <td>[replica]</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>customStoreLabelSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta">LabelSelector</a></em></td>
+          <td>StoreLabelSelector enables adding additional labels to build a custom label selector<br />for discoverable StoreAPIs. Values provided here will be appended to the default which are<br />{&ldquo;operator.thanos.io/store-api&rdquo;: &ldquo;true&rdquo;, &ldquo;app.kubernetes.io/part-of&rdquo;: &ldquo;thanos&rdquo;}.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>telemetryQuantiles</code> <em><a href="#telemetryquantiles">TelemetryQuantiles</a></em></td>
+          <td>TelemetryQuantiles is the configuration for the request telemetry quantiles.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>webConfig</code> <em><a href="#webconfig">WebConfig</a></em></td>
+          <td>WebConfig is the configuration for the Query UI and API web options.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>grpcProxyStrategy</code> <em>string</em></td>
+          <td>GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes.</td>
+          <td>eager</td>
+          <td>Enum: [eager lazy] <br /></td>
+      </tr>
+      <tr>
+          <td><code>queryFrontend</code> <em><a href="#queryfrontendspec">QueryFrontendSpec</a></em></td>
+          <td>QueryFrontend is the configuration for the Query Frontend<br />If you specify this, the operator will create a Query Frontend in front of your query deployment.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>featureGates</code> <em><a href="#featuregates">FeatureGates</a></em></td>
+          <td>FeatureGates are feature gates for the compact component.</td>
+          <td>{ serviceMonitor:map[enable:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosquerystatus">ThanosQueryStatus<a href="#thanosquerystatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosQueryStatus defines the observed state of ThanosQuery
+Includes reconciliation state, deployment status, pod status, and last reconciled statistics.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosquery">ThanosQuery</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+          <td>Conditions represent the latest available observations of the state of the Querier.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>Paused is the flag to pause the Querier.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>querierStatus</code> <em><a href="#deploymentstatus">DeploymentStatus</a></em></td>
+          <td>Querier is the status of the Querier.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>queryFrontendStatus</code> <em><a href="#deploymentstatus">DeploymentStatus</a></em></td>
+          <td>QueryFrontend is the status of the Query Frontend.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosreceive">ThanosReceive<a href="#thanosreceive" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosReceive is the Schema for the thanosreceives API</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosreceivelist">ThanosReceiveList</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosReceive</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>spec</code> <em><a href="#thanosreceivespec">ThanosReceiveSpec</a></em></td>
+          <td>Spec defines the desired state of ThanosReceive</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>status</code> <em><a href="#thanosreceivestatus">ThanosReceiveStatus</a></em></td>
+          <td>Status defines the observed state of ThanosReceive</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosreceivelist">ThanosReceiveList<a href="#thanosreceivelist" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosReceiveList contains a list of ThanosReceive</p>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosReceiveList</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#listmeta-v1-meta">ListMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>items</code> <em><a href="#thanosreceive">ThanosReceive</a> array</em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosreceivespec">ThanosReceiveSpec<a href="#thanosreceivespec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosReceiveSpec defines the desired state of ThanosReceive</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosreceive">ThanosReceive</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>routerSpec</code> <em><a href="#routerspec">RouterSpec</a></em></td>
+          <td>Router is the configuration for the router.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>ingesterSpec</code> <em><a href="#ingesterspec">IngesterSpec</a></em></td>
+          <td>Ingester is the configuration for the ingestor.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>featureGates</code> <em><a href="#featuregates">FeatureGates</a></em></td>
+          <td>FeatureGates are feature gates for the compact component.</td>
+          <td>{ serviceMonitor:map[enable:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosreceivestatus">ThanosReceiveStatus<a href="#thanosreceivestatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosReceiveStatus defines the observed state of ThanosReceive</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosreceive">ThanosReceive</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+          <td>Conditions represent the latest available observations of the state of the ThanosReceive CRD.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>Paused is a flag that indicates if the ThanosReceive is paused.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>routerStatus</code> <em><a href="#deploymentstatus">DeploymentStatus</a></em></td>
+          <td>RouterStatus is the status of the Receive router.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>hashringStatus</code> <em>object (keys:string, values:<a href="#statefulsetstatus">StatefulSetStatus</a>)</em></td>
+          <td>HashringStatus is a map of ingester statuses to hashring names.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosruler">ThanosRuler<a href="#thanosruler" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosRuler is the Schema for the thanosrulers API</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosrulerlist">ThanosRulerList</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosRuler</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>spec</code> <em><a href="#thanosrulerspec">ThanosRulerSpec</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>status</code> <em><a href="#thanosrulerstatus">ThanosRulerStatus</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosrulerlist">ThanosRulerList<a href="#thanosrulerlist" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosRulerList contains a list of ThanosRuler</p>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosRulerList</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#listmeta-v1-meta">ListMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>items</code> <em><a href="#thanosruler">ThanosRuler</a> array</em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosrulerspec">ThanosRulerSpec<a href="#thanosrulerspec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosRulerSpec defines the desired state of ThanosRuler</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosruler">ThanosRuler</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the Ruler component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of Ruler replicas.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>queryLabelSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta">LabelSelector</a></em></td>
+          <td>QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />{&ldquo;operator.thanos.io/query-api&rdquo;: &ldquo;true&rdquo;, &ldquo;app.kubernetes.io/part-of&rdquo;: &ldquo;thanos&rdquo;}.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>defaultObjectStorageConfig</code> <em><a href="#objectstorageconfig">ObjectStorageConfig</a></em></td>
+          <td>ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>ruleConfigSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta">LabelSelector</a></em></td>
+          <td>RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is:<br />{&ldquo;operator.thanos.io/rule-file&rdquo;: &ldquo;true&rdquo;}.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>alertmanagerURL</code> <em>string</em></td>
+          <td>AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />&lsquo;dns+&rsquo; or &lsquo;dnssrv+&rsquo; to detect Alertmanager IPs through respective DNS lookups.</td>
+          <td></td>
+          <td>Pattern: <code>^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalLabels</code> <em><a href="#externallabels">ExternalLabels</a></em></td>
+          <td>ExternalLabels set on Ruler TSDB, for query time deduplication.</td>
+          <td>{ rule_replica:$(NAME) }</td>
+          <td>MinProperties: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>evaluationInterval</code> <em><a href="#duration">Duration</a></em></td>
+          <td>EvaluationInterval is the default interval at which rules are evaluated.</td>
+          <td>1m</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>alertLabelDrop</code> <em>string array</em></td>
+          <td>Labels to drop before Ruler sends alerts to alertmanager.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>retention</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Retention is the duration for which the Thanos Rule StatefulSet will retain data.</td>
+          <td>2h</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storageSize</code> <em>string</em></td>
+          <td>StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet.</td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>featureGates</code> <em><a href="#featuregates">FeatureGates</a></em></td>
+          <td>FeatureGates are feature gates for the rule component.</td>
+          <td>{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>prometheusRuleSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta">LabelSelector</a></em></td>
+          <td>PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler.</td>
+          <td>{ matchLabels:map[operator.thanos.io/prometheus-rule:true] }</td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>ruleTenancyConfig</code> <em><a href="#ruletenancyconfig">RuleTenancyConfig</a></em></td>
+          <td>RuleTenancyConfig is the configuration for the rule tenancy.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosrulerstatus">ThanosRulerStatus<a href="#thanosrulerstatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosRulerStatus defines the observed state of ThanosRuler</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosruler">ThanosRuler</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+          <td>Conditions represent the latest available observations of the state of the Ruler.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>Paused is a flag that indicates if the Ruler is paused.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of replicas of the StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>updatedReplicas</code> <em>integer</em></td>
+          <td>Total number of non-terminating pods targeted by StatefulSet that have the desired template spec..</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>availableReplicas</code> <em>integer</em></td>
+          <td>Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>readyReplicas</code> <em>integer</em></td>
+          <td>ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>currentReplicas</code> <em>integer</em></td>
+          <td>currentReplicas is the number of Pods created by the StatefulSet.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosstore">ThanosStore<a href="#thanosstore" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosStore is the Schema for the thanosstores API</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosstorelist">ThanosStoreList</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosStore</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>spec</code> <em><a href="#thanosstorespec">ThanosStoreSpec</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>status</code> <em><a href="#thanosstorestatus">ThanosStoreStatus</a></em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosstorelist">ThanosStoreList<a href="#thanosstorelist" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosStoreList contains a list of ThanosStore</p>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td><code>monitoring.thanos.io/v1alpha1</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td><code>ThanosStoreList</code></td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>kind</code> <em>string</em></td>
+          <td>Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>apiVersion</code> <em>string</em></td>
+          <td>APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#listmeta-v1-meta">ListMeta</a></em></td>
+          <td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>items</code> <em><a href="#thanosstore">ThanosStore</a> array</em></td>
+          <td></td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosstorespec">ThanosStoreSpec<a href="#thanosstorespec" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosStoreSpec defines the desired state of ThanosStore</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosstore">ThanosStore</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>version</code> <em>string</em></td>
+          <td>Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.<br />If not specified, the operator assumes the latest upstream version of<br />Thanos available at the time when the version of the operator was released.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>baseImage</code> <em>string</em></td>
+          <td>Base container image (without tags) to use for the Thanos components deployed via operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#pullpolicy-v1-core">PullPolicy</a></em></td>
+          <td>Image pull policy for the Thanos containers.<br />See https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy for more details.</td>
+          <td>IfNotPresent</td>
+          <td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+          <td>An optional list of references to Secrets in the same namespace<br />to use for pulling images from registries.<br />See http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>resourceRequirements</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+          <td>ResourceRequirements for the Thanos component container.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logLevel</code> <em>string</em></td>
+          <td>Log level for Thanos.</td>
+          <td></td>
+          <td>Enum: [debug info warn error] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>logFormat</code> <em>string</em></td>
+          <td>Log format for Thanos.</td>
+          <td>logfmt</td>
+          <td>Enum: [logfmt json] <br />Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+          <td>NodeSelector defines on which Nodes the workloads are scheduled.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core">Affinity</a></em></td>
+          <td>Affinity defines the workloads affinity scheduling rules if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core">Toleration</a> array</em></td>
+          <td>Tolerations defines the workloads tolerations if specified.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>replicas</code> <em>integer</em></td>
+          <td>Replicas is the number of store or store shard replicas.</td>
+          <td>1</td>
+          <td>Minimum: 1 <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+          <td>Labels are additional labels to add to the Store component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>objectStorageConfig</code> <em><a href="#objectstorageconfig">ObjectStorageConfig</a></em></td>
+          <td>ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storageSize</code> <em><a href="#storagesize">StorageSize</a></em></td>
+          <td>StorageSize is the size of the storage to be used by the Thanos Store StatefulSets.</td>
+          <td></td>
+          <td>Pattern: <code>^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$</code> <br />Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>ignoreDeletionMarksDelay</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Duration after which the blocks marked for deletion will be filtered out while fetching blocks.<br />The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.<br />This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.<br />If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json<br />file to mark after what duration the block should be deleted rather than deleting the block straight away.</td>
+          <td>24h</td>
+          <td>Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>indexCacheConfig</code> <em><a href="#cacheconfig">CacheConfig</a></em></td>
+          <td>IndexCacheConfig allows configuration of the index cache.<br />See format details: https://thanos.io/tip/components/store.md/#index-cache</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>cachingBucketConfig</code> <em><a href="#cacheconfig">CacheConfig</a></em></td>
+          <td>CachingBucketConfig allows configuration of the caching bucket.<br />See format details: https://thanos.io/tip/components/store.md/#caching-bucket</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>shardingStrategy</code> <em><a href="#shardingstrategy">ShardingStrategy</a></em></td>
+          <td>ShardingStrategy defines the sharding strategy for the Store Gateways across object storage blocks.</td>
+          <td></td>
+          <td>Required: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>timeRangeConfig</code> <em><a href="#timerangeconfig">TimeRangeConfig</a></em></td>
+          <td>TimeRangeConfig configures the time range of data to serve for the store component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>storeLimitsOptions</code> <em><a href="#storelimitsoptions">StoreLimitsOptions</a></em></td>
+          <td>StoreLimitsOptions allows configuration of the store API limits.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>indexHeaderConfig</code> <em><a href="#indexheaderconfig">IndexHeaderConfig</a></em></td>
+          <td>IndexHeaderConfig allows configuration of the Store Gateway index header.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>blockConfig</code> <em><a href="#blockconfig">BlockConfig</a></em></td>
+          <td>BlockConfig defines settings for block handling.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>featureGates</code> <em><a href="#featuregates">FeatureGates</a></em></td>
+          <td>FeatureGates are feature gates for the compact component.</td>
+          <td>{ serviceMonitor:map[enable:true] }</td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalArgs</code> <em>string array</em></td>
+          <td>Additional arguments to pass to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core">Container</a> array</em></td>
+          <td>Additional containers to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core">Volume</a> array</em></td>
+          <td>Additional volumes to add to the Thanos components.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalVolumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core">VolumeMount</a> array</em></td>
+          <td>Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalPorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core">ContainerPort</a> array</em></td>
+          <td>Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalEnv</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core">EnvVar</a> array</em></td>
+          <td>Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>additionalServicePorts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core">ServicePort</a> array</em></td>
+          <td>AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="thanosstorestatus">ThanosStoreStatus<a href="#thanosstorestatus" class="anchor" aria-hidden="true">#</a> </h4>
+<p>ThanosStoreStatus defines the observed state of ThanosStore</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosstore">ThanosStore</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#condition-v1-meta">Condition</a> array</em></td>
+          <td>Conditions represent the latest available observations of the state of the Store.</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><code>paused</code> <em>boolean</em></td>
+          <td>Paused is a flag that indicates if the Store is paused.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>shardStatuses</code> <em>object (keys:string, values:<a href="#statefulsetstatus">StatefulSetStatus</a>)</em></td>
+          <td>ShardStatuses is a map of shard statuses to shard numbers.</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="timerangeconfig">TimeRangeConfig<a href="#timerangeconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>TimeRangeConfig configures the time range of data to serve.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanoscompactspec">ThanosCompactSpec</a></li>
+<li><a href="#thanosstorespec">ThanosStoreSpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>minTime</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served.</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+      <tr>
+          <td><code>maxTime</code> <em><a href="#duration">Duration</a></em></td>
+          <td>Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served.</td>
+          <td></td>
+          <td>Optional: {} <br />Pattern: <code>^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z|[+-][0-9]\{2\}:[0-9]\{2\})))$</code> <br /></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="webconfig">WebConfig<a href="#webconfig" class="anchor" aria-hidden="true">#</a> </h4>
+<p>WebConfig is the configuration for the Query UI and API web options.</p>
+<p><em>Appears in:</em></p>
+<ul>
+<li><a href="#thanosqueryspec">ThanosQuerySpec</a></li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>Field</th>
+          <th>Description</th>
+          <th>Default</th>
+          <th>Validation</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>routePrefix</code> <em>string</em></td>
+          <td>RoutePrefix is the prefix for API and UI endpoints.<br />This allows thanos UI to be served on a sub-path.<br />Defaults to the value of &ndash;web.external-prefix.<br />This option is analogous to &ndash;web.route-prefix of Prometheus.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>externalPrefix</code> <em>string</em></td>
+          <td>ExternalPrefix is the static prefix for all HTML links and redirect URLs in the UI query web interface.<br />Actual endpoints are still served on / or the web.route-prefix.<br />This allows thanos UI to be served behind a reverse proxy that strips a URL sub-path.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>prefixHeader</code> <em>string</em></td>
+          <td>PrefixHeader is the name of HTTP request header used for dynamic prefixing of UI links and redirects.<br />This option is ignored if web.external-prefix argument is set.<br />Security risk: enable this option only if a reverse proxy in front of thanos is resetting the header.<br />This allows thanos UI to be served on a sub-path.</td>
+          <td></td>
+          <td>Optional: {} <br /></td>
+      </tr>
+      <tr>
+          <td><code>disableCORS</code> <em>boolean</em></td>
+          <td>DisableCORS is the flag to disable CORS headers to be set by Thanos.<br />By default Thanos sets CORS headers to be allowed by all.</td>
+          <td>false</td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+
 			<div class="page-footer-meta d-flex flex-column flex-md-row justify-content-between">
 				</div>
 			<div class="page-nav d-flex flex-column flex-sm-row">
@@ -405,7 +3713,7 @@
     <div class="row">
       <div class="col-lg-8 text-center text-lg-start">
         <ul class="list-inline">
-          
+          <li class="list-inline-item"><a class="text-muted" href="/terms/">Terms of Service</a></li>
         </ul>
       </div>
       <div class="col-lg-8 text-center text-lg-end">
