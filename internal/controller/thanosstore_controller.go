@@ -57,20 +57,23 @@ type ThanosStoreReconciler struct {
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
 func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
+	reconciler := &ThanosStoreReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+	}
+
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
 		handler.SetFeatureGates(featureGates)
+		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("store").Set(float64(len(featureGates)))
 	}
+	reconciler.handler = handler
 
-	return &ThanosStoreReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry),
-		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
-	}
+	return reconciler
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosstores,verbs=get;list;watch;create;update;patch;delete
@@ -100,6 +103,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if store.Spec.Paused != nil && *store.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosStore")
+		r.metrics.Paused.WithLabelValues("store", store.GetName(), store.GetNamespace()).Set(1)
 		r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
 		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionPaused,
@@ -110,9 +114,13 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	r.metrics.Paused.WithLabelValues("store", store.GetName(), store.GetNamespace()).Set(0)
+
 	err = r.syncResources(ctx, *store)
 	if err != nil {
+		r.logger.Error(err, "failed to sync resources", "resource", store.GetName(), "namespace", store.GetNamespace())
 		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.metrics.ResourceSync.WithLabelValues("store", store.GetName(), store.GetNamespace(), "sync_failed").Inc()
 		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -122,6 +130,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	r.metrics.ResourceSync.WithLabelValues("store", store.GetName(), store.GetNamespace(), "sync_success").Inc()
 	r.updateCondition(ctx, store, metav1.Condition{
 		Type:    ConditionReconcileSuccess,
 		Status:  metav1.ConditionTrue,
@@ -135,6 +144,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) error {
 	var errCount int
 	opts := r.specToOptions(store)
+	r.metrics.ShardsConfigured.WithLabelValues(store.GetName(), store.GetNamespace()).Set(float64(len(opts)))
 
 	expectShards := make([]string, len(opts))
 	for i, opt := range opts {
@@ -143,6 +153,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount > 0 {
+		r.metrics.ShardCreationUpdateFailures.WithLabelValues(store.GetName(), store.GetNamespace()).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 

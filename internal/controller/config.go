@@ -5,6 +5,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 )
 
 // Config holds the configuration for all controllers.
@@ -51,4 +53,6 @@ type InstrumentationConfig struct {
 	EventRecorder record.EventRecorder
 
 	MetricsRegistry prometheus.Registerer
+
+	CommonMetrics *metrics.CommonMetrics
 }

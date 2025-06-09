@@ -67,20 +67,23 @@ type ThanosRulerReconciler struct {
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
 func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
-	featureGates := conf.FeatureGate.ToGVK()
-	if len(featureGates) > 0 {
-		handler.SetFeatureGates(featureGates)
-	}
-
-	return &ThanosRulerReconciler{
+	reconciler := &ThanosRulerReconciler{
 		Client:   client,
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry),
+		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
 	}
+
+	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	featureGates := conf.FeatureGate.ToGVK()
+	if len(featureGates) > 0 {
+		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("ruler").Set(float64(len(featureGates)))
+		handler.SetFeatureGates(featureGates)
+	}
+	reconciler.handler = handler
+
+	return reconciler
 }
 
 // +kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosrulers,verbs=get;list;watch;create;update;patch;delete
@@ -111,6 +114,7 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if ruler.Spec.Paused != nil && *ruler.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosRuler resource")
+		r.metrics.Paused.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace()).Set(1)
 		r.recorder.Event(ruler, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosRuler resource")
 		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionPaused,
@@ -121,8 +125,12 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	r.metrics.Paused.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace()).Set(0)
+
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
+		r.logger.Error(err, "failed to sync resources", "resource", ruler.GetName(), "namespace", ruler.GetNamespace())
+		r.metrics.ResourceSync.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace(), "sync_failed").Inc()
 		r.recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -133,6 +141,7 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	r.metrics.ResourceSync.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace(), "sync_success").Inc()
 	r.updateCondition(ctx, ruler, metav1.Condition{
 		Type:    ConditionReconcileSuccess,
 		Status:  metav1.ConditionTrue,
@@ -333,6 +342,9 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		tenantLabel := ruler.Spec.RuleTenancyConfig.TenantLabel
 		tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
 
+		tenantRuleGroupCount := make(map[string]int)
+		tenantRuleGroupCount[""] = 0
+
 		// Modify PrometheusRule objects to include tenant label
 		for _, rule := range promRules.Items {
 			if rule.Labels == nil {
@@ -341,8 +353,14 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 			value, exists := rule.Labels[tenantValueLabel]
 			if !exists {
 				r.logger.Info("tenant value label key not found in PrometheusRule labels", "tenantValueLabel", tenantValueLabel, "ruler", ruler.Name)
+				tenantRuleGroupCount[""] += len(rule.Spec.Groups)
 				continue
 			}
+
+			if _, exists := tenantRuleGroupCount[value]; !exists {
+				tenantRuleGroupCount[value] = 0
+			}
+			tenantRuleGroupCount[value] += len(rule.Spec.Groups)
 
 			for i, group := range rule.Spec.Groups {
 				// Set the tenant label on each rule group
@@ -365,11 +383,19 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 				rule.Spec.Groups[i] = group
 			}
 		}
+
+		for tenant, count := range tenantRuleGroupCount {
+			r.metrics.PrometheusRuleGroupsTenantCount.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), tenant).Set(float64(count))
+		}
 	}
+
+	r.metrics.PrometheusRulesFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(promRules.Items)))
 
 	// Collect all rule files first
 	allRuleFiles := make(map[string]string)
 	for _, rule := range promRules.Items {
+		r.metrics.PrometheusRuleGroupsFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), rule.Name).Set(float64(len(rule.Spec.Groups)))
+
 		ruleContent := manifestruler.GenerateRuleFileContent(rule.Spec.Groups)
 		allRuleFiles[fmt.Sprintf("%s.yaml", rule.Name)] = ruleContent
 	}
@@ -421,7 +447,10 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		}
 	}
 
+	r.metrics.ConfigMapsCreated.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(len(configMaps)))
+
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
+		r.metrics.ConfigMapCreationFailures.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(errCount))
 		return nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
 	}
 
@@ -511,6 +540,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 				continue
 			}
 			if selector.Matches(labels.Set(obj.GetLabels())) {
+				r.metrics.ServiceWatchesReconciliationsTotal.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Inc()
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      ruler.GetName(),
@@ -520,7 +550,6 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 			}
 		}
 
-		r.metrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }
@@ -552,6 +581,7 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 				continue
 			}
 			if selector.Matches(labels.Set(obj.GetLabels())) {
+				r.metrics.ConfigMapWatchesReconciliationsTotal.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Inc()
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      ruler.GetName(),
@@ -561,7 +591,6 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 			}
 		}
 
-		r.metrics.ConfigMapWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }
@@ -600,7 +629,7 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 			}
 
 			if selector.Matches(labels.Set(obj.GetLabels())) {
-				r.logger.Info("found prometheus rule enqueueing", "ruler", ruler.GetName())
+				r.metrics.PrometheusRuleWatchesReconciliationsTotal.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Inc()
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      ruler.GetName(),
