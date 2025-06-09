@@ -153,26 +153,32 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) error {
 	var objs []client.Object
 
-	querierObjs, err := r.buildQuery(ctx, query)
+	querier, err := r.buildQuery(ctx, query)
 	if err != nil {
 		return err
 	}
 
-	objs = append(objs, querierObjs...)
+	expectedResources := []string{querier.GetGeneratedResourceName()}
+	objs = append(objs, querier.Build()...)
 
 	if query.Spec.QueryFrontend != nil {
 		r.recorder.Event(&query, corev1.EventTypeNormal, "BuildingQueryFrontend", "Building Query Frontend resources")
-		frontendObjs := r.buildQueryFrontend(query)
-		objs = append(objs, frontendObjs...)
+		frontend := r.buildQueryFrontend(query)
+
+		expectedResources = append(expectedResources, frontend.GetGeneratedResourceName())
+		objs = append(objs, frontend.Build()...)
 	}
 
-	var errCount int
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
+	if errCount := r.pruneOrphanedResources(ctx, query.GetNamespace(), query.GetName(), expectedResources); errCount > 0 {
+		return fmt.Errorf("failed to prune %d orphaned resources for query or query frontend", errCount)
+	}
+
 	name := manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName()
-	if errCount = r.handler.DeleteResource(ctx,
+	if errCount := r.handler.DeleteResource(ctx,
 		getDisabledFeatureGatedResources(query.Spec.FeatureGates, []string{name}, query.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the query", errCount)
 	}
@@ -180,7 +186,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	return nil
 }
 
-func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]client.Object, error) {
+func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) (manifests.Buildable, error) {
 	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
 		return nil, err
@@ -189,7 +195,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 	opts := queryV1Alpha1ToOptions(query)
 	opts.Endpoints = endpoints
 
-	return opts.Build(), nil
+	return opts, nil
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the StoreAPI services that match the ThanosQuery storeLabelSelector.
@@ -241,8 +247,16 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	return endpoints, nil
 }
 
-func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) []client.Object {
-	return queryV1Alpha1ToQueryFrontEndOptions(query).Build()
+func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
+	return queryV1Alpha1ToQueryFrontEndOptions(query)
+}
+
+func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithDeployment().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectedResources, listOpts...)
 }
 
 // SetupWithManager sets up the controller with the Manager.
