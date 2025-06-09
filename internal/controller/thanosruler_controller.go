@@ -153,15 +153,20 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) error {
 	var objs []client.Object
 
-	desiredObjs, err := r.buildRuler(ctx, ruler)
+	opts, err := r.buildRuler(ctx, ruler)
 	if err != nil {
 		return err
 	}
+	expectedResources := []string{opts.GetGeneratedResourceName()}
 
-	objs = append(objs, desiredObjs...)
+	objs = append(objs, opts.Build()...)
 
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
+	}
+
+	if errCount := r.pruneOrphanedResources(ctx, ruler.GetNamespace(), ruler.GetName(), expectedResources); errCount > 0 {
+		return fmt.Errorf("failed to prune %d orphaned resources for query or query frontend", errCount)
 	}
 
 	if errCount := r.handler.DeleteResource(ctx,
@@ -172,19 +177,19 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	return nil
 }
 
-func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]client.Object, error) {
+func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (manifests.Buildable, error) {
 	endpoints, err := r.getQueryAPIServiceEndpoints(ctx, ruler)
 	if err != nil {
-		return []client.Object{}, err
+		return nil, err
 	}
 
 	if len(endpoints) == 0 {
-		return []client.Object{}, fmt.Errorf("no query API services found")
+		return nil, fmt.Errorf("no query API services found")
 	}
 
 	ruleFiles, err := r.getRuleConfigMaps(ctx, ruler)
 	if err != nil {
-		return []client.Object{}, err
+		return nil, err
 	}
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
@@ -192,7 +197,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	if manifests.HasPrometheusRuleEnabled(ruler.Spec.FeatureGates) {
 		promRuleConfigMaps, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
 		if err != nil {
-			return []client.Object{}, err
+			return nil, err
 		}
 		r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 	}
@@ -218,7 +223,15 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
-	return opts.Build(), nil
+	return opts, nil
+}
+
+func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectedResources, listOpts...)
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.
