@@ -81,6 +81,7 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
+		r.metrics.Paused.WithLabelValues("compact", compact.GetName(), compact.GetNamespace()).Set(1)
 		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
 		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionPaused,
@@ -91,8 +92,11 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
+	r.metrics.Paused.WithLabelValues("compact", compact.GetName(), compact.GetNamespace()).Set(0)
+
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
+		r.logger.Error(err, "failed to sync resources", "resource", compact.GetName(), "namespace", compact.GetNamespace())
 		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -115,20 +119,23 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // NewThanosCompactReconciler returns a reconciler for ThanosCompact resources.
 func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosCompactReconciler {
+	reconciler := &ThanosCompactReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+	}
+
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
 		handler.SetFeatureGates(featureGates)
+		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("compact").Set(float64(len(featureGates)))
 	}
+	reconciler.handler = handler
 
-	return &ThanosCompactReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry),
-		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
-	}
+	return reconciler
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -141,6 +148,7 @@ func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact monitoringthanosiov1alpha1.ThanosCompact) error {
 	var errCount int
 	options := r.specToOptions(compact)
+	r.metrics.ShardsConfigured.WithLabelValues(compact.GetName(), compact.GetNamespace()).Set(float64(len(options)))
 
 	// for compactor, we want to make sure we clean up any resources that are no longer needed first
 	// as we don't want multiple compactor instances potentially compacting the same data.
@@ -160,6 +168,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount > 0 {
+		r.metrics.ShardCreationUpdateFailures.WithLabelValues(compact.GetName(), compact.GetNamespace()).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 

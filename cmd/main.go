@@ -36,6 +36,7 @@ import (
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -164,6 +165,7 @@ func main() {
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
 				MetricsRegistry: ctrlmetrics.Registry,
+				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
 			},
 		}
 	}

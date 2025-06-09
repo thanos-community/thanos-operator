@@ -29,6 +29,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -117,6 +118,7 @@ var _ = BeforeSuite(func() {
 				Logger:          logger.WithName(component),
 				EventRecorder:   record.NewFakeRecorder(100).WithLogger(logger),
 				MetricsRegistry: ctrlmetrics.Registry,
+				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
 			},
 		}
 	}

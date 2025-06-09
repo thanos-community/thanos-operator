@@ -69,20 +69,23 @@ type ThanosReceiveReconciler struct {
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
 func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosReceiveReconciler {
+	reconciler := &ThanosReceiveReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+	}
+
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
 		handler.SetFeatureGates(featureGates)
+		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("receive").Set(float64(len(featureGates)))
 	}
+	reconciler.handler = handler
 
-	return &ThanosReceiveReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry),
-		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
-	}
+	return reconciler
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -106,6 +109,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.logger.Info("receiver is paused")
 		r.recorder.Event(receiver, corev1.EventTypeNormal, "Paused",
 			"Reconciliation is paused for ThanosReceive resource")
+		r.metrics.Paused.WithLabelValues("receive", receiver.GetName(), receiver.GetNamespace()).Set(1)
 		r.updateCondition(ctx, receiver, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
@@ -115,12 +119,15 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
+	r.metrics.Paused.WithLabelValues("receive", receiver.GetName(), receiver.GetNamespace()).Set(0)
+
 	if !receiver.GetDeletionTimestamp().IsZero() {
 		return r.handleDeletionTimestamp(receiver)
 	}
 
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
+		r.logger.Error(err, "failed to sync resources", "resource", receiver.GetName(), "namespace", receiver.GetNamespace())
 		r.recorder.Event(receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, receiver, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -299,6 +306,11 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		return []byte(""), nil
 	}
 
+	for _, hashring := range out {
+		r.metrics.HashringTenantsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace(), hashring.Name).Set(float64(len(hashring.Tenants)))
+		r.metrics.HashringEndpointsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace(), hashring.Name).Set(float64(len(hashring.Endpoints)))
+	}
+
 	b, err := json.MarshalIndent(out, "", "    ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal hashring config: %w", err)
@@ -338,7 +350,7 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			return nil
 		}
 
-		r.metrics.EndpointWatchesReconciliationsTotal.Inc()
+		r.metrics.EndpointWatchesReconciliationsTotal.WithLabelValues(svc.GetOwnerReferences()[0].Name, obj.GetNamespace()).Inc()
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{

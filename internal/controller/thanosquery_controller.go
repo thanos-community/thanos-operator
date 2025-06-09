@@ -67,20 +67,23 @@ type ThanosQueryReconciler struct {
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
 func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
+	reconciler := &ThanosQueryReconciler{
+		Client:   client,
+		Scheme:   scheme,
+		logger:   conf.InstrumentationConfig.Logger,
+		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder: conf.InstrumentationConfig.EventRecorder,
+	}
+
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
 		handler.SetFeatureGates(featureGates)
+		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("query").Set(float64(len(featureGates)))
 	}
+	reconciler.handler = handler
 
-	return &ThanosQueryReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry),
-		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
-	}
+	return reconciler
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosqueries,verbs=get;list;watch;create;update;patch;delete
@@ -111,6 +114,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
+		r.metrics.Paused.WithLabelValues("query", query.GetName(), query.GetNamespace()).Set(1)
 		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
 		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionPaused,
@@ -121,8 +125,11 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	r.metrics.Paused.WithLabelValues("query", query.GetName(), query.GetNamespace()).Set(0)
+
 	err = r.syncResources(ctx, *query)
 	if err != nil {
+		r.logger.Error(err, "failed to sync resources", "resource", query.GetName(), "namespace", query.GetNamespace())
 		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -302,6 +309,7 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 			}
 
 			if selector.Matches(labels.Set(obj.GetLabels())) {
+				r.metrics.ServiceWatchesReconciliationsTotal.WithLabelValues(query.GetName(), query.GetNamespace()).Inc()
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      query.GetName(),
@@ -311,7 +319,6 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 			}
 		}
 
-		r.metrics.ServiceWatchesReconciliationsTotal.Add(float64(len(requests)))
 		return requests
 	})
 }
