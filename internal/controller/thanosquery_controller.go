@@ -131,7 +131,6 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", query.GetName(), "namespace", query.GetNamespace())
 		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
-		r.metrics.ResourceSync.WithLabelValues("query", query.GetName(), query.GetNamespace(), "sync_failed").Inc()
 		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -147,7 +146,6 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Reason:  ReasonReconcileComplete,
 		Message: "Reconciliation completed successfully",
 	})
-	r.metrics.ResourceSync.WithLabelValues("query", query.GetName(), query.GetNamespace(), "sync_success").Inc()
 
 	return ctrl.Result{}, nil
 }

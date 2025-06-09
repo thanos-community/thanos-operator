@@ -120,7 +120,6 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", store.GetName(), "namespace", store.GetNamespace())
 		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
-		r.metrics.ResourceSync.WithLabelValues("store", store.GetName(), store.GetNamespace(), "sync_failed").Inc()
 		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -130,7 +129,6 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	r.metrics.ResourceSync.WithLabelValues("store", store.GetName(), store.GetNamespace(), "sync_success").Inc()
 	r.updateCondition(ctx, store, metav1.Condition{
 		Type:    ConditionReconcileSuccess,
 		Status:  metav1.ConditionTrue,

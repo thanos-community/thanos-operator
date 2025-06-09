@@ -10,7 +10,6 @@ import (
 type CommonMetrics struct {
 	FeatureGatesEnabled *prometheus.GaugeVec
 	Paused              *prometheus.GaugeVec
-	ResourceSync        *prometheus.CounterVec
 }
 
 type ThanosQueryMetrics struct {
@@ -70,10 +69,6 @@ func NewCommonMetrics(reg prometheus.Registerer) *CommonMetrics {
 				Name: "thanos_operator_paused",
 				Help: "Paused state of ThanosOperator",
 			}, []string{"component", "resource", "namespace"}),
-			ResourceSync: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-				Name: "thanos_operator_resource_sync_total",
-				Help: "Total number of resources synced by ThanosOperator",
-			}, []string{"component", "resource", "namespace", "case"}),
 		}
 	})
 	return commonMetricsInstance
@@ -98,19 +93,19 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 		CommonMetrics: commonMetrics,
 		HashringsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashrings_configured",
-			Help: "Number of configured hashrings for ThanosReceive resources",
+			Help: "Number of configured hashrings per ThanosReceive resource",
 		}, []string{"resource", "namespace"}),
 		HashringHash: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashring_hash",
-			Help: "Hash of the hashrings configuration for ThanosReceive resources",
+			Help: "Hash of the hashrings configuration per ThanosReceive resource",
 		}, []string{"resource", "namespace"}),
 		HashringTenantsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashring_tenants_configured",
-			Help: "Number of configured tenants for hashrings for ThanosReceive resources",
+			Help: "Number of tenants configured per distinct ThanosReceive hashring",
 		}, []string{"resource", "namespace", "hashring"}),
 		HashringEndpointsConfigured: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 			Name: "thanos_operator_receive_hashring_endpoints_configured",
-			Help: "Number of configured endpoints for hashrings for ThanosReceive resources",
+			Help: "Number of configured endpoints for each distinct ThanosReceive hashring",
 		}, []string{"resource", "namespace", "hashring"}),
 		EndpointWatchesReconciliationsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
 			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",

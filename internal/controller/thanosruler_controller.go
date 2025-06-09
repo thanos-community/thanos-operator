@@ -130,7 +130,6 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", ruler.GetName(), "namespace", ruler.GetNamespace())
-		r.metrics.ResourceSync.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace(), "sync_failed").Inc()
 		r.recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -141,7 +140,6 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	r.metrics.ResourceSync.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace(), "sync_success").Inc()
 	r.updateCondition(ctx, ruler, metav1.Condition{
 		Type:    ConditionReconcileSuccess,
 		Status:  metav1.ConditionTrue,

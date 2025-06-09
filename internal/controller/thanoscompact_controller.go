@@ -97,7 +97,6 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", compact.GetName(), "namespace", compact.GetNamespace())
-		r.metrics.ResourceSync.WithLabelValues("compact", compact.GetName(), compact.GetNamespace(), "sync_failed").Inc()
 		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
 		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionReconcileFailed,
@@ -108,7 +107,6 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	r.metrics.ResourceSync.WithLabelValues("compact", compact.GetName(), compact.GetNamespace(), "sync_success").Inc()
 	r.updateCondition(ctx, compact, metav1.Condition{
 		Type:    ConditionReconcileSuccess,
 		Status:  metav1.ConditionTrue,
