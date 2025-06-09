@@ -71,7 +71,7 @@ func NewCommonMetrics(reg prometheus.Registerer) *CommonMetrics {
 				Help: "Paused state of ThanosOperator",
 			}, []string{"component", "resource", "namespace"}),
 			ResourceSync: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-				Name: "thanos_operator_resource_sync",
+				Name: "thanos_operator_resource_sync_total",
 				Help: "Total number of resources synced by ThanosOperator",
 			}, []string{"component", "resource", "namespace", "case"}),
 		}
@@ -151,15 +151,15 @@ func NewThanosRulerMetrics(reg prometheus.Registerer, commonMetrics *CommonMetri
 			Help: "Number of PrometheusRule groups found for ThanosRuler resources",
 		}, []string{"resource", "namespace", "rule_name"}),
 		ConfigMapsCreated: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_cfgmaps_created",
+			Name: "thanos_operator_ruler_cfgmaps_created_total",
 			Help: "Number of ConfigMaps created from PrometheusRules for ThanosRuler resources",
 		}, []string{"resource", "namespace"}),
 		ConfigMapCreationFailures: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_ruler_cfgmaps_creation_failures",
+			Name: "thanos_operator_ruler_cfgmaps_creation_failures_total",
 			Help: "Number of ConfigMaps creation failures for ThanosRuler resources",
 		}, []string{"resource", "namespace"}),
 		PrometheusRuleGroupsTenantCount: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
-			Name: "thanos_operator_ruler_promrule_groups_tenant_count",
+			Name: "thanos_operator_ruler_tenant_promrule_groups",
 			Help: "Number of PrometheusRule groups found for ThanosRuler resources by tenant",
 		}, []string{"resource", "namespace", "tenant"}),
 	}
@@ -173,7 +173,7 @@ func NewThanosStoreMetrics(reg prometheus.Registerer, commonMetrics *CommonMetri
 			Help: "Number of shards configured for ThanosStore resources",
 		}, []string{"resource", "namespace"}),
 		ShardCreationUpdateFailures: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_store_shards_creation_update_failures",
+			Name: "thanos_operator_store_shards_creation_update_failures_total",
 			Help: "Number of shard creation/update failures for ThanosStore resources",
 		}, []string{"resource", "namespace"}),
 	}
@@ -187,7 +187,7 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 			Help: "Number of shards configured for ThanosCompact resources",
 		}, []string{"resource", "namespace"}),
 		ShardCreationUpdateFailures: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_compact_shards_creation_update_failures",
+			Name: "thanos_operator_compact_shards_creation_update_failures_total",
 			Help: "Number of shard creation/update failures for ThanosCompact resources",
 		}, []string{"resource", "namespace"}),
 	}

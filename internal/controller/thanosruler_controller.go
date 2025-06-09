@@ -343,6 +343,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
 
 		tenantRuleGroupCount := make(map[string]int)
+		// Empty key to handle no tenant label.
 		tenantRuleGroupCount[""] = 0
 
 		// Modify PrometheusRule objects to include tenant label
