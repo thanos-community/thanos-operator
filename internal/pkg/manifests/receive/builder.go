@@ -592,6 +592,19 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 func routerArgsFrom(opts RouterOptions) []string {
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
+
+	grpcDisableEndlessRetry := `{
+  "loadBalancingPolicy":"round_robin",
+  "retryPolicy": {
+    "maxAttempts": 2,
+    "initialBackoff": "0.1s",
+    "backoffMultiplier": 1,
+    "retryableStatusCodes": [
+  	  "UNAVAILABLE"
+    ]
+  }
+}`
+
 	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
@@ -599,6 +612,7 @@ func routerArgsFrom(opts RouterOptions) []string {
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
 		fmt.Sprintf("--receive.hashrings-algorithm=%s", opts.HashringAlgorithm),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
+		fmt.Sprintf("--receive.grpc-service-config=%s", grpcDisableEndlessRetry),
 	)
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
