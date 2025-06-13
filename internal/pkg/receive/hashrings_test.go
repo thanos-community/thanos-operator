@@ -298,7 +298,7 @@ func TestDynamicMergeEmptyPreviousState(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 }
@@ -493,7 +493,7 @@ func TestMapToExternalLabels(t *testing.T) {
 func TestStaticMergeEmptyPreviousState(t *testing.T) {
 	previousState := Hashrings{}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 3,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -510,7 +510,7 @@ func TestStaticMergeEmptyPreviousState(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 
@@ -522,7 +522,7 @@ func TestStaticMergeEmptyPreviousState(t *testing.T) {
 func TestStaticMergeEmptyPreviousStateNotReady(t *testing.T) {
 	previousState := Hashrings{}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 5,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -544,7 +544,7 @@ func TestStaticMergeEmptyPreviousStateNotReady(t *testing.T) {
 func TestStaticMergeReplicationFactorMet(t *testing.T) {
 	previousState := Hashrings{
 		{
-			Name: "hashring1",
+			Name: hashringName,
 			Endpoints: []Endpoint{
 				{Address: "endpoint1"},
 				{Address: "endpoint2"},
@@ -553,7 +553,7 @@ func TestStaticMergeReplicationFactorMet(t *testing.T) {
 		},
 	}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 3,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -570,7 +570,7 @@ func TestStaticMergeReplicationFactorMet(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 
@@ -582,7 +582,7 @@ func TestStaticMergeReplicationFactorMet(t *testing.T) {
 func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
 	previousState := Hashrings{
 		{
-			Name: "hashring1",
+			Name: hashringName,
 			Endpoints: []Endpoint{
 				{Address: "endpoint1"},
 				{Address: "endpoint2"},
@@ -591,7 +591,7 @@ func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
 		},
 	}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 5,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -608,7 +608,7 @@ func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 
@@ -620,7 +620,7 @@ func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
 func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
 	previousState := Hashrings{
 		{
-			Name: "hashring1",
+			Name: hashringName,
 			Endpoints: []Endpoint{
 				{Address: "endpoint-1"},
 				{Address: "endpoint-2"},
@@ -631,7 +631,7 @@ func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
 		},
 	}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 3,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -650,7 +650,7 @@ func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 
@@ -662,7 +662,7 @@ func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
 func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
 	previousState := Hashrings{
 		{
-			Name: "hashring1",
+			Name: hashringName,
 			Endpoints: []Endpoint{
 				{Address: "endpoint1"},
 				{Address: "endpoint2"},
@@ -671,7 +671,7 @@ func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
 		},
 	}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 3,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -687,7 +687,7 @@ func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 	if !reflect.DeepEqual(result[0].Endpoints, previousState[0].Endpoints) {
@@ -698,14 +698,14 @@ func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
 func TestStaticMergeDesiredStateNotMet(t *testing.T) {
 	previousState := Hashrings{
 		{
-			Name: "hashring1",
+			Name: hashringName,
 			Endpoints: []Endpoint{
 				{Address: "endpoint1"},
 			},
 		},
 	}
 	desiredState := HashringState{
-		"hashring1": {
+		hashringName: {
 			DesiredReplicas: 3,
 			Config: HashringConfig{
 				Endpoints: []Endpoint{
@@ -720,7 +720,7 @@ func TestStaticMergeDesiredStateNotMet(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 }
