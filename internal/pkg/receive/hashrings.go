@@ -154,12 +154,12 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 // It ensures that the hashrings are in the desired state and that the replication factor is met.
 // If the previous state is empty, it will only add hashrings that have all members ready.
 // It allows for a single missing member to account for voluntary disruptions.
-func DynamicMerge(previousState Hashrings, desiredState HashringState, replicationFactor int) Hashrings {
+func DynamicMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int) Hashrings {
 	var mergedState Hashrings
 	if isEmptyHashring(previousState) {
-		return handleUnseenHashrings(desiredState)
+		return handleUnseenHashrings(fetchedReadyState)
 	}
-	for k, v := range desiredState {
+	for k, v := range fetchedReadyState {
 		// we first check that the hashring can meet the desired replication factor
 		// secondly, we allow to tolerate a single missing member. this allows us to account for
 		// voluntary disruptions to the hashring.
@@ -181,6 +181,33 @@ func DynamicMerge(previousState Hashrings, desiredState HashringState, replicati
 		return mergedState[i].Name < mergedState[j].Name
 	})
 
+	return mergedState
+}
+
+func StaticMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int) Hashrings {
+	var mergedState Hashrings
+	if isEmptyHashring(previousState) {
+		return handleUnseenHashrings(fetchedReadyState)
+	}
+
+	for k, v := range fetchedReadyState {
+		if len(v.Config.Endpoints) >= replicationFactor && len(v.Config.Endpoints) >= v.DesiredReplicas {
+			v.Config.Endpoints = trimTo(v.Config.Endpoints, v.DesiredReplicas)
+			mergedState = append(mergedState, metaToHashring(k, v))
+			continue
+		}
+		// otherwise we look for previous state and merge if it exists
+		// this means that if the hashring is having issues, we don't interfere with its
+		// since doing so could cause further disruptions and frequent reshuffling
+		for _, hr := range previousState {
+			if hr.Name == k {
+				mergedState = append(mergedState, hr)
+			}
+		}
+	}
+	sort.Slice(mergedState, func(i, j int) bool {
+		return mergedState[i].Name < mergedState[j].Name
+	})
 	return mergedState
 }
 
@@ -240,4 +267,14 @@ func HashAsMetricValue(data []byte) float64 {
 	var bytes = make([]byte, 8)
 	copy(bytes, smallSum)
 	return float64(binary.LittleEndian.Uint64(bytes))
+}
+
+func trimTo[T any](s []T, target int) []T {
+	if target < 0 {
+		target = 0
+	}
+	if target > len(s) {
+		return s
+	}
+	return s[:target]
 }

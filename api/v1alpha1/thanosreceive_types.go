@@ -20,6 +20,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
+type HashringPolicy string
+
+const (
+	// HashringPolicyStatic is the default hashring policy.
+	// This type of hashring is fixed in size based on the input of the IngesterHashringSpec.Replicas field.
+	HashringPolicyStatic HashringPolicy = "static"
+	// HashringPolicyDynamic is a dynamic hashring policy.
+	// This type of hashring is dynamic and whilst it is based on the IngesterHashringSpec.Replicas field,
+	// it will remove members that become unavailable due to voluntary disruptions (e.g rolling updates, scale down, etc).
+	HashringPolicyDynamic HashringPolicy = "dynamic"
+)
+
 // RouterSpec represents the configuration for the router
 type RouterSpec struct {
 	// CommonFields are the options available to all Thanos components.
@@ -39,6 +52,11 @@ type RouterSpec struct {
 	// +kubebuilder:validation:Enum=1;3;5
 	// +kubebuilder:validation:Required
 	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
+	// HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
+	// +kubebuilder:default="static"
+	// +kubebuilder:validation:Enum=static;dynamic
+	// +kubebuilder:validation:Optional
+	HashringPolicy *HashringPolicy `json:"hashringPolicy,omitempty"`
 	// ExternalLabels set and forwarded by the router to the ingesters.
 	// +kubebuilder:default={receive: "true"}
 	// +kubebuilder:validation:Required

@@ -298,7 +298,7 @@ func TestDynamicMergeEmptyPreviousState(t *testing.T) {
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
-	if result[0].Name != "hashring1" {
+	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 }
@@ -487,5 +487,240 @@ func TestMapToExternalLabels(t *testing.T) {
 
 			}
 		})
+	}
+}
+
+func TestStaticMergeEmptyPreviousState(t *testing.T) {
+	previousState := Hashrings{}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 3,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+					{Address: "endpoint2"},
+					{Address: "endpoint3"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+
+	if len(result[0].Endpoints) != 3 {
+		t.Errorf("expected 3 endpoints, got %d", len(result[0].Endpoints))
+	}
+}
+
+func TestStaticMergeEmptyPreviousStateNotReady(t *testing.T) {
+	previousState := Hashrings{}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 5,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+					{Address: "endpoint2"},
+					{Address: "endpoint3"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 0 {
+		t.Errorf("expected 0 hashring, got %d", len(result))
+	}
+}
+
+func TestStaticMergeReplicationFactorMet(t *testing.T) {
+	previousState := Hashrings{
+		{
+			Name: hashringName,
+			Endpoints: []Endpoint{
+				{Address: "endpoint1"},
+				{Address: "endpoint2"},
+				{Address: "endpoint3"},
+			},
+		},
+	}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 3,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+					{Address: "endpoint2"},
+					{Address: "endpoint3"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+
+	if len(result[0].Endpoints) != 3 {
+		t.Errorf("expected 3 endpoints, got %d", len(result[0].Endpoints))
+	}
+}
+
+func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
+	previousState := Hashrings{
+		{
+			Name: hashringName,
+			Endpoints: []Endpoint{
+				{Address: "endpoint1"},
+				{Address: "endpoint2"},
+				{Address: "endpoint3"},
+			},
+		},
+	}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 5,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+					{Address: "endpoint2"},
+					{Address: "endpoint3"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+
+	if len(result[0].Endpoints) != 3 {
+		t.Errorf("expected 3 endpoints, got %d", len(result[0].Endpoints))
+	}
+}
+
+func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
+	previousState := Hashrings{
+		{
+			Name: hashringName,
+			Endpoints: []Endpoint{
+				{Address: "endpoint-1"},
+				{Address: "endpoint-2"},
+				{Address: "endpoint-3"},
+				{Address: "endpoint-4"},
+				{Address: "endpoint-5"},
+			},
+		},
+	}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 3,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint-5"},
+					{Address: "endpoint-4"},
+					{Address: "endpoint-1"},
+					{Address: "endpoint-2"},
+					{Address: "endpoint-3"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+
+	if len(result[0].Endpoints) != 3 {
+		t.Errorf("expected 3 endpoints, got %d", len(result[0].Endpoints))
+	}
+}
+
+func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
+	previousState := Hashrings{
+		{
+			Name: hashringName,
+			Endpoints: []Endpoint{
+				{Address: "endpoint1"},
+				{Address: "endpoint2"},
+				{Address: "endpoint3"},
+			},
+		},
+	}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 3,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+					{Address: "endpoint2"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+	if !reflect.DeepEqual(result[0].Endpoints, previousState[0].Endpoints) {
+		t.Errorf("expected endpoints to be %v, got %v", previousState[0].Endpoints, result[0].Endpoints)
+	}
+}
+
+func TestStaticMergeDesiredStateNotMet(t *testing.T) {
+	previousState := Hashrings{
+		{
+			Name: hashringName,
+			Endpoints: []Endpoint{
+				{Address: "endpoint1"},
+			},
+		},
+	}
+	desiredState := HashringState{
+		hashringName: {
+			DesiredReplicas: 3,
+			Config: HashringConfig{
+				Endpoints: []Endpoint{
+					{Address: "endpoint1"},
+				},
+			},
+		},
+	}
+	replicationFactor := 3
+
+	result := StaticMerge(previousState, desiredState, replicationFactor)
+	if len(result) != 1 {
+		t.Errorf("expected 1 hashring, got %d", len(result))
+	}
+	if result[0].Name != hashringName {
+		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
 	}
 }
