@@ -311,6 +311,23 @@ _Appears in:_
 | `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
+#### HashringPolicy
+
+_Underlying type:_ _string_
+
+HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
+
+
+
+_Appears in:_
+- [RouterSpec](#routerspec)
+
+| Field | Description |
+| --- | --- |
+| `static` | HashringPolicyStatic is the default hashring policy.<br />This type of hashring is fixed in size based on the input of the IngesterHashringSpec.Replicas field.<br /> |
+| `dynamic` | HashringPolicyDynamic is a dynamic hashring policy.<br />This type of hashring is dynamic and whilst it is based on the IngesterHashringSpec.Replicas field,<br />it will remove members that become unavailable due to voluntary disruptions (e.g rolling updates, scale down, etc).<br /> |
+
+
 #### InMemoryCacheConfig
 
 
@@ -529,6 +546,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the router components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of router replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `replicationFactor` _integer_ | ReplicationFactor is the replication factor for the router. | 1 | Enum: [1 3 5] <br />Required: \{\} <br /> |
+| `hashringPolicy` _[HashringPolicy](#hashringpolicy)_ | HashringPolicy defines the policy for how the hashring is built and maintained at runtime. | static | Enum: [static dynamic] <br />Optional: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set and forwarded by the router to the ingesters. | \{ receive:true \} | MinProperties: 1 <br />Required: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |

@@ -277,7 +277,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
-	desiredState := make(receive.HashringState, len(receiver.Spec.Ingester.Hashrings))
+	fetchedReadyState := make(receive.HashringState, len(receiver.Spec.Ingester.Hashrings))
 	for _, hashring := range receiver.Spec.Ingester.Hashrings {
 		filters := []receive.EndpointFilter{receive.FilterEndpointReady()}
 		labelValue := ReceiveIngesterNameFromParent(receiver.GetName(), hashring.Name)
@@ -296,12 +296,19 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			hc.TenantMatcherType = receive.TenantMatcher(hashring.TenancyConfig.TenantMatcherType)
 		}
 
-		desiredState[hashring.Name] = receive.HashringMeta{
+		fetchedReadyState[hashring.Name] = receive.HashringMeta{
 			DesiredReplicas: int(hashring.Replicas),
 			Config:          hc,
 		}
 	}
-	out := receive.DynamicMerge(currentHashringState, desiredState, int(receiver.Spec.Router.ReplicationFactor))
+
+	var out receive.Hashrings
+	if receiver.Spec.Router.HashringPolicy != nil && *receiver.Spec.Router.HashringPolicy == monitoringthanosiov1alpha1.HashringPolicyStatic {
+		out = receive.StaticMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor))
+	} else {
+		out = receive.DynamicMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor))
+	}
+
 	if len(out) == 0 {
 		return []byte(""), nil
 	}
