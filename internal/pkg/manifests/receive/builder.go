@@ -41,6 +41,7 @@ const (
 
 	// HashringConfigKey is the key in the ConfigMap for the hashring configuration.
 	HashringConfigKey = "hashrings.json"
+
 	// EmptyHashringConfig is the empty hashring configuration.
 	EmptyHashringConfig = "[{}]"
 )
@@ -481,12 +482,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 						{
 							Name: hashringVolumeName,
 							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: name,
-									},
-									DefaultMode: ptr.To(int32(420)),
-								},
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
