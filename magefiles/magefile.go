@@ -123,7 +123,7 @@ func InstallCRDS() error {
 
 // Installs the Thanos Operator sample resources into the Kubernetes cluster
 func InstallSamples() error {
-	if err := sh.Run("make", "install-sample"); err != nil {
+	if err := sh.Run("make", "install-sample", fmt.Sprintf("IMG_MAIN=%s", getImageName())); err != nil {
 		return err
 	}
 	return nil
@@ -242,7 +242,7 @@ kind: Prometheus
 metadata:
   name: prometheus-dev
 spec:
-  scrapeInterval: 5s
+  scrapeInterval: 1s
   serviceAccountName: prometheus
   serviceMonitorNamespaceSelector:
     matchLabels:
