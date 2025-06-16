@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -124,7 +125,10 @@ func (opts RouterOptions) Build() []client.Object {
 	objectMetaLabels := GetRouterLabels(opts)
 	name := opts.GetGeneratedResourceName()
 
-	objs = append(objs, manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels, opts.Annotations))
+	sa := manifests.BuildServiceAccount(name, opts.Namespace, selectorLabels, opts.Annotations)
+	objs = append(objs, sa)
+	objs = append(objs, newRouterRole(name, opts.Namespace))
+	objs = append(objs, newRouterRoleBinding(name, opts.Namespace, sa.GetName()))
 	objs = append(objs, newRouterService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
@@ -356,6 +360,43 @@ func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[s
 	return svc
 }
 
+func newRouterRole(name, namespace string) *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+	}
+}
+
+func newRouterRoleBinding(name, namespace, saName string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      saName,
+				Namespace: namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     name,
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+}
+
 // newService creates a new Service for the Thanos Receive components.
 func newService(name, namespace string, selectorLabels, objectMetaLabels map[string]string, annotations map[string]string) *corev1.Service {
 	servicePorts := []corev1.ServicePort{
@@ -532,6 +573,94 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 							Args:                     routerArgsFrom(opts),
+						},
+						{
+							Image:           "quay.io/philipgough/configmap-sync:latest",
+							Name:            "configmap-syncer",
+							ImagePullPolicy: corev1.PullAlways,
+							// Ensure restrictive context for the container
+							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+							SecurityContext: &corev1.SecurityContext{
+								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{
+										"ALL",
+									},
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      hashringVolumeName,
+									MountPath: hashringMountPath,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: int32(8080),
+									Name:          HTTPPortName,
+								},
+							},
+							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+							Args: []string{
+								"--health-probe-bind-address=:8081",
+								"--metrics-bind-address=127.0.0.1:8080",
+								"--zap-encoder=console",
+								"--zap-log-level=debug",
+								fmt.Sprintf("--name=%s", name),
+								fmt.Sprintf("--namespace%s", opts.Namespace),
+								fmt.Sprintf("--key=%s", HashringConfigKey),
+								fmt.Sprintf("--path=%s/%s", hashringMountPath, HashringConfigKey),
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/healthz",
+										Port: intstr.FromInt32(8081),
+									},
+								},
+								InitialDelaySeconds: 15,
+								PeriodSeconds:       30,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/readyz",
+										Port: intstr.FromInt32(8081),
+									},
+								},
+								InitialDelaySeconds: 15,
+								PeriodSeconds:       30,
+							},
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("500m"),
+									corev1.ResourceMemory: resource.MustParse("128Mi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("10m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
 						},
 					},
 					ServiceAccountName:           name,
