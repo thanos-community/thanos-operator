@@ -42,15 +42,18 @@ var (
 	metricsAddr string
 	probeAddr   string
 
-	configMapName string
-	configMapKey  string
-	pathToWrite   string
+	configMapName      string
+	configMapNamespace string
+
+	configMapKey string
+	pathToWrite  string
 )
 
 func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to")
 	flag.StringVar(&configMapName, "name", "", "The name of the ConfigMap to watch")
+	flag.StringVar(&configMapNamespace, "namespace", "", "The namespace of the ConfigMap to watch. Empty means all namespaces will be watched.")
 	flag.StringVar(&configMapKey, "key", "", "The ConfigMap key to read")
 	flag.StringVar(&pathToWrite, "path", "/", "The path to write to on disk")
 
@@ -66,17 +69,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	cacheOpts := cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {
+				Field: fields.OneTermEqualSelector("metadata.name", configMapName),
+			},
+		},
+	}
+
+	if configMapNamespace != "" {
+		cacheOpts.DefaultNamespaces = map[string]cache.Config{
+			configMapNamespace: {},
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		HealthProbeBindAddress: probeAddr,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				&corev1.ConfigMap{}: {
-					Field: fields.OneTermEqualSelector("metadata.name", configMapName),
-				},
-			},
-		},
+		Cache:                  cacheOpts,
 	})
 	if err != nil {
 		setupLog.Error(err, "could not create manager")
