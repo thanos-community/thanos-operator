@@ -627,7 +627,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 								"--zap-encoder=console",
 								"--zap-log-level=debug",
 								fmt.Sprintf("--name=%s", name),
-								fmt.Sprintf("--namespace%s", opts.Namespace),
+								fmt.Sprintf("--namespace=%s", opts.Namespace),
 								fmt.Sprintf("--key=%s", HashringConfigKey),
 								fmt.Sprintf("--path=%s/%s", hashringMountPath, HashringConfigKey),
 							},
