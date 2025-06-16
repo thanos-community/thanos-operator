@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	"dario.cat/mergo"
 
@@ -86,6 +87,16 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 			pdb := existing.(*policyv1.PodDisruptionBudget)
 			wantPdb := desired.(*policyv1.PodDisruptionBudget)
 			mutatePodDisruptionBudget(pdb, wantPdb)
+
+		case *rbacv1.Role:
+			role := existing.(*rbacv1.Role)
+			wantRole := desired.(*rbacv1.Role)
+			mutateRole(role, wantRole)
+
+		case *rbacv1.RoleBinding:
+			roleBinding := existing.(*rbacv1.RoleBinding)
+			wantRoleBinding := desired.(*rbacv1.RoleBinding)
+			mutateRoleBinding(roleBinding, wantRoleBinding)
 		default:
 			t := reflect.TypeOf(existing).String()
 			return fmt.Errorf("missing mutate implementation for resource type %v", t)
@@ -177,4 +188,17 @@ func mutatePodDisruptionBudget(existing, desired *policyv1.PodDisruptionBudget) 
 	existing.Annotations = desired.Annotations
 	existing.Labels = desired.Labels
 	existing.Spec = desired.Spec
+}
+
+func mutateRole(existing, desired *rbacv1.Role) {
+	existing.Labels = desired.Labels
+	existing.Annotations = desired.Annotations
+	existing.Rules = desired.Rules
+}
+
+func mutateRoleBinding(existing, desired *rbacv1.RoleBinding) {
+	existing.Labels = desired.Labels
+	existing.Annotations = desired.Annotations
+	existing.Subjects = desired.Subjects
+	existing.RoleRef = desired.RoleRef
 }
