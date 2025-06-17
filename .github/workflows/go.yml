@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - first-dev
     tags:
   pull_request:
 
@@ -48,12 +47,13 @@ jobs:
           go-version: ${{ env.golang-version }}
       - run: make --always-make test
   e2e-tests:
-    name: E2E tests
+    name: E2E tests (Thanos ${{ matrix.thanos-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        kind-image:
-          - 'kindest/node:v1.31.0'
+        kind-image: ['kindest/node:v1.31.0']
+        thanos-version:
+          - v0.38.0
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,4 +73,4 @@ jobs:
       - name: Run tests
         run: |
           export KUBECONFIG="${HOME}/.kube/config"
-          make test-e2e
+          THANOS_VERSION=${{ matrix.thanos-version }} make test-e2e
