@@ -47,7 +47,7 @@ jobs:
           go-version: ${{ env.golang-version }}
       - run: make --always-make test
   e2e-tests:
-    name: E2E tests (Thanos ${{ matrix.thanos-version }})
+    name: E2E tests (Thanos ${{ matrix.thanos-version }}) (${{ matrix.kind-image }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
