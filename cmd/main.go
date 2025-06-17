@@ -27,6 +27,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
+	"github.com/prometheus/common/version"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
@@ -149,8 +150,10 @@ func main() {
 	}
 
 	ctrlmetrics.Registry.MustRegister(
-		versioncollector.NewCollector("thanos_operator"),
+		versioncollector.NewCollector("thanos-operator"),
 	)
+
+	setupLog.Info("starting thanos operator", "build_info", version.Print("thanos-operator"))
 
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)

@@ -165,7 +165,19 @@ check-docs: build generate-api-docs $(MDOX)
 
 .PHONY: build
 build: manifests generate format vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+	@VERSION=$$(cat VERSION) && \
+	REVISION=$$(git rev-parse HEAD) && \
+	BRANCH=$$(git rev-parse --abbrev-ref HEAD) && \
+	BUILDUSER=$$(whoami)@$$HOSTNAME && \
+	BUILDDATE=$$(date +%Y%m%d-%H:%M:%S) && \
+	go build -o bin/manager \
+		-ldflags="-s -w \
+		-X github.com/prometheus/common/version.Version=$$VERSION \
+		-X github.com/prometheus/common/version.Revision=$$REVISION \
+		-X github.com/prometheus/common/version.Branch=$$BRANCH \
+		-X github.com/prometheus/common/version.BuildUser=$$BUILDUSER \
+		-X github.com/prometheus/common/version.BuildDate=$$BUILDDATE" \
+		cmd/main.go
 
 .PHONY: run
 run: manifests generate format vet ## Run a controller from your host.
@@ -177,7 +189,18 @@ run: manifests generate format vet ## Run a controller from your host.
 # Used for e2e testing.
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build --load -t ${IMG} .
+	@VERSION=$$(cat VERSION) && \
+	REVISION=$$(git rev-parse HEAD) && \
+	BRANCH=$$(git rev-parse --abbrev-ref HEAD) && \
+	BUILDUSER=$$(whoami)@$$HOSTNAME && \
+	BUILDDATE=$$(date +%Y%m%d-%H:%M:%S) && \
+	$(CONTAINER_TOOL) build --load \
+		--build-arg VERSION=$$VERSION \
+		--build-arg REVISION=$$REVISION \
+		--build-arg BRANCH=$$BRANCH \
+		--build-arg BUILDUSER=$$BUILDUSER \
+		--build-arg BUILDDATE=$$BUILDDATE \
+		-t ${IMG} .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -197,7 +220,20 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --tag ${IMG_MAIN} -f Dockerfile.cross .
+	VERSION=$$(cat VERSION) && \
+	REVISION=$$(git rev-parse HEAD) && \
+	BRANCH=$$(git rev-parse --abbrev-ref HEAD) && \
+	BUILDUSER=$$(whoami)@$$HOSTNAME && \
+	BUILDDATE=$$(date +%Y%m%d-%H:%M:%S) && \
+	$(CONTAINER_TOOL) buildx build --push \
+		--platform=$(PLATFORMS) \
+		--build-arg VERSION=$$VERSION \
+		--build-arg REVISION=$$REVISION \
+		--build-arg BRANCH=$$BRANCH \
+		--build-arg BUILDUSER=$$BUILDUSER \
+		--build-arg BUILDDATE=$$BUILDDATE \
+		--tag ${IMG} --tag ${IMG_MAIN} \
+		-f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 

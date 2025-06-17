@@ -3,6 +3,13 @@ FROM golang:1.24 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
+# Build variables
+ARG VERSION
+ARG REVISION
+ARG BRANCH
+ARG BUILDUSER
+ARG BUILDDATE
+
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -22,7 +29,16 @@ COPY internal/pkg/ internal/pkg/
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
+  go build -a -o manager \
+  -ldflags="-s -w \
+  -X github.com/prometheus/common/version.Version=${VERSION} \
+  -X github.com/prometheus/common/version.Revision=${REVISION} \
+  -X github.com/prometheus/common/version.Branch=${BRANCH} \
+  -X github.com/prometheus/common/version.BuildUser=${BUILDUSER} \
+  -X github.com/prometheus/common/version.BuildDate=${BUILDDATE}" \
+  cmd/main.go
+
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
