@@ -105,7 +105,7 @@ func BuildAndLoadLocalImage() error {
 
 // Builds the container image
 func BuildLocalImage() error {
-	return sh.Run("docker", "build", ".", "-t", getImageName())
+	return sh.Run("docker", "build", "--load", ".", "-t", getImageName())
 }
 
 // Applies the Thanos Operators CRDs into the Kubernetes cluster
