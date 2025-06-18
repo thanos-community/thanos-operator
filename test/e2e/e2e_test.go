@@ -256,6 +256,17 @@ var _ = Describe("controller", Ordered, func() {
 								},
 							},
 						},
+						Router: v1alpha1.RouterSpec{
+							CommonFields: v1alpha1.CommonFields{
+								Version: getThanosVersion(),
+							},
+							Replicas:          1,
+							ReplicationFactor: 1,
+							HashringPolicy:    ptr.To(v1alpha1.HashringPolicyStatic),
+							ExternalLabels: map[string]string{
+								"receive": "true",
+							},
+						},
 					},
 				}
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
