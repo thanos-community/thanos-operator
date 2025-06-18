@@ -155,6 +155,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -226,6 +227,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
+	r.metrics.HashringLastWriteSuccessTime.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).SetToCurrentTime()
 
 	if errCount = r.handler.DeleteResource(ctx,
 		getDisabledFeatureGatedResources(receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {

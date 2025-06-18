@@ -22,6 +22,7 @@ type ThanosReceiveMetrics struct {
 	*CommonMetrics
 	HashringsConfigured                 *prometheus.GaugeVec
 	HashringHash                        *prometheus.GaugeVec
+	HashringLastWriteSuccessTime        *prometheus.GaugeVec
 	HashringTenantsConfigured           *prometheus.GaugeVec
 	HashringEndpointsConfigured         *prometheus.GaugeVec
 	EndpointWatchesReconciliationsTotal *prometheus.CounterVec
@@ -51,6 +52,11 @@ type ThanosCompactMetrics struct {
 	*CommonMetrics
 	ShardsConfigured            *prometheus.GaugeVec
 	ShardCreationUpdateFailures *prometheus.CounterVec
+}
+
+type ConfigMapSyncerMetrics struct {
+	LastWriteSuccessTime *prometheus.GaugeVec
+	ConfigMapHash        *prometheus.GaugeVec
 }
 
 var (
@@ -110,6 +116,10 @@ func NewThanosReceiveMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 		EndpointWatchesReconciliationsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
 			Name: "thanos_operator_receive_endpoint_event_reconciliations_total",
 			Help: "Total number of reconciliations for ThanosReceive resources due to EndpointSlice events",
+		}, []string{"resource", "namespace"}),
+		HashringLastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_operator_receive_hashring_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
 		}, []string{"resource", "namespace"}),
 	}
 }
@@ -184,6 +194,19 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 		ShardCreationUpdateFailures: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
 			Name: "thanos_operator_compact_shards_creation_update_failures_total",
 			Help: "Number of shard creation/update failures for ThanosCompact resources",
+		}, []string{"resource", "namespace"}),
+	}
+}
+
+func NewConfigMapSyncerMetrics(reg prometheus.Registerer) ConfigMapSyncerMetrics {
+	return ConfigMapSyncerMetrics{
+		LastWriteSuccessTime: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_last_write_success_timestamp_seconds",
+			Help: "Unix timestamp of the last successful write to disk",
+		}, []string{"resource", "namespace"}),
+		ConfigMapHash: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+			Name: "thanos_configmap_syncer_configmap_hash",
+			Help: "Hash of the last created or updated configmap",
 		}, []string{"resource", "namespace"}),
 	}
 }

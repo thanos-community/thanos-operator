@@ -80,6 +80,14 @@ func KindCluster() error {
 	return sh.Run("kind", "create", "cluster", "--name", kindClusterName)
 }
 
+// Deletes the KinD cluster named 'thanos-operator-cluster'
+func TeardownDemoEnvironment() error {
+	if err := sh.Run("kind", "delete", "cluster", "--name", kindClusterName); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Installs the Prometheus Operator in the Kubernetes cluster
 func PrometheusOperator() error {
 	return utils.InstallPrometheusOperator()
@@ -115,7 +123,7 @@ func InstallCRDS() error {
 
 // Installs the Thanos Operator sample resources into the Kubernetes cluster
 func InstallSamples() error {
-	if err := sh.Run("make", "install-sample"); err != nil {
+	if err := sh.Run("make", "install-sample", fmt.Sprintf("IMG_MAIN=%s", getImageName())); err != nil {
 		return err
 	}
 	return nil
@@ -234,6 +242,7 @@ kind: Prometheus
 metadata:
   name: prometheus-dev
 spec:
+  scrapeInterval: 1s
   serviceAccountName: prometheus
   serviceMonitorNamespaceSelector:
     matchLabels:
