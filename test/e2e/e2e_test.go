@@ -67,6 +67,14 @@ const (
 	hashringTwoName = "two"
 )
 
+func getThanosVersion() *string {
+	version := os.Getenv("THANOS_VERSION")
+	if version == "" {
+		version = "v0.38.0"
+	}
+	return ptr.To(version)
+}
+
 var _ = Describe("controller", Ordered, func() {
 	var c client.Client
 
@@ -229,10 +237,16 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name:        hashringName,
 									StorageSize: "100Mi",
+									CommonFields: v1alpha1.CommonFields{
+										Version: getThanosVersion(),
+									},
 								},
 								{
 									Name:        hashringTwoName,
 									StorageSize: "100Mi",
+									CommonFields: v1alpha1.CommonFields{
+										Version: getThanosVersion(),
+									},
 									TenancyConfig: &v1alpha1.TenancyConfig{
 										Tenants: []string{
 											"tenant1",
@@ -240,6 +254,17 @@ var _ = Describe("controller", Ordered, func() {
 										TenantMatcherType: "exact",
 									},
 								},
+							},
+						},
+						Router: v1alpha1.RouterSpec{
+							CommonFields: v1alpha1.CommonFields{
+								Version: getThanosVersion(),
+							},
+							Replicas:          1,
+							ReplicationFactor: 1,
+							HashringPolicy:    ptr.To(v1alpha1.HashringPolicyStatic),
+							ExternalLabels: map[string]string{
+								"receive": "true",
 							},
 						},
 					},
@@ -326,8 +351,10 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosQuerySpec{
-						CommonFields: v1alpha1.CommonFields{},
-						Replicas:     1,
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						Replicas: 1,
 						Labels: map[string]string{
 							"some-label": "xyz",
 						},
@@ -369,6 +396,9 @@ var _ = Describe("controller", Ordered, func() {
 				Expect(err).To(BeNil())
 
 				updatedCR.Spec.QueryFrontend = &v1alpha1.QueryFrontendSpec{
+					CommonFields: v1alpha1.CommonFields{
+						Version: getThanosVersion(),
+					},
 					Replicas:             2,
 					CompressResponses:    true,
 					LogQueriesLongerThan: &tenSeconds,
@@ -446,8 +476,10 @@ var _ = Describe("controller", Ordered, func() {
 								manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
 							},
 						},
-						CommonFields: v1alpha1.CommonFields{},
-						StorageSize:  "100Mi",
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						StorageSize: "100Mi",
 						PrometheusRuleSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
@@ -567,9 +599,11 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosStoreSpec{
-						Replicas:     2,
-						CommonFields: v1alpha1.CommonFields{},
-						Labels:       map[string]string{"some-label": "xyz"},
+						Replicas: 2,
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						Labels: map[string]string{"some-label": "xyz"},
 						ShardingStrategy: v1alpha1.ShardingStrategy{
 							Type:   v1alpha1.Block,
 							Shards: 2,
@@ -616,8 +650,10 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosCompactSpec{
-						CommonFields: v1alpha1.CommonFields{},
-						StorageSize:  "100Mi",
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						StorageSize: "100Mi",
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
