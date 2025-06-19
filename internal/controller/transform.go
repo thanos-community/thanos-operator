@@ -132,7 +132,10 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
 		StorageSize:              resource.MustParse(string(spec.StorageSize)),
 		ExternalLabels:           spec.ExternalLabels,
-		ReplicationProtocol:      string(*in.Spec.Router.ReplicationProtocol),
+	}
+
+	if in.Spec.Router.ReplicationProtocol != nil {
+		igops.ReplicationProtocol = string(*in.Spec.Router.ReplicationProtocol)
 	}
 
 	if spec.TenancyConfig != nil {
@@ -160,12 +163,17 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive) manifestreceive.
 	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
 	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonFields, in.Spec.FeatureGates, router.Additional)
 
-	return manifestreceive.RouterOptions{
-		Options:             opts,
-		ReplicationFactor:   router.ReplicationFactor,
-		ExternalLabels:      router.ExternalLabels,
-		ReplicationProtocol: string(*router.ReplicationProtocol),
+	ropts := manifestreceive.RouterOptions{
+		Options:           opts,
+		ReplicationFactor: router.ReplicationFactor,
+		ExternalLabels:    router.ExternalLabels,
 	}
+
+	if router.ReplicationProtocol != nil {
+		ropts.ReplicationProtocol = string(*router.ReplicationProtocol)
+	}
+
+	return ropts
 }
 
 // ReceiveIngesterNameFromParent returns the name of the Thanos Receive Ingester component.
