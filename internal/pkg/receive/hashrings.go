@@ -43,7 +43,7 @@ type Endpoint struct {
 	// Address is the address of the endpoint.
 	Address string `json:"address"`
 	// CapnProtoAddress is the address of the endpoint for the Cap'n Proto based replication protocol.
-	CapnProtoAddress string `json:"capnproto_address"`
+	CapnProtoAddress string `json:"capnproto_address"` //nolint:tagliatelle
 	// AZ is the availability zone of the endpoint.
 	AZ string `json:"az"`
 }
