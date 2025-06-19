@@ -286,9 +286,14 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			return nil, fmt.Errorf("failed to get endpoint slices for resource %s: %w", receiver.GetName(), err)
 		}
 
+		converter := receive.DefaultEndpointConverter
+		if receiver.Spec.Router.ReplicationProtocol != nil && *receiver.Spec.Router.ReplicationProtocol == monitoringthanosiov1alpha1.ReplicationProtocolCapnProto {
+			converter = receive.CapnProtoEndpointConverter
+		}
+
 		hc := receive.HashringConfig{
 			Name:      hashring.Name,
-			Endpoints: receive.EndpointSliceListToEndpoints(receive.DefaultEndpointConverter, *eps, filters...),
+			Endpoints: receive.EndpointSliceListToEndpoints(converter, *eps, filters...),
 		}
 
 		if hashring.TenancyConfig != nil {
