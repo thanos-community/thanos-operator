@@ -290,6 +290,7 @@ var _ = Describe("controller", Ordered, func() {
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]
@@ -303,6 +304,7 @@ var _ = Describe("controller", Ordered, func() {
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]

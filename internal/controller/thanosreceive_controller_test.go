@@ -333,14 +333,17 @@ config:
         "endpoints": [
             {
                 "address": "some-hostname-b.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             },
             {
                 "address": "some-hostname-c.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             },
             {
                 "address": "some-hostname.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]
