@@ -9483,6 +9483,14 @@ spec:
                     - 5
                     format: int32
                     type: integer
+                  replicationProtocol:
+                    default: grpc
+                    description: ReplicationProtocol is the protocol for remote write
+                      replication.
+                    enum:
+                    - grpc
+                    - capnproto
+                    type: string
                   resourceRequirements:
                     description: ResourceRequirements for the Thanos component container.
                     properties:

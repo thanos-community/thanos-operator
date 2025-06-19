@@ -16,6 +16,7 @@ import (
 )
 
 const GRPCPort = receive.GRPCPort
+const CapnProtoPort = receive.CapnProtoPort
 
 // TenantMatcher represents the type of tenant matching to use.
 type TenantMatcher string
@@ -41,6 +42,8 @@ const (
 type Endpoint struct {
 	// Address is the address of the endpoint.
 	Address string `json:"address"`
+	// CapnProtoAddress is the address of the endpoint for the Cap'n Proto based replication protocol.
+	CapnProtoAddress string `json:"capnproto_address"`
 	// AZ is the availability zone of the endpoint.
 	AZ string `json:"az"`
 }
@@ -125,6 +128,17 @@ func DefaultEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endp
 	ns := eps.GetNamespace()
 	return Endpoint{
 		Address: fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, GRPCPort),
+	}
+}
+
+// DefaultCapnProtoEndpointConverter is the default EndpointConverter that converts an EndpointSlice to an Endpoint.
+// It uses the service name and namespace from the EndpointSlice to construct the address.
+// It uses the Cap'n Proto based replication protocol port.
+func CapnProtoEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint) Endpoint {
+	svcName := eps.Labels[discoveryv1.LabelServiceName]
+	ns := eps.GetNamespace()
+	return Endpoint{
+		CapnProtoAddress: fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, CapnProtoPort),
 	}
 }
 

@@ -33,6 +33,16 @@ const (
 	HashringPolicyDynamic HashringPolicy = "dynamic"
 )
 
+// ReplicationProtocol defines the protocol for remote write replication.
+type ReplicationProtocol string
+
+const (
+	// ReplicationProtocolGRPC is the default gRPC replication protocol.
+	ReplicationProtocolGRPC ReplicationProtocol = "grpc"
+	// ReplicationProtocolCapnProto is the Cap'n Proto based replication protocol.
+	ReplicationProtocolCapnProto ReplicationProtocol = "capnproto"
+)
+
 // RouterSpec represents the configuration for the router
 type RouterSpec struct {
 	// CommonFields are the options available to all Thanos components.
@@ -52,6 +62,11 @@ type RouterSpec struct {
 	// +kubebuilder:validation:Enum=1;3;5
 	// +kubebuilder:validation:Required
 	ReplicationFactor int32 `json:"replicationFactor,omitempty"`
+	// ReplicationProtocol is the protocol for remote write replication.
+	// +kubebuilder:default="grpc"
+	// +kubebuilder:validation:Enum=grpc;capnproto
+	// +kubebuilder:validation:Optional
+	ReplicationProtocol *ReplicationProtocol `json:"replicationProtocol,omitempty"`
 	// HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
 	// +kubebuilder:default="static"
 	// +kubebuilder:validation:Enum=static;dynamic
