@@ -502,6 +502,23 @@ _Appears in:_
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
 
 
+#### ReplicationProtocol
+
+_Underlying type:_ _string_
+
+ReplicationProtocol defines the protocol for remote write replication.
+
+
+
+_Appears in:_
+- [RouterSpec](#routerspec)
+
+| Field | Description |
+| --- | --- |
+| `grpc` | ReplicationProtocolGRPC is the default gRPC replication protocol.<br /> |
+| `capnproto` | ReplicationProtocolCapnProto is the Cap'n Proto based replication protocol.<br /> |
+
+
 #### RetentionResolutionConfig
 
 
@@ -546,6 +563,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the router components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of router replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `replicationFactor` _integer_ | ReplicationFactor is the replication factor for the router. | 1 | Enum: [1 3 5] <br />Required: \{\} <br /> |
+| `replicationProtocol` _[ReplicationProtocol](#replicationprotocol)_ | ReplicationProtocol is the protocol for remote write replication. | grpc | Enum: [grpc capnproto] <br />Optional: \{\} <br /> |
 | `hashringPolicy` _[HashringPolicy](#hashringpolicy)_ | HashringPolicy defines the policy for how the hashring is built and maintained at runtime. | static | Enum: [static dynamic] <br />Optional: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set and forwarded by the router to the ingesters. | \{ receive:true \} | MinProperties: 1 <br />Required: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |

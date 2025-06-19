@@ -131,9 +131,9 @@ func DefaultEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endp
 	}
 }
 
-// DefaultCapnProtoEndpointConverter is the default EndpointConverter that converts an EndpointSlice to an Endpoint.
-// It uses the service name and namespace from the EndpointSlice to construct the address.
-// It uses the Cap'n Proto based replication protocol port.
+// CapnProtoEndpointConverter is the EndpointConverter that converts an EndpointSlice to an Endpoint.
+// It uses the service name and namespace from the EndpointSlice to construct the Cap'n Proto address.
+// It also uses the Cap'n Proto based replication protocol port.
 func CapnProtoEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint) Endpoint {
 	svcName := eps.Labels[discoveryv1.LabelServiceName]
 	ns := eps.GetNamespace()
@@ -159,7 +159,13 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 		}
 	}
 	sort.Slice(endpoints, func(i, j int) bool {
-		return endpoints[i].Address < endpoints[j].Address
+		if endpoints[i].Address != "" && endpoints[j].Address != "" {
+			return endpoints[i].Address < endpoints[j].Address
+		}
+		if endpoints[i].CapnProtoAddress != "" && endpoints[j].CapnProtoAddress != "" {
+			return endpoints[i].CapnProtoAddress < endpoints[j].CapnProtoAddress
+		}
+		return false
 	})
 	return slices.Compact(endpoints)
 }
