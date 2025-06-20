@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Reference on Thanos Operator</title>
+    <link>http://localhost:1313/docs/reference/</link>
+    <description>Recent content in Reference on Thanos Operator</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <copyright>Copyright (c) Thanos Operator Authors</copyright>
+    <lastBuildDate>Thu, 07 Sep 2023 16:13:18 +0200</lastBuildDate>
+    <atom:link href="http://localhost:1313/docs/reference/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>API Reference</title>
+      <link>http://localhost:1313/docs/reference/api-reference/</link>
+      <pubDate>Thu, 07 Sep 2023 16:13:18 +0200</pubDate>
+      <guid>http://localhost:1313/docs/reference/api-reference/</guid>
+      <description>&lt;h2 id=&#34;packages&#34;&gt;Packages&lt;/h2&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#monitoringthanosiov1alpha1&#34;&gt;monitoring.thanos.io/v1alpha1&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h2 id=&#34;monitoringthanosiov1alpha1&#34;&gt;monitoring.thanos.io/v1alpha1&lt;/h2&gt;&#xA;&lt;p&gt;Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group&lt;/p&gt;&#xA;&lt;h3 id=&#34;resource-types&#34;&gt;Resource Types&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanoscompact&#34;&gt;ThanosCompact&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanoscompactlist&#34;&gt;ThanosCompactList&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosquery&#34;&gt;ThanosQuery&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosquerylist&#34;&gt;ThanosQueryList&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosreceive&#34;&gt;ThanosReceive&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosreceivelist&#34;&gt;ThanosReceiveList&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosruler&#34;&gt;ThanosRuler&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosrulerlist&#34;&gt;ThanosRulerList&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosstore&#34;&gt;ThanosStore&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;&lt;a href=&#34;#thanosstorelist&#34;&gt;ThanosStoreList&lt;/a&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h4 id=&#34;additional&#34;&gt;Additional&lt;/h4&gt;&#xA;&lt;p&gt;Additional holds additional configuration for the Thanos components.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
