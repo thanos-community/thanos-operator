@@ -1,0 +1,502 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "monitoring.thanos.io/v1alpha1",
+          "kind": "ThanosCompact",
+          "metadata": {
+            "name": "example-compact",
+            "namespace": "thanos-operator-system"
+          },
+          "spec": {
+            "objectStorageConfig": {
+              "key": "thanos.yaml",
+              "name": "thanos-object-storage"
+            },
+            "retentionConfig": {
+              "fiveMinutes": "30d",
+              "oneHour": "30d",
+              "raw": "30d"
+            },
+            "shardingConfig": [
+              {
+                "externalLabelSharding": [
+                  {
+                    "label": "tenant_id",
+                    "value": "a"
+                  }
+                ],
+                "shardName": "example"
+              }
+            ],
+            "storageSize": "100Mi"
+          }
+        },
+        {
+          "apiVersion": "monitoring.thanos.io/v1alpha1",
+          "kind": "ThanosQuery",
+          "metadata": {
+            "name": "example-query",
+            "namespace": "thanos-operator-system"
+          },
+          "spec": {
+            "customStoreLabelSelector": {
+              "matchLabels": {
+                "operator.thanos.io/store-api": "true"
+              }
+            },
+            "imagePullPolicy": "IfNotPresent",
+            "labels": {
+              "some-label": "xyz"
+            },
+            "logFormat": "logfmt",
+            "queryFrontend": {
+              "compressResponses": true,
+              "imagePullPolicy": "IfNotPresent",
+              "labelsMaxRetries": 3,
+              "logFormat": "logfmt",
+              "logQueriesLongerThan": "10s",
+              "queryLabelSelector": {
+                "matchLabels": {
+                  "operator.thanos.io/query-api": "true"
+                }
+              },
+              "queryRangeMaxRetries": 3,
+              "replicas": 2
+            },
+            "replicaLabels": [
+              "prometheus_replica",
+              "replica",
+              "rule_replica"
+            ],
+            "replicas": 1
+          }
+        },
+        {
+          "apiVersion": "monitoring.thanos.io/v1alpha1",
+          "kind": "ThanosReceive",
+          "metadata": {
+            "name": "example-receive",
+            "namespace": "thanos-operator-system"
+          },
+          "spec": {
+            "ingesterSpec": {
+              "defaultObjectStorageConfig": {
+                "key": "thanos.yaml",
+                "name": "thanos-object-storage"
+              },
+              "hashrings": [
+                {
+                  "externalLabels": {
+                    "replica": "$(POD_NAME)"
+                  },
+                  "name": "blue",
+                  "replicas": 1,
+                  "storageSize": "100Mi",
+                  "tenancyConfig": {
+                    "tenantMatcherType": "exact"
+                  },
+                  "tsdbConfig": {
+                    "retention": "2h"
+                  }
+                },
+                {
+                  "externalLabels": {
+                    "replica": "$(POD_NAME)"
+                  },
+                  "name": "green",
+                  "replicas": 1,
+                  "storageSize": "100Mi",
+                  "tenancyConfig": {
+                    "tenantMatcherType": "exact"
+                  },
+                  "tsdbConfig": {
+                    "retention": "2h"
+                  }
+                }
+              ]
+            },
+            "routerSpec": {
+              "externalLabels": {
+                "receive": "true"
+              },
+              "imagePullPolicy": "IfNotPresent",
+              "logFormat": "logfmt",
+              "replicas": 1,
+              "replicationFactor": 1
+            }
+          }
+        },
+        {
+          "apiVersion": "monitoring.thanos.io/v1alpha1",
+          "kind": "ThanosRuler",
+          "metadata": {
+            "name": "example-ruler",
+            "namespace": "thanos-operator-system"
+          },
+          "spec": {
+            "alertmanagerURL": "http://alertmanager.example.com:9093",
+            "defaultObjectStorageConfig": {
+              "key": "thanos.yaml",
+              "name": "thanos-object-storage"
+            },
+            "evaluationInterval": "1m",
+            "externalLabels": {
+              "rule_replica": "$(NAME)"
+            },
+            "imagePullPolicy": "IfNotPresent",
+            "logFormat": "logfmt",
+            "queryLabelSelector": {
+              "matchLabels": {
+                "app.kubernetes.io/part-of": "thanos",
+                "operator.thanos.io/query-api": "true"
+              }
+            },
+            "replicas": 1,
+            "retention": "2h",
+            "ruleConfigSelector": {
+              "matchLabels": {
+                "operator.thanos.io/rule-file": "true"
+              }
+            },
+            "storageSize": "1Gi"
+          }
+        },
+        {
+          "apiVersion": "monitoring.thanos.io/v1alpha1",
+          "kind": "ThanosStore",
+          "metadata": {
+            "name": "example-store",
+            "namespace": "thanos-operator-system"
+          },
+          "spec": {
+            "ignoreDeletionMarksDelay": "24h",
+            "imagePullPolicy": "IfNotPresent",
+            "labels": {
+              "some-label": "xyz"
+            },
+            "logFormat": "logfmt",
+            "objectStorageConfig": {
+              "key": "thanos.yaml",
+              "name": "thanos-object-storage"
+            },
+            "shardingStrategy": {
+              "shards": 2,
+              "type": "block"
+            },
+            "storageSize": "1Gi"
+          }
+        }
+      ]
+    capabilities: Basic Install
+    createdAt: "2025-06-10T07:17:57Z"
+    operators.operatorframework.io/builder: operator-sdk-v1.40.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
+  name: thanos-operator.v0.1.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ThanosCompact is the Schema for the thanoscompacts API
+      displayName: Thanos Compact
+      kind: ThanosCompact
+      name: thanoscompacts.monitoring.thanos.io
+      version: v1alpha1
+    - description: ThanosQuery is the Schema for the thanosqueries API
+      displayName: Thanos Query
+      kind: ThanosQuery
+      name: thanosqueries.monitoring.thanos.io
+      version: v1alpha1
+    - description: ThanosReceive is the Schema for the thanosreceives API
+      displayName: Thanos Receive
+      kind: ThanosReceive
+      name: thanosreceives.monitoring.thanos.io
+      version: v1alpha1
+    - description: ThanosRuler is the Schema for the thanosrulers API
+      displayName: Thanos Ruler
+      kind: ThanosRuler
+      name: thanosrulers.monitoring.thanos.io
+      version: v1alpha1
+    - description: ThanosStore is the Schema for the thanosstores API
+      displayName: Thanos Store
+      kind: ThanosStore
+      name: thanosstores.monitoring.thanos.io
+      version: v1alpha1
+  description: Operator to manage Thanos installations.
+  displayName: thanos-operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - serviceaccounts
+          - services
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - discovery.k8s.io
+          resources:
+          - endpointslices
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - prometheusrules
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.thanos.io
+          resources:
+          - thanoscompacts
+          - thanosqueries
+          - thanosreceives
+          - thanosrulers
+          - thanosstores
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.thanos.io
+          resources:
+          - thanoscompacts/finalizers
+          - thanosqueries/finalizers
+          - thanosreceives/finalizers
+          - thanosrulers/finalizers
+          - thanosstores/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - monitoring.thanos.io
+          resources:
+          - thanoscompacts/status
+          - thanosqueries/status
+          - thanosreceives/status
+          - thanosrulers/status
+          - thanosstores/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: thanos-operator-controller-manager
+      deployments:
+      - label:
+          app.kubernetes.io/component: manager
+          app.kubernetes.io/created-by: thanos-operator
+          app.kubernetes.io/instance: controller-manager
+          app.kubernetes.io/managed-by: kustomize
+          app.kubernetes.io/name: deployment
+          app.kubernetes.io/part-of: thanos-operator
+          control-plane: controller-manager
+        name: thanos-operator-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              annotations:
+                kubectl.kubernetes.io/default-container: manager
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                  protocol: TCP
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 5m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              - args:
+                - --health-probe-bind-address=:8081
+                - --metrics-bind-address=127.0.0.1:8080
+                - --leader-elect
+                - --zap-encoder=console
+                - --zap-log-level=debug
+                command:
+                - /manager
+                image: quay.io/thanos/thanos-operator:main-2025-06-10-a069672
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: thanos-operator-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: thanos-operator-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - monitoring
+  - operator
+  links:
+  - name: Thanos Operator
+    url: https://thanos-operator.dev
+  maintainers:
+  - email: saswataminsta@yahoo.com
+    name: Saswata Mukherjee
+  - email: pgough@redhat.com
+    name: Philip Gough
+  - email: mzardab@redhat.com
+    name: Moad Zardab
+  maturity: alpha
+  provider:
+    name: Thanos Community
+    url: https://thanos-operator.dev
+  version: 0.1.0
