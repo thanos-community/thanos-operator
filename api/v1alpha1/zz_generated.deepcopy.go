@@ -660,6 +660,11 @@ func (in *RouterSpec) DeepCopyInto(out *RouterSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.ReplicationProtocol != nil {
+		in, out := &in.ReplicationProtocol, &out.ReplicationProtocol
+		*out = new(ReplicationProtocol)
+		**out = **in
+	}
 	if in.HashringPolicy != nil {
 		in, out := &in.HashringPolicy, &out.HashringPolicy
 		*out = new(HashringPolicy)
