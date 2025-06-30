@@ -15,7 +15,7 @@ import (
 
 const (
 	DefaultThanosImage   = "quay.io/thanos/thanos"
-	DefaultThanosVersion = "v0.38.0"
+	DefaultThanosVersion = "v0.39.0"
 
 	defaultLogLevel  = "info"
 	defaultLogFormat = "logfmt"
