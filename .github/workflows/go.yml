@@ -54,6 +54,7 @@ jobs:
         kind-image: ['kindest/node:v1.31.0']
         thanos-version:
           - v0.38.0
+          - v0.39.0
     steps:
       - uses: actions/checkout@v4
         with:
