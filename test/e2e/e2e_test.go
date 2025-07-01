@@ -70,7 +70,7 @@ const (
 func getThanosVersion() *string {
 	version := os.Getenv("THANOS_VERSION")
 	if version == "" {
-		version = "v0.38.0"
+		version = "v0.39.0"
 	}
 	return ptr.To(version)
 }

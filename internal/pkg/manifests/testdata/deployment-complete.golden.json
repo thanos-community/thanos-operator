@@ -31,7 +31,7 @@
         "containers": [
           {
             "name": "thanos",
-            "image": "quay.io/thanos/thanos:v0.38.0",
+            "image": "quay.io/thanos/thanos:v0.39.0",
             "args": [
               "query",
               "--log.level=info"
