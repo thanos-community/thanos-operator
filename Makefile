@@ -406,7 +406,7 @@ bundle-check: bundle
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.
-	$(CONTAINER_RUNTIME) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(CONTAINER_TOOL) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
