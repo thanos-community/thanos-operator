@@ -412,6 +412,10 @@ bundle-build: generate bundle ## Build the bundle image.
 bundle-push: ## Push the bundle image.
 	$(MAKE) image-push IMG=$(BUNDLE_IMG)
 
+.PHONY: image-push
+image-push: ## Push docker image with the manager.
+	${CONTAINER_TOOL} push ${IMG}
+
 .PHONY: opm
 OPM = ./bin/opm
 opm: ## Download opm locally if necessary.
