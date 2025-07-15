@@ -414,7 +414,7 @@ bundle-push: ## Push the bundle image.
 
 .PHONY: image-push
 image-push: ## Push docker image with the manager.
-	${CONTAINER_TOOL} push ${IMG}
+	$(CONTAINER_TOOL) push ${IMG}
 
 .PHONY: opm
 OPM = ./bin/opm
@@ -450,7 +450,10 @@ endif
 # https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
 catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	$(OPM) index add --container-tool $(CONTAINER_TOOL)  --generate --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	docker buildx build --platform linux/amd64 \
+      -t $(CATALOG_IMG) -f index.Dockerfile .
+	rm -f index.Dockerfile
 
 # Push the catalog image.
 .PHONY: catalog-push
