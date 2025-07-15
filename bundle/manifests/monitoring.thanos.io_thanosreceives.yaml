@@ -9399,6 +9399,14 @@ spec:
                       the ingesters.
                     minProperties: 1
                     type: object
+                  hashringPolicy:
+                    default: static
+                    description: HashringPolicy defines the policy for how the hashring
+                      is built and maintained at runtime.
+                    enum:
+                    - static
+                    - dynamic
+                    type: string
                   imagePullPolicy:
                     default: IfNotPresent
                     description: |-
