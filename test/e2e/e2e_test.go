@@ -290,6 +290,7 @@ var _ = Describe("controller", Ordered, func() {
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]
@@ -303,6 +304,7 @@ var _ = Describe("controller", Ordered, func() {
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]
@@ -337,6 +339,137 @@ var _ = Describe("controller", Ordered, func() {
 					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
 				}, time.Minute*2, time.Second*5).Should(Succeed())
 
+			})
+		})
+
+		Context("When ThanosReceive with capnproto replication protocol is created", func() {
+			capnprotoReceiveName := "capnproto-receive"
+			capnprotoRouterName := controller.ReceiveRouterNameFromParent(capnprotoReceiveName)
+			capnprotoIngesterName := controller.ReceiveIngesterNameFromParent(capnprotoReceiveName, hashringName)
+
+			It("should bring up components with capnproto configuration", func() {
+				cr := &v1alpha1.ThanosReceive{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      capnprotoReceiveName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.ThanosReceiveSpec{
+						Ingester: v1alpha1.IngesterSpec{
+							DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: objStoreSecret,
+								},
+								Key: objStoreSecretKey,
+							},
+							Hashrings: []v1alpha1.IngesterHashringSpec{
+								{
+									Name:        hashringName,
+									StorageSize: "100Mi",
+									CommonFields: v1alpha1.CommonFields{
+										Version: getThanosVersion(),
+									},
+								},
+							},
+						},
+						Router: v1alpha1.RouterSpec{
+							CommonFields: v1alpha1.CommonFields{
+								Version: getThanosVersion(),
+							},
+							Replicas:            1,
+							ReplicationFactor:   1,
+							ReplicationProtocol: ptr.To(v1alpha1.ReplicationProtocolCapnProto),
+							HashringPolicy:      ptr.To(v1alpha1.HashringPolicyStatic),
+							ExternalLabels: map[string]string{
+								"receive": "capnproto",
+							},
+						},
+					},
+				}
+				err := c.Create(context.Background(), cr, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, capnprotoIngesterName, namespace)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+
+				Eventually(func() bool {
+					return utils.VerifyDeploymentReplicasRunning(c, 1, capnprotoRouterName, namespace)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+			})
+
+			It("should create ConfigMap with capnproto_address fields", func() {
+				//nolint:lll
+				expect := fmt.Sprintf(`[
+    {
+        "hashring": "%s",
+        "endpoints": [
+            {
+                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+				"capnproto_address": "%s-0.%s.thanos-operator-system.svc.cluster.local:19391",
+                "az": ""
+            }
+        ]
+    }
+]`, hashringName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName)
+
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(c, capnprotoRouterName, namespace, receive.HashringConfigKey, expect)
+				}, time.Minute*5, time.Second*10).Should(BeTrue())
+			})
+
+			It("should have capnproto arguments in router deployment", func() {
+				Eventually(func() bool {
+					return utils.VerifyDeploymentArgs(c,
+						capnprotoRouterName,
+						namespace,
+						0,
+						"--receive.replication-protocol=capnproto",
+					)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
+			It("should have capnproto arguments in ingester statefulset", func() {
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(c,
+						capnprotoIngesterName,
+						namespace,
+						0,
+						"--receive.capnproto-address=0.0.0.0:19391",
+					)
+				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
+			It("should accept metrics over remote write with capnproto protocol", func() {
+				ctx := context.Background()
+				selector := client.MatchingLabels{
+					manifests.ComponentLabel: receive.RouterComponentName,
+					manifests.OwnerLabel:     capnprotoReceiveName,
+				}
+				router := &corev1.PodList{}
+				err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
+				Expect(err).To(BeNil())
+				Expect(len(router.Items)).To(Equal(1))
+
+				pod := router.Items[0].Name
+				port := intstr.IntOrString{IntVal: receive.RemoteWritePort}
+				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
+				}, time.Minute*2, time.Second*5).Should(Succeed())
+			})
+
+			AfterAll(func() {
+				// Clean up the capnproto receive resource
+				cr := &v1alpha1.ThanosReceive{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      capnprotoReceiveName,
+						Namespace: namespace,
+					},
+				}
+				_ = c.Delete(context.Background(), cr, &client.DeleteOptions{})
 			})
 		})
 

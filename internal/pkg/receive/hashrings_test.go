@@ -46,6 +46,42 @@ func TestDefaultEndpointConverter(t *testing.T) {
 	}
 }
 
+func TestCapnProtoEndpointConverter(t *testing.T) {
+	eps := discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "test-service",
+			},
+		},
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Hostname: ptr.To("test-host"),
+				Conditions: discoveryv1.EndpointConditions{
+					Ready: ptr.To(true),
+				},
+			},
+		},
+	}
+
+	ep := discoveryv1.Endpoint{
+		Hostname: ptr.To("test-host"),
+		Conditions: discoveryv1.EndpointConditions{
+			Ready: ptr.To(true),
+		},
+	}
+
+	expected := Endpoint{
+		Address:          "test-host.test-service.default.svc.cluster.local:10901",
+		CapnProtoAddress: "test-host.test-service.default.svc.cluster.local:19391",
+	}
+
+	result := CapnProtoEndpointConverter(eps, ep)
+	if result != expected {
+		t.Errorf("expected %v, got %v", expected, result)
+	}
+}
+
 func TestFilterEndpointReady(t *testing.T) {
 	eps := discoveryv1.EndpointSlice{
 		Endpoints: []discoveryv1.Endpoint{
@@ -217,6 +253,43 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			expected: []Endpoint{
 				{
 					Address: "test-host.test-service.default.svc.cluster.local:10901",
+				},
+			},
+		},
+		{
+			name: "WithCapnProtoEndpointConverter",
+			eps: discoveryv1.EndpointSliceList{
+				Items: []discoveryv1.EndpointSlice{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Labels: map[string]string{
+								discoveryv1.LabelServiceName: "test-service",
+							},
+						},
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Hostname: ptr.To("test-host"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: ptr.To(true),
+								},
+							},
+							{
+								Hostname: ptr.To("test-host-2"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: ptr.To(false),
+								},
+							},
+						},
+					},
+				},
+			},
+			converter: CapnProtoEndpointConverter,
+			filters:   []EndpointFilter{FilterEndpointReady()},
+			expected: []Endpoint{
+				{
+					Address:          "test-host.test-service.default.svc.cluster.local:10901",
+					CapnProtoAddress: "test-host.test-service.default.svc.cluster.local:19391",
 				},
 			},
 		},

@@ -333,14 +333,17 @@ config:
         "endpoints": [
             {
                 "address": "some-hostname-b.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             },
             {
                 "address": "some-hostname-c.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             },
             {
                 "address": "some-hostname.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "",
                 "az": ""
             }
         ]
@@ -403,6 +406,157 @@ config:
 				Consistently(func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")
 				}, time.Second*5, time.Second).Should(BeFalse())
+			})
+		})
+
+		It("should configure capnproto replication protocol correctly", func() {
+			resource := &monitoringthanosiov1alpha1.ThanosReceive{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
+					Router: monitoringthanosiov1alpha1.RouterSpec{
+						CommonFields:        monitoringthanosiov1alpha1.CommonFields{},
+						Labels:              map[string]string{"test": "my-router-test"},
+						ReplicationFactor:   3,
+						ReplicationProtocol: ptr.To(monitoringthanosiov1alpha1.ReplicationProtocolCapnProto),
+					},
+					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
+						DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
+							Key:                  "test-key",
+						},
+						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
+							{
+								Name:        hashringName,
+								Labels:      map[string]string{"test": "my-ingester-test"},
+								StorageSize: "100Mi",
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+									TenantMatcherType: "exact",
+									Tenants:           []string{"test-tenant"},
+								},
+								Replicas: 3,
+							},
+						},
+					},
+				},
+			}
+
+			By("setting up the thanos receive ingest resources", func() {
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				Eventually(func() bool {
+					return verifier.Verify(k8sClient, ingesterName, ns)
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
+			})
+
+			By("creating router components", func() {
+				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
+				Eventually(func() bool {
+					return verifier.Verify(k8sClient, routerName, ns)
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
+			})
+
+			By("reacting to capnproto endpoint creation and updating the ConfigMap with capnproto_address", func() {
+				epSliceRelevant := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ep-slice-capnproto",
+						Namespace: ns,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Name:       ingesterName,
+								Kind:       "Service",
+								APIVersion: "v1",
+								UID:        types.UID("1234"),
+							},
+						},
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: ingesterName,
+							manifests.ComponentLabel:     receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"8.8.8.8"},
+							Hostname:  ptr.To("capnproto-hostname-a"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"1.1.1.1"},
+							Hostname:  ptr.To("capnproto-hostname-b"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"2.2.2.2"},
+							Hostname:  ptr.To("capnproto-hostname-c"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), epSliceRelevant)).Should(Succeed())
+
+				svcName := ingesterName
+				expectCapnProto := fmt.Sprintf(`[
+    {
+        "hashring": "test-hashring",
+        "tenants": [
+            "test-tenant"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "capnproto-hostname-a.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "capnproto-hostname-a.%s.treceive.svc.cluster.local:19391",
+                "az": ""
+            },
+            {
+                "address": "capnproto-hostname-b.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "capnproto-hostname-b.%s.treceive.svc.cluster.local:19391",
+                "az": ""
+            },
+            {
+                "address": "capnproto-hostname-c.%s.treceive.svc.cluster.local:10901",
+				"capnproto_address": "capnproto-hostname-c.%s.treceive.svc.cluster.local:19391",
+                "az": ""
+            }
+        ]
+    }
+]`, svcName, svcName, svcName, svcName, svcName, svcName)
+
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
+			})
+
+			By("verifying that router container has capnproto arguments", func() {
+				Eventually(func() bool {
+					return utils.VerifyDeploymentArgs(
+						k8sClient, routerName, ns, 0, "--receive.replication-protocol=capnproto")
+				}, time.Second*10, time.Second*1).Should(BeTrue())
+			})
+
+			By("verifying that ingester containers have capnproto arguments", func() {
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(
+						k8sClient, ingesterName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")
+				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 		})
 	})

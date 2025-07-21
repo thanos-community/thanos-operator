@@ -33,6 +33,10 @@ const (
 	GRPCPortName = "grpc"
 	// GRPCPort is the port number for the gRPC port for the Thanos Receive components.
 	GRPCPort = 10901
+	// CapnProtoPortName is the name of the Cap'n Proto port for the Thanos Receive components.
+	CapnProtoPortName = "capnproto"
+	// CapnProtoPort is the port number for the Cap'n Proto port for the Thanos Receive components.
+	CapnProtoPort = 19391
 	// RemoteWritePortName is the name of the remote write port for the Thanos Receive components.
 	RemoteWritePortName = "remote-write"
 	// RemoteWritePort is the port number for the remote write port for the Thanos Receive components.
@@ -57,6 +61,7 @@ type IngesterOptions struct {
 	HashringName             string
 	AsyncForwardWorkerCount  string
 	TooFarInFutureTimeWindow manifests.Duration
+	ReplicationProtocol      string
 }
 
 type TSDBOpts struct {
@@ -74,10 +79,11 @@ type TenancyOpts struct {
 // RouterOptions for Thanos Receive router
 type RouterOptions struct {
 	manifests.Options
-	ReplicationFactor int32
-	ExternalLabels    map[string]string
-	HashringConfig    string
-	HashringAlgorithm string
+	ReplicationFactor   int32
+	ExternalLabels      map[string]string
+	HashringConfig      string
+	HashringAlgorithm   string
+	ReplicationProtocol string
 }
 
 // Build builds the ingester for Thanos Receive
@@ -296,6 +302,10 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 									Name:          GRPCPortName,
 								},
 								{
+									ContainerPort: CapnProtoPort,
+									Name:          CapnProtoPortName,
+								},
+								{
 									ContainerPort: HTTPPort,
 									Name:          HTTPPortName,
 								},
@@ -363,6 +373,12 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 			Name:       GRPCPortName,
 			Port:       GRPCPort,
 			TargetPort: intstr.FromInt32(GRPCPort),
+			Protocol:   "TCP",
+		},
+		{
+			Name:       CapnProtoPortName,
+			Port:       CapnProtoPort,
+			TargetPort: intstr.FromInt32(CapnProtoPort),
 			Protocol:   "TCP",
 		},
 		{
@@ -521,6 +537,10 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 									Name:          GRPCPortName,
 								},
 								{
+									ContainerPort: CapnProtoPort,
+									Name:          CapnProtoPortName,
+								},
+								{
 									ContainerPort: HTTPPort,
 									Name:          HTTPPortName,
 								},
@@ -581,6 +601,10 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
 	}
 
+	if opts.ReplicationProtocol == "capnproto" {
+		args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
+	}
+
 	// TODO(saswatamcode): Add some validation.
 	if opts.Additional.Args != nil {
 		args = append(args, opts.Additional.Args...)
@@ -616,6 +640,10 @@ func routerArgsFrom(opts RouterOptions) []string {
 	)
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
+	}
+
+	if opts.ReplicationProtocol == "capnproto" {
+		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
 	}
 
 	// TODO(saswatamcode): Add some validation.
