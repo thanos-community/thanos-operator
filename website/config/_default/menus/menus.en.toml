@@ -52,23 +52,23 @@
   post = "v0.1.0"
   weight = 30
 
-# [[sidebar_docs]]
-#   name = "Guides"
-#   pageRef = "/docs/guides"
-#   weight = 10
-#
-# [[sidebar_docs]]
-#   name = "Reference"
-#   pageRef = "/docs/reference"
-#   weight = 20
-#
-# [[sidebar_docs]]
-#   name = "Resources"
-#   pageRef = "/docs/resources"
-#   weight = 30
+[[sidebar_docs]]
+  name = "Guides"
+  pageRef = "/docs/guides"
+  weight = 10
+
+[[sidebar_docs]]
+  name = "Reference"
+  pageRef = "/docs/reference"
+  weight = 20
+
+[[sidebar_docs]]
+  name = "Resources"
+  pageRef = "/docs/resources"
+  weight = 30
 
 
-# [[footer]]
-#   name = "Terms of Service"
-#   url = "/terms/"
-#   weight = 20
+[[footer]]
+  name = "Terms of Service"
+  url = "/terms/"
+  weight = 20
