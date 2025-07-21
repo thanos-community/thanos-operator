@@ -368,12 +368,6 @@ var _ = Describe("controller", Ordered, func() {
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
 									},
-									TenancyConfig: &v1alpha1.TenancyConfig{
-										Tenants: []string{
-											"capnproto-tenant",
-										},
-										TenantMatcherType: "exact",
-									},
 								},
 							},
 						},
@@ -408,19 +402,15 @@ var _ = Describe("controller", Ordered, func() {
 				expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
-        "tenants": [
-            "capnproto-tenant"
-        ],
-        "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "",
+                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
 				"capnproto_address": "%s-0.%s.thanos-operator-system.svc.cluster.local:19391",
                 "az": ""
             }
         ]
     }
-]`, hashringName, capnprotoIngesterName, capnprotoIngesterName)
+]`, hashringName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName)
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(c, capnprotoRouterName, namespace, receive.HashringConfigKey, expect)
@@ -436,27 +426,9 @@ var _ = Describe("controller", Ordered, func() {
 						"--receive.replication-protocol=capnproto",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
-
-				Eventually(func() bool {
-					return utils.VerifyDeploymentArgs(c,
-						capnprotoRouterName,
-						namespace,
-						0,
-						"--receive.capnproto-address=0.0.0.0:19391",
-					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
 
 			It("should have capnproto arguments in ingester statefulset", func() {
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(c,
-						capnprotoIngesterName,
-						namespace,
-						0,
-						"--receive.replication-protocol=capnproto",
-					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
-
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						capnprotoIngesterName,

@@ -522,23 +522,23 @@ config:
         "tenant_matcher_type": "exact",
         "endpoints": [
             {
-                "address": "",
+                "address": "capnproto-hostname-a.%s.treceive.svc.cluster.local:10901",
 				"capnproto_address": "capnproto-hostname-a.%s.treceive.svc.cluster.local:19391",
                 "az": ""
             },
             {
-                "address": "",
+                "address": "capnproto-hostname-b.%s.treceive.svc.cluster.local:10901",
 				"capnproto_address": "capnproto-hostname-b.%s.treceive.svc.cluster.local:19391",
                 "az": ""
             },
             {
-                "address": "",
+                "address": "capnproto-hostname-c.%s.treceive.svc.cluster.local:10901",
 				"capnproto_address": "capnproto-hostname-c.%s.treceive.svc.cluster.local:19391",
                 "az": ""
             }
         ]
     }
-]`, svcName, svcName, svcName)
+]`, svcName, svcName, svcName, svcName, svcName, svcName)
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
@@ -550,19 +550,9 @@ config:
 					return utils.VerifyDeploymentArgs(
 						k8sClient, routerName, ns, 0, "--receive.replication-protocol=capnproto")
 				}, time.Second*10, time.Second*1).Should(BeTrue())
-
-				Eventually(func() bool {
-					return utils.VerifyDeploymentArgs(
-						k8sClient, routerName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
 			By("verifying that ingester containers have capnproto arguments", func() {
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(
-						k8sClient, ingesterName, ns, 0, "--receive.replication-protocol=capnproto")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
-
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")

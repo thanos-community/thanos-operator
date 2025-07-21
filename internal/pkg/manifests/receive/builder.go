@@ -602,7 +602,6 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 	}
 
 	if opts.ReplicationProtocol == "capnproto" {
-		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
 		args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
 	}
 
@@ -645,7 +644,6 @@ func routerArgsFrom(opts RouterOptions) []string {
 
 	if opts.ReplicationProtocol == "capnproto" {
 		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
-		args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
 	}
 
 	// TODO(saswatamcode): Add some validation.

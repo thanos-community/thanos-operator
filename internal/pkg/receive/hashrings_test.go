@@ -72,6 +72,7 @@ func TestCapnProtoEndpointConverter(t *testing.T) {
 	}
 
 	expected := Endpoint{
+		Address:          "test-host.test-service.default.svc.cluster.local:10901",
 		CapnProtoAddress: "test-host.test-service.default.svc.cluster.local:19391",
 	}
 
@@ -287,6 +288,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady()},
 			expected: []Endpoint{
 				{
+					Address:          "test-host.test-service.default.svc.cluster.local:10901",
 					CapnProtoAddress: "test-host.test-service.default.svc.cluster.local:19391",
 				},
 			},

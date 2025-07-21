@@ -138,6 +138,7 @@ func CapnProtoEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.En
 	svcName := eps.Labels[discoveryv1.LabelServiceName]
 	ns := eps.GetNamespace()
 	return Endpoint{
+		Address:          fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, GRPCPort),
 		CapnProtoAddress: fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, CapnProtoPort),
 	}
 }
