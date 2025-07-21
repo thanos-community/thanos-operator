@@ -107,7 +107,7 @@ So the Thanos Operator binary and CRDs have flags to disable these using feature
 Requirements to build, and test the project,
 
 ```
-Go 1.22+
+Go 1.24+
 Linux or macOS
 KinD 
 kubectl
