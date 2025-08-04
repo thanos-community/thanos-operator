@@ -64,7 +64,7 @@ func (opts Options) Build() []client.Object {
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newShardStatefulSet(opts, selectorLabels, objectMetaLabels))
-	objs = append(objs, newService(opts, selectorLabels, objectMetaLabels))
+	objs = append(objs, NewService(opts))
 
 	if opts.ServiceMonitorConfig != nil {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
