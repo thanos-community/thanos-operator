@@ -138,6 +138,10 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		igops.ReplicationProtocol = string(*in.Spec.Router.ReplicationProtocol)
 	}
 
+	if spec.GRPCCompression != nil {
+		igops.GRPCCompression = string(*spec.GRPCCompression)
+	}
+
 	if spec.TenancyConfig != nil {
 		igops.TenancyOpts = manifestreceive.TenancyOpts{
 			TenantHeader:           spec.TenancyConfig.TenantHeader,

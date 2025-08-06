@@ -311,6 +311,23 @@ _Appears in:_
 | `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
+#### GRPCCompression
+
+_Underlying type:_ _string_
+
+GRPCCompression defines the compression algorithm for gRPC communication.
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+
+| Field | Description |
+| --- | --- |
+| `none` | GRPCCompressionNone disables gRPC compression.<br /> |
+| `snappy` | GRPCCompressionSnappy enables Snappy compression for gRPC.<br /> |
+
+
 #### HashringPolicy
 
 _Underlying type:_ _string_
@@ -397,6 +414,7 @@ _Appears in:_
 | `asyncForwardWorkerCount` _integer_ | AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests. | 5 | Optional: \{\} <br /> |
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  | Optional: \{\} <br /> |
 | `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `grpcCompression` _[GRPCCompression](#grpccompression)_ | GRPCCompression defines the compression algorithm for gRPC communication. | snappy | Enum: [none snappy] <br />Optional: \{\} <br /> |
 
 
 #### IngesterSpec
