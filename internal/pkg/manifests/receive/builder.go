@@ -62,6 +62,7 @@ type IngesterOptions struct {
 	AsyncForwardWorkerCount  string
 	TooFarInFutureTimeWindow manifests.Duration
 	ReplicationProtocol      string
+	GRPCCompression          string
 }
 
 type TSDBOpts struct {
@@ -585,7 +586,6 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		fmt.Sprintf("--objstore.config=$(%s)", ingestObjectStoreEnvVarName),
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc.cluster.local:%d",
 			opts.GetGeneratedResourceName(), GRPCPort),
-		"--receive.grpc-compression=none",
 		fmt.Sprintf("--receive.forward.async-workers=%s", opts.AsyncForwardWorkerCount),
 		fmt.Sprintf("--tsdb.too-far-in-future.time-window=%s", opts.TooFarInFutureTimeWindow),
 		fmt.Sprintf("--receive.tenant-header=%s", opts.TenancyOpts.TenantHeader),
@@ -603,6 +603,11 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 
 	if opts.ReplicationProtocol == "capnproto" {
 		args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
+	}
+
+	// Snappy is the default compression algorithm set on Thanos.
+	if opts.GRPCCompression == "none" {
+		args = append(args, fmt.Sprintf("--receive.grpc-compression=%s", opts.GRPCCompression))
 	}
 
 	// TODO(saswatamcode): Add some validation.

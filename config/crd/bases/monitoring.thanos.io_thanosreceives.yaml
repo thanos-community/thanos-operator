@@ -4608,6 +4608,14 @@ spec:
                             blocks.
                           minProperties: 1
                           type: object
+                        grpcCompression:
+                          default: snappy
+                          description: GRPCCompression defines the compression algorithm
+                            for gRPC communication.
+                          enum:
+                          - none
+                          - snappy
+                          type: string
                         imagePullPolicy:
                           default: IfNotPresent
                           description: |-

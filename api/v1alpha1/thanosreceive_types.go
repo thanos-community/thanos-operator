@@ -43,6 +43,16 @@ const (
 	ReplicationProtocolCapnProto ReplicationProtocol = "capnproto"
 )
 
+// GRPCCompression defines the compression algorithm for gRPC communication.
+type GRPCCompression string
+
+const (
+	// GRPCCompressionNone disables gRPC compression.
+	GRPCCompressionNone GRPCCompression = "none"
+	// GRPCCompressionSnappy enables Snappy compression for gRPC.
+	GRPCCompressionSnappy GRPCCompression = "snappy"
+)
+
 // RouterSpec represents the configuration for the router
 type RouterSpec struct {
 	// CommonFields are the options available to all Thanos components.
@@ -151,6 +161,11 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:default:="0s"
 	// +kubebuilder:validation:Optional
 	TooFarInFutureTimeWindow *Duration `json:"tooFarInFutureTimeWindow,omitempty"`
+	// GRPCCompression defines the compression algorithm for gRPC communication.
+	// +kubebuilder:default="snappy"
+	// +kubebuilder:validation:Enum=none;snappy
+	// +kubebuilder:validation:Optional
+	GRPCCompression *GRPCCompression `json:"grpcCompression,omitempty"`
 }
 
 // TenancyConfig is the configuration for the tenancy options.
