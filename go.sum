@@ -329,8 +329,8 @@ github.com/prashantv/gostub v1.1.0 h1:BTyx3RfQjRHnUWaGF9oQos79AlQ5k8WNktv7VGvVH4
 github.com/prashantv/gostub v1.1.0/go.mod h1:A5zLQHz7ieHGG7is6LLXLz7I8+3LZzsrV0P1IAHhP5U=
 github.com/prometheus-community/prom-label-proxy v0.11.1 h1:jX+m+BQCNM0z3/P6V6jVxbiDKgugvk91SaICD6bVhT4=
 github.com/prometheus-community/prom-label-proxy v0.11.1/go.mod h1:uTeQW+wZ/VPV1LL3IPfvUE++wR2nPLex+Y4RE38Cpis=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.0 h1:V/HLst0rSw4BZp8nIqhaTnnW4/EGxEoYbgjcDqzPJ5U=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.0/go.mod h1:MruMqbSS9aYrKhBImrO9X9g52hwz3I0B+tcoeAwkmuM=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.1 h1:NEQAo0Cl1gf9sJ3oI1QzczS3BF6ySvSSH36mwOZDuhI=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.84.1/go.mod h1:MruMqbSS9aYrKhBImrO9X9g52hwz3I0B+tcoeAwkmuM=
 github.com/prometheus/alertmanager v0.28.1 h1:BK5pCoAtaKg01BYRUJhEDV1tqJMEtYBGzPw8QdvnnvA=
 github.com/prometheus/alertmanager v0.28.1/go.mod h1:0StpPUDDHi1VXeM7p2yYfeZgLVi/PPlt39vo9LQUHxM=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
