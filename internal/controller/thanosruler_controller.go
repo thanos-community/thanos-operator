@@ -369,6 +369,11 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 				continue
 			}
 
+			if value == "" {
+				err := fmt.Errorf("tenant in labels of PrometheusRule %s is empty", rule.Name)
+				return nil, err
+			}
+
 			if _, exists := tenantRuleGroupCount[value]; !exists {
 				tenantRuleGroupCount[value] = 0
 			}
