@@ -445,7 +445,7 @@ func GenerateRuleFileContent(groups []monitoringv1.RuleGroup) string {
 		return ""
 	}
 
-	var data interface{}
+	var data any
 	err = json.Unmarshal(jsonData, &data)
 	if err != nil {
 		return ""

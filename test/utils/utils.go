@@ -74,7 +74,7 @@ type PrometheusResponse struct {
 		ResultType string `json:"resultType"`
 		Result     []struct {
 			Metric map[string]string `json:"metric"`
-			Value  []interface{}     `json:"value"` // Use interface{} because value can be mixed types
+			Value  []any             `json:"value"` // Use interface{} because value can be mixed types
 		} `json:"result"`
 	} `json:"data"`
 }
@@ -164,8 +164,8 @@ func LoadImageToKindClusterWithName(name string) error {
 // according to line breakers, and ignores the empty elements in it.
 func GetNonEmptyLines(output string) []string {
 	var res []string
-	elements := strings.Split(output, "\n")
-	for _, element := range elements {
+	elements := strings.SplitSeq(output, "\n")
+	for element := range elements {
 		if element != "" {
 			res = append(res, element)
 		}
@@ -435,11 +435,11 @@ func VerifyConfigMapContents(c client.Client, name, namespace, key, expect strin
 	data := cm.Data[key]
 
 	if json.Valid([]byte(data)) && json.Valid([]byte(expect)) {
-		var jData interface{}
+		var jData any
 		if err := json.Unmarshal([]byte(data), &jData); err != nil {
 			return false
 		}
-		var jExpect interface{}
+		var jExpect any
 		if err := json.Unmarshal([]byte(expect), &jExpect); err != nil {
 			return false
 		}

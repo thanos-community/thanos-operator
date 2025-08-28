@@ -3,6 +3,7 @@ package manifests
 import (
 	"crypto/md5"
 	"fmt"
+	"slices"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -157,10 +158,8 @@ var badChars = []rune{
 // The core of this function was copied from https://github.com/solo-io/k8s-utils
 func SanitizeName(name string) string {
 	name = strings.Map(func(r rune) rune {
-		for _, badChar := range badChars {
-			if r == badChar {
-				return '-'
-			}
+		if slices.Contains(badChars, r) {
+			return '-'
 		}
 		return r
 	}, name)
