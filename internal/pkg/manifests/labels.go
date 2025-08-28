@@ -71,9 +71,7 @@ func BuildLabelSelectorFrom(labelSelector *metav1.LabelSelector, requiredLabels 
 	if ls == nil {
 		ls = &metav1.LabelSelector{MatchLabels: requiredLabels}
 	} else {
-		for k, v := range requiredLabels {
-			ls.MatchLabels[k] = v
-		}
+		maps.Copy(ls.MatchLabels, requiredLabels)
 	}
 	return metav1.LabelSelectorAsSelector(ls)
 }

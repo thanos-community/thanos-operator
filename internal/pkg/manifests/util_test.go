@@ -54,7 +54,7 @@ func TestOptionalToString(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected string
 	}{
 		{"int pointer", intPointer, "42"},
