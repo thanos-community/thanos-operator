@@ -58,17 +58,18 @@
   weight = 10
 
 [[sidebar_docs]]
-  name = "Reference"
-  pageRef = "/docs/reference"
+  name = "Components"
+  pageRef = "/docs/components"
   weight = 20
 
 [[sidebar_docs]]
-  name = "Resources"
-  pageRef = "/docs/resources"
+  name = "API Reference"
+  pageRef = "/docs/api-reference"
   weight = 30
 
+[[sidebar_docs]]
+  name = "Community"
+  pageRef = "/docs/community"
+  weight = 40
 
-[[footer]]
-  name = "Terms of Service"
-  url = "/terms/"
-  weight = 20
+
