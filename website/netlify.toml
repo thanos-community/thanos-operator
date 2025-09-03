@@ -6,31 +6,58 @@
   NODE_VERSION = "20.11.0"
   NPM_VERSION = "10.2.4"
   HUGO_VERSION = "0.145.0+extended+withdeploy"
+  HUGO_ENV = "production"
 
 [context.production]
-  command = "npm run build"
+  command = "make website"
 
 [context.deploy-preview]
-  command = "npm run build"
+  command = "make website"
 
 [context.branch-deploy]
-  command = "npm run build"
+  command = "make website"
 
 [context.next]
-  command = "npm run build"
+  command = "make website"
 
 [context.next.environment]
   HUGO_ENV = "next"
 
 [dev]
   framework = "#custom"
-  command = "npm run dev"
+  command = "make website-dev"
   targetPort = 1313
   port = 8888
   publish = "public"
   autoLaunch = false
 
 # Redirects and rewrites — https://docs.netlify.com/routing/redirects/#syntax-for-the-netlify-configuration-file
+
+# Common redirects for user convenience
+[[redirects]]
+  from = "/docs/"
+  to = "/docs/guides/get-started/"
+  status = 302
+
+[[redirects]]
+  from = "/guides/"
+  to = "/docs/guides/"
+  status = 302
+
+[[redirects]]
+  from = "/contributing/"
+  to = "/docs/community/contributing/"
+  status = 302
+
+[[redirects]]
+  from = "/installation/"
+  to = "/docs/guides/installation/"
+  status = 302
+
+[[redirects]]
+  from = "/docs/design/"
+  to = "/docs/guides/design/"
+  status = 301
 
 # Custom headers — https://docs.netlify.com/routing/headers/#syntax-for-the-netlify-configuration-file
 [[headers]]

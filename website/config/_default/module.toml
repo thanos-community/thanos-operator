@@ -85,3 +85,8 @@
 [[mounts]]
   source = "static"
   target = "static"
+
+# Mount assets directory to static so files like logo.riv are copied to public
+[[mounts]]
+  source = "assets"
+  target = "static"
