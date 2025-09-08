@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/golang/snappy v1.0.0
 	github.com/magefile/mage v1.15.0
-	github.com/onsi/ginkgo/v2 v2.25.1
+	github.com/onsi/ginkgo/v2 v2.25.3
 	github.com/onsi/gomega v1.38.2
 	github.com/prometheus-community/prom-label-proxy v0.11.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.85.0
