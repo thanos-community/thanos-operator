@@ -17,11 +17,11 @@ GO     ?= $(shell which go)
 #	@echo "Running crd-ref-docs"
 #	@$(CRD_REF_DOCS) <flags/args..>
 #
-CRD_REF_DOCS := $(GOBIN)/crd-ref-docs-v0.1.0
+CRD_REF_DOCS := $(GOBIN)/crd-ref-docs-v0.2.0
 $(CRD_REF_DOCS): $(BINGO_DIR)/crd-ref-docs.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/crd-ref-docs-v0.1.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=crd-ref-docs.mod -o=$(GOBIN)/crd-ref-docs-v0.1.0 "github.com/elastic/crd-ref-docs"
+	@echo "(re)installing $(GOBIN)/crd-ref-docs-v0.2.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=crd-ref-docs.mod -o=$(GOBIN)/crd-ref-docs-v0.2.0 "github.com/elastic/crd-ref-docs"
 
 FAILLINT := $(GOBIN)/faillint-v1.15.0
 $(FAILLINT): $(BINGO_DIR)/faillint.mod
@@ -29,11 +29,11 @@ $(FAILLINT): $(BINGO_DIR)/faillint.mod
 	@echo "(re)installing $(GOBIN)/faillint-v1.15.0"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=faillint.mod -o=$(GOBIN)/faillint-v1.15.0 "github.com/fatih/faillint"
 
-GOIMPORTS := $(GOBIN)/goimports-v0.20.0
+GOIMPORTS := $(GOBIN)/goimports-v0.38.0
 $(GOIMPORTS): $(BINGO_DIR)/goimports.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/goimports-v0.20.0"
-	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=goimports.mod -o=$(GOBIN)/goimports-v0.20.0 "golang.org/x/tools/cmd/goimports"
+	@echo "(re)installing $(GOBIN)/goimports-v0.38.0"
+	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=goimports.mod -o=$(GOBIN)/goimports-v0.38.0 "golang.org/x/tools/cmd/goimports"
 
 GOLANGCI_LINT := $(GOBIN)/golangci-lint-v1.63.4
 $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
