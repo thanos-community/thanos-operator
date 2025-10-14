@@ -9,7 +9,7 @@ on:
 
 env:
   golang-version: '1.25'
-  kind-version: 'v0.27.0'
+  kind-version: 'v0.30.0'
 
 jobs:
   lint:
@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.golang-version }}
 
