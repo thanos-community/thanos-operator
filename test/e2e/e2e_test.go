@@ -287,6 +287,7 @@ var _ = Describe("controller", Ordered, func() {
 					expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
+		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
@@ -301,6 +302,7 @@ var _ = Describe("controller", Ordered, func() {
             "tenant1"
         ],
         "tenant_matcher_type": "exact",
+		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
@@ -402,6 +404,7 @@ var _ = Describe("controller", Ordered, func() {
 				expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
+		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
