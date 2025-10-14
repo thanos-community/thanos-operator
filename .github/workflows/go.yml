@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        kind-image: ['kindest/node:v1.31.0']
+        kind-image: ['kindest/node:v1.34.0']
         thanos-version:
           - v0.38.0
           - v0.39.0
