@@ -119,34 +119,34 @@ func FilterEndpointReady() EndpointFilter {
 }
 
 // EndpointConverter is a function that converts an EndpointSlice to an Endpoint.
-type EndpointConverter func(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint) Endpoint
+type EndpointConverter func(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint, clusterDomain string) Endpoint
 
 // DefaultEndpointConverter is the default EndpointConverter that converts an EndpointSlice to an Endpoint.
 // It uses the service name and namespace from the EndpointSlice to construct the address.
-func DefaultEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint) Endpoint {
+func DefaultEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint, clusterDomain string) Endpoint {
 	svcName := eps.Labels[discoveryv1.LabelServiceName]
 	ns := eps.GetNamespace()
 	return Endpoint{
-		Address: fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, GRPCPort),
+		Address: fmt.Sprintf("%s.%s.%s.svc.%s:%d", *ep.Hostname, svcName, ns, clusterDomain, GRPCPort),
 	}
 }
 
 // CapnProtoEndpointConverter is the EndpointConverter that converts an EndpointSlice to an Endpoint.
 // It uses the service name and namespace from the EndpointSlice to construct the Cap'n Proto address.
 // It also uses the Cap'n Proto based replication protocol port.
-func CapnProtoEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint) Endpoint {
+func CapnProtoEndpointConverter(eps discoveryv1.EndpointSlice, ep discoveryv1.Endpoint, clusterDomain string) Endpoint {
 	svcName := eps.Labels[discoveryv1.LabelServiceName]
 	ns := eps.GetNamespace()
 	return Endpoint{
-		Address:          fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, GRPCPort),
-		CapnProtoAddress: fmt.Sprintf("%s.%s.%s.svc.cluster.local:%d", *ep.Hostname, svcName, ns, CapnProtoPort),
+		Address:          fmt.Sprintf("%s.%s.%s.svc.%s:%d", *ep.Hostname, svcName, ns, clusterDomain, GRPCPort),
+		CapnProtoAddress: fmt.Sprintf("%s.%s.%s.svc.%s:%d", *ep.Hostname, svcName, ns, clusterDomain, CapnProtoPort),
 	}
 }
 
 // EndpointSliceListToEndpoints converts a list of EndpointSlices to a list of Endpoints.
 // It uses the provided EndpointConverter to convert each EndpointSlice to an Endpoint.
 // It also applies the provided EndpointFilters to filter the EndpointSlices.
-func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.EndpointSliceList, filters ...EndpointFilter) []Endpoint {
+func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.EndpointSliceList, clusterDomain string, filters ...EndpointFilter) []Endpoint {
 	var endpoints []Endpoint
 	for _, epSlice := range eps.Items {
 		for _, filter := range filters {
@@ -156,7 +156,7 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 
 		svcEndpoints := epSlice.Endpoints
 		for _, ep := range svcEndpoints {
-			endpoints = append(endpoints, converter(epSlice, ep))
+			endpoints = append(endpoints, converter(epSlice, ep, clusterDomain))
 		}
 	}
 	sort.Slice(endpoints, func(i, j int) bool {

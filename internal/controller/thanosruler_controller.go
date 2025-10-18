@@ -63,16 +63,19 @@ type ThanosRulerReconciler struct {
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
+
+	clusterDomain string
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
 func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
 	reconciler := &ThanosRulerReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder: conf.InstrumentationConfig.EventRecorder,
+		Client:        client,
+		Scheme:        scheme,
+		logger:        conf.InstrumentationConfig.Logger,
+		metrics:       controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:      conf.InstrumentationConfig.EventRecorder,
+		clusterDomain: conf.ClusterDomain,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -219,7 +222,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler)
+	opts := rulerV1Alpha1ToOptions(ruler, r.clusterDomain)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

@@ -63,16 +63,19 @@ type ThanosQueryReconciler struct {
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
+
+	clusterDomain string
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
 func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
 	reconciler := &ThanosQueryReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder: conf.InstrumentationConfig.EventRecorder,
+		Client:        client,
+		Scheme:        scheme,
+		logger:        conf.InstrumentationConfig.Logger,
+		metrics:       controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:      conf.InstrumentationConfig.EventRecorder,
+		clusterDomain: conf.ClusterDomain,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -192,7 +195,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return nil, err
 	}
 
-	opts := queryV1Alpha1ToOptions(query)
+	opts := queryV1Alpha1ToOptions(query, r.clusterDomain)
 	opts.Endpoints = endpoints
 
 	return opts, nil
@@ -248,7 +251,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(query)
+	return queryV1Alpha1ToQueryFrontEndOptions(query, r.clusterDomain)
 }
 
 func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {

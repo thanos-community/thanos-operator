@@ -100,6 +100,8 @@ type Options struct {
 	// If not set, the PodDisruptionBudget will not be created.
 	PodDisruptionConfig *PodDisruptionBudgetOptions
 	PlacementConfig     *Placement
+	// Domain of the cluster
+	ClusterDomain string
 }
 
 // Placement is a struct that holds the placement configuration for the component
