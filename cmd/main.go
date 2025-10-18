@@ -76,6 +76,7 @@ func main() {
 	var enableHTTP2 bool
 
 	var featureGatePrometheusOperator bool
+	var clusterDomain string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -88,6 +89,7 @@ func main() {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
 		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
+	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -170,6 +172,7 @@ func main() {
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
 			},
+			ClusterDomain: clusterDomain,
 		}
 	}
 

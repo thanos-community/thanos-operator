@@ -53,16 +53,19 @@ type ThanosStoreReconciler struct {
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
+
+	clusterDomain string
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
 func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
 	reconciler := &ThanosStoreReconciler{
-		Client:   client,
-		Scheme:   scheme,
-		logger:   conf.InstrumentationConfig.Logger,
-		metrics:  controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder: conf.InstrumentationConfig.EventRecorder,
+		Client:        client,
+		Scheme:        scheme,
+		logger:        conf.InstrumentationConfig.Logger,
+		metrics:       controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:      conf.InstrumentationConfig.EventRecorder,
+		clusterDomain: conf.ClusterDomain,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -172,13 +175,13 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(store)}
+		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.clusterDomain)}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		storeShardOpts := storeV1Alpha1ToOptions(store)
+		storeShardOpts := storeV1Alpha1ToOptions(store, r.clusterDomain)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",
