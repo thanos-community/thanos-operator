@@ -163,7 +163,7 @@ config:
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.cluster.local", "my-query", ns)
+					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.%s", "my-query", ns, clusterDomain)
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
