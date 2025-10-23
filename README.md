@@ -30,6 +30,8 @@ Thanos Operator binary CLI Options include,
 
 ```bash mdox-exec="./bin/manager --help"
 Usage of ./bin/manager:
+  -cluster-domain string
+    	The domain of the cluster. (default "cluster.local")
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
   -feature-gate.enable-prometheus-operator-crds
