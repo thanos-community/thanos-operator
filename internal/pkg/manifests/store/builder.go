@@ -100,7 +100,7 @@ const (
 	cachingBucketConfigEnvVarName = "CACHING_BUCKET_CONFIG"
 
 	dataVolumeName      = "data"
-	dataVolumeMountPath = "var/thanos/store"
+	dataVolumeMountPath = "/var/thanos/store"
 )
 
 // NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
@@ -334,7 +334,7 @@ func storeArgsFrom(opts Options) []string {
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--objstore.config=$(%s)", storeObjectStoreEnvVarName),
-		"--data-dir=/var/thanos/store",
+		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
 		fmt.Sprintf("--ignore-deletion-marks-delay=%s", string(opts.IgnoreDeletionMarksDelay)),
 		fmt.Sprintf("--min-time=%s", string(opts.Min)),
 		fmt.Sprintf("--max-time=%s", string(opts.Max)),

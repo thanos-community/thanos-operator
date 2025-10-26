@@ -93,7 +93,7 @@ const (
 	rulerObjectStoreEnvVarName = "OBJSTORE_CONFIG"
 
 	dataVolumeName      = "data"
-	dataVolumeMountPath = "var/thanos/rule"
+	dataVolumeMountPath = "/var/thanos/rule"
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
@@ -273,8 +273,10 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					Affinity:           &podAffinity,
-					SecurityContext:    &corev1.PodSecurityContext{},
+					Affinity: &podAffinity,
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: ptr.To(int64(1001)),
+					},
 					Containers:         []corev1.Container{rulerContainer},
 					ServiceAccountName: name,
 					Volumes:            volumes,
@@ -371,7 +373,7 @@ func rulerArgs(opts Options) []string {
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
 		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
-		"--data-dir=/var/thanos/rule",
+		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
 		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)

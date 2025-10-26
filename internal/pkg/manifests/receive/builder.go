@@ -162,7 +162,7 @@ const (
 	ingestObjectStoreEnvVarName = "OBJSTORE_CONFIG"
 
 	dataVolumeName      = "data"
-	dataVolumeMountPath = "var/thanos/receive"
+	dataVolumeMountPath = "/var/thanos/receive"
 )
 
 // NewIngestorStatefulSet creates a new StatefulSet for the Thanos Receive ingester.
@@ -218,7 +218,9 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
-					SecurityContext:    &corev1.PodSecurityContext{},
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: ptr.To(int64(1001)),
+					},
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -417,7 +419,7 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 
 const (
 	hashringVolumeName = "hashring-config"
-	hashringMountPath  = "var/lib/thanos-receive"
+	hashringMountPath  = "/var/lib/thanos-receive"
 )
 
 // NewRouterDeployment creates a new Deployment for the Thanos Receive router.
