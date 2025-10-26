@@ -99,6 +99,7 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, clusterDomain string) manif
 		ExternalLabels:     in.Spec.ExternalLabels,
 		AlertLabelDrop:     in.Spec.AlertLabelDrop,
 		StorageSize:        resource.MustParse(in.Spec.StorageSize),
+		StorageClassName:   in.Spec.StorageClassName,
 		EvaluationInterval: manifests.Duration(in.Spec.EvaluationInterval),
 	}
 }
@@ -131,6 +132,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		AsyncForwardWorkerCount:  manifests.OptionalToString(spec.AsyncForwardWorkerCount),
 		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
 		StorageSize:              resource.MustParse(string(spec.StorageSize)),
+		StorageClassName:         spec.StorageClassName,
 		ExternalLabels:           spec.ExternalLabels,
 	}
 
@@ -224,6 +226,7 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, clusterDomain string) manif
 		IndexHeaderOptions:       indexHeaderOpts,
 		BlockConfigOptions:       blockConfigOpts,
 		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
+		StorageClassName:         in.Spec.StorageClassName,
 		Options:                  opts,
 	}
 
@@ -311,12 +314,13 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, clusterDomain string) m
 			FiveMinutes: ptr.To(manifests.Duration(in.Spec.RetentionConfig.FiveMinutes)),
 			OneHour:     ptr.To(manifests.Duration(in.Spec.RetentionConfig.OneHour)),
 		},
-		BlockConfig:    blockDiscovery(),
-		Compaction:     compaction(),
-		Downsampling:   downsamplingConfig(),
-		DebugConfig:    debugConfig(),
-		StorageSize:    in.Spec.StorageSize.ToResourceQuantity(),
-		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		BlockConfig:      blockDiscovery(),
+		Compaction:       compaction(),
+		Downsampling:     downsamplingConfig(),
+		DebugConfig:      debugConfig(),
+		StorageSize:      in.Spec.StorageSize.ToResourceQuantity(),
+		StorageClassName: in.Spec.StorageClassName,
+		ObjStoreSecret:   in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 	}
 
 	if in.Spec.TimeRangeConfig != nil {

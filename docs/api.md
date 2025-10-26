@@ -410,6 +410,7 @@ _Appears in:_
 | `tsdbConfig` _[TSDBConfig](#tsdbconfig)_ | TSDB configuration for the ingestor. |  | Required: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for the hashring. |  | Optional: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storageClassName` _string_ | StorageClassName is the name of the storage class to be used by the Thanos Receive StatefulSets. |  | Optional: \{\} <br /> |
 | `tenancyConfig` _[TenancyConfig](#tenancyconfig)_ | TenancyConfig is the configuration for the tenancy options. |  | Optional: \{\} <br /> |
 | `asyncForwardWorkerCount` _integer_ | AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests. | 5 | Optional: \{\} <br /> |
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  | Optional: \{\} <br /> |
@@ -862,6 +863,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Compact component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the object storage configuration for the compact component. |  | Required: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storageClassName` _string_ | StorageClassName is the name of the storage class to be used by the Thanos Compact StatefulSets. |  | Optional: \{\} <br /> |
 | `retentionConfig` _[RetentionResolutionConfig](#retentionresolutionconfig)_ | RetentionConfig is the retention configuration for the compact component. |  | Required: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `blockViewerGlobalSync` _[BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)_ | BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI. |  | Optional: \{\} <br /> |
@@ -1159,6 +1161,7 @@ _Appears in:_
 | `alertLabelDrop` _string array_ | Labels to drop before Ruler sends alerts to alertmanager. |  | Optional: \{\} <br /> |
 | `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `storageSize` _string_ | StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storageClassName` _string_ | StorageClassName is the name of the storage class to be used by the Thanos Ruler StatefulSets. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
 | `prometheusRuleSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler. | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
@@ -1263,6 +1266,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |
 | `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Store StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storageClassName` _string_ | StorageClassName is the name of the storage class to be used by the Thanos Store StatefulSets. |  | Optional: \{\} <br /> |
 | `ignoreDeletionMarksDelay` _[Duration](#duration)_ | Duration after which the blocks marked for deletion will be filtered out while fetching blocks.<br />The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.<br />This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.<br />If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json<br />file to mark after what duration the block should be deleted rather than deleting the block straight away. | 24h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `indexCacheConfig` _[CacheConfig](#cacheconfig)_ | IndexCacheConfig allows configuration of the index cache.<br />See format details: https://thanos.io/tip/components/store.md/#index-cache |  | Optional: \{\} <br /> |
 | `cachingBucketConfig` _[CacheConfig](#cacheconfig)_ | CachingBucketConfig allows configuration of the caching bucket.<br />See format details: https://thanos.io/tip/components/store.md/#caching-bucket |  | Optional: \{\} <br /> |

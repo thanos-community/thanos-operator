@@ -146,6 +146,9 @@ type IngesterHashringSpec struct {
 	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
 	// +kubebuilder:validation:Required
 	StorageSize StorageSize `json:"storageSize"`
+	// StorageClassName is the name of the storage class to be used by the Thanos Receive StatefulSets.
+	// +kubebuilder:validation:Optional
+	StorageClassName *string `json:"storageClassName"`
 	// TenancyConfig is the configuration for the tenancy options.
 	// +kubebuilder:validation:Optional
 	TenancyConfig *TenancyConfig `json:"tenancyConfig,omitempty"`

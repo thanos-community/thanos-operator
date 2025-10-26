@@ -38,6 +38,7 @@ const (
 type Options struct {
 	manifests.Options
 	StorageSize              resource.Quantity
+	StorageClassName         *string
 	ObjStoreSecret           corev1.SecretKeySelector
 	IndexCacheConfig         manifests.CacheConfig
 	CachingBucketConfig      manifests.CacheConfig
@@ -128,6 +129,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 						corev1.ResourceStorage: opts.StorageSize,
 					},
 				},
+				StorageClassName: opts.StorageClassName,
 			},
 		},
 	}

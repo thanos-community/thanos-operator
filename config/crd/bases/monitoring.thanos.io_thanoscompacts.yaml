@@ -4862,6 +4862,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - shardName
                 x-kubernetes-list-type: map
+              storageClassName:
+                description: StorageClassName is the name of the storage class to
+                  be used by the Thanos Compact StatefulSets.
+                type: string
               storageSize:
                 description: StorageSize is the size of the storage to be used by
                   the Thanos Compact StatefulSets.

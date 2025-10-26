@@ -480,6 +480,11 @@ func (in *IngesterHashringSpec) DeepCopyInto(out *IngesterHashringSpec) {
 		*out = new(ObjectStorageConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.StorageClassName != nil {
+		in, out := &in.StorageClassName, &out.StorageClassName
+		*out = new(string)
+		**out = **in
+	}
 	if in.TenancyConfig != nil {
 		in, out := &in.TenancyConfig, &out.TenancyConfig
 		*out = new(TenancyConfig)
@@ -948,6 +953,11 @@ func (in *ThanosCompactSpec) DeepCopyInto(out *ThanosCompactSpec) {
 		}
 	}
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
+	if in.StorageClassName != nil {
+		in, out := &in.StorageClassName, &out.StorageClassName
+		*out = new(string)
+		**out = **in
+	}
 	out.RetentionConfig = in.RetentionConfig
 	if in.BlockConfig != nil {
 		in, out := &in.BlockConfig, &out.BlockConfig
@@ -1404,6 +1414,11 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.StorageClassName != nil {
+		in, out := &in.StorageClassName, &out.StorageClassName
+		*out = new(string)
+		**out = **in
+	}
 	if in.Paused != nil {
 		in, out := &in.Paused, &out.Paused
 		*out = new(bool)
@@ -1532,6 +1547,11 @@ func (in *ThanosStoreSpec) DeepCopyInto(out *ThanosStoreSpec) {
 		}
 	}
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
+	if in.StorageClassName != nil {
+		in, out := &in.StorageClassName, &out.StorageClassName
+		*out = new(string)
+		**out = **in
+	}
 	if in.IndexCacheConfig != nil {
 		in, out := &in.IndexCacheConfig, &out.IndexCacheConfig
 		*out = new(CacheConfig)

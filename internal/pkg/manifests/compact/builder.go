@@ -44,7 +44,8 @@ type Options struct {
 	// RelabelConfig is the relabel configuration for the Thanos Compact shard.
 	RelabelConfigs manifests.RelabelConfigs
 	// StorageSize is the size of the PVC to create for the Thanos Compact shard.
-	StorageSize resource.Quantity
+	StorageSize      resource.Quantity
+	StorageClassName *string
 	// ObjStoreSecret is the secret key selector for the object store configuration.
 	ObjStoreSecret corev1.SecretKeySelector
 	// Min and Max time for the compactor
@@ -119,6 +120,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 						corev1.ResourceStorage: opts.StorageSize,
 					},
 				},
+				StorageClassName: opts.StorageClassName,
 			},
 		},
 	}

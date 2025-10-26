@@ -45,6 +45,7 @@ type Options struct {
 	ExternalLabels     map[string]string
 	AlertLabelDrop     []string
 	StorageSize        resource.Quantity
+	StorageClassName   *string
 	EvaluationInterval manifests.Duration
 }
 
@@ -233,6 +234,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					corev1.ResourceStorage: opts.StorageSize,
 				},
 			},
+			StorageClassName: opts.StorageClassName,
 		},
 	},
 	}
