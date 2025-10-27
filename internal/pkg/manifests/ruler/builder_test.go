@@ -286,7 +286,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 							t.Errorf("expected ruler statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
 						}
 						if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
-							t.Errorf("expected ruler statefulset to have volumemount mounted at var/thanos/ruler, got %s", c.VolumeMounts[0].MountPath)
+							t.Errorf("expected ruler statefulset to have volumemount mounted at /var/thanos/ruler, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}

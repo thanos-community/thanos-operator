@@ -165,7 +165,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 							t.Errorf("expected store statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
 						}
 						if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
-							t.Errorf("expected store statefulset to have volumemount mounted at var/thanos/store, got %s", c.VolumeMounts[0].MountPath)
+							t.Errorf("expected store statefulset to have volumemount mounted at /var/thanos/store, got %s", c.VolumeMounts[0].MountPath)
 						}
 					}
 				}

@@ -30,7 +30,7 @@ const (
 const (
 	objectStoreEnvVarName = "OBJSTORE_CONFIG"
 	dataVolumeName        = "data"
-	dataVolumeMountPath   = "var/thanos/compact"
+	dataVolumeMountPath   = "/var/thanos/compact"
 )
 
 // Options for Thanos Compact
