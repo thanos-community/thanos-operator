@@ -93,7 +93,9 @@ config:
 							},
 						},
 					},
-					StorageSize: "1Gi",
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
@@ -220,9 +222,11 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        hashringName,
-								Labels:      map[string]string{"test": "my-ingester-test"},
-								StorageSize: "100Mi",
+								Name:   hashringName,
+								Labels: map[string]string{"test": "my-ingester-test"},
+								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+									Size: "100Mi",
+								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
 									Tenants:           []string{"test-tenant"},
@@ -297,7 +301,9 @@ config:
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
 					Replicas:     2,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-					StorageSize:  "1Gi",
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
@@ -363,7 +369,9 @@ config:
 							Type:   monitoringthanosiov1alpha1.Block,
 							Shards: 3,
 						},
-						StorageSize: "1Gi",
+						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+							Size: "1Gi",
+						},
 						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "thanos-objstore",

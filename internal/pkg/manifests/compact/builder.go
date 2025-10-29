@@ -7,7 +7,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -43,10 +42,7 @@ type Options struct {
 	DebugConfig      *DebugConfigOptions
 	// RelabelConfig is the relabel configuration for the Thanos Compact shard.
 	RelabelConfigs manifests.RelabelConfigs
-	// StorageSize is the size of the PVC to create for the Thanos Compact shard.
-	StorageSize      resource.Quantity
-	StorageClassName *string
-	// ObjStoreSecret is the secret key selector for the object store configuration.
+	StorageConfig  manifests.StorageConfig
 	ObjStoreSecret corev1.SecretKeySelector
 	// Min and Max time for the compactor
 	Min, Max  *manifests.Duration
@@ -117,10 +113,10 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 				},
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: opts.StorageSize,
+						corev1.ResourceStorage: opts.StorageConfig.StorageSize,
 					},
 				},
-				StorageClassName: opts.StorageClassName,
+				StorageClassName: opts.StorageConfig.StorageClassName,
 			},
 		},
 	}

@@ -10,7 +10,6 @@ import (
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -92,14 +91,16 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, clusterDomain string) manif
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, in.Spec.FeatureGates, in.Spec.Additional, clusterDomain)
 	return manifestruler.Options{
-		Options:            opts,
-		ObjStoreSecret:     in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:          manifests.Duration(in.Spec.Retention),
-		AlertmanagerURL:    in.Spec.AlertmanagerURL,
-		ExternalLabels:     in.Spec.ExternalLabels,
-		AlertLabelDrop:     in.Spec.AlertLabelDrop,
-		StorageSize:        resource.MustParse(in.Spec.StorageSize),
-		StorageClassName:   in.Spec.StorageClassName,
+		Options:         opts,
+		ObjStoreSecret:  in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		Retention:       manifests.Duration(in.Spec.Retention),
+		AlertmanagerURL: in.Spec.AlertmanagerURL,
+		ExternalLabels:  in.Spec.ExternalLabels,
+		AlertLabelDrop:  in.Spec.AlertLabelDrop,
+		StorageConfig: manifests.StorageConfig{
+			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+		},
 		EvaluationInterval: manifests.Duration(in.Spec.EvaluationInterval),
 	}
 }
@@ -131,9 +132,11 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		},
 		AsyncForwardWorkerCount:  manifests.OptionalToString(spec.AsyncForwardWorkerCount),
 		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
-		StorageSize:              resource.MustParse(string(spec.StorageSize)),
-		StorageClassName:         spec.StorageClassName,
-		ExternalLabels:           spec.ExternalLabels,
+		StorageConfig: manifests.StorageConfig{
+			StorageSize:      spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: spec.StorageConfiguration.StorageClass,
+		},
+		ExternalLabels: spec.ExternalLabels,
 	}
 
 	if in.Spec.Router.ReplicationProtocol != nil {
@@ -225,9 +228,11 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, clusterDomain string) manif
 		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
 		IndexHeaderOptions:       indexHeaderOpts,
 		BlockConfigOptions:       blockConfigOpts,
-		StorageSize:              resource.MustParse(string(in.Spec.StorageSize)),
-		StorageClassName:         in.Spec.StorageClassName,
-		Options:                  opts,
+		StorageConfig: manifests.StorageConfig{
+			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+		},
+		Options: opts,
 	}
 
 	if in.Spec.StoreLimitsOptions != nil {
@@ -314,13 +319,15 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, clusterDomain string) m
 			FiveMinutes: ptr.To(manifests.Duration(in.Spec.RetentionConfig.FiveMinutes)),
 			OneHour:     ptr.To(manifests.Duration(in.Spec.RetentionConfig.OneHour)),
 		},
-		BlockConfig:      blockDiscovery(),
-		Compaction:       compaction(),
-		Downsampling:     downsamplingConfig(),
-		DebugConfig:      debugConfig(),
-		StorageSize:      in.Spec.StorageSize.ToResourceQuantity(),
-		StorageClassName: in.Spec.StorageClassName,
-		ObjStoreSecret:   in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		BlockConfig:  blockDiscovery(),
+		Compaction:   compaction(),
+		Downsampling: downsamplingConfig(),
+		DebugConfig:  debugConfig(),
+		StorageConfig: manifests.StorageConfig{
+			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+		},
+		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 	}
 
 	if in.Spec.TimeRangeConfig != nil {

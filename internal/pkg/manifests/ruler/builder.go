@@ -9,7 +9,6 @@ import (
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -44,8 +43,7 @@ type Options struct {
 	AlertmanagerURL    string
 	ExternalLabels     map[string]string
 	AlertLabelDrop     []string
-	StorageSize        resource.Quantity
-	StorageClassName   *string
+	StorageConfig      manifests.StorageConfig
 	EvaluationInterval manifests.Duration
 }
 
@@ -231,10 +229,10 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			},
 			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: opts.StorageSize,
+					corev1.ResourceStorage: opts.StorageConfig.StorageSize,
 				},
 			},
-			StorageClassName: opts.StorageClassName,
+			StorageClassName: opts.StorageConfig.StorageClassName,
 		},
 	},
 	}

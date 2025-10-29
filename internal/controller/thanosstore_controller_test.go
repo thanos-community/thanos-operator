@@ -104,7 +104,9 @@ config:
 						Type:   monitoringthanosiov1alpha1.Block,
 						Shards: 3,
 					},
-					StorageSize: "1Gi",
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",

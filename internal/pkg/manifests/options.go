@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 
@@ -406,4 +407,9 @@ func (sl StoreLimitsOpts) ToFlags() []string {
 		flags = append(flags, fmt.Sprintf("--store.limits.request-series=%d", sl.StoreLimitsRequestSeries))
 	}
 	return flags
+}
+
+type StorageConfig struct {
+	StorageSize      resource.Quantity
+	StorageClassName *string
 }

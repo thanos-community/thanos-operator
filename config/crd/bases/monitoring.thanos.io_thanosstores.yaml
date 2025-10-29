@@ -5085,15 +5085,23 @@ spec:
                 required:
                 - type
                 type: object
-              storageClassName:
-                description: StorageClassName is the name of the storage class to
-                  be used by the Thanos Store StatefulSets.
-                type: string
-              storageSize:
-                description: StorageSize is the size of the storage to be used by
-                  the Thanos Store StatefulSets.
-                pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                type: string
+              storage:
+                description: StorageConfiguration represents the storage to be used
+                  by the Thanos Store StatefulSets.
+                properties:
+                  size:
+                    description: Size is the size of the PV storage to be used by
+                      a Thanos component.
+                    pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                    type: string
+                  storageClass:
+                    description: |-
+                      StorageClass is the name of the storage class to be used. If specified,
+                      it will use the default storage class.
+                    type: string
+                required:
+                - size
+                type: object
               storeLimitsOptions:
                 description: StoreLimitsOptions allows configuration of the store
                   API limits.
@@ -5179,7 +5187,7 @@ spec:
             - objectStorageConfig
             - replicas
             - shardingStrategy
-            - storageSize
+            - storage
             type: object
           status:
             description: ThanosStoreStatus defines the observed state of ThanosStore
