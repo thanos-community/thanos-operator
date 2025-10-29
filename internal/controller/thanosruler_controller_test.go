@@ -99,7 +99,9 @@ config:
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
 					Replicas:     2,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-					StorageSize:  "1Gi",
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",

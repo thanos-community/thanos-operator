@@ -8,7 +8,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -53,11 +52,10 @@ type IngesterOptions struct {
 	manifests.Options
 	TSDBOpts
 	TenancyOpts
-	StoreLimitsOpts  manifests.StoreLimitsOpts
-	StorageSize      resource.Quantity
-	StorageClassName *string
-	ObjStoreSecret   corev1.SecretKeySelector
-	ExternalLabels   map[string]string
+	StoreLimitsOpts manifests.StoreLimitsOpts
+	StorageConfig   manifests.StorageConfig
+	ObjStoreSecret  corev1.SecretKeySelector
+	ExternalLabels  map[string]string
 	// HashringName is the name of the hashring and is a required field.
 	HashringName             string
 	AsyncForwardWorkerCount  string
@@ -188,10 +186,10 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 				},
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: opts.StorageSize,
+						corev1.ResourceStorage: opts.StorageConfig.StorageSize,
 					},
 				},
-				StorageClassName: opts.StorageClassName,
+				StorageClassName: opts.StorageConfig.StorageClassName,
 			},
 		},
 	}

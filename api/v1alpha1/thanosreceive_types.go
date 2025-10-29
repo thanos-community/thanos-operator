@@ -143,12 +143,9 @@ type IngesterHashringSpec struct {
 	// ObjectStorageConfig is the secret that contains the object storage configuration for the hashring.
 	// +kubebuilder:validation:Optional
 	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
-	// StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet.
+	// StorageConfiguration represents the storage to be used by the Thanos Receive StatefulSets.
 	// +kubebuilder:validation:Required
-	StorageSize StorageSize `json:"storageSize"`
-	// StorageClassName is the name of the storage class to be used by the Thanos Receive StatefulSets.
-	// +kubebuilder:validation:Optional
-	StorageClassName *string `json:"storageClassName"`
+	StorageConfiguration StorageConfiguration `json:"storage"`
 	// TenancyConfig is the configuration for the tenancy options.
 	// +kubebuilder:validation:Optional
 	TenancyConfig *TenancyConfig `json:"tenancyConfig,omitempty"`
