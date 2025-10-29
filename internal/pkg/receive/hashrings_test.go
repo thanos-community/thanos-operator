@@ -535,9 +535,9 @@ func TestMapToExternalLabels(t *testing.T) {
 			input: map[string]string{
 				"key1": "value1",
 			},
-			expected: labels.Labels{
-				{Name: "key1", Value: "value1"},
-			},
+			expected: labels.FromMap(map[string]string{
+				"key1": "value1",
+			}),
 		},
 		{
 			name: "MultipleEntries",
@@ -545,22 +545,22 @@ func TestMapToExternalLabels(t *testing.T) {
 				"key1": "value1",
 				"key2": "value2",
 			},
-			expected: labels.Labels{
-				{Name: "key1", Value: "value1"},
-				{Name: "key2", Value: "value2"},
-			},
+			expected: labels.FromMap(map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			}),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := MapToExternalLabels(tt.input)
-			if len(result) != len(tt.expected) {
-				t.Errorf("expected %d labels, got %d", len(tt.expected), len(result))
+			if result.Len() != tt.expected.Len() {
+				t.Errorf("expected %d labels, got %d", tt.expected.Len(), result.Len())
 			}
-			for _, v := range tt.expected {
-				if result.Get(v.Name) != v.Value {
-					t.Errorf("expected label %s to have value %s, got %s", v.Name, v.Value, result.Get(v.Name))
+			for name, value := range tt.expected.Map() {
+				if result.Get(name) != value {
+					t.Errorf("expected label %s to have value %s, got %s", name, value, result.Get(name))
 				}
 
 			}

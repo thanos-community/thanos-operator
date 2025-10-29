@@ -330,6 +330,7 @@ config:
             "test-tenant"
         ],
         "tenant_matcher_type": "exact",
+		"external_labels": {},
         "endpoints": [
             {
                 "address": "some-hostname-b.%s.treceive.svc.%s:10901",
@@ -520,6 +521,7 @@ config:
             "test-tenant"
         ],
         "tenant_matcher_type": "exact",
+		"external_labels": {},
         "endpoints": [
             {
                 "address": "capnproto-hostname-a.%s.treceive.svc.%s:10901",
