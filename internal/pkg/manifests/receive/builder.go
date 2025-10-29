@@ -53,10 +53,11 @@ type IngesterOptions struct {
 	manifests.Options
 	TSDBOpts
 	TenancyOpts
-	StoreLimitsOpts manifests.StoreLimitsOpts
-	StorageSize     resource.Quantity
-	ObjStoreSecret  corev1.SecretKeySelector
-	ExternalLabels  map[string]string
+	StoreLimitsOpts  manifests.StoreLimitsOpts
+	StorageSize      resource.Quantity
+	StorageClassName *string
+	ObjStoreSecret   corev1.SecretKeySelector
+	ExternalLabels   map[string]string
 	// HashringName is the name of the hashring and is a required field.
 	HashringName             string
 	AsyncForwardWorkerCount  string
@@ -190,6 +191,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 						corev1.ResourceStorage: opts.StorageSize,
 					},
 				},
+				StorageClassName: opts.StorageClassName,
 			},
 		},
 	}

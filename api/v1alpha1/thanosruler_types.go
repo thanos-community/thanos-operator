@@ -69,6 +69,9 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
 	StorageSize string `json:"storageSize"`
+	// StorageClassName is the name of the storage class to be used by the Thanos Ruler StatefulSets.
+	// +kubebuilder:validation:Optional
+	StorageClassName *string `json:"storageClassName"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

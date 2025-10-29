@@ -33,6 +33,9 @@ type ThanosCompactSpec struct {
 	// StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets.
 	// +kubebuilder:validation:Required
 	StorageSize StorageSize `json:"storageSize"`
+	// StorageClassName is the name of the storage class to be used by the Thanos Compact StatefulSets.
+	// +kubebuilder:validation:Optional
+	StorageClassName *string `json:"storageClassName"`
 	// RetentionConfig is the retention configuration for the compact component.
 	// +kubebuilder:validation:Required
 	RetentionConfig RetentionResolutionConfig `json:"retentionConfig,omitempty"`

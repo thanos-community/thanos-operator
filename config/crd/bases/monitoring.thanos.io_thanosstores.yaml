@@ -4854,6 +4854,10 @@ spec:
                 required:
                 - type
                 type: object
+              storageClassName:
+                description: StorageClassName is the name of the storage class to
+                  be used by the Thanos Store StatefulSets.
+                type: string
               storageSize:
                 description: StorageSize is the size of the storage to be used by
                   the Thanos Store StatefulSets.
