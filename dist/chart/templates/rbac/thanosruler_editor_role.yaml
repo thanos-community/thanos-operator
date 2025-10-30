@@ -1,0 +1,28 @@
+{{- if .Values.rbac.enable }}
+# permissions for end users to edit thanosrulers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: thanosruler-editor-role
+rules:
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosrulers/status
+  verbs:
+  - get
+{{- end -}}
