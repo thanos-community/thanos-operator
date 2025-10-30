@@ -1,0 +1,17 @@
+{{- if .Values.rbac.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: {{ .Values.controllerManager.serviceAccountName }}-metrics-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+{{- end -}}

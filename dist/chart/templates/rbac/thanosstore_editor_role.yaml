@@ -1,0 +1,28 @@
+{{- if .Values.rbac.enable }}
+# permissions for end users to edit thanosstores.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: thanosstore-editor-role
+rules:
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosstores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosstores/status
+  verbs:
+  - get
+{{- end -}}

@@ -1,0 +1,24 @@
+{{- if .Values.rbac.enable }}
+# permissions for end users to view thanosreceives.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: thanosreceive-viewer-role
+rules:
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanosreceives/status
+  verbs:
+  - get
+{{- end -}}

@@ -1,0 +1,24 @@
+{{- if .Values.rbac.enable }}
+# permissions for end users to view thanoscompacts.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: thanoscompact-viewer-role
+rules:
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanoscompacts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanoscompacts/status
+  verbs:
+  - get
+{{- end -}}
