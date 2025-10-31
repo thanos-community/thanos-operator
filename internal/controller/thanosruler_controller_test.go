@@ -217,13 +217,46 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
 
+				promRule2 := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-promrule-2",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"operator.thanos.io/tenant":          "test",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "example",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "HighRequestLatency",
+										Expr:  intstr.FromString(`job:request_latency_seconds:mean5m{job="myjob"} > 0.5`),
+										Labels: map[string]string{
+											"severity": "page",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRule2)).Should(Succeed())
+
 				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/" + promRule.Name + ".yaml"
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRule.Name + ".yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/my-rules.yaml"
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRule2.Name + ".yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + cfgmap.GetName() + "/my-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
