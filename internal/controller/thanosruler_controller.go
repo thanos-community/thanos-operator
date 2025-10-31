@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus-community/prom-label-proxy/injectproxy"
@@ -208,16 +209,20 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	// PrometheusRule-based configmaps take precedence.
 	uniqueRuleFiles := make(map[string]corev1.ConfigMapKeySelector)
 	for _, rf := range ruleFiles {
-		uniqueRuleFiles[rf.Name] = rf
+		uniqueRuleFiles[fmt.Sprintf("%s/%s", rf.Name, rf.Key)] = rf
 	}
 	for _, prf := range promRuleConfigMaps {
-		uniqueRuleFiles[prf.Name] = prf
+		uniqueRuleFiles[fmt.Sprintf("%s/%s", prf.Name, prf.Key)] = prf
 	}
 
 	ruleFiles = make([]corev1.ConfigMapKeySelector, 0, len(uniqueRuleFiles))
 	for _, rf := range uniqueRuleFiles {
 		ruleFiles = append(ruleFiles, rf)
 	}
+
+	sort.Slice(ruleFiles, func(i, j int) bool {
+		return fmt.Sprintf("%s/%s", ruleFiles[i].Name, ruleFiles[i].Key) < fmt.Sprintf("%s/%s", ruleFiles[j].Name, ruleFiles[j].Key)
+	})
 
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))

@@ -710,7 +710,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/my-rules.yaml",
+						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 
@@ -719,7 +719,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/"+promRule.Name+".yaml",
+						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
