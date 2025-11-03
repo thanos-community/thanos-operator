@@ -65,13 +65,9 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:default="2h"
 	// +kubebuilder:validation:Required
 	Retention Duration `json:"retention,omitempty"`
-	// StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet.
+	// StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
-	StorageSize string `json:"storageSize"`
-	// StorageClassName is the name of the storage class to be used by the Thanos Ruler StatefulSets.
-	// +kubebuilder:validation:Optional
-	StorageClassName *string `json:"storageClassName"`
+	StorageConfiguration StorageConfiguration `json:"storage"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

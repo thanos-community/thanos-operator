@@ -8,7 +8,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -37,8 +36,7 @@ const (
 // Name is the name of the Thanos Store component
 type Options struct {
 	manifests.Options
-	StorageSize              resource.Quantity
-	StorageClassName         *string
+	StorageConfig            manifests.StorageConfig
 	ObjStoreSecret           corev1.SecretKeySelector
 	IndexCacheConfig         manifests.CacheConfig
 	CachingBucketConfig      manifests.CacheConfig
@@ -126,10 +124,10 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 				},
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: opts.StorageSize,
+						corev1.ResourceStorage: opts.StorageConfig.StorageSize,
 					},
 				},
-				StorageClassName: opts.StorageClassName,
+				StorageClassName: opts.StorageConfig.StorageClassName,
 			},
 		},
 	}

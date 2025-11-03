@@ -235,15 +235,19 @@ var _ = Describe("controller", Ordered, func() {
 							},
 							Hashrings: []v1alpha1.IngesterHashringSpec{
 								{
-									Name:        hashringName,
-									StorageSize: "100Mi",
+									Name: hashringName,
+									StorageConfiguration: v1alpha1.StorageConfiguration{
+										Size: "100Mi",
+									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
 									},
 								},
 								{
-									Name:        hashringTwoName,
-									StorageSize: "100Mi",
+									Name: hashringTwoName,
+									StorageConfiguration: v1alpha1.StorageConfiguration{
+										Size: "100Mi",
+									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
 									},
@@ -365,8 +369,10 @@ var _ = Describe("controller", Ordered, func() {
 							},
 							Hashrings: []v1alpha1.IngesterHashringSpec{
 								{
-									Name:        hashringName,
-									StorageSize: "100Mi",
+									Name: hashringName,
+									StorageConfiguration: v1alpha1.StorageConfiguration{
+										Size: "100Mi",
+									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
 									},
@@ -615,7 +621,9 @@ var _ = Describe("controller", Ordered, func() {
 						CommonFields: v1alpha1.CommonFields{
 							Version: getThanosVersion(),
 						},
-						StorageSize: "100Mi",
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
 						PrometheusRuleSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
@@ -744,7 +752,9 @@ var _ = Describe("controller", Ordered, func() {
 							Type:   v1alpha1.Block,
 							Shards: 2,
 						},
-						StorageSize: "100Mi",
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,
@@ -789,7 +799,9 @@ var _ = Describe("controller", Ordered, func() {
 						CommonFields: v1alpha1.CommonFields{
 							Version: getThanosVersion(),
 						},
-						StorageSize: "100Mi",
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: objStoreSecret,

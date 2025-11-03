@@ -5118,15 +5118,23 @@ spec:
                 - tenantLabel
                 - tenantValueLabel
                 type: object
-              storageClassName:
-                description: StorageClassName is the name of the storage class to
-                  be used by the Thanos Ruler StatefulSets.
-                type: string
-              storageSize:
-                description: StorageSize is the size of the storage to be used by
-                  the Thanos Ruler StatefulSet.
-                pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                type: string
+              storage:
+                description: StorageConfiguration represents the storage to be used
+                  by the Thanos Ruler StatefulSets.
+                properties:
+                  size:
+                    description: Size is the size of the PV storage to be used by
+                      a Thanos component.
+                    pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                    type: string
+                  storageClass:
+                    description: |-
+                      StorageClass is the name of the storage class to be used. If specified,
+                      it will use the default storage class.
+                    type: string
+                required:
+                - size
+                type: object
               tolerations:
                 description: Tolerations defines the workloads tolerations if specified.
                 items:
@@ -5179,7 +5187,7 @@ spec:
             - prometheusRuleSelector
             - replicas
             - retention
-            - storageSize
+            - storage
             type: object
           status:
             description: ThanosRulerStatus defines the observed state of ThanosRuler

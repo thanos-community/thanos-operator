@@ -5007,15 +5007,23 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                               type: object
                           type: object
-                        storageClassName:
-                          description: StorageClassName is the name of the storage
-                            class to be used by the Thanos Receive StatefulSets.
-                          type: string
-                        storageSize:
-                          description: StorageSize is the size of the storage to be
-                            used by the Thanos Receive StatefulSet.
-                          pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
-                          type: string
+                        storage:
+                          description: StorageConfiguration represents the storage
+                            to be used by the Thanos Receive StatefulSets.
+                          properties:
+                            size:
+                              description: Size is the size of the PV storage to be
+                                used by a Thanos component.
+                              pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                              type: string
+                            storageClass:
+                              description: |-
+                                StorageClass is the name of the storage class to be used. If specified,
+                                it will use the default storage class.
+                              type: string
+                          required:
+                          - size
+                          type: object
                         storeLimitsOptions:
                           description: StoreLimitsOptions is the configuration for
                             the store API limits options.
@@ -5152,7 +5160,7 @@ spec:
                       - externalLabels
                       - name
                       - replicas
-                      - storageSize
+                      - storage
                       - tsdbConfig
                       type: object
                     maxItems: 100

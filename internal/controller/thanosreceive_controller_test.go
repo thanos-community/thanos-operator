@@ -127,9 +127,11 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        hashringName,
-								Labels:      map[string]string{"test": "my-ingester-test"},
-								StorageSize: "100Mi",
+								Name:   hashringName,
+								Labels: map[string]string{"test": "my-ingester-test"},
+								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+									Size: "100Mi",
+								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									Tenants: []string{"test-tenant"},
 								},
@@ -152,9 +154,11 @@ config:
 				resource.Spec.Ingester.Hashrings = append(
 					resource.Spec.Ingester.Hashrings,
 					monitoringthanosiov1alpha1.IngesterHashringSpec{
-						Name:        hashringName,
-						Labels:      map[string]string{"test": "my-ingester-test"},
-						StorageSize: "100Mi",
+						Name:   hashringName,
+						Labels: map[string]string{"test": "my-ingester-test"},
+						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
 						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
 						},
@@ -195,9 +199,11 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        hashringName,
-								Labels:      map[string]string{"test": "my-ingester-test"},
-								StorageSize: "100Mi",
+								Name:   hashringName,
+								Labels: map[string]string{"test": "my-ingester-test"},
+								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+									Size: "100Mi",
+								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
 									Tenants:           []string{"test-tenant"},
@@ -365,9 +371,11 @@ config:
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.Ingester.Hashrings = []monitoringthanosiov1alpha1.IngesterHashringSpec{
 					{
-						Name:        updatedHashringName,
-						Labels:      map[string]string{"test": "my-ingester-test"},
-						StorageSize: "100Mi",
+						Name:   updatedHashringName,
+						Labels: map[string]string{"test": "my-ingester-test"},
+						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
 						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
 						},
@@ -430,9 +438,11 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:        hashringName,
-								Labels:      map[string]string{"test": "my-ingester-test"},
-								StorageSize: "100Mi",
+								Name:   hashringName,
+								Labels: map[string]string{"test": "my-ingester-test"},
+								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+									Size: "100Mi",
+								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
 									Tenants:           []string{"test-tenant"},

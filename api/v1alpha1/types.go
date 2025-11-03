@@ -42,6 +42,17 @@ type InMemoryCacheConfig struct {
 // https://thanos.io/tip/thanos/storage.md/#external-labels
 type ExternalLabels map[string]string
 
+// StorageConfiguration represents the configuration options for a PVC used by a Thanos component
+type StorageConfiguration struct {
+	// Size is the size of the PV storage to be used by a Thanos component.
+	// +kubebuilder:validation:Required
+	Size StorageSize `json:"size"`
+	// StorageClass is the name of the storage class to be used. If specified,
+	// it will use the default storage class.
+	// +kubebuilder:validation:Optional
+	StorageClass *string `json:"storageClass,omitempty"`
+}
+
 // StorageSize is the size of the PV storage to be used by a Thanos component.
 // +kubebuilder:validation:Required
 // +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
