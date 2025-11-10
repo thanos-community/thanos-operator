@@ -292,6 +292,18 @@ uninstall-example: manifests kustomize ## Uninstall example definitions from K8s
 	$(KUBECTL) delete -f test/utils/testdata/
 	$(KUSTOMIZE) build config/samples | $(KUBECTL) delete -f -  
 
+##@ Website
+
+.PHONY: website-dev
+website-dev: ## Start website development server
+	@echo ">> starting website development server"
+	cd website && npm ci && npm run dev
+
+.PHONY: website
+website: ## Build website for production
+	@echo ">> building website for production"
+	cd website && npm ci && npm run build
+
 ##@ Dependencies
 
 ## Location to install dependencies to
