@@ -221,6 +221,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 		return []manifestquery.Endpoint{}, nil
 	}
 
+	endpointCountByType := make(map[manifests.EndpointType]int)
 	endpoints := make([]manifestquery.Endpoint, len(services.Items))
 	for i, svc := range services.Items {
 
@@ -241,7 +242,11 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 			Namespace:   svc.GetNamespace(),
 			Type:        etype,
 		}
-		r.metrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Inc()
+		endpointCountByType[etype]++
+	}
+
+	for etype, count := range endpointCountByType {
+		r.metrics.EndpointsConfigured.WithLabelValues(string(etype), query.GetName(), query.GetNamespace()).Set(float64(count))
 	}
 
 	sort.Slice(endpoints, func(i, j int) bool {
