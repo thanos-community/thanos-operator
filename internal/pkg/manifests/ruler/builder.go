@@ -3,6 +3,7 @@ package ruler
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -132,7 +133,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 	for _, ruleFile := range opts.RuleFiles {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      ruleFile.Name,
-			MountPath: fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Key),
+			MountPath: fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key),
 			SubPath:   ruleFile.Key,
 		})
 	}
@@ -239,6 +240,9 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 
 	volumes := []corev1.Volume{}
 	for _, ruleFile := range opts.RuleFiles {
+		if slices.ContainsFunc(volumes, func(v corev1.Volume) bool { return v.Name == ruleFile.Name }) {
+			continue
+		}
 		volumes = append(volumes, corev1.Volume{
 			Name: ruleFile.Name,
 			VolumeSource: corev1.VolumeSource{
@@ -387,7 +391,7 @@ func rulerArgs(opts Options) []string {
 	}
 
 	for _, ruleFile := range opts.RuleFiles {
-		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Key)))
+		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key)))
 	}
 
 	for _, endpoint := range opts.Endpoints {
