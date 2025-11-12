@@ -5,6 +5,8 @@
 domain: monitoring.thanos.io
 layout:
 - go.kubebuilder.io/v4
+plugins:
+  helm.kubebuilder.io/v1-alpha: {}
 projectName: thanos-operator
 repo: github.com/thanos-community/thanos-operator
 resources:
