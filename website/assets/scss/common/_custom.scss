@@ -2,17 +2,18 @@
 
 // Ensure all primary buttons use the theme color
 .btn-primary {
-  background-color: #8A5FFF;
-  border-color: #8A5FFF;
-  
-  &:hover {
-    background-color: #6D41FF;
-    border-color: #6D41FF;
+    background-color: #8A5FFF;
+    border-color: #8A5FFF;
+    
+    &:hover {
+      background-color: #6D41FF;
+      border-color: #6D41FF;
+    }
+    
+    &:focus, &:active {
+      background-color: darken(#6D41FF, 10%);
+      border-color: darken(#6D41FF, 10%);
+      box-shadow: 0 0 0 0.25rem rgba(138, 95, 255, 0.25);
+    }
   }
   
-  &:focus, &:active {
-    background-color: darken(#6D41FF, 10%);
-    border-color: darken(#6D41FF, 10%);
-    box-shadow: 0 0 0 0.25rem rgba(138, 95, 255, 0.25);
-  }
-}

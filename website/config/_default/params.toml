@@ -1,6 +1,6 @@
 # Hugo
 title = "Thanos Operator"
-description = "Congrats on setting up a new Doks project!"
+description = "Thanos Operator Documentation"
 images = ["cover.png"]
 
 # mainSections
@@ -21,7 +21,7 @@ mainSections = ["docs"]
 
   ## Button
   navBarButton = false # false (default) or true
-  navBarButtonUrl = "/docs/prologue/introduction/"
+  navBarButtonUrl = "/docs/guides/get-started/"
   navBarButtonText = "Get Started"
 
   # FlexSearch
@@ -74,7 +74,7 @@ mainSections = ["docs"]
   editPage = false # false (default) or true
   lastMod = false # false (default) or true
   repoHost = "GitHub" # GitHub (default), Gitea, GitLab, Bitbucket, or BitbucketServer
-  docsRepo = "https://github.com/h-enk/doks"
+  docsRepo = "https://github.com/thanos-community/thanos-operator"
   docsRepoBranch = "main" # main (default), master, or <branch name>
   docsRepoSubPath = "" # "" (none, default) or <sub path>
 
