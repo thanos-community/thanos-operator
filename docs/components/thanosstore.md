@@ -1,12 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosStore
-summary: Documentation for Thanos Operator components
-slug: thanosstore.md
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosStore
 
 The `ThanosStore` CRD manages Store Gateway deployments that provide access to historical data stored in object storage. It supports automatic sharding, caching, and performance optimization for large-scale deployments.
 
@@ -73,7 +65,3 @@ spec:
   labels:
     some-label: xyz
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanosstore.md) :heart:

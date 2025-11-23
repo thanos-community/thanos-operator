@@ -4,7 +4,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/thanos-community/thanos-operator)](https://goreportcard.com/report/github.com/thanos-community/thanos-operator) [![Go Code reference](https://img.shields.io/badge/code%20reference-go.dev-darkblue.svg)](https://pkg.go.dev/github.com/thanos-community/thanos-operator?tab=subdirectories) [![Static Badge](https://img.shields.io/badge/join_slack-%23thanos_operator-green)](https://cloud-native.slack.com/archives/C080V0HNV8W)
 
-[![Build and Push Multi-Platform Image to Quay](https://github.com/thanos-community/thanos-operator/actions/workflows/push.yaml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/push.yaml) [![go](https://github.com/thanos-community/thanos-operator/actions/workflows/go.yml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/go.yml) [![docs](https://github.com/thanos-community/thanos-operator/actions/workflows/docs.yaml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/docs.yaml)
+[![Build and Push Multi-Platform Image to Quay](https://github.com/thanos-community/thanos-operator/actions/workflows/push.yaml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/push.yaml) [![go](https://github.com/thanos-community/thanos-operator/actions/workflows/go.yml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/go.yml) [![docs](https://github.com/thanos-community/thanos-operator/actions/workflows/docs.yaml/badge.svg)](https://github.com/thanos-community/thanos-operator/actions/workflows/docs.yaml) [![Netlify Status](https://api.netlify.com/api/v1/badges/007f40e9-e4db-4a55-b66d-cb22d611d213/deploy-status)](https://app.netlify.com/projects/thanos-operator/deploys)
 
 > [!NOTE]
 >
@@ -22,7 +22,9 @@ The Thanos operator includes, but is not limited to, the following features:
 
 * **Extensability with multi-cluster technologies**: Shares Thanos' philosophy of operating in multi-cluster environments. Provides extensible configuration so that you can easily manage Thanos installation with other multi-cluster technologies/initiatives like custom operators or [Open Cluster Management](https://open-cluster-management.io/).
 
-For more details, read how to [get started](#getting-started) and explore our [CRD docs](./docs/api.md)
+For more details, read how to [get started](#getting-started) and explore our [CRD docs](docs/api-reference/api.md)
+
+Or visit our website: https://thanos-operator.dev/!
 
 ## Usage
 
@@ -60,7 +62,7 @@ Usage of ./bin/manager:
     	Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'). Defaults to 'epoch'.
 ```
 
-CRDs supported by this operator are defined in [./config/crd/bases](./config/crd/bases/). Operator deployment manifests are defined in [./config/manager](./config/manager/). To edit and build configuration refer to [CRD docs](./docs/api.md).
+CRDs supported by this operator are defined in [./config/crd/bases](./config/crd/bases/). Operator deployment manifests are defined in [./config/manager](./config/manager/). To edit and build configuration refer to [CRD docs](docs/api-reference/api.md).
 
 ## Getting Started
 
@@ -96,6 +98,8 @@ Once the workloads are ready, run `kubectl -n thanos-operator-system port-forwar
 
 This demo consists of a Prometheus, deployed via Prometheus Operator, that scrapes metrics from the operator and the Thanos components themselves. It remote writes to the Thanos Receive component.
 
+Read more about getting started [here](docs/get-started.md) and how to [install](docs/installation.md) here!
+
 ### Feature Gates
 
 The CRDs within Thanos Operator have the ability to create/read certain Prometheus Operator objects, such as ServiceMonitors and PrometheusRules. However not all environments may have Prometheus Operator installed.
@@ -115,7 +119,7 @@ KinD
 kubectl
 ```
 
-You can read about our goals and design decisions [here](./docs/DESIGN.md)!
+You can read about our goals and design decisions [here](docs/proposals/design.md)!
 
 Any contributions are welcome! Just use GitHub Issues and Pull Requests as usual. We follow [Thanos Go coding style guide](https://thanos.io/tip/contributing/coding-style-guide.md/).
 
@@ -145,6 +149,6 @@ EXCLUDE_COMPACT=true EXCLUDE_QUERY=true EXCLUDE_RULER=true EXCLUDE_RECEIVE=true 
 
 [@philipgough](https://github.com/PhilipGough) [@saswatamcode](https://github.com/saswatamcode)
 
-## Logos and Artwork 
+## Logos and Artwork
 
 [@sjcox-rh](https://github.com/sjcox-rh)

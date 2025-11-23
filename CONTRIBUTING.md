@@ -2,7 +2,7 @@
 
 This document explains the process of contributing to the Thanos Operator project.
 
-First of all please follow the [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md) in all your interactions within the project.
+First of all please follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all your interactions within the project.
 
 ## Thanos Philosophy
 
@@ -40,3 +40,9 @@ In the code and documentation prefer non-offensive terminology, for example:
 ## Components/CRDs Naming Architecture
 
 Please follow the upstream conventions used by Thanos and Prometheus Operator projects, when deciding on new names for this project.
+
+## Contributing to Documentation
+
+Please feel free to propose any documentation changes to `docs/`. Once you are satisfied, please run `make docs`. This will trigger the generation of our docs via tool called `mdox`, which will automatically create the doc for our website in-tree as well as format the markdown optimally.
+
+If you are creating a new section of docs, please update the [mdox config](.mdox.yaml) so it can be included on our website.

@@ -1,17 +1,9 @@
 ---
-weight: 800
-toc: true
 title: Guides
-summary: ""
-seo:
-    canonical: ""
-    description: ""
-    robots: ""
-    title: ""
-lastmod: "2023-09-07T16:06:50+02:00"
-draft: false
-description: ""
-date: "2023-09-07T16:06:50+02:00"
 ---
 
+Guides for operating Thanos Operator.
 
+---
+
+Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/guides/README.md) :heart:

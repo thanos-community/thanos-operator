@@ -1,17 +1,11 @@
 ---
 weight: 100
 toc: true
-title: Thanos Community Code of Conduct
+title: Code of Conduct
 summary: Community standards and enforcement guidelines
-seo:
-    canonical: ""
-    description: ""
-    robots: ""
-    title: ""
-lastmod: "2023-09-07T16:12:37+02:00"
+slug: code-of-conduct.md
 draft: false
-description: Thanos Community Code of Conduct
-date: "2023-09-07T16:12:37+02:00"
+description: Community standards and enforcement guidelines
 ---
 
 Thanos follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md). Additionally our team members can be contacted directly for code of conduct abuse, as described below.
@@ -25,3 +19,7 @@ Project maintainers who do not follow or enforce the Code of Conduct in good fai
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant](http://contributor-covenant.org), version 1.4, available at [http://contributor-covenant.org/version/1/4](http://contributor-covenant.org/version/1/4/)
+
+---
+
+Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/CODE_OF_CONDUCT.md) :heart:

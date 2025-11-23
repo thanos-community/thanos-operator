@@ -2,21 +2,15 @@
 weight: 90
 toc: true
 title: Contributing
-summary: ""
-seo:
-    canonical: ""
-    description: ""
-    robots: ""
-    title: Contributing to Thanos Operator
-lastmod: "2023-09-07T16:04:48+02:00"
+summary: Guide to contributing to the Thanos Operator project
+slug: contributing.md
 draft: false
 description: Guide to contributing to the Thanos Operator project
-date: "2023-09-07T16:04:48+02:00"
 ---
 
 This document explains the process of contributing to the Thanos Operator project.
 
-First of all please follow the [Code of Conduct](../thanos-community-code-of-conduct) in all your interactions within the project.
+First of all please follow the [Code of Conduct](../code-of-conduct.md/) in all your interactions within the project.
 
 ## Thanos Philosophy
 
@@ -37,7 +31,7 @@ If you encounter any issue or you have an idea to improve, please:
 * If none of the issues are relevant, please add an issue to [GitHub issues](https://github.com/thanos-community/thanos-operator/issues). Please provide any relevant information as suggested by the Issue template.
 * If you have a quick question you might want to also ask on #thanos or #thanos-operator slack channel in the CNCF workspace. We recommend using GitHub issues for issues and feedback, because GitHub issues are trackable.
 
-If you encounter a security vulnerability, please refer to [Reporting a Vulnerability process](https://github.com/thanos-community/thanos-operator/blob/main/SECURITY.md#reporting-a-vulnerability)
+If you encounter a security vulnerability, please refer to [Reporting a Vulnerability process](../security.md/#reporting-a-vulnerability)
 
 ## Adding New Features / Components
 
@@ -54,3 +48,13 @@ In the code and documentation prefer non-offensive terminology, for example:
 ## Components/CRDs Naming Architecture
 
 Please follow the upstream conventions used by Thanos and Prometheus Operator projects, when deciding on new names for this project.
+
+## Contributing to Documentation
+
+Please feel free to propose any documentation changes to `docs/`. Once you are satisfied, please run `make docs`. This will trigger the generation of our docs via tool called `mdox`, which will automatically create the doc for our website in-tree as well as format the markdown optimally.
+
+If you are creating a new section of docs, please update the [mdox config](https://github.com/thanos-community/thanos-operator/blob/main/.mdox.yaml) so it can be included on our website.
+
+---
+
+Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/CONTRIBUTING.md) :heart:

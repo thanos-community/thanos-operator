@@ -1,12 +1,4 @@
----
-weight: 20
-toc: true
-title: Installation Guide
-summary: Guides a user to install Thanos Operator on their Kubernetes cluster
-slug: installation.md
-draft: false
-description: Guides a user to install Thanos Operator on their Kubernetes cluster
----
+# Installation
 
 Currently, we offer a single mode of installing Thanos Operator, using a YAML bundle. Alternative methods will be added in the future!
 
@@ -59,8 +51,4 @@ make install-example
 
 ## Next Steps
 
-After installation, proceed to the [Get Started guide](../get-started.md/) for a quick walkthrough of deploying Thanos components.
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/installation.md) :heart:
+After installation, proceed to the [Get Started guide](get-started.md) for a quick walkthrough of deploying Thanos components.

@@ -1,12 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosReceive
-summary: Documentation for Thanos Operator components
-slug: thanosreceive.md
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosReceive
 
 The `ThanosReceive` CRD manages Thanos Receive hashrings for the ingestion of metrics via Prometheus Remote Write protocol.
 
@@ -92,7 +84,3 @@ spec:
     replicas: 1
     replicationFactor: 1
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanosreceive.md) :heart:

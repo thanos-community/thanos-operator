@@ -1,0 +1,141 @@
+version: 1
+
+inputDir: "$(INPUT_DIR)"
+outputDir: "$(OUTPUT_DIR)"
+extraInputGlobs:
+  - "CONTRIBUTING.md"
+  - "CODE_OF_CONDUCT.md"
+  - "SECURITY.md"
+  - "ECOSYSTEM_COMPATIBILITY.md"
+
+gitIgnored: false
+localLinksStyle:
+  hugo:
+    indexFileName: "_index.md"
+
+linkPrefixForNonMarkdownResources: "https://github.com/thanos-community/thanos-operator/blob/main"
+
+transformations:
+
+  - glob: "$(EXTERNAL_GLOB_REL)SECURITY.md"
+    path: /community/security.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        weight: 120
+        title: Security
+        summary: Security guidelines and best practices
+        draft: false
+        description: Security guidelines and best practices
+    backMatter: &docBackMatter
+      template: |
+        Found a typo, inconsistency or missing information in our docs?
+        Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/{{ .Origin.Path }}) :heart:
+
+  - glob: "$(EXTERNAL_GLOB_REL)CODE_OF_CONDUCT.md"
+    path: /community/code-of-conduct.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        weight: 100
+        title: Code of Conduct
+        summary: Community standards and enforcement guidelines
+        draft: false
+        description: Community standards and enforcement guidelines
+    backMatter: *docBackMatter
+
+  - glob: "$(EXTERNAL_GLOB_REL)CONTRIBUTING.md"
+    path: /community/contributing.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        weight: 90
+        title: Contributing
+        summary: Guide to contributing to the Thanos Operator project
+        draft: false
+        description: Guide to contributing to the Thanos Operator project
+    backMatter: *docBackMatter
+
+  - glob: "$(EXTERNAL_GLOB_REL)ECOSYSTEM_COMPATIBILITY.md"
+    path: /community/ecosystem-compatibility.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        weight: 110
+        title: Ecosystem Compatibility
+        summary: Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts
+        draft: false
+        description: How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem
+    backMatter: *docBackMatter
+
+  - glob: "README.md"
+    path: _index.md
+    popHeader: true
+    frontMatter:
+      template: |
+        title: "{{ .Origin.FirstHeader }}"
+    backMatter: *docBackMatter
+
+  - glob: "**/README.md"
+    path: _index.md
+    popHeader: true
+    frontMatter:
+      template: |
+        title: "{{ .Origin.FirstHeader }}"
+    backMatter: *docBackMatter
+
+  - glob: "get-started.md"
+    path: /guides/get-started.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        title: Get Started with Thanos Operator
+        summary: Guides a user to get started with Thanos Operator!
+        draft: false
+        weight: 10
+        description: Guides a user to get started with Thanos Operator!
+    backMatter: *docBackMatter
+
+  - glob: "installation.md"
+    path: /guides/installation.md
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        title: Installation Guide
+        summary: Guides a user to install Thanos Operator on their Kubernetes cluster
+        draft: false
+        weight: 20
+        description: Guides a user to install Thanos Operator on their Kubernetes cluster
+    backMatter: *docBackMatter
+
+  - glob: "proposals/*.md"
+    path: /proposals/*
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        title: "{{ .Origin.FirstHeader }}"
+        summary: Thanos Operator design proposals
+        draft: false
+        weight: 130
+        description: Thanos Operator design proposals
+    backMatter: *docBackMatter
+
+  - glob: "components/*.md"
+    path: /components/*
+    popHeader: true
+    frontMatter:
+      template: |
+        toc: true
+        title: "{{ .Origin.FirstHeader }}"
+        summary: Documentation for Thanos Operator components
+        draft: false
+        weight: 30
+        description: Documentation for Thanos Operator components
+    backMatter: *docBackMatter

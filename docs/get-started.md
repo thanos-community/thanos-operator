@@ -1,12 +1,4 @@
----
-weight: 10
-toc: true
-title: Get Started with Thanos Operator
-summary: Guides a user to get started with Thanos Operator!
-slug: get-started.md
-draft: false
-description: Guides a user to get started with Thanos Operator!
----
+# Get Started
 
 Thanos Operator is a Kubernetes operator for managing [Thanos](https://thanos.io/) components. It provides custom resources to deploy and configure Thanos components in a cloud-native way.
 
@@ -18,7 +10,7 @@ Before getting started, ensure you have:
 - `kubectl` configured to access your cluster
 - Basic understanding of [Thanos](https://thanos.io/) concepts
 
-For detailed installation instructions, see the [Installation Guide](../installation.md/).
+For detailed installation instructions, see the [Installation Guide](installation.md).
 
 ## Installation
 
@@ -87,12 +79,8 @@ Thanos Operator provides the following CRDs:
 
 ## Next Steps
 
-- Explore the [component CRDs](../../components/thanosreceive.md/) and how to use them.
-- Explore the [API Reference](../../api-reference/api.md/) for detailed CRD specifications
-- Review [design decisions](../../proposals/design.md/) for architectural insights
+- Explore the [component CRDs](components/thanosreceive.md) and how to use them.
+- Explore the [API Reference](api-reference/api.md) for detailed CRD specifications
+- Review [design decisions](proposals/design.md) for architectural insights
 - Check out example configurations in the project's [`config/samples`](https://github.com/thanos-community/thanos-operator/tree/main/config/samples) directory
-- Learn how to [contribute](../../community/contributing.md/) to the project
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/get-started.md) :heart:
+- Learn how to [contribute](../CONTRIBUTING.md) to the project

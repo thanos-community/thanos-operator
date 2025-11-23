@@ -1,19 +1,7 @@
 ---
-weight: 80
-toc: true
-title: API Reference
-summary: Complete API Reference for Thanos Operator
-sidebar:
-    collapsed: true
-seo:
-    canonical: ""
-    description: ""
-    robots: ""
-    title: ""
-lastmod: "2023-09-07T16:12:37+02:00"
-draft: false
-description: Thanos Operator API Reference
-date: "2023-09-07T16:12:37+02:00"
+title: Thanos Operator CRD API Reference
 ---
 
+---
 
+Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/api-reference/README.md) :heart:

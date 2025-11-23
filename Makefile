@@ -33,7 +33,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 FILES_TO_FMT      	 ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
-MD_FILES_TO_FORMAT = $(filter-out website/content/docs/api-reference/api.md, $(shell find website/content/docs -name "*.md")) $(shell ls website/content/docs/*.md)
+MD_FILES_TO_FORMAT = $(shell ls *.md) $(shell ls docs/*.md)  $(filter-out docs/api-reference/api.md, $(shell ls docs/*/*.md))
 MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
 CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
@@ -148,11 +148,32 @@ define require_clean_work_tree
 
 endef
 
+INPUT_DIR := docs
+OUTPUT_DIR := ./website/content/docs
+EXTERNAL_GLOB_REL := ../
+MDOX_CONFIG_FILE := .mdox.yaml
+
+.PHONY: docs
+docs: ## Generates docs for website
+docs: $(MDOX)
+	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt $(MD_FILES_TO_FORMAT)
+	@echo ">> generating docs for website (Input: $(INPUT_DIR), Output: $(OUTPUT_DIR))"
+	export INPUT_DIR="$(INPUT_DIR)"; \
+	export OUTPUT_DIR="$(OUTPUT_DIR)"; \
+	export EXTERNAL_GLOB_REL="$(EXTERNAL_GLOB_REL)"; \
+	\
+	rm -rf "$(OUTPUT_DIR)"; \
+	\
+	PATH="${PATH}:$(GOBIN)" $(MDOX) transform --log.level=debug --config-file=$(MDOX_CONFIG_FILE)
+	$(MAKE) generate-api-docs
+
 .PHONY: generate-api-docs
 generate-api-docs: ## Generate documentation from CRD
-generate-api-docs: $(CRD_REF_DOCS) generate
+generate-api-docs: $(CRD_REF_DOCS) generate format
 	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./website/content/docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
 	mv ./website/content/docs/api-reference/monitoring.thanos.io.md ./website/content/docs/api-reference/api.md
+	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
+	mv ./docs/api-reference/monitoring.thanos.io.md ./docs/api-reference/api.md
 	$(SED) -i'' '/^# API Reference */d' ./website/content/docs/api-reference/api.md
 	@tmpfile=$$(mktemp); \
 	printf "%s\n" "---" >> $$tmpfile; \
@@ -162,26 +183,15 @@ generate-api-docs: $(CRD_REF_DOCS) generate
 	printf "%s\n" 'date: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
 	printf "%s\n" 'lastmod: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
 	printf "%s\n" 'draft: false' >> $$tmpfile; \
-	printf "%s\n" 'weight: 80' >> $$tmpfile; \
+	printf "%s\n" 'weight: 40' >> $$tmpfile; \
 	printf "%s\n" 'toc: true' >> $$tmpfile; \
-	printf "%s\n" 'seo:' >> $$tmpfile; \
-	printf "%s\n" '  title: ""' >> $$tmpfile; \
-	printf "%s\n" '  description: ""' >> $$tmpfile; \
-	printf "%s\n" '  canonical: ""' >> $$tmpfile; \
-	printf "%s\n" '  robots: ""' >> $$tmpfile; \
-	printf "%s\n\n" "---" >> $$tmpfile; \
+	printf "%s\n" "---" >> $$tmpfile; \
 	cat ./website/content/docs/api-reference/api.md >> $$tmpfile; \
 	mv $$tmpfile ./website/content/docs/api-reference/api.md
 
-.PHONY: docs
-docs: ## Generates docs for all commands, localise links, ensure GitHub format.
-docs: build generate-api-docs $(MDOX)
-	@echo ">> generating docs"
-	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt $(MD_FILES_TO_FORMAT)
-
 .PHONY: check-docs
 check-docs: ## Checks docs against discrepancy with flags, links, white noise.
-check-docs: build generate-api-docs $(MDOX)
+check-docs: build docs $(MDOX)
 	@echo ">> checking docs"
 	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
 	$(call require_clean_work_tree,'run make docs and commit changes')
@@ -330,11 +340,6 @@ website: ## Build website for production
 website: $(HUGO)
 	@echo ">> building website for production"
 	@cd website && npm install && "$(HUGO)" -b $(WEBSITE_BASE_URL)
-
-.PHONY: website-netlify
-website-netlify: ## Build website for production
-	@echo ">> building website for production"
-	@cd website && npm install && hugo -b $(WEBSITE_BASE_URL)
 
 ##@ Dependencies
 
