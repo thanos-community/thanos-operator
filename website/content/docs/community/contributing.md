@@ -49,6 +49,12 @@ In the code and documentation prefer non-offensive terminology, for example:
 
 Please follow the upstream conventions used by Thanos and Prometheus Operator projects, when deciding on new names for this project.
 
+## Contributing to Documentation
+
+Please feel free to propose any documentation changes to `docs/`. Once you are satisfied, please run `make docs`. This will trigger the generation of our docs via tool called `mdox`, which will automatically create the doc for our website in-tree as well as format the markdown optimally.
+
+If you are creating a new section of docs, please update the [mdox config](https://github.com/thanos-community/thanos-operator/blob/main/.mdox.yaml) so it can be included on our website.
+
 ---
 
 Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/CONTRIBUTING.md) :heart:

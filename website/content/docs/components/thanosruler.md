@@ -8,11 +8,11 @@ draft: false
 description: Documentation for Thanos Operator components
 ---
 
-The `ThanosRuler` CRD manages the Thanos Ruler component, which evaluates Prometheus recording and alerting rules using data from Thanos Query. It provides distributed rule evaluation with high availability and multi-tenancy support.
+The `ThanosRuler` CRD manages the Thanos Ruler component, which evaluates Prometheus recording and alerting rules using data from Thanos Query and can send alerts to Alertmanager. It provides distributed rule evaluation with high availability and multi-tenancy support.
 
 ## Overview
 
-ThanosRuler performs several key functions:
+Thanos Ruler performs several key functions:
 
 - **Rule Evaluation**: Executes Prometheus recording and alerting rules at regular intervals
 - **Alert Generation**: Sends alerts to Alertmanager based on rule evaluation results

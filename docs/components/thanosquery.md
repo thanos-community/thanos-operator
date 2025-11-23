@@ -1,6 +1,6 @@
 # ThanosQuery
 
-The `ThanosQuery` CRD provides a global view across all Thanos data sources through the StoreAPI. It automatically discovers and connects to Store API endpoints and optionally deploys a Query Frontend for improved performance.
+The `ThanosQuery` CRD manages the Thanos Querier which provides a global PromQL query view across all types of Thanos data sources through the StoreAPI. It automatically discovers and connects to Store API endpoints and optionally can deploy a Query Frontend for improved query response times.
 
 ## Overview
 

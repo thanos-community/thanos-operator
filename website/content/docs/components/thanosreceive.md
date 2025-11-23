@@ -8,13 +8,13 @@ draft: false
 description: Documentation for Thanos Operator components
 ---
 
-The `ThanosReceive` CRD manages the ingestion of metrics via Prometheus remote-write protocol. It deploys and configures both router and ingester components to handle metric ingestion at scale.
+The `ThanosReceive` CRD manages Thanos Receive hashrings for the ingestion of metrics via Prometheus Remote Write protocol.
+
+It deploys Receiver in split mode and configures both router and ingester components to handle metric ingestion at scale, and has the ability to specify multiple hashrings.
 
 ## Overview
 
-ThanosReceive consists of two main components:
-
-- **Router**: Routes incoming remote-write requests to appropriate ingesters based on hashring configuration
+- **Router**: Routes incoming Remote Write to appropriate ingesters based on hashring configuration
 - **Ingesters**: Store metrics in local TSDB and upload blocks to object storage
 
 ## Architecture

@@ -1,10 +1,10 @@
 # ThanosCompact
 
-The `ThanosCompact` CRD manages the Thanos Compactor component, which handles data compaction, downsampling, and retention management for object storage blocks. It's essential for maintaining optimal storage efficiency and query performance over time.
+The `ThanosCompact` CRD manages the Thanos Compactor component, which handles data compaction, downsampling, and retention management for TSDB blocks uploaded to object storage. It's essential for maintaining optimal storage efficiency and query performance over time.
 
 ## Overview
 
-ThanosCompact performs several critical functions:
+Thanos Compact performs several critical functions:
 
 - **Block Compaction**: Combines smaller blocks into larger ones to reduce metadata overhead
 - **Downsampling**: Creates lower-resolution data for faster long-term queries
