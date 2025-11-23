@@ -4,17 +4,17 @@
 [build.environment]
   NODE_VERSION = "24.11.1"
   NPM_VERSION = "11.6.2"
-  # HUGO_VERSION = "..." is set by bingo which allows reproducible local environment.
+  HUGO_VERSION = "0.152.2"
   GO_VERSION = "1.25.3"
 
 [context.production]
-  command = "(env && make website) || (sleep 30; false)"
+  command = "(env && make website-netlify) || (sleep 30; false)"
 
 [context.deploy-preview]
-  command = "(env && make website WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
+  command = "(env && make website-netlify WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
 
 [context.branch-deploy]
-  command = "(env && make website WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
+  command = "(env && make website-netlify WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
 
 # Redirects and rewrites — https://docs.netlify.com/routing/redirects/#syntax-for-the-netlify-configuration-file
 
