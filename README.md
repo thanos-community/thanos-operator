@@ -1,3 +1,5 @@
+<p align="center"><img src="./logo_full.png" height="200" alt="Thanos Operator Logo"></p>
+
 # Thanos Operator
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/thanos-community/thanos-operator)](https://goreportcard.com/report/github.com/thanos-community/thanos-operator) [![Go Code reference](https://img.shields.io/badge/code%20reference-go.dev-darkblue.svg)](https://pkg.go.dev/github.com/thanos-community/thanos-operator?tab=subdirectories) [![Static Badge](https://img.shields.io/badge/join_slack-%23thanos_operator-green)](https://cloud-native.slack.com/archives/C080V0HNV8W)
@@ -6,7 +8,7 @@
 
 > [!NOTE]
 >
-> This operator is still a work in progress and does not provide API guarantees yet.
+> This operator is still a work in progress so APIs are in alpha state.
 
 ## Overview
 
@@ -107,7 +109,7 @@ So the Thanos Operator binary and CRDs have flags to disable these using feature
 Requirements to build, and test the project,
 
 ```
-Go 1.22+
+Go 1.24+
 Linux or macOS
 KinD 
 kubectl
@@ -142,3 +144,7 @@ EXCLUDE_COMPACT=true EXCLUDE_QUERY=true EXCLUDE_RULER=true EXCLUDE_RECEIVE=true 
 ## Initial Authors
 
 [@philipgough](https://github.com/PhilipGough) [@saswatamcode](https://github.com/saswatamcode)
+
+## Logos and Artwork 
+
+[@sjcox-rh](https://github.com/sjcox-rh)

@@ -1,0 +1,2 @@
+baseurl = "https://thanos-operator.dev"
+canonifyURLs = true
