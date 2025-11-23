@@ -323,13 +323,13 @@ uninstall-example: manifests kustomize ## Uninstall example definitions from K8s
 website-dev: ## Start website development server
 website-dev: $(HUGO)
 	@echo ">> starting website development server"
-	cd website && npm install && $(HUGO) serve
+	cd website && npm install && "$(HUGO)" serve
 
 .PHONY: website
 website: ## Build website for production
 website: $(HUGO)
 	@echo ">> building website for production"
-	cd website && npm install && $(HUGO) -b $(WEBSITE_BASE_URL)
+	cd website && npm install && "$(HUGO)" -b $(WEBSITE_BASE_URL)
 
 ##@ Dependencies
 
