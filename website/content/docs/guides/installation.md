@@ -4,7 +4,6 @@ toc: true
 title: Installation Guide
 summary: Guides a user to install Thanos Operator on their Kubernetes cluster
 slug: installation.md
-lastmod: 2025-11-23 20:03:15.980275169 +0000 GMT
 draft: false
 description: Guides a user to install Thanos Operator on their Kubernetes cluster
 ---
@@ -60,7 +59,7 @@ make install-example
 
 ## Next Steps
 
-After installation, proceed to the [Get Started guide](https://github.com/thanos-community/thanos-operator/blob/main/../get-started) for a quick walkthrough of deploying Thanos components.
+After installation, proceed to the [Get Started guide](../get-started.md/) for a quick walkthrough of deploying Thanos components.
 
 ---
 

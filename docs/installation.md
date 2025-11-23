@@ -51,4 +51,4 @@ make install-example
 
 ## Next Steps
 
-After installation, proceed to the [Get Started guide](../get-started/) for a quick walkthrough of deploying Thanos components.
+After installation, proceed to the [Get Started guide](get-started.md) for a quick walkthrough of deploying Thanos components.

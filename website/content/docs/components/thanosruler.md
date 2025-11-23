@@ -4,7 +4,6 @@ toc: true
 title: ThanosRuler
 summary: Documentation for Thanos Operator components
 slug: thanosruler.md
-lastmod: 2025-11-23 20:03:15.981345797 +0000 GMT
 draft: false
 description: Documentation for Thanos Operator components
 ---

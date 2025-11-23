@@ -10,7 +10,7 @@ Before getting started, ensure you have:
 - `kubectl` configured to access your cluster
 - Basic understanding of [Thanos](https://thanos.io/) concepts
 
-For detailed installation instructions, see the [Installation Guide](../installation/).
+For detailed installation instructions, see the [Installation Guide](installation.md).
 
 ## Installation
 
@@ -79,8 +79,8 @@ Thanos Operator provides the following CRDs:
 
 ## Next Steps
 
-- Explore the [component CRDs](/docs/components/thanosreceive/) and how to use them.
-- Explore the [API Reference](/docs/api-reference/api-reference/) for detailed CRD specifications
-- Review [design decisions](../design/) for architectural insights
+- Explore the [component CRDs](components/thanosreceive.md) and how to use them.
+- Explore the [API Reference](api-reference/api.md) for detailed CRD specifications
+- Review [design decisions](proposals/design.md) for architectural insights
 - Check out example configurations in the project's [`config/samples`](https://github.com/thanos-community/thanos-operator/tree/main/config/samples) directory
-- Learn how to [contribute](/docs/community/contributing/) to the project
+- Learn how to [contribute](../CONTRIBUTING.md) to the project

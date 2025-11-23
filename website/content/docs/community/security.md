@@ -4,7 +4,6 @@ toc: true
 title: Security
 summary: Security guidelines and best practices
 slug: security.md
-lastmod: 2025-11-23 20:03:15.979250666 +0000 GMT
 draft: false
 description: Security guidelines and best practices
 ---

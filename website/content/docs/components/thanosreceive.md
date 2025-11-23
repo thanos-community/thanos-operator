@@ -4,7 +4,6 @@ toc: true
 title: ThanosReceive
 summary: Documentation for Thanos Operator components
 slug: thanosreceive.md
-lastmod: 2025-11-23 20:03:15.98115313 +0000 GMT
 draft: false
 description: Documentation for Thanos Operator components
 ---

@@ -4,7 +4,6 @@ toc: true
 title: ThanosStore
 summary: Documentation for Thanos Operator components
 slug: thanosstore.md
-lastmod: 2025-11-23 20:03:15.981511547 +0000 GMT
 draft: false
 description: Documentation for Thanos Operator components
 ---

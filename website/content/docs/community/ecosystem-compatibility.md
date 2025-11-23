@@ -4,7 +4,6 @@ toc: true
 title: Ecosystem Compatibility
 summary: Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts
 slug: ecosystem-compatibility.md
-lastmod: 2025-11-23 20:03:15.958347691 +0000 GMT
 draft: false
 description: How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem
 ---

@@ -23,7 +23,7 @@ If you encounter any issue or you have an idea to improve, please:
 * If none of the issues are relevant, please add an issue to [GitHub issues](https://github.com/thanos-community/thanos-operator/issues). Please provide any relevant information as suggested by the Issue template.
 * If you have a quick question you might want to also ask on #thanos or #thanos-operator slack channel in the CNCF workspace. We recommend using GitHub issues for issues and feedback, because GitHub issues are trackable.
 
-If you encounter a security vulnerability, please refer to [Reporting a Vulnerability process](https://github.com/thanos-community/thanos-operator/blob/main/SECURITY.md#reporting-a-vulnerability)
+If you encounter a security vulnerability, please refer to [Reporting a Vulnerability process](SECURITY.md#reporting-a-vulnerability)
 
 ## Adding New Features / Components
 

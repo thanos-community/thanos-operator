@@ -4,7 +4,6 @@ toc: true
 title: Thanos Operator Initial Design
 summary: Thanos Operator design proposals
 slug: design.md
-lastmod: 2025-11-23 20:03:15.983127052 +0000 GMT
 draft: false
 description: Thanos Operator design proposals
 ---

@@ -28,7 +28,6 @@ transformations:
         summary: Security guidelines and best practices
         draft: false
         description: Security guidelines and best practices
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: &docBackMatter
       template: |
         Found a typo, inconsistency or missing information in our docs?
@@ -45,7 +44,6 @@ transformations:
         summary: Community standards and enforcement guidelines
         draft: false
         description: Community standards and enforcement guidelines
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "$(EXTERNAL_GLOB_REL)CONTRIBUTING.md"
@@ -59,7 +57,6 @@ transformations:
         summary: Guide to contributing to the Thanos Operator project
         draft: false
         description: Guide to contributing to the Thanos Operator project
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "$(EXTERNAL_GLOB_REL)ECOSYSTEM_COMPATIBILITY.md"
@@ -73,7 +70,6 @@ transformations:
         summary: Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts
         draft: false
         description: How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "README.md"
@@ -103,7 +99,6 @@ transformations:
         draft: false
         weight: 10
         description: Guides a user to get started with Thanos Operator!
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "installation.md"
@@ -117,7 +112,6 @@ transformations:
         draft: false
         weight: 20
         description: Guides a user to install Thanos Operator on their Kubernetes cluster
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "proposals/*.md"
@@ -131,7 +125,6 @@ transformations:
         draft: false
         weight: 130
         description: Thanos Operator design proposals
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter
 
   - glob: "components/*.md"
@@ -145,5 +138,4 @@ transformations:
         draft: false
         weight: 30
         description: Documentation for Thanos Operator components
-        lastmod: "{{ .Origin.LastMod }}"
     backMatter: *docBackMatter

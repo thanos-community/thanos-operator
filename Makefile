@@ -191,7 +191,7 @@ generate-api-docs: $(CRD_REF_DOCS) generate format
 
 .PHONY: check-docs
 check-docs: ## Checks docs against discrepancy with flags, links, white noise.
-check-docs: build generate-api-docs $(MDOX)
+check-docs: build docs $(MDOX)
 	@echo ">> checking docs"
 	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
 	$(call require_clean_work_tree,'run make docs and commit changes')

@@ -4,7 +4,6 @@ toc: true
 title: Code of Conduct
 summary: Community standards and enforcement guidelines
 slug: code-of-conduct.md
-lastmod: 2025-11-23 20:03:15.957411397 +0000 GMT
 draft: false
 description: Community standards and enforcement guidelines
 ---

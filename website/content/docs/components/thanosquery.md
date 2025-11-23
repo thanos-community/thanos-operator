@@ -4,7 +4,6 @@ toc: true
 title: ThanosQuery
 summary: Documentation for Thanos Operator components
 slug: thanosquery.md
-lastmod: 2025-11-23 20:03:15.980993462 +0000 GMT
 draft: false
 description: Documentation for Thanos Operator components
 ---

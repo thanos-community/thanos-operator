@@ -4,7 +4,6 @@ toc: true
 title: ThanosCompact
 summary: Documentation for Thanos Operator components
 slug: thanoscompact.md
-lastmod: 2025-11-23 20:03:15.980798254 +0000 GMT
 draft: false
 description: Documentation for Thanos Operator components
 ---
