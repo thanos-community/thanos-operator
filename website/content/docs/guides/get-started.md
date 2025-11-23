@@ -1,17 +1,17 @@
 ---
-title: "Get Started"
-description: "Guides a user to get started with Thanos Operator!"
-summary: ""
-date: 2023-09-07T16:04:48+02:00
-lastmod: 2023-09-07T16:04:48+02:00
-draft: false
-weight: 810
+weight: 10
 toc: true
+title: Get Started
+summary: ""
 seo:
-  title: "Get started with Thanos Operator!" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: Get started with Thanos Operator!
+lastmod: "2023-09-07T16:04:48+02:00"
+draft: false
+description: Guides a user to get started with Thanos Operator!
+date: "2023-09-07T16:04:48+02:00"
 ---
 
 Thanos Operator is a Kubernetes operator for managing [Thanos](https://thanos.io/) components. It provides custom resources to deploy and configure Thanos components in a cloud-native way.

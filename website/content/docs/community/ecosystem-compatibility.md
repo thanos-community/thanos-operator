@@ -1,17 +1,17 @@
 ---
-title: "Ecosystem Compatibility"
-description: "How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem"
-summary: "Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts"
-date: 2025-01-29T16:00:00+00:00
-lastmod: 2025-01-29T16:00:00+00:00
-draft: false
-weight: 850
+weight: 110
 toc: true
+title: Ecosystem Compatibility
+summary: Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts
 seo:
-  title: "Thanos Operator Ecosystem Compatibility"
-  description: "Comprehensive guide on how Thanos Operator integrates with Prometheus Operator and existing monitoring infrastructure"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Comprehensive guide on how Thanos Operator integrates with Prometheus Operator and existing monitoring infrastructure
+    robots: ""
+    title: Thanos Operator Ecosystem Compatibility
+lastmod: "2025-01-29T16:00:00+00:00"
+draft: false
+description: How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem
+date: "2025-01-29T16:00:00+00:00"
 ---
 
 ## Overview
@@ -194,16 +194,19 @@ Before migration:
 ### Common Integration Issues
 
 **CRD Conflicts**: Ensure both operators are using compatible CRD versions
+
 ```bash
 kubectl get crd | grep -E "(prometheus|thanos)"
 ```
 
 **RBAC Permissions**: Verify cross-operator permissions for shared resources
+
 ```bash
 kubectl auth can-i get servicemonitors --as=system:serviceaccount:thanos-system:thanos-operator
 ```
 
 **Service Discovery**: Debug service discovery configuration
+
 ```bash
 kubectl logs -n thanos-system deployment/thanos-operator-controller-manager
 ```

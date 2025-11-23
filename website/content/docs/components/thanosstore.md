@@ -1,17 +1,17 @@
 ---
-title: "ThanosStore"
-description: "Complete reference for ThanosStore CRD"
-summary: "ThanosStore manages Store Gateway deployments for accessing historical data from object storage"
-date: 2024-01-15T09:00:00+00:00
-lastmod: 2024-01-15T09:00:00+00:00
-draft: false
-weight: 930
+weight: 50
 toc: true
+title: ThanosStore
+summary: ThanosStore manages Store Gateway deployments for accessing historical data from object storage
 seo:
-  title: "ThanosStore CRD Reference"
-  description: "Complete documentation for ThanosStore Custom Resource Definition"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Complete documentation for ThanosStore Custom Resource Definition
+    robots: ""
+    title: ThanosStore CRD Reference
+lastmod: "2024-01-15T09:00:00+00:00"
+draft: false
+description: Complete reference for ThanosStore CRD
+date: "2024-01-15T09:00:00+00:00"
 ---
 
 The `ThanosStore` CRD manages Store Gateway deployments that provide access to historical data stored in object storage. It supports automatic sharding, caching, and performance optimization for large-scale deployments.
@@ -78,4 +78,3 @@ spec:
   labels:
     some-label: xyz
 ```
-

@@ -1,17 +1,17 @@
 ---
-title: "Installation"
-description: "Guide to installing Thanos Operator on your Kubernetes cluster"
-summary: ""
-date: 2023-09-07T16:04:48+02:00
-lastmod: 2023-09-07T16:04:48+02:00
-draft: false
-weight: 805
+weight: 20
 toc: true
+title: Installation
+summary: ""
 seo:
-  title: "Installing Thanos Operator" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: Installing Thanos Operator
+lastmod: "2023-09-07T16:04:48+02:00"
+draft: false
+description: Guide to installing Thanos Operator on your Kubernetes cluster
+date: "2023-09-07T16:04:48+02:00"
 ---
 
 Currently, we offer a single mode of installing Thanos Operator, using a YAML bundle. Alternative methods will be added in the future!

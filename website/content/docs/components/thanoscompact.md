@@ -1,17 +1,17 @@
 ---
-title: "ThanosCompact"
-description: "Complete reference for ThanosCompact CRD"
-summary: "ThanosCompact manages data compaction, downsampling, and retention for Thanos"
-date: 2024-01-15T09:00:00+00:00
-lastmod: 2024-01-15T09:00:00+00:00
-draft: false
-weight: 940
+weight: 70
 toc: true
+title: ThanosCompact
+summary: ThanosCompact manages data compaction, downsampling, and retention for Thanos
 seo:
-  title: "ThanosCompact CRD Reference"
-  description: "Complete documentation for ThanosCompact Custom Resource Definition"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Complete documentation for ThanosCompact Custom Resource Definition
+    robots: ""
+    title: ThanosCompact CRD Reference
+lastmod: "2024-01-15T09:00:00+00:00"
+draft: false
+description: Complete reference for ThanosCompact CRD
+date: "2024-01-15T09:00:00+00:00"
 ---
 
 The `ThanosCompact` CRD manages the Thanos Compactor component, which handles data compaction, downsampling, and retention management for object storage blocks. It's essential for maintaining optimal storage efficiency and query performance over time.

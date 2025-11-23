@@ -1,19 +1,19 @@
 ---
-title: "Community"
-description: "Thanos Operator Community"
-summary: "Community resources and contribution guidelines"
-date: 2023-09-07T16:12:37+02:00
-lastmod: 2023-09-07T16:12:37+02:00
-draft: false
 weight: 900
 toc: true
+title: Community
+summary: Community resources and contribution guidelines
 sidebar:
-  collapsed: true
+    collapsed: true
 seo:
-  title: "" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: ""
+lastmod: "2023-09-07T16:12:37+02:00"
+draft: false
+description: Thanos Operator Community
+date: "2023-09-07T16:12:37+02:00"
 ---
 
 Community resources, contribution guidelines, and ecosystem compatibility information.

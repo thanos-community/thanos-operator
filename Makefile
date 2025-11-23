@@ -15,6 +15,10 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+# Support gsed on OSX (installed via brew), falling back to sed. On Linux
+# systems gsed won't be installed, so will use sed as expected.
+SED ?= $(shell which gsed 2>/dev/null || which sed)
+
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
 # scaffolded by default. However, you might want to replace it to use other
@@ -27,7 +31,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 FILES_TO_FMT      	 ?= $(shell find . -path ./vendor -prune -o -name '*.go' -print)
-MD_FILES_TO_FORMAT = $(filter-out docs/api.md, $(shell find docs -name "*.md")) $(shell ls *.md)
+MD_FILES_TO_FORMAT = $(filter-out website/content/docs/api-reference/api.md, $(shell find website/content/docs -name "*.md")) $(shell ls website/content/docs/*.md)
 MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
 CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
@@ -145,8 +149,27 @@ endef
 .PHONY: generate-api-docs
 generate-api-docs: ## Generate documentation from CRD
 generate-api-docs: $(CRD_REF_DOCS) generate
-	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
-	mv ./docs/monitoring.thanos.io.md ./docs/api.md
+	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./website/content/docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
+	mv ./website/content/docs/api-reference/monitoring.thanos.io.md ./website/content/docs/api-reference/api.md
+	$(SED) -i'' '/^# API Reference */d' ./website/content/docs/api-reference/api.md
+	@tmpfile=$$(mktemp); \
+	printf "%s\n" "---" >> $$tmpfile; \
+	printf "%s\n" 'title: "API Reference"' >> $$tmpfile; \
+	printf "%s\n" 'description: ""' >> $$tmpfile; \
+	printf "%s\n" 'summary: ""' >> $$tmpfile; \
+	printf "%s\n" 'date: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
+	printf "%s\n" 'lastmod: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
+	printf "%s\n" 'draft: false' >> $$tmpfile; \
+	printf "%s\n" 'weight: 80' >> $$tmpfile; \
+	printf "%s\n" 'toc: true' >> $$tmpfile; \
+	printf "%s\n" 'seo:' >> $$tmpfile; \
+	printf "%s\n" '  title: ""' >> $$tmpfile; \
+	printf "%s\n" '  description: ""' >> $$tmpfile; \
+	printf "%s\n" '  canonical: ""' >> $$tmpfile; \
+	printf "%s\n" '  robots: ""' >> $$tmpfile; \
+	printf "%s\n\n" "---" >> $$tmpfile; \
+	cat ./website/content/docs/api-reference/api.md >> $$tmpfile; \
+	mv $$tmpfile ./website/content/docs/api-reference/api.md
 
 .PHONY: docs
 docs: ## Generates docs for all commands, localise links, ensure GitHub format.

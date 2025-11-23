@@ -72,4 +72,7 @@
   pageRef = "/docs/community"
   weight = 40
 
-
+[[sidebar_docs]]
+  name = "Proposals"
+  pageRef = "/docs/proposals"
+  weight = 50

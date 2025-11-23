@@ -1,19 +1,19 @@
 ---
-title: "API Reference"
-description: "Thanos Operator API Reference"
-summary: "Complete API Reference for Thanos Operator"
-date: 2023-09-07T16:12:37+02:00
-lastmod: 2023-09-07T16:12:37+02:00
-draft: false
-weight: 900
+weight: 80
 toc: true
+title: API Reference
+summary: Complete API Reference for Thanos Operator
 sidebar:
-  collapsed: true
+    collapsed: true
 seo:
-  title: "" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: ""
+lastmod: "2023-09-07T16:12:37+02:00"
+draft: false
+description: Thanos Operator API Reference
+date: "2023-09-07T16:12:37+02:00"
 ---
 
-Complete API reference documentation for the Thanos Operator.
+

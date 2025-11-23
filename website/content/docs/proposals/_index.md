@@ -1,17 +1,19 @@
 ---
-weight: 999
+weight: 800
 toc: true
-title: Docs
+title: Proposals
 summary: ""
+sidebar:
+    collapsed: true
 seo:
     canonical: ""
     description: ""
     robots: ""
     title: ""
-lastmod: "2023-09-07T16:12:03+02:00"
+lastmod: "2023-09-07T16:06:50+02:00"
 draft: false
 description: ""
-date: "2023-09-07T16:12:03+02:00"
+date: "2023-09-07T16:06:50+02:00"
 ---
 
 

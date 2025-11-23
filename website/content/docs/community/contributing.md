@@ -1,17 +1,17 @@
 ---
-title: "Contributing"
-description: "Guide to contributing to the Thanos Operator project"
-summary: ""
-date: 2023-09-07T16:04:48+02:00
-lastmod: 2023-09-07T16:04:48+02:00
-draft: false
-weight: 820
+weight: 90
 toc: true
+title: Contributing
+summary: ""
 seo:
-  title: "Contributing to Thanos Operator" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: Contributing to Thanos Operator
+lastmod: "2023-09-07T16:04:48+02:00"
+draft: false
+description: Guide to contributing to the Thanos Operator project
+date: "2023-09-07T16:04:48+02:00"
 ---
 
 This document explains the process of contributing to the Thanos Operator project.

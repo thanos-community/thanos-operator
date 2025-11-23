@@ -1,17 +1,17 @@
 ---
-title: "ThanosQuery"
-description: "Complete reference for ThanosQuery CRD"
-summary: "ThanosQuery provides federated querying across all Thanos data sources"
-date: 2024-01-15T09:00:00+00:00
-lastmod: 2024-01-15T09:00:00+00:00
-draft: false
-weight: 920
+weight: 40
 toc: true
+title: ThanosQuery
+summary: ThanosQuery provides federated querying across all Thanos data sources
 seo:
-  title: "ThanosQuery CRD Reference"
-  description: "Complete documentation for ThanosQuery Custom Resource Definition"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Complete documentation for ThanosQuery Custom Resource Definition
+    robots: ""
+    title: ThanosQuery CRD Reference
+lastmod: "2024-01-15T09:00:00+00:00"
+draft: false
+description: Complete reference for ThanosQuery CRD
+date: "2024-01-15T09:00:00+00:00"
 ---
 
 The `ThanosQuery` CRD provides a global view across all Thanos data sources through the StoreAPI. It automatically discovers and connects to Store API endpoints and optionally deploys a Query Frontend for improved performance.
@@ -89,4 +89,3 @@ spec:
     replicas: 2
   replicas: 1
 ```
-

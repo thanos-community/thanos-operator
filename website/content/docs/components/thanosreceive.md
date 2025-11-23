@@ -1,17 +1,17 @@
 ---
-title: "ThanosReceive"
-description: "Complete reference for ThanosReceive CRD"
-summary: "ThanosReceive manages metrics ingestion and routing in Thanos"
-date: 2024-01-15T09:00:00+00:00
-lastmod: 2024-01-15T09:00:00+00:00
-draft: false
-weight: 910
+weight: 30
 toc: true
+title: ThanosReceive
+summary: ThanosReceive manages metrics ingestion and routing in Thanos
 seo:
-  title: "ThanosReceive CRD Reference"
-  description: "Complete documentation for ThanosReceive Custom Resource Definition"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Complete documentation for ThanosReceive Custom Resource Definition
+    robots: ""
+    title: ThanosReceive CRD Reference
+lastmod: "2024-01-15T09:00:00+00:00"
+draft: false
+description: Complete reference for ThanosReceive CRD
+date: "2024-01-15T09:00:00+00:00"
 ---
 
 The `ThanosReceive` CRD manages the ingestion of metrics via Prometheus remote-write protocol. It deploys and configures both router and ingester components to handle metric ingestion at scale.

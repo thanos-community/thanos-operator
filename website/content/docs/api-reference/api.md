@@ -5,13 +5,13 @@ summary: ""
 date: 2023-09-07T16:13:18+02:00
 lastmod: 2023-09-07T16:13:18+02:00
 draft: false
-weight: 910
+weight: 80
 toc: true
 seo:
-  title: "" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+  title: ""
+  description: ""
+  canonical: ""
+  robots: ""
 ---
 
 
@@ -326,6 +326,40 @@ _Appears in:_
 | `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
+#### GRPCCompression
+
+_Underlying type:_ _string_
+
+GRPCCompression defines the compression algorithm for gRPC communication.
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+
+| Field | Description |
+| --- | --- |
+| `none` | GRPCCompressionNone disables gRPC compression.<br /> |
+| `snappy` | GRPCCompressionSnappy enables Snappy compression for gRPC.<br /> |
+
+
+#### HashringPolicy
+
+_Underlying type:_ _string_
+
+HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
+
+
+
+_Appears in:_
+- [RouterSpec](#routerspec)
+
+| Field | Description |
+| --- | --- |
+| `static` | HashringPolicyStatic is the default hashring policy.<br />This type of hashring is fixed in size based on the input of the IngesterHashringSpec.Replicas field.<br /> |
+| `dynamic` | HashringPolicyDynamic is a dynamic hashring policy.<br />This type of hashring is dynamic and whilst it is based on the IngesterHashringSpec.Replicas field,<br />it will remove members that become unavailable due to voluntary disruptions (e.g rolling updates, scale down, etc).<br /> |
+
+
 #### InMemoryCacheConfig
 
 
@@ -390,11 +424,12 @@ _Appears in:_
 | `replicas` _integer_ | Replicas is the number of replicas/members of the hashring to add to the Thanos Receive StatefulSet. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `tsdbConfig` _[TSDBConfig](#tsdbconfig)_ | TSDB configuration for the ingestor. |  | Required: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for the hashring. |  | Optional: \{\} <br /> |
-| `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Receive StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Receive StatefulSets. |  | Required: \{\} <br /> |
 | `tenancyConfig` _[TenancyConfig](#tenancyconfig)_ | TenancyConfig is the configuration for the tenancy options. |  | Optional: \{\} <br /> |
 | `asyncForwardWorkerCount` _integer_ | AsyncForwardWorkerCount is the number of concurrent workers processing forwarding of remote-write requests. | 5 | Optional: \{\} <br /> |
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  | Optional: \{\} <br /> |
 | `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `grpcCompression` _[GRPCCompression](#grpccompression)_ | GRPCCompression defines the compression algorithm for gRPC communication. | snappy | Enum: [none snappy] <br />Optional: \{\} <br /> |
 
 
 #### IngesterSpec
@@ -438,6 +473,11 @@ _Appears in:_
 - [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
 
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the referent.<br />This field is effectively required, but due to backwards compatibility is<br />allowed to be empty. Instances of this type with an empty value here are<br />almost certainly wrong.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names |  |  |
+| `key` _string_ | The key of the secret to select from.  Must be a valid secret key. |  |  |
+| `optional` _boolean_ | Specify whether the Secret or its key must be defined |  |  |
 
 
 #### PodDisruptionBudgetConfig
@@ -500,6 +540,23 @@ _Appears in:_
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
 
 
+#### ReplicationProtocol
+
+_Underlying type:_ _string_
+
+ReplicationProtocol defines the protocol for remote write replication.
+
+
+
+_Appears in:_
+- [RouterSpec](#routerspec)
+
+| Field | Description |
+| --- | --- |
+| `grpc` | ReplicationProtocolGRPC is the default gRPC replication protocol.<br /> |
+| `capnproto` | ReplicationProtocolCapnProto is the Cap'n Proto based replication protocol.<br /> |
+
+
 #### RetentionResolutionConfig
 
 
@@ -544,6 +601,8 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the router components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of router replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `replicationFactor` _integer_ | ReplicationFactor is the replication factor for the router. | 1 | Enum: [1 3 5] <br />Required: \{\} <br /> |
+| `replicationProtocol` _[ReplicationProtocol](#replicationprotocol)_ | ReplicationProtocol is the protocol for remote write replication. | grpc | Enum: [grpc capnproto] <br />Optional: \{\} <br /> |
+| `hashringPolicy` _[HashringPolicy](#hashringpolicy)_ | HashringPolicy defines the policy for how the hashring is built and maintained at runtime. | static | Enum: [static dynamic] <br />Optional: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set and forwarded by the router to the ingesters. | \{ receive:true \} | MinProperties: 1 <br />Required: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
@@ -662,6 +721,26 @@ _Appears in:_
 | `currentReplicas` _integer_ | currentReplicas is the number of Pods created by the StatefulSet. |  |  |
 
 
+#### StorageConfiguration
+
+
+
+StorageConfiguration represents the configuration options for a PVC used by a Thanos component
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosRulerSpec](#thanosrulerspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `size` _[StorageSize](#storagesize)_ | Size is the size of the PV storage to be used by a Thanos component. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storageClass` _string_ | StorageClass is the name of the storage class to be used. If specified,<br />it will use the default storage class. |  | Optional: \{\} <br /> |
+
+
 #### StorageSize
 
 _Underlying type:_ _string_
@@ -673,9 +752,7 @@ _Validation:_
 
 _Appears in:_
 - [InMemoryCacheConfig](#inmemorycacheconfig)
-- [IngesterHashringSpec](#ingesterhashringspec)
-- [ThanosCompactSpec](#thanoscompactspec)
-- [ThanosStoreSpec](#thanosstorespec)
+- [StorageConfiguration](#storageconfiguration)
 
 
 
@@ -822,7 +899,7 @@ _Appears in:_
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Compact component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the object storage configuration for the compact component. |  | Required: \{\} <br /> |
-| `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Compact StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Compact StatefulSets. |  | Required: \{\} <br /> |
 | `retentionConfig` _[RetentionResolutionConfig](#retentionresolutionconfig)_ | RetentionConfig is the retention configuration for the compact component. |  | Required: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `blockViewerGlobalSync` _[BlockViewerGlobalSyncConfig](#blockviewerglobalsyncconfig)_ | BlockViewerGlobalSync is the configuration for syncing the blocks between local and remote view for /global Block Viewer UI. |  | Optional: \{\} <br /> |
@@ -1119,7 +1196,7 @@ _Appears in:_
 | `evaluationInterval` _[Duration](#duration)_ | EvaluationInterval is the default interval at which rules are evaluated. | 1m | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `alertLabelDrop` _string array_ | Labels to drop before Ruler sends alerts to alertmanager. |  | Optional: \{\} <br /> |
 | `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
-| `storageSize` _string_ | StorageSize is the size of the storage to be used by the Thanos Ruler StatefulSet. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
 | `prometheusRuleSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler. | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
@@ -1223,7 +1300,7 @@ _Appears in:_
 | `replicas` _integer_ | Replicas is the number of store or store shard replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |
-| `storageSize` _[StorageSize](#storagesize)_ | StorageSize is the size of the storage to be used by the Thanos Store StatefulSets. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Store StatefulSets. |  | Required: \{\} <br /> |
 | `ignoreDeletionMarksDelay` _[Duration](#duration)_ | Duration after which the blocks marked for deletion will be filtered out while fetching blocks.<br />The idea of ignore-deletion-marks-delay is to ignore blocks that are marked for deletion with some delay.<br />This ensures store can still serve blocks that are meant to be deleted but do not have a replacement yet.<br />If delete-delay duration is provided to compactor or bucket verify component, it will upload deletion-mark.json<br />file to mark after what duration the block should be deleted rather than deleting the block straight away. | 24h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `indexCacheConfig` _[CacheConfig](#cacheconfig)_ | IndexCacheConfig allows configuration of the index cache.<br />See format details: https://thanos.io/tip/components/store.md/#index-cache |  | Optional: \{\} <br /> |
 | `cachingBucketConfig` _[CacheConfig](#cacheconfig)_ | CachingBucketConfig allows configuration of the caching bucket.<br />See format details: https://thanos.io/tip/components/store.md/#caching-bucket |  | Optional: \{\} <br /> |

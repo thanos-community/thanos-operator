@@ -1,17 +1,17 @@
 ---
-title: "Thanos Community Code of Conduct"
-description: "Thanos Community Code of Conduct"
-summary: "Community standards and enforcement guidelines"
-date: 2023-09-07T16:12:37+02:00
-lastmod: 2023-09-07T16:12:37+02:00
-draft: false
-weight: 920
+weight: 100
 toc: true
+title: Thanos Community Code of Conduct
+summary: Community standards and enforcement guidelines
 seo:
-  title: "" # custom title (optional)
-  description: "" # custom description (recommended)
-  canonical: "" # custom canonical URL (optional)
-  robots: "" # custom robot tags (optional)
+    canonical: ""
+    description: ""
+    robots: ""
+    title: ""
+lastmod: "2023-09-07T16:12:37+02:00"
+draft: false
+description: Thanos Community Code of Conduct
+date: "2023-09-07T16:12:37+02:00"
 ---
 
 Thanos follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md). Additionally our team members can be contacted directly for code of conduct abuse, as described below.

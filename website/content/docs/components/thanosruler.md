@@ -1,17 +1,17 @@
 ---
-title: "ThanosRuler"
-description: "Complete reference for ThanosRuler CRD"
-summary: "ThanosRuler manages rule evaluation, alerting, and recording rules for Thanos"
-date: 2024-01-15T09:00:00+00:00
-lastmod: 2024-01-15T09:00:00+00:00
-draft: false
-weight: 950
+weight: 60
 toc: true
+title: ThanosRuler
+summary: ThanosRuler manages rule evaluation, alerting, and recording rules for Thanos
 seo:
-  title: "ThanosRuler CRD Reference"
-  description: "Complete documentation for ThanosRuler Custom Resource Definition"
-  canonical: ""
-  robots: ""
+    canonical: ""
+    description: Complete documentation for ThanosRuler Custom Resource Definition
+    robots: ""
+    title: ThanosRuler CRD Reference
+lastmod: "2024-01-15T09:00:00+00:00"
+draft: false
+description: Complete reference for ThanosRuler CRD
+date: "2024-01-15T09:00:00+00:00"
 ---
 
 The `ThanosRuler` CRD manages the Thanos Ruler component, which evaluates Prometheus recording and alerting rules using data from Thanos Query. It provides distributed rule evaluation with high availability and multi-tenancy support.
