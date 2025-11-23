@@ -180,6 +180,7 @@ generate-api-docs: $(CRD_REF_DOCS) generate format
 	printf "%s\n" 'title: "API Reference"' >> $$tmpfile; \
 	printf "%s\n" 'description: ""' >> $$tmpfile; \
 	printf "%s\n" 'summary: ""' >> $$tmpfile; \
+	printf "%s\n" 'slug: api.md' >> $$tmpfile; \
 	printf "%s\n" 'date: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
 	printf "%s\n" 'lastmod: 2023-09-07T16:13:18+02:00' >> $$tmpfile; \
 	printf "%s\n" 'draft: false' >> $$tmpfile; \
