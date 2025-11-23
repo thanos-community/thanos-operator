@@ -9,11 +9,7 @@
     "url": "https://github.com/thuliteio/doks.git"
   },
   "scripts": {
-    "create": "hugo new",
-    "dev": "hugo server --disableFastRender --noHTTPCache",
-    "format": "prettier **/** -w -c",
-    "build": "hugo --minify --gc",
-    "preview": "vite preview --outDir public"
+    "format": "prettier **/** -w -c"
   },
   "dependencies": {
     "@thulite/doks-core": "^1.8.3",

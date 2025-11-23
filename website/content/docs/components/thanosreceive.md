@@ -37,7 +37,7 @@ ThanosReceive consists of two main components:
                     ┌─────────────────────┐
                     │  ThanosReceive      │
                     │  Router             │
-                    │  (Load Balancer)    │
+                    │  (route RW requests)│
                     └─────────┬───────────┘
                               │
               ┌───────────────┼───────────────┐
@@ -71,7 +71,8 @@ spec:
       key: thanos.yaml
     hashrings:
       - name: blue
-        storageSize: "100Mi"
+        storage:
+          size: "100Mi"
         tsdbConfig:
           retention: 2h
         tenancyConfig:
@@ -80,7 +81,8 @@ spec:
         externalLabels:
           replica: $(POD_NAME)
       - name: green
-        storageSize: "100Mi"
+        storage:
+          size: "100Mi"
         tsdbConfig:
           retention: 2h
         tenancyConfig:

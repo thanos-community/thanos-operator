@@ -1,5 +1,7 @@
 include .bingo/Variables.mk
 
+WEBSITE_BASE_URL ?= https://thanos-operator.dev
+
 # Image URL to use all building/pushing image targets
 DOCKER_IMAGE_REPO ?= quay.io/thanos/thanos-operator
 DOCKER_IMAGE_TAG  ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
@@ -319,13 +321,15 @@ uninstall-example: manifests kustomize ## Uninstall example definitions from K8s
 
 .PHONY: website-dev
 website-dev: ## Start website development server
+website-dev: $(HUGO)
 	@echo ">> starting website development server"
-	cd website && npm ci && npm run dev
+	cd website && npm install && $(HUGO) serve
 
 .PHONY: website
 website: ## Build website for production
+website: $(HUGO)
 	@echo ">> building website for production"
-	cd website && npm ci && npm run build
+	cd website && npm install && $(HUGO) -b $(WEBSITE_BASE_URL)
 
 ##@ Dependencies
 

@@ -41,6 +41,12 @@ $(GOLANGCI_LINT): $(BINGO_DIR)/golangci-lint.mod
 	@echo "(re)installing $(GOBIN)/golangci-lint-v1.63.4"
 	@cd $(BINGO_DIR) && GOWORK=off $(GO) build -mod=mod -modfile=golangci-lint.mod -o=$(GOBIN)/golangci-lint-v1.63.4 "github.com/golangci/golangci-lint/cmd/golangci-lint"
 
+HUGO := $(GOBIN)/hugo-v0.152.2
+$(HUGO): $(BINGO_DIR)/hugo.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/hugo-v0.152.2"
+	@cd $(BINGO_DIR) && CGO_ENABLED=1 $(GO) build -tags=extended,withdeploy -mod=mod -modfile=hugo.mod -o=$(GOBIN)/hugo-v0.152.2 "github.com/gohugoio/hugo"
+
 MDOX := $(GOBIN)/mdox-v0.9.1-0.20220713110358-25b9abcf90a0
 $(MDOX): $(BINGO_DIR)/mdox.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.

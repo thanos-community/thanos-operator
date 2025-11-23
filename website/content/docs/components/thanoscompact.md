@@ -31,37 +31,37 @@ ThanosCompact performs several critical functions:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        Object Storage                               │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │ Block A │ │ Block B │ │ Block C │ │ Block D │ │ Block E │  ...  │
-│  │ (2h res)│ │ (2h res)│ │ (5m res)│ │ (1h res)│ │ (2h res)│       │
-│  │ Tenant1 │ │ Tenant1 │ │ Tenant2 │ │ Tenant2 │ │ Tenant1 │       │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘       │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐        │
+│  │ Block A │ │ Block B │ │ Block C │ │ Block D │ │ Block E │  ...   │
+│  │(raw res)│ │(raw res)│ │(raw res)│ │(raw res)│ │(raw res)│        │
+│  │ Tenant1 │ │ Tenant1 │ │ Tenant2 │ │ Tenant2 │ │ Tenant1 │        │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘        │
 └─────────────────┬───────────────────────────────────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    ThanosCompact Shards                             │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                   │
-│  │   Shard 1   │ │   Shard 2   │ │   Shard 3   │                   │
-│  │  Tenant1    │ │  Tenant2    │ │  Tenant3    │                   │
-│  │             │ │             │ │             │                   │
-│  │ ┌─────────┐ │ │ ┌─────────┐ │ │ ┌─────────┐ │                   │
-│  │ │Compact  │ │ │ │Compact  │ │ │ │Compact  │ │                   │
-│  │ │Downsamp.│ │ │ │Downsamp.│ │ │ │Downsamp.│ │                   │
-│  │ │Retention│ │ │ │Retention│ │ │ │Retention│ │                   │
-│  │ └─────────┘ │ │ └─────────┘ │ │ └─────────┘ │                   │
-│  └─────────────┘ └─────────────┘ └─────────────┘                   │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                    │
+│  │   Shard 1   │ │   Shard 2   │ │   Shard 3   │                    │
+│  │  Tenant1    │ │  Tenant2    │ │  Tenant3    │                    │
+│  │             │ │             │ │             │                    │
+│  │ ┌─────────┐ │ │ ┌─────────┐ │ │ ┌─────────┐ │                    │
+│  │ │Compact  │ │ │ │Compact  │ │ │ │Compact  │ │                    │
+│  │ │Downsamp.│ │ │ │Downsamp.│ │ │ │Downsamp.│ │                    │
+│  │ │Retention│ │ │ │Retention│ │ │ │Retention│ │                    │
+│  │ └─────────┘ │ │ └─────────┘ │ │ └─────────┘ │                    │
+│  └─────────────┘ └─────────────┘ └─────────────┘                    │
 └─────────────────┬───────────────────────────────────────────────────┘
                   │
                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Optimized Object Storage                         │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                   │
-│  │ Compacted   │ │ Downsampled │ │ Retention   │                   │
-│  │ Blocks      │ │ Blocks      │ │ Applied     │                   │
-│  │ (Larger)    │ │ (5m, 1h res)│ │ (Old data   │                   │
-│  │             │ │             │ │  removed)   │                   │
-│  └─────────────┘ └─────────────┘ └─────────────┘                   │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                    │
+│  │ Compacted   │ │ Downsampled │ │ Retention   │                    │
+│  │ Blocks      │ │ Blocks      │ │ Applied     │                    │
+│  │ (Larger)    │ │ (5m, 1h res)│ │ (Old data   │                    │
+│  │             │ │             │ │  removed)   │                    │
+│  └─────────────┘ └─────────────┘ └─────────────┘                    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -75,7 +75,8 @@ kind: ThanosCompact
 metadata:
   name: example-compact
 spec:
-  storageSize: "100Mi"
+  storage:
+    size: "100Mi"
   shardingConfig:
     - shardName: example
       externalLabelSharding:

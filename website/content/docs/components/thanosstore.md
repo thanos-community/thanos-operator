@@ -73,7 +73,8 @@ spec:
   shardingStrategy:
     shards: 2
     type: block
-  storageSize: 1Gi
+  storage:
+    size: 1Gi
   ignoreDeletionMarksDelay: 24h
   labels:
     some-label: xyz

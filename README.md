@@ -8,7 +8,7 @@
 
 > [!NOTE]
 >
-> This operator is still a work in progress and does not provide API guarantees yet.
+> This operator is still a work in progress so APIs are in alpha state.
 
 ## Overview
 

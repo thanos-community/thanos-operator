@@ -70,6 +70,7 @@ spec:
   ruleConfigSelector:
     matchLabels:
       operator.thanos.io/rule-file: "true"
+      operator.thanos.io/tenant: "thanos"
   queryLabelSelector:
     matchLabels:
       operator.thanos.io/query-api: "true"
@@ -82,7 +83,8 @@ spec:
     rule_replica: "$(NAME)"
   evaluationInterval: 1m
   retention: 2h
-  storageSize: 1Gi
+  storage:
+    size: 1Gi
   logFormat: logfmt
   imagePullPolicy: IfNotPresent
 ```

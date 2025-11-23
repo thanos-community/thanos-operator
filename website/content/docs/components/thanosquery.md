@@ -35,7 +35,7 @@ ThanosQuery consists of two main components:
                                  │ PromQL Queries
                                  ▼
                     ┌─────────────────────┐
-                    │  Thanos Query        │
+                    │  Thanos Query       │
                     │  Frontend           │
                     │  (Optional)         │
                     └─────────┬───────────┘

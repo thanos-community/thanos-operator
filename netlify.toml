@@ -1,20 +1,20 @@
 [build]
-  publish = "public"
-  functions = "functions"
-  command = "npm run build"
+  publish = "website/public"
 
 [build.environment]
-  NODE_VERSION = "22.17.0"
-  NPM_VERSION = "10.9.2"
-  HUGO_VERSION = "0.148.1"
+  NODE_VERSION = "24.11.1"
+  NPM_VERSION = "11.6.2"
+  # HUGO_VERSION = "..." is set by bingo which allows reproducible local environment.
+  GO_VERSION = "1.25.3"
 
-[dev]
-  framework = "#custom"
-  command = "npm run dev"
-  targetPort = 1313
-  port = 8888
-  publish = "public"
-  autoLaunch = false
+[context.production]
+  command = "(env && make website) || (sleep 30; false)"
+
+[context.deploy-preview]
+  command = "(env && make website WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
+
+[context.branch-deploy]
+  command = "(env && make website WEBSITE_BASE_URL=${DEPLOY_PRIME_URL}) || (sleep 30; false)"
 
 # Redirects and rewrites — https://docs.netlify.com/routing/redirects/#syntax-for-the-netlify-configuration-file
 
@@ -33,3 +33,7 @@
     public,
     max-age=31536000'''
     Access-Control-Allow-Origin = "*"
+
+
+
+

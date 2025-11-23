@@ -1,2 +1,2 @@
-baseurl = "https://thanos-operator.dev/"
+baseurl = "https://thanos-operator.dev"
 canonifyURLs = true
