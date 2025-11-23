@@ -331,11 +331,6 @@ website: $(HUGO)
 	@echo ">> building website for production"
 	@cd website && npm install && "$(HUGO)" -b $(WEBSITE_BASE_URL)
 
-.PHONY: website-netlify
-website-netlify: ## Build website for production
-	@echo ">> building website for production"
-	@cd website && npm install && hugo -b $(WEBSITE_BASE_URL)
-
 ##@ Dependencies
 
 ## Location to install dependencies to
