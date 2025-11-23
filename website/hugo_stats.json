@@ -26,6 +26,7 @@
       "h5",
       "head",
       "header",
+      "hr",
       "html",
       "img",
       "input",
@@ -247,6 +248,7 @@
       "alternatives",
       "architecture",
       "attribution",
+      "authors",
       "available-custom-resources",
       "basic-configuration",
       "best-practices",
@@ -323,6 +325,7 @@
       "queryfrontendspec",
       "quick-start-example",
       "replicationprotocol",
+      "reporting-a-vulnerability",
       "resource-naming",
       "resource-types",
       "retentionresolutionconfig",
@@ -381,6 +384,8 @@
       "validation-steps",
       "verify-installation",
       "webconfig",
+      "what-we-dont-do-yet",
+      "what-you-can-expect",
       "why"
     ]
   }

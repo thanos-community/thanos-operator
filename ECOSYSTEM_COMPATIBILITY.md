@@ -1,13 +1,4 @@
----
-weight: 110
-toc: true
-title: Ecosystem Compatibility
-summary: Learn how Thanos Operator works alongside Prometheus Operator and other monitoring tools without conflicts
-slug: ecosystem-compatibility.md
-lastmod: 2025-11-23 20:03:15.958347691 +0000 GMT
-draft: false
-description: How Thanos Operator integrates with existing Prometheus Operator deployments and the broader monitoring ecosystem
----
+# Ecosystem Compatibility
 
 ## Overview
 
@@ -229,7 +220,3 @@ kubectl logs -n thanos-system deployment/thanos-operator-controller-manager | gr
 - **Flexible deployment**: Choose components based on specific needs
 
 The Thanos Operator's ecosystem-first design ensures that adopting Thanos doesn't disrupt your existing monitoring infrastructure while providing a clear path to enhanced observability capabilities.
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/ECOSYSTEM_COMPATIBILITY.md) :heart:

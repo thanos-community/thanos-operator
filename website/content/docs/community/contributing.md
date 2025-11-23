@@ -2,21 +2,16 @@
 weight: 90
 toc: true
 title: Contributing
-summary: ""
-seo:
-    canonical: ""
-    description: ""
-    robots: ""
-    title: Contributing to Thanos Operator
-lastmod: "2023-09-07T16:04:48+02:00"
+summary: Guide to contributing to the Thanos Operator project
+slug: contributing.md
+lastmod: 2025-11-23 20:03:15.957770773 +0000 GMT
 draft: false
 description: Guide to contributing to the Thanos Operator project
-date: "2023-09-07T16:04:48+02:00"
 ---
 
 This document explains the process of contributing to the Thanos Operator project.
 
-First of all please follow the [Code of Conduct](../thanos-community-code-of-conduct) in all your interactions within the project.
+First of all please follow the [Code of Conduct](../code-of-conduct.md/) in all your interactions within the project.
 
 ## Thanos Philosophy
 
@@ -54,3 +49,7 @@ In the code and documentation prefer non-offensive terminology, for example:
 ## Components/CRDs Naming Architecture
 
 Please follow the upstream conventions used by Thanos and Prometheus Operator projects, when deciding on new names for this project.
+
+---
+
+Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/CONTRIBUTING.md) :heart:

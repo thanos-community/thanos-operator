@@ -1,13 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosReceive
-summary: Documentation for Thanos Operator components
-slug: thanosreceive.md
-lastmod: 2025-11-23 20:03:15.98115313 +0000 GMT
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosReceive
 
 The `ThanosReceive` CRD manages the ingestion of metrics via Prometheus remote-write protocol. It deploys and configures both router and ingester components to handle metric ingestion at scale.
 
@@ -93,7 +84,3 @@ spec:
     replicas: 1
     replicationFactor: 1
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanosreceive.md) :heart:

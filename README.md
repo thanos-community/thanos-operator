@@ -145,6 +145,6 @@ EXCLUDE_COMPACT=true EXCLUDE_QUERY=true EXCLUDE_RULER=true EXCLUDE_RECEIVE=true 
 
 [@philipgough](https://github.com/PhilipGough) [@saswatamcode](https://github.com/saswatamcode)
 
-## Logos and Artwork 
+## Logos and Artwork
 
 [@sjcox-rh](https://github.com/sjcox-rh)

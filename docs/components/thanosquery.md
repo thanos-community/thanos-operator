@@ -1,13 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosQuery
-summary: Documentation for Thanos Operator components
-slug: thanosquery.md
-lastmod: 2025-11-23 20:03:15.980993462 +0000 GMT
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosQuery
 
 The `ThanosQuery` CRD provides a global view across all Thanos data sources through the StoreAPI. It automatically discovers and connects to Store API endpoints and optionally deploys a Query Frontend for improved performance.
 
@@ -84,7 +75,3 @@ spec:
     replicas: 2
   replicas: 1
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanosquery.md) :heart:

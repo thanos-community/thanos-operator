@@ -30,7 +30,7 @@
 
 [[main]]
   name = "Docs"
-  url = "/docs/guides/get-started/"
+  url = "/docs/guides/get-started.md/"
   weight = 10
 
 # [[social]]

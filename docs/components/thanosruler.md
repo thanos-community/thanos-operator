@@ -1,13 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosRuler
-summary: Documentation for Thanos Operator components
-slug: thanosruler.md
-lastmod: 2025-11-23 20:03:15.981345797 +0000 GMT
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosRuler
 
 The `ThanosRuler` CRD manages the Thanos Ruler component, which evaluates Prometheus recording and alerting rules using data from Thanos Query. It provides distributed rule evaluation with high availability and multi-tenancy support.
 
@@ -83,7 +74,3 @@ spec:
   logFormat: logfmt
   imagePullPolicy: IfNotPresent
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanosruler.md) :heart:

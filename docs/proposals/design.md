@@ -1,13 +1,4 @@
----
-weight: 130
-toc: true
-title: Thanos Operator Initial Design
-summary: Thanos Operator design proposals
-slug: design.md
-lastmod: 2025-11-23 20:03:15.983127052 +0000 GMT
-draft: false
-description: Thanos Operator design proposals
----
+# Thanos Operator Initial Design
 
 ## Summary
 
@@ -53,7 +44,7 @@ We propose that there should be a single CRD for Thanos Receive.
 
 **Option One - Split routing and metrics ingest components**
 
-<img src="../../img/ThanosReceive.png" alt="Thanos Receive" width="800"/>
+<img src="../img/ThanosReceive.png" alt="Thanos Receive" width="800"/>
 
 ***“As a developer, I want to be able to spin up Thanos Receive as a remote write sink with minimal configuration and simple documentation.”***
 
@@ -85,7 +76,7 @@ We propose that there should be a single CRD for Thanos Query, as one end of the
 
 **Option One - Endpoint flag-based Auto Service Discovery (always restarts)**
 
-<img src="../../img/ThanosQueryOpt1.png" alt="Endpoint flag-based Auto Service Discovery" width="800"/>
+<img src="../img/ThanosQueryOpt1.png" alt="Endpoint flag-based Auto Service Discovery" width="800"/>
 
 ***“As a developer, I want to be able to spin up Thanos Query as a global view where I can see all my data, both in and out of cluster.”***
 
@@ -109,7 +100,7 @@ While not planned for initial implementation, fields like *Distributed* and *Sha
 
 **Option Two - File-based Auto Service Discovery (only restart for group/strict endpoint)**
 
-<img src="../../img/ThanosQueryOpt2.png" alt="File-based Auto Service Discovery (only restart for group/strict endpoint)" width="800"/>
+<img src="../img/ThanosQueryOpt2.png" alt="File-based Auto Service Discovery (only restart for group/strict endpoint)" width="800"/>
 
 The only point of difference in this implementation is that we are using an SD file for endpoints. This ensures that Query pods don’t need to be restarted unless there is a change in endpoint-group or strict Services.
 
@@ -135,7 +126,7 @@ Same as prior implementation.
 
 #### Proposed Design: Store
 
-<img src="../../img/ThanosStore.png" alt="Store Shard Management" width="800"/>
+<img src="../img/ThanosStore.png" alt="Store Shard Management" width="800"/>
 
 We propose that there should be a single CRD for Thanos StoreGW, representing the long-term aspect of the metrics query path.
 
@@ -166,7 +157,7 @@ We propose that there should be a single CRD for Thanos Compactor. The initial i
 1. Auto-discovery of external labels and shard creation based on those labels.
 2. Time based sharding based on auto-discovery of a compaction backlog.
 
-<img src="../../img/ThanosCompact.png" alt="Thanos Compactor" width="800"/>
+<img src="../img/ThanosCompact.png" alt="Thanos Compactor" width="800"/>
 
 ## Alternatives
 
@@ -181,7 +172,3 @@ We propose that there should be a single CRD for Thanos Compactor. The initial i
 * [No convenient way to setup rules](https://github.com/banzaicloud/thanos-operator/issues/173)
 * A limited amount of tests seems to be in place
 * We’d likely need to make major contributions to make this fit for purpose for us, and given the current level of activity in the project, it might be hard for these to land upstream. Further, the effort for these major contributions are likely to be in the same general size as creating an operator from scratch.
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/proposals/design.md) :heart:

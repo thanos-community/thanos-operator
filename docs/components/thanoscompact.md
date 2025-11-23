@@ -1,13 +1,4 @@
----
-weight: 30
-toc: true
-title: ThanosCompact
-summary: Documentation for Thanos Operator components
-slug: thanoscompact.md
-lastmod: 2025-11-23 20:03:15.980798254 +0000 GMT
-draft: false
-description: Documentation for Thanos Operator components
----
+# ThanosCompact
 
 The `ThanosCompact` CRD manages the Thanos Compactor component, which handles data compaction, downsampling, and retention management for object storage blocks. It's essential for maintaining optimal storage efficiency and query performance over time.
 
@@ -85,7 +76,3 @@ spec:
     fiveMinutes: 30d
     oneHour: 30d
 ```
-
----
-
-Found a typo, inconsistency or missing information in our docs? Help us to improve [Thanos Operator](https://thanos-operator.dev) documentation by proposing a fix [on GitHub here](https://github.com/thanos-community/thanos-operator/edit/main/docs/components/thanoscompact.md) :heart:
