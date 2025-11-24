@@ -12,7 +12,7 @@ require (
 	github.com/prometheus-community/prom-label-proxy v0.12.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.87.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.67.2
+	github.com/prometheus/common v0.67.4
 	github.com/prometheus/prometheus v0.307.3
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v2 v2.4.0
