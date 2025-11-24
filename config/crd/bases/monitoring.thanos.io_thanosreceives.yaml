@@ -5179,6 +5179,14 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              podManagementPolicy:
+                default: OrderedReady
+                description: PodManagementPolicyType defines the policy for creating
+                  pods under a stateful set.
+                enum:
+                - OrderedReady
+                - Parallel
+                type: string
               routerSpec:
                 description: Router is the configuration for the router.
                 properties:

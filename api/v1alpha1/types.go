@@ -114,6 +114,31 @@ type CommonFields struct {
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
+// StatefulSetFields are the options available to all Thanos components.
+// These fields reflect runtime changes to managed StatefulSet resources.
+// +k8s:deepcopy-gen=true
+type StatefulSetFields struct {
+	// +kubebuilder:default:=OrderedReady
+	// +kubebuilder:validation:Optional
+	PodManagementPolicy *PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
+}
+
+// PodManagementPolicyType defines the policy for creating pods under a stateful set.
+// +kubebuilder:validation:Enum=OrderedReady;Parallel
+type PodManagementPolicyType string
+
+const (
+	// OrderedReadyPodManagement will create pods in strictly increasing order on
+	// scale up and strictly decreasing order on scale down, progressing only when
+	// the previous pod is ready or terminated. At most one pod will be changed
+	// at any time.
+	OrderedReadyPodManagement PodManagementPolicyType = "OrderedReady"
+	// ParallelPodManagement will create and delete pods as soon as the stateful set
+	// replica count is changed, and will not wait for pods to be ready or complete
+	// termination.
+	ParallelPodManagement PodManagementPolicyType = "Parallel"
+)
+
 // Additional holds additional configuration for the Thanos components.
 type Additional struct {
 	// Additional arguments to pass to the Thanos components.

@@ -112,7 +112,8 @@
       }
     },
     "serviceName": "",
-    "updateStrategy": {}
+    "updateStrategy": {},
+    "podManagementPolicy": "Parallel"
   },
   "status": {
     "replicas": 0,

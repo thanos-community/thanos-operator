@@ -211,6 +211,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
+			PodManagementPolicy:  appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			VolumeClaimTemplates: vc,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

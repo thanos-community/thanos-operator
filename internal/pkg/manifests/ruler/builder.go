@@ -272,6 +272,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
+			PodManagementPolicy: appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: objectMetaLabels,
