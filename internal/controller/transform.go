@@ -281,13 +281,15 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, clusterDomain string) m
 		}
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
-		if in.Spec.BlockConfig == nil {
+		if in.Spec.BlockConfig == nil && in.Spec.BlockViewerGlobalSync == nil {
 			return nil
 		}
-		opts := &manifestscompact.BlockConfigOptions{
-			BlockDiscoveryStrategy:    ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
-			BlockFilesConcurrency:     in.Spec.BlockConfig.BlockFilesConcurrency,
-			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
+		opts := &manifestscompact.BlockConfigOptions{}
+
+		if in.Spec.BlockConfig != nil {
+			opts.BlockDiscoveryStrategy = ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy))
+			opts.BlockFilesConcurrency = in.Spec.BlockConfig.BlockFilesConcurrency
+			opts.BlockMetaFetchConcurrency = in.Spec.BlockConfig.BlockMetaFetchConcurrency
 		}
 
 		if in.Spec.BlockViewerGlobalSync != nil {
