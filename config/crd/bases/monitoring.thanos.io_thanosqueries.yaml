@@ -40,7 +40,9 @@ spec:
             description: ThanosQuerySpec defines the desired state of ThanosQuery
             properties:
               additionalArgs:
-                description: Additional arguments to pass to the Thanos components.
+                description: |-
+                  Additional arguments to pass to the Thanos components.
+                  An additional argument will override an existing argument provided by the operator if there is a conflict.
                 items:
                   type: string
                 type: array
@@ -4885,7 +4887,9 @@ spec:
                   If you specify this, the operator will create a Query Frontend in front of your query deployment.
                 properties:
                   additionalArgs:
-                    description: Additional arguments to pass to the Thanos components.
+                    description: |-
+                      Additional arguments to pass to the Thanos components.
+                      An additional argument will override an existing argument provided by the operator if there is a conflict.
                     items:
                       type: string
                     type: array
