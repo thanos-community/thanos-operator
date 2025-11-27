@@ -31,6 +31,7 @@
             "name": "thanos",
             "image": "quay.io/thanos/thanos:v0.39.0",
             "args": [
+              "query",
               "--log.level=info",
               "--query.timeout=5m",
               "--query.max-concurrent=20"

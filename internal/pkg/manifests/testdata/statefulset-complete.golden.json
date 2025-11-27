@@ -31,6 +31,7 @@
             "name": "thanos",
             "image": "quay.io/thanos/thanos:v0.39.0",
             "args": [
+              "store",
               "--log.level=info",
               "--store.grpc-series-max-concurrency=20"
             ],
