@@ -40,6 +40,92 @@ func PruneEmptyArgs(args []string) []string {
 	return args
 }
 
+var thanosRepeatableFlags = []string{
+	// Query flags
+	"--query.replica-label",
+	"--query.partition-label",
+	"--selector-label",
+	"--query.telemetry.request-duration-seconds-quantiles",
+	"--query.telemetry.request-samples-quantiles",
+	"--query.telemetry.request-series-seconds-quantiles",
+	"--store.sd-files",
+	"--endpoint",
+	"--endpoint-group",
+	"--endpoint-strict",
+	"--endpoint-group-strict",
+	"--inject-test-addresses",
+	// Rule flags
+	"--label",
+	"--rule-file",
+	"--grpc-query-endpoint",
+	"--query",
+	"--query.sd-files",
+	// Receive flags
+	"--receive.otlp-promote-resource-attributes",
+	// Query Frontend flags
+	"--query-frontend.forward-header",
+}
+
+// MergeArgs merges existing args with additional args, replacing any existing args
+// that have the same flag name. Args should be in the format "--flag=value" or "--flag".
+func MergeArgs(existingArgs, additionalArgs []string) []string {
+	// Prune empty args from inputs
+	existingArgs = PruneEmptyArgs(existingArgs)
+	additionalArgs = PruneEmptyArgs(additionalArgs)
+
+	if len(additionalArgs) == 0 {
+		return existingArgs
+	}
+
+	argMap := make(map[string]string)
+	var orderKeys []string
+
+	// Parse existing args into map
+	for _, arg := range existingArgs {
+		flag := extractFlag(arg)
+		if flag != "" {
+			if _, exists := argMap[flag]; !exists {
+				orderKeys = append(orderKeys, flag)
+			}
+			argMap[flag] = arg
+		}
+	}
+
+	// Parse additional args and override/add
+	for _, arg := range additionalArgs {
+		flag := extractFlag(arg)
+		if flag != "" {
+			if _, exists := argMap[flag]; !exists {
+				orderKeys = append(orderKeys, flag)
+			}
+			argMap[flag] = arg
+		}
+	}
+
+	// Rebuild args slice maintaining order
+	result := make([]string, 0, len(orderKeys))
+	for _, flag := range orderKeys {
+		result = append(result, argMap[flag])
+	}
+
+	// Apply final pruning to ensure no empty args slip through
+	return PruneEmptyArgs(result)
+}
+
+// extractFlag extracts the flag name from an argument string.
+// For "--flag=value" returns "--flag", for "--flag" returns "--flag".
+func extractFlag(arg string) string {
+	if !strings.HasPrefix(arg, "--") {
+		return ""
+	}
+
+	if idx := strings.Index(arg, "="); idx != -1 {
+		return arg[:idx]
+	}
+
+	return arg
+}
+
 // IsGrpcServiceWithLabels returns true if the given object is a gRPC service with required labels.
 // The requiredLabels map is used to match the labels of the object.
 // The function returns false if the object is not a service or if it does not have a gRPC port.
