@@ -259,6 +259,30 @@ func TestMergeArgs(t *testing.T) {
 			additional: []string{"--query.replica-label=instance", "--endpoint=store2"},
 			expected:   []string{"--query.replica-label=replica", "--query.replica-label=instance", "--endpoint=store1", "--endpoint=store2"},
 		},
+		{
+			name:       "preserve binary name first",
+			existing:   []string{"query", "--log.level=info", "--query.timeout=5m"},
+			additional: []string{"--log.level=debug", "--query.max-concurrent=20"},
+			expected:   []string{"query", "--log.level=debug", "--query.timeout=5m", "--query.max-concurrent=20"},
+		},
+		{
+			name:       "preserve binary name with repeatable flags",
+			existing:   []string{"receive", "--query.replica-label=replica", "--log.level=info"},
+			additional: []string{"--query.replica-label=instance", "--log.level=debug"},
+			expected:   []string{"receive", "--query.replica-label=replica", "--query.replica-label=instance", "--log.level=debug"},
+		},
+		{
+			name:       "binary name only",
+			existing:   []string{"compact"},
+			additional: []string{"--log.level=debug", "--compact.concurrency=2"},
+			expected:   []string{"compact", "--log.level=debug", "--compact.concurrency=2"},
+		},
+		{
+			name:       "no binary name in existing args",
+			existing:   []string{"--log.level=info", "--query.timeout=5m"},
+			additional: []string{"--log.level=debug"},
+			expected:   []string{"--log.level=debug", "--query.timeout=5m"},
+		},
 	}
 
 	for _, tt := range tests {

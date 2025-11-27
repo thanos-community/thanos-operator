@@ -79,6 +79,7 @@ func isRepeatableFlag(flag string) bool {
 // MergeArgs merges existing args with additional args. For most flags, additional args
 // replace existing ones with the same flag name. For repeatable flags (listed in
 // thanosRepeatableFlags), additional args are appended rather than replaced.
+// The first argument (if it's not a flag) is preserved as the command name.
 // Args should be in the format "--flag=value" or "--flag".
 func MergeArgs(existingArgs, additionalArgs []string) []string {
 	// Prune empty args from inputs
@@ -89,6 +90,17 @@ func MergeArgs(existingArgs, additionalArgs []string) []string {
 		return existingArgs
 	}
 
+	// Preserve the first argument if it's not a flag (cmd name)
+	var cmdName string
+	var flagArgs []string
+
+	if len(existingArgs) > 0 && !strings.HasPrefix(existingArgs[0], "--") {
+		cmdName = existingArgs[0]
+		flagArgs = existingArgs[1:]
+	} else {
+		flagArgs = existingArgs
+	}
+
 	// For non-repeatable flags, use map for deduplication
 	argMap := make(map[string]string)
 	var orderKeys []string
@@ -96,8 +108,8 @@ func MergeArgs(existingArgs, additionalArgs []string) []string {
 	// For repeatable flags, collect all values
 	repeatableArgs := make(map[string][]string)
 
-	// Parse existing args
-	for _, arg := range existingArgs {
+	// Parse existing flag args (excluding binary name)
+	for _, arg := range flagArgs {
 		flag := extractFlag(arg)
 		if flag != "" {
 			if isRepeatableFlag(flag) {
@@ -136,7 +148,14 @@ func MergeArgs(existingArgs, additionalArgs []string) []string {
 	}
 
 	// Rebuild args slice maintaining order
-	result := make([]string, 0, len(orderKeys)*2) // Estimate capacity
+	result := make([]string, 0, len(orderKeys)*2+1) // Estimate capacity including binary name
+
+	// Add binary name first if it exists
+	if cmdName != "" {
+		result = append(result, cmdName)
+	}
+
+	// Add flags in order
 	for _, flag := range orderKeys {
 		if isRepeatableFlag(flag) {
 			// Add all instances of repeatable flags
