@@ -402,11 +402,6 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
 	}
 
-	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
-	}
-
 	return args
 }
 
