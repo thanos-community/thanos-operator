@@ -3,8 +3,7 @@
   "apiVersion": "apps/v1",
   "metadata": {
     "name": "thanos-store",
-    "namespace": "monitoring",
-    "creationTimestamp": null
+    "namespace": "monitoring"
   },
   "spec": {
     "selector": {
@@ -14,7 +13,6 @@
     },
     "template": {
       "metadata": {
-        "creationTimestamp": null,
         "labels": {
           "app": "thanos-store"
         }

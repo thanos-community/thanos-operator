@@ -146,10 +146,10 @@ func TestHasRequiredLabels(t *testing.T) {
 
 func TestMergeArgs(t *testing.T) {
 	tests := []struct {
-		name         string
-		existing     []string
-		additional   []string
-		expected     []string
+		name       string
+		existing   []string
+		additional []string
+		expected   []string
 	}{
 		{
 			name:       "empty additional args",
@@ -223,17 +223,53 @@ func TestMergeArgs(t *testing.T) {
 			additional: []string{"--log.level=debug", "--another-empty="},
 			expected:   []string{"--log.level=debug", "--query.timeout=5m"},
 		},
+		{
+			name:       "repeatable flag - append additional args",
+			existing:   []string{"--log.level=info", "--query.replica-label=replica"},
+			additional: []string{"--query.replica-label=instance"},
+			expected:   []string{"--log.level=info", "--query.replica-label=replica", "--query.replica-label=instance"},
+		},
+		{
+			name:       "repeatable flag - multiple existing and additional",
+			existing:   []string{"--query.replica-label=replica", "--query.replica-label=cluster", "--log.level=info"},
+			additional: []string{"--query.replica-label=instance", "--query.replica-label=zone"},
+			expected:   []string{"--query.replica-label=replica", "--query.replica-label=cluster", "--query.replica-label=instance", "--query.replica-label=zone", "--log.level=info"},
+		},
+		{
+			name:       "mix repeatable and non-repeatable flags",
+			existing:   []string{"--log.level=info", "--query.replica-label=replica", "--query.timeout=5m"},
+			additional: []string{"--log.level=debug", "--query.replica-label=instance", "--query.timeout=10m"},
+			expected:   []string{"--log.level=debug", "--query.replica-label=replica", "--query.replica-label=instance", "--query.timeout=10m"},
+		},
+		{
+			name:       "repeatable flag - only additional args",
+			existing:   []string{"--log.level=info"},
+			additional: []string{"--query.replica-label=replica", "--query.replica-label=instance"},
+			expected:   []string{"--log.level=info", "--query.replica-label=replica", "--query.replica-label=instance"},
+		},
+		{
+			name:       "repeatable flag - only existing args",
+			existing:   []string{"--query.replica-label=replica", "--query.replica-label=instance"},
+			additional: []string{"--log.level=debug"},
+			expected:   []string{"--query.replica-label=replica", "--query.replica-label=instance", "--log.level=debug"},
+		},
+		{
+			name:       "multiple different repeatable flags",
+			existing:   []string{"--query.replica-label=replica", "--endpoint=store1"},
+			additional: []string{"--query.replica-label=instance", "--endpoint=store2"},
+			expected:   []string{"--query.replica-label=replica", "--query.replica-label=instance", "--endpoint=store1", "--endpoint=store2"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := MergeArgs(tt.existing, tt.additional)
-			
+
 			if len(result) != len(tt.expected) {
 				t.Errorf("expected %d args, got %d: %v", len(tt.expected), len(result), result)
 				return
 			}
-			
+
 			for i, expected := range tt.expected {
 				if i >= len(result) || result[i] != expected {
 					t.Errorf("at index %d: expected %q, got %q", i, expected, result[i])
@@ -286,6 +322,59 @@ func TestExtractFlag(t *testing.T) {
 			result := extractFlag(tt.arg)
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestIsRepeatableFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		flag     string
+		expected bool
+	}{
+		{
+			name:     "repeatable query replica label",
+			flag:     "--query.replica-label",
+			expected: true,
+		},
+		{
+			name:     "repeatable endpoint",
+			flag:     "--endpoint",
+			expected: true,
+		},
+		{
+			name:     "repeatable label flag",
+			flag:     "--label",
+			expected: true,
+		},
+		{
+			name:     "non-repeatable log level",
+			flag:     "--log.level",
+			expected: false,
+		},
+		{
+			name:     "non-repeatable query timeout",
+			flag:     "--query.timeout",
+			expected: false,
+		},
+		{
+			name:     "empty flag",
+			flag:     "",
+			expected: false,
+		},
+		{
+			name:     "invalid flag format",
+			flag:     "not-a-flag",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isRepeatableFlag(tt.flag)
+			if result != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
 	}

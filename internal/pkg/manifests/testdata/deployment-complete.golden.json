@@ -3,8 +3,7 @@
   "apiVersion": "apps/v1",
   "metadata": {
     "name": "thanos-query",
-    "namespace": "monitoring",
-    "creationTimestamp": null
+    "namespace": "monitoring"
   },
   "spec": {
     "selector": {
@@ -14,7 +13,6 @@
     },
     "template": {
       "metadata": {
-        "creationTimestamp": null,
         "labels": {
           "app": "thanos-query"
         }
@@ -33,8 +31,9 @@
             "name": "thanos",
             "image": "quay.io/thanos/thanos:v0.39.0",
             "args": [
-              "query",
-              "--log.level=info"
+              "--log.level=info",
+              "--query.timeout=5m",
+              "--query.max-concurrent=20"
             ],
             "ports": [
               {

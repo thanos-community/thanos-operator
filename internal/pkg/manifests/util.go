@@ -66,8 +66,20 @@ var thanosRepeatableFlags = []string{
 	"--query-frontend.forward-header",
 }
 
-// MergeArgs merges existing args with additional args, replacing any existing args
-// that have the same flag name. Args should be in the format "--flag=value" or "--flag".
+// isRepeatableFlag checks if a flag allows multiple values
+func isRepeatableFlag(flag string) bool {
+	for _, repeatableFlag := range thanosRepeatableFlags {
+		if flag == repeatableFlag {
+			return true
+		}
+	}
+	return false
+}
+
+// MergeArgs merges existing args with additional args. For most flags, additional args
+// replace existing ones with the same flag name. For repeatable flags (listed in
+// thanosRepeatableFlags), additional args are appended rather than replaced.
+// Args should be in the format "--flag=value" or "--flag".
 func MergeArgs(existingArgs, additionalArgs []string) []string {
 	// Prune empty args from inputs
 	existingArgs = PruneEmptyArgs(existingArgs)
@@ -77,17 +89,29 @@ func MergeArgs(existingArgs, additionalArgs []string) []string {
 		return existingArgs
 	}
 
+	// For non-repeatable flags, use map for deduplication
 	argMap := make(map[string]string)
 	var orderKeys []string
 
-	// Parse existing args into map
+	// For repeatable flags, collect all values
+	repeatableArgs := make(map[string][]string)
+
+	// Parse existing args
 	for _, arg := range existingArgs {
 		flag := extractFlag(arg)
 		if flag != "" {
-			if _, exists := argMap[flag]; !exists {
-				orderKeys = append(orderKeys, flag)
+			if isRepeatableFlag(flag) {
+				repeatableArgs[flag] = append(repeatableArgs[flag], arg)
+				// Add to order only if not seen before
+				if len(repeatableArgs[flag]) == 1 {
+					orderKeys = append(orderKeys, flag)
+				}
+			} else {
+				if _, exists := argMap[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				argMap[flag] = arg
 			}
-			argMap[flag] = arg
 		}
 	}
 
@@ -95,17 +119,32 @@ func MergeArgs(existingArgs, additionalArgs []string) []string {
 	for _, arg := range additionalArgs {
 		flag := extractFlag(arg)
 		if flag != "" {
-			if _, exists := argMap[flag]; !exists {
-				orderKeys = append(orderKeys, flag)
+			if isRepeatableFlag(flag) {
+				// For repeatable flags, append the additional args
+				if _, exists := repeatableArgs[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				repeatableArgs[flag] = append(repeatableArgs[flag], arg)
+			} else {
+				// For non-repeatable flags, replace existing
+				if _, exists := argMap[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				argMap[flag] = arg
 			}
-			argMap[flag] = arg
 		}
 	}
 
 	// Rebuild args slice maintaining order
-	result := make([]string, 0, len(orderKeys))
+	result := make([]string, 0, len(orderKeys)*2) // Estimate capacity
 	for _, flag := range orderKeys {
-		result = append(result, argMap[flag])
+		if isRepeatableFlag(flag) {
+			// Add all instances of repeatable flags
+			result = append(result, repeatableArgs[flag]...)
+		} else {
+			// Add single instance of non-repeatable flags
+			result = append(result, argMap[flag])
+		}
 	}
 
 	// Apply final pruning to ensure no empty args slip through
