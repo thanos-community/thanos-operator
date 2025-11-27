@@ -248,6 +248,13 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
 		}
 
+		if opts.Additional.Args != nil {
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				opts.Additional.Args,
+			)
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -289,6 +296,13 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
 			o.Spec.Template.Spec.Affinity = opts.PlacementConfig.Affinity
 			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
+		}
+
+		if opts.Additional.Args != nil {
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				opts.Additional.Args,
+			)
 		}
 
 	default:

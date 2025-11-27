@@ -304,10 +304,6 @@ func compactorArgsFrom(opts Options) []string {
 	args = append(args, opts.Downsampling.toArgs()...)
 	args = append(args, opts.DebugConfig.toArgs()...)
 
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
-	}
-
 	return manifests.PruneEmptyArgs(args)
 }
 

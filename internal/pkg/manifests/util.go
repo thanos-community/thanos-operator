@@ -40,6 +40,131 @@ func PruneEmptyArgs(args []string) []string {
 	return args
 }
 
+var thanosRepeatableFlags = []string{
+	// Query flags
+	"--query.replica-label",
+	"--query.partition-label",
+	"--selector-label",
+	"--query.telemetry.request-duration-seconds-quantiles",
+	"--query.telemetry.request-samples-quantiles",
+	"--query.telemetry.request-series-seconds-quantiles",
+	"--store.sd-files",
+	"--endpoint",
+	"--endpoint-group",
+	"--endpoint-strict",
+	"--endpoint-group-strict",
+	"--inject-test-addresses",
+	// Rule flags
+	"--label",
+	"--rule-file",
+	"--grpc-query-endpoint",
+	"--query",
+	"--query.sd-files",
+	// Receive flags
+	"--receive.otlp-promote-resource-attributes",
+	// Query Frontend flags
+	"--query-frontend.forward-header",
+}
+
+// isRepeatableFlag checks if a flag allows multiple values
+func isRepeatableFlag(flag string) bool {
+	for _, repeatableFlag := range thanosRepeatableFlags {
+		if flag == repeatableFlag {
+			return true
+		}
+	}
+	return false
+}
+
+// MergeArgs merges existing args with additional args. For most flags, additional args
+// replace existing ones with the same flag name. For repeatable flags (listed in
+// thanosRepeatableFlags), additional args are appended rather than replaced.
+// Args should be in the format "--flag=value" or "--flag".
+func MergeArgs(existingArgs, additionalArgs []string) []string {
+	// Prune empty args from inputs
+	existingArgs = PruneEmptyArgs(existingArgs)
+	additionalArgs = PruneEmptyArgs(additionalArgs)
+
+	if len(additionalArgs) == 0 {
+		return existingArgs
+	}
+
+	// For non-repeatable flags, use map for deduplication
+	argMap := make(map[string]string)
+	var orderKeys []string
+
+	// For repeatable flags, collect all values
+	repeatableArgs := make(map[string][]string)
+
+	// Parse existing args
+	for _, arg := range existingArgs {
+		flag := extractFlag(arg)
+		if flag != "" {
+			if isRepeatableFlag(flag) {
+				repeatableArgs[flag] = append(repeatableArgs[flag], arg)
+				// Add to order only if not seen before
+				if len(repeatableArgs[flag]) == 1 {
+					orderKeys = append(orderKeys, flag)
+				}
+			} else {
+				if _, exists := argMap[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				argMap[flag] = arg
+			}
+		}
+	}
+
+	// Parse additional args and override/add
+	for _, arg := range additionalArgs {
+		flag := extractFlag(arg)
+		if flag != "" {
+			if isRepeatableFlag(flag) {
+				// For repeatable flags, append the additional args
+				if _, exists := repeatableArgs[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				repeatableArgs[flag] = append(repeatableArgs[flag], arg)
+			} else {
+				// For non-repeatable flags, replace existing
+				if _, exists := argMap[flag]; !exists {
+					orderKeys = append(orderKeys, flag)
+				}
+				argMap[flag] = arg
+			}
+		}
+	}
+
+	// Rebuild args slice maintaining order
+	result := make([]string, 0, len(orderKeys)*2) // Estimate capacity
+	for _, flag := range orderKeys {
+		if isRepeatableFlag(flag) {
+			// Add all instances of repeatable flags
+			result = append(result, repeatableArgs[flag]...)
+		} else {
+			// Add single instance of non-repeatable flags
+			result = append(result, argMap[flag])
+		}
+	}
+
+	// Apply final pruning to ensure no empty args slip through
+	return PruneEmptyArgs(result)
+}
+
+// extractFlag extracts the flag name from an argument string.
+// For "--flag=value" returns "--flag", for "--flag" returns "--flag".
+func extractFlag(arg string) string {
+	if !strings.HasPrefix(arg, "--") {
+		return ""
+	}
+
+	if idx := strings.Index(arg, "="); idx != -1 {
+		return arg[:idx]
+	}
+
+	return arg
+}
+
 // IsGrpcServiceWithLabels returns true if the given object is a gRPC service with required labels.
 // The requiredLabels map is used to match the labels of the object.
 // The function returns false if the object is not a service or if it does not have a gRPC port.

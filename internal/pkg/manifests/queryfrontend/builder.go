@@ -232,10 +232,6 @@ func queryFrontendArgs(opts Options) []string {
 		args = append(args, "--query-frontend.compress-responses")
 	}
 
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
-	}
-
 	return manifests.PruneEmptyArgs(args)
 }
 

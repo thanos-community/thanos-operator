@@ -613,10 +613,6 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 	}
 
 	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
-	}
-
 	return manifests.PruneEmptyArgs(args)
 }
 
@@ -651,11 +647,6 @@ func routerArgsFrom(opts RouterOptions) []string {
 
 	if opts.ReplicationProtocol == "capnproto" {
 		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
-	}
-
-	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
 	}
 
 	return manifests.PruneEmptyArgs(args)

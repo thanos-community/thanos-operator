@@ -310,11 +310,6 @@ func queryArgs(opts Options) []string {
 		}
 	}
 
-	// TODO(saswatamcode): Add some validation.
-	if opts.Additional.Args != nil {
-		args = append(args, opts.Additional.Args...)
-	}
-
 	return manifests.PruneEmptyArgs(args)
 }
 

@@ -3,8 +3,7 @@
   "apiVersion": "apps/v1",
   "metadata": {
     "name": "thanos-store",
-    "namespace": "monitoring",
-    "creationTimestamp": null
+    "namespace": "monitoring"
   },
   "spec": {
     "selector": {
@@ -14,7 +13,6 @@
     },
     "template": {
       "metadata": {
-        "creationTimestamp": null,
         "labels": {
           "app": "thanos-store"
         }
@@ -33,8 +31,8 @@
             "name": "thanos",
             "image": "quay.io/thanos/thanos:v0.39.0",
             "args": [
-              "store",
-              "--log.level=info"
+              "--log.level=info",
+              "--store.grpc-series-max-concurrency=20"
             ],
             "ports": [
               {

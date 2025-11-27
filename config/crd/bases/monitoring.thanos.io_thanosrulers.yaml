@@ -40,7 +40,9 @@ spec:
             description: ThanosRulerSpec defines the desired state of ThanosRuler
             properties:
               additionalArgs:
-                description: Additional arguments to pass to the Thanos components.
+                description: |-
+                  Additional arguments to pass to the Thanos components.
+                  An additional argument will override an existing argument provided by the operator if there is a conflict.
                 items:
                   type: string
                 type: array

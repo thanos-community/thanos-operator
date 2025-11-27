@@ -33,3 +33,5 @@ manager
 website/node_modules/
 website/public/
 website/resources/_gen/
+
+.claude

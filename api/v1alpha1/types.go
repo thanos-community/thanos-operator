@@ -117,6 +117,7 @@ type CommonFields struct {
 // Additional holds additional configuration for the Thanos components.
 type Additional struct {
 	// Additional arguments to pass to the Thanos components.
+	// An additional argument will override an existing argument provided by the operator if there is a conflict.
 	// +kubebuilder:validation:Optional
 	Args []string `json:"additionalArgs,omitempty"`
 	// Additional containers to add to the Thanos components.

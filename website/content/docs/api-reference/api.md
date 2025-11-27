@@ -51,7 +51,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -442,7 +442,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `defaultObjectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.<br />Can be overridden by the ObjectStorageConfig in the IngesterHashringSpec per hashring. |  | Required: \{\} <br /> |
 | `hashrings` _[IngesterHashringSpec](#ingesterhashringspec) array_ | Hashrings is a list of hashrings to route to. |  | MaxItems: 100 <br />Required: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -526,7 +526,7 @@ _Appears in:_
 | `queryRangeMaxRetries` _integer_ | QueryRangeMaxRetries sets the maximum number of retries for query range requests | 5 | Minimum: 0 <br /> |
 | `labelsMaxRetries` _integer_ | LabelsMaxRetries sets the maximum number of retries for label requests | 5 | Minimum: 0 <br /> |
 | `labelsDefaultTimeRange` _[Duration](#duration)_ | LabelsDefaultTimeRange sets the default time range for label queries |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -599,7 +599,7 @@ _Appears in:_
 | `replicationProtocol` _[ReplicationProtocol](#replicationprotocol)_ | ReplicationProtocol is the protocol for remote write replication. | grpc | Enum: [grpc capnproto] <br />Optional: \{\} <br /> |
 | `hashringPolicy` _[HashringPolicy](#hashringpolicy)_ | HashringPolicy defines the policy for how the hashring is built and maintained at runtime. | static | Enum: [static dynamic] <br />Optional: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set and forwarded by the router to the ingesters. | \{ receive:true \} | MinProperties: 1 <br />Required: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -905,7 +905,7 @@ _Appears in:_
 | `timeRangeConfig` _[TimeRangeConfig](#timerangeconfig)_ | TimeRangeConfig configures the time range of data to serve for the compact component.. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -1007,7 +1007,7 @@ _Appears in:_
 | `queryFrontend` _[QueryFrontendSpec](#queryfrontendspec)_ | QueryFrontend is the configuration for the Query Frontend<br />If you specify this, the operator will create a Query Frontend in front of your query deployment. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -1196,7 +1196,7 @@ _Appears in:_
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
 | `prometheusRuleSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler. | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `ruleTenancyConfig` _[RuleTenancyConfig](#ruletenancyconfig)_ | RuleTenancyConfig is the configuration for the rule tenancy. |  | Optional: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
@@ -1306,7 +1306,7 @@ _Appears in:_
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
-| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components. |  | Optional: \{\} <br /> |
+| `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volumemount-v1-core) array_ | Additional volume mounts to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
