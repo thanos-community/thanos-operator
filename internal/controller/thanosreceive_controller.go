@@ -209,14 +209,11 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		expectIngesters[i] = opt.GetGeneratedResourceName()
 		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, opt.Build())
 	}
-
-	if errCount > 0 {
-		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
-	}
+	// we won't error out here yet as we don't want to delay updating the router configmap
 
 	// prune the ingest resources that are no longer needed/have changed
-	errCount = r.pruneOrphanedResources(ctx, receiver.GetNamespace(), receiver.GetName(), expectIngesters)
-	if errCount > 0 {
+	pruneErrCount := r.pruneOrphanedResources(ctx, receiver.GetNamespace(), receiver.GetName(), expectIngesters)
+	if pruneErrCount > 0 {
 		return fmt.Errorf("failed to prune %d orphaned resources for receive ingester(s)", errCount)
 	}
 
@@ -228,6 +225,11 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
+	}
+
+	// we go back and force a reconcile now on the original errors from the ingesters
+	if errCount > 0 {
+		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
