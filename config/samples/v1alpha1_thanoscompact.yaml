@@ -3,7 +3,8 @@ kind: ThanosCompact
 metadata:
   name: example-compact
 spec:
-  storageSize: "100Mi"
+  storage:
+    size: "100Mi"
   shardingConfig:
     - shardName: example
       externalLabelSharding:

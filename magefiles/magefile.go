@@ -115,7 +115,8 @@ func InstallCRDS() error {
 
 // Installs the Thanos Operator sample resources into the Kubernetes cluster
 func InstallSamples() error {
-	if err := sh.Run("IMG_MAIN="+getImageName(), "make", "install-sample"); err != nil {
+	env := map[string]string{"IMG_MAIN": getImageName()}
+	if err := sh.RunWith(env, "make", "install-sample"); err != nil {
 		return err
 	}
 	return nil

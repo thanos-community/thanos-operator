@@ -19,7 +19,8 @@ spec:
     rule_replica: "$(NAME)"
   evaluationInterval: 1m
   retention: 2h
-  storageSize: 1Gi
+  storage:
+    size: 1Gi
   logFormat: logfmt
   imagePullPolicy: IfNotPresent
 
