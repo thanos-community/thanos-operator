@@ -213,6 +213,9 @@ type ThanosReceiveSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
+	// StatefulSetFields are the options available to all Thanos stateful
+	// components.
+	StatefulSetFields `json:",inline"`
 }
 
 // ThanosReceiveStatus defines the observed state of ThanosReceive

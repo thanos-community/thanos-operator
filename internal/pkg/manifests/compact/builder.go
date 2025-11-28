@@ -158,6 +158,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 				MatchLabels: selectorLabels,
 			},
 			VolumeClaimTemplates: vc,
+			PodManagementPolicy:  appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: metaLabels,

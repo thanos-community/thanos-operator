@@ -66,6 +66,7 @@ func GetLabelSelectorForOwner(opts Buildable) client.ListOption {
 // Options is a struct that holds the options for the common manifests
 type Options struct {
 	Additional
+	StatefulSet
 	// Owner is the name of the owner of the object. This relates to the CustomResource or entity that created the object.
 	// This value will be used to populate the OwnerLabel after it has been run through ValidateAndSanitizeResourceName.
 	// This should be set to the name of the CustomResource that is creating the object and is a required field.
@@ -304,6 +305,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 				opts.Additional.Args,
 			)
 		}
+		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
 	default:
 		//no-op
@@ -328,6 +330,11 @@ type Additional struct {
 	Env []corev1.EnvVar
 	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
 	ServicePorts []corev1.ServicePort
+}
+
+type StatefulSet struct {
+	// Pod management policy of the statefulset.
+	PodManagementPolicy string
 }
 
 // RelabelConfig is a struct that holds the relabel configuration

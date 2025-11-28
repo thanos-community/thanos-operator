@@ -23,6 +23,9 @@ import (
 // ThanosStoreSpec defines the desired state of ThanosStore
 type ThanosStoreSpec struct {
 	CommonFields `json:",inline"`
+	// StatefulSetFields are the options available to all Thanos stateful
+	// components.
+	StatefulSetFields `json:",inline"`
 	// Replicas is the number of store or store shard replicas.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1

@@ -483,6 +483,28 @@ _Appears in:_
 | `minAvailable` _integer_ | MinAvailable is the minimum number of pods that must still be available during the disruption. |  | Optional: \{\} <br /> |
 
 
+#### PodManagementPolicyType
+
+_Underlying type:_ _string_
+
+PodManagementPolicyType defines the policy for creating pods under a stateful set.
+
+_Validation:_
+- Enum: [OrderedReady Parallel]
+
+_Appears in:_
+- [StatefulSetFields](#statefulsetfields)
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosReceiveSpec](#thanosreceivespec)
+- [ThanosRulerSpec](#thanosrulerspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description |
+| --- | --- |
+| `OrderedReady` | OrderedReadyPodManagement will create pods in strictly increasing order on<br />scale up and strictly decreasing order on scale down, progressing only when<br />the previous pod is ready or terminated. At most one pod will be changed<br />at any time.<br /> |
+| `Parallel` | ParallelPodManagement will create and delete pods as soon as the stateful set<br />replica count is changed, and will not wait for pods to be ready or complete<br />termination.<br /> |
+
+
 #### QueryFrontendSpec
 
 
@@ -681,6 +703,26 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `block` | Block is the block modulo sharding strategy for sharding Stores according to block ids.<br /> |
+
+
+#### StatefulSetFields
+
+
+
+StatefulSetFields are the options available to all Thanos components.
+These fields reflect runtime changes to managed StatefulSet resources.
+
+
+
+_Appears in:_
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosReceiveSpec](#thanosreceivespec)
+- [ThanosRulerSpec](#thanosrulerspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 
 
 #### StatefulSetStatus
@@ -882,6 +924,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Compact component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the object storage configuration for the compact component. |  | Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Compact StatefulSets. |  | Required: \{\} <br /> |
@@ -1085,6 +1128,7 @@ _Appears in:_
 | `ingesterSpec` _[IngesterSpec](#ingesterspec)_ | Ingester is the configuration for the ingestor. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 
 
 #### ThanosReceiveStatus
@@ -1171,6 +1215,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Ruler component. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />\{"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
@@ -1282,6 +1327,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of store or store shard replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |

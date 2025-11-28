@@ -688,6 +688,9 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 					},
 					ServiceMonitorConfig: &ServiceMonitorConfig{},
 					PodDisruptionConfig:  &PodDisruptionBudgetOptions{},
+					StatefulSet: StatefulSet{
+						PodManagementPolicy: "Parallel",
+					},
 				},
 			},
 		},

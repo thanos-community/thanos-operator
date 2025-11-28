@@ -24,6 +24,9 @@ import (
 type ThanosCompactSpec struct {
 	// CommonFields are the options available to all Thanos components.
 	CommonFields `json:",inline"`
+	// StatefulSetFields are the options available to all Thanos stateful
+	// components.
+	StatefulSetFields `json:",inline"`
 	// Labels are additional labels to add to the Compact component.
 	// +kubebuilder:validation:Optional
 	Labels map[string]string `json:"labels,omitempty"`
