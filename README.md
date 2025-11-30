@@ -46,20 +46,14 @@ Usage of ./bin/manager:
     	Paths to a kubeconfig. Only required if out-of-cluster.
   -leader-elect
     	Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.
+  -log.format string
+    	Output format of log messages. One of: [logfmt, json] (default "logfmt")
+  -log.level string
+    	Only log messages with the given severity or above. One of: [debug, info, warn, error] (default "info")
   -metrics-bind-address string
     	The address the metric endpoint binds to. (default ":8080")
   -metrics-secure
     	If set the metrics endpoint is served securely
-  -zap-devel
-    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error)
-  -zap-encoder value
-    	Zap log encoding (one of 'json' or 'console')
-  -zap-log-level value
-    	Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'or any integer value > 0 which corresponds to custom debug levels of increasing verbosity
-  -zap-stacktrace-level value
-    	Zap Level at and above which stacktraces are captured (one of 'info', 'error', 'panic').
-  -zap-time-encoding value
-    	Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'). Defaults to 'epoch'.
 ```
 
 CRDs supported by this operator are defined in [./config/crd/bases](./config/crd/bases/). Operator deployment manifests are defined in [./config/manager](./config/manager/). To edit and build configuration refer to [CRD docs](docs/api-reference/api.md).

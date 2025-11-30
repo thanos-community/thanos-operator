@@ -24,9 +24,12 @@ import (
 	"net/http/pprof"
 	"os"
 
+	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
+	"github.com/prometheus/common/promslog"
+	psflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -48,7 +51,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -78,6 +80,9 @@ func main() {
 	var featureGatePrometheusOperator bool
 	var clusterDomain string
 
+	var logLevelStr string
+	var logFormatStr string
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -90,12 +95,33 @@ func main() {
 	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
 		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
-	opts := zap.Options{}
-	opts.BindFlags(flag.CommandLine)
+	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
+	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	logLevel := promslog.NewLevel()
+	if err := logLevel.Set(logLevelStr); err != nil {
+		setupLog.Error(err, "invalid log level")
+		os.Exit(1)
+	}
 
+	logFormat := promslog.NewFormat()
+	if err := logFormat.Set(logFormatStr); err != nil {
+		setupLog.Error(err, "invalid log format")
+		os.Exit(1)
+	}
+
+	ctrl.SetLogger(
+		logr.FromSlogHandler(
+			promslog.New(&promslog.Config{
+				Level:  logLevel,
+				Format: logFormat,
+				Style:  promslog.GoKitStyle,
+				Writer: os.Stderr,
+			}).Handler(),
+		),
+	)
+	setupLog := ctrl.Log.WithName("setup")
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
 	// prevent from being vulnerable to the HTTP/2 Stream Cancelation and
@@ -155,7 +181,7 @@ func main() {
 		versioncollector.NewCollector("thanos-operator"),
 	)
 
-	setupLog.Info("starting thanos operator", "build_info", version.Print("thanos-operator"))
+	setupLog.Info("starting thanos operator", "build_info", version.Info(), "build_context", version.BuildContext())
 
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
