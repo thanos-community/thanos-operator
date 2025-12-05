@@ -1,0 +1,28 @@
+{{- if .Values.rbacHelpers.enable }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+    labels:
+        app.kubernetes.io/component: rbac
+        app.kubernetes.io/created-by: thanos-operator
+        app.kubernetes.io/instance: thanosquery-viewer-role
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/name: clusterrole
+        app.kubernetes.io/part-of: thanos-operator
+    name: thanos-operator-thanosquery-viewer-role
+rules:
+    - apiGroups:
+        - monitoring.thanos.io
+      resources:
+        - thanosqueries
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - monitoring.thanos.io
+      resources:
+        - thanosqueries/status
+      verbs:
+        - get
+{{- end }}

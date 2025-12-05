@@ -1,0 +1,110 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+    name: thanos-operator-manager-role
+rules:
+    - apiGroups:
+        - ""
+      resources:
+        - configmaps
+        - serviceaccounts
+        - services
+      verbs:
+        - create
+        - delete
+        - get
+        - list
+        - patch
+        - update
+        - watch
+    - apiGroups:
+        - apps
+      resources:
+        - deployments
+        - statefulsets
+      verbs:
+        - create
+        - delete
+        - get
+        - list
+        - patch
+        - update
+        - watch
+    - apiGroups:
+        - discovery.k8s.io
+      resources:
+        - endpointslices
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - monitoring.coreos.com
+      resources:
+        - prometheusrules
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - monitoring.coreos.com
+      resources:
+        - servicemonitors
+      verbs:
+        - create
+        - delete
+        - get
+        - list
+        - patch
+        - update
+        - watch
+    - apiGroups:
+        - monitoring.thanos.io
+      resources:
+        - thanoscompacts
+        - thanosqueries
+        - thanosreceives
+        - thanosrulers
+        - thanosstores
+      verbs:
+        - create
+        - delete
+        - get
+        - list
+        - patch
+        - update
+        - watch
+    - apiGroups:
+        - monitoring.thanos.io
+      resources:
+        - thanoscompacts/finalizers
+        - thanosqueries/finalizers
+        - thanosreceives/finalizers
+        - thanosrulers/finalizers
+        - thanosstores/finalizers
+      verbs:
+        - update
+    - apiGroups:
+        - monitoring.thanos.io
+      resources:
+        - thanoscompacts/status
+        - thanosqueries/status
+        - thanosreceives/status
+        - thanosrulers/status
+        - thanosstores/status
+      verbs:
+        - get
+        - patch
+        - update
+    - apiGroups:
+        - policy
+      resources:
+        - poddisruptionbudgets
+      verbs:
+        - create
+        - delete
+        - get
+        - list
+        - patch
+        - update
+        - watch
