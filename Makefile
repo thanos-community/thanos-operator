@@ -38,7 +38,7 @@ MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
 CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
 .PHONY: all
-all: build bundle docs
+all: build build-installer docs
 
 ##@ General
 
