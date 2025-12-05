@@ -66,8 +66,10 @@ jobs:
 
       - name: Install Helm chart for project
         run: |
+          export HELM_DRIVER=configmap
           helm install my-release ./dist/chart --create-namespace --namespace thanos-operator-system
 
       - name: Check Helm release status
         run: |
+          export HELM_DRIVER=configmap
           helm status my-release --namespace thanos-operator-system
