@@ -61,16 +61,11 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-.PHONY: deps
-deps: ## Ensures fresh go.mod and go.sum.
-	@go mod tidy
-	@go mod verify
+	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: format
 format: ## Formats Go code.
@@ -276,17 +271,18 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 ##@ Deployment
 
 # Add a bundle.yaml file with CRDs and deployment, with kustomize config.
-.PHONY: bundle
-bundle: manifests generate format kustomize ## Generate a consolidated YAML with CRDs and deployment.
+# Also in dist, for helm chart gen.
+.PHONY: build-installer
+build-installer: manifests generate format kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	@echo ">> generating bundle.yaml (override image using IMG_MAIN)"
 	mkdir -p dist
-	@if [ -d "config/crd" ]; then \
-		$(KUSTOMIZE) build config/crd > bundle.yaml; \
-	fi
-	echo "---" >> bundle.yaml  # Add a document separator before appending
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
-	$(KUSTOMIZE) build config/default >> bundle.yaml
+	$(KUSTOMIZE) build config/default > bundle.yaml
+	$(KUSTOMIZE) build config/default > dist/install.yaml
 
+.PHONY: build-chart
+build-chart: build-installer kubebuilder ## Build the helm chart.
+	$(KUBEBUILDER) edit --plugins=helm/v2-alpha
 
 ifndef ignore-not-found
   ignore-not-found = false
@@ -354,11 +350,13 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
+KUBEBUILDER ?= $(LOCALBIN)/kubebuilder-$(KUBEBUILDER_VERSION)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.7.1
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 ENVTEST_VERSION ?= latest
+KUBEBUILDER_VERSION ?= v4.10.1
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -374,6 +372,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+
+.PHONY: kubebuilder
+kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.
+$(KUBEBUILDER): $(LOCALBIN)
+	$(call go-install-tool,$(KUBEBUILDER),sigs.k8s.io/kubebuilder/v4,$(KUBEBUILDER_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
