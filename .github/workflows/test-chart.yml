@@ -64,12 +64,15 @@ jobs:
           helm repo update
           helm install prometheus-crds prometheus-community/prometheus-operator-crds
 
-      - name: Install Helm chart for project
+      - name: Create namespace for thanos-operator
         run: |
-          export HELM_DRIVER=configmap
-          helm install my-release ./dist/chart --create-namespace --namespace thanos-operator-system
+          kubectl create namespace thanos-operator-system || true
 
-      - name: Check Helm release status
+      - name: Install Helm chart for project using server-side apply
         run: |
-          export HELM_DRIVER=configmap
-          helm status my-release --namespace thanos-operator-system
+          helm template my-release ./dist/chart --namespace thanos-operator-system | \
+            kubectl apply --server-side --force-conflicts -f -
+
+      - name: Verify deployment
+        run: |
+          kubectl get all -n thanos-operator-system
