@@ -284,10 +284,13 @@ build-installer: manifests generate format kustomize ## Generate a consolidated 
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
 	$(KUSTOMIZE) build config/default > bundle.yaml
 	$(KUSTOMIZE) build config/default > dist/install.yaml
+	$(call require_clean_work_tree,'run make build-installer and commit changes')
 
 .PHONY: build-chart
 build-chart: build-installer kubebuilder ## Build the helm chart.
 	$(KUBEBUILDER) edit --plugins=helm/v2-alpha
+	rm -rf .github/workflows/test-chart.yml
+	$(call require_clean_work_tree,'run make build-chart and commit changes')
 
 ifndef ignore-not-found
   ignore-not-found = false

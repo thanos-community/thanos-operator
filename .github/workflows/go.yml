@@ -5,7 +5,10 @@ on:
     branches:
       - main
     tags:
+      - 'v*'
   pull_request:
+    branches:
+      - main
 
 env:
   golang-version: '1.25'
@@ -17,7 +20,7 @@ jobs:
     name: Linters (Static Analysis) for Go
     steps:
       - name: Checkout code into the Go module directory.
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -39,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Unit tests
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6
@@ -56,7 +59,7 @@ jobs:
           - v0.39.0
           - v0.40.1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6
