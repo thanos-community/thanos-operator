@@ -10,8 +10,8 @@ on:
     branches:
       - main
     paths:
-      - 'dist/install.yaml'
-      - 'dist/chart/**'
+      - 'bundle.yaml'
+      - 'helm/chart/**'
 
 env:
   golang-version: '1.25'
@@ -65,7 +65,7 @@ jobs:
 
       - name: Lint Helm Chart
         run: |
-          helm lint ./dist/chart
+          helm lint ./helm/chart
 
       - name: Install Prometheus Operator CRDs
         run: |
@@ -77,7 +77,7 @@ jobs:
 
       - name: Install Helm chart for project using server-side apply
         run: |
-          helm template my-release ./dist/chart --namespace thanos-operator-system | \
+          helm template my-release ./helm/chart --namespace thanos-operator-system | \
             kubectl apply --server-side -f -
 
       - name: Verify deployment
