@@ -5,7 +5,14 @@ on:
     branches:
       - main
     tags:
+      - 'v*'
   pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'website/**'
 
 permissions:  
   contents: read
@@ -18,7 +25,7 @@ jobs:
       GOBIN: /tmp/.bin
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Go
         uses: actions/setup-go@v6
