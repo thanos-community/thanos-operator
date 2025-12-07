@@ -27,7 +27,6 @@ go.work
 *.swo
 *~
 
-manager
 
 .mdoxcache
 website/node_modules/

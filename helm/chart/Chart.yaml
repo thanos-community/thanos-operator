@@ -4,4 +4,4 @@ description: A Helm chart to distribute the project thanos-operator
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
-icon: "https://thanos-operator.dev/cover.png"
+icon: "https://example.com/icon.png"

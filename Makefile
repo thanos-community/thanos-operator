@@ -276,19 +276,17 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 ##@ Deployment
 
 # Add a bundle.yaml file with CRDs and deployment, with kustomize config.
-# Also in dist, for helm chart gen.
 .PHONY: build-installer
 build-installer: manifests generate format kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	@echo ">> generating bundle.yaml (override image using IMG_MAIN)"
-	mkdir -p dist
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
 	$(KUSTOMIZE) build config/default > bundle.yaml
-	$(KUSTOMIZE) build config/default > dist/install.yaml
-	$(call require_clean_work_tree,'run make build-installer and commit changes')
+	$(call require_clean_work_tree,'run make build-chart and commit changes')
 
 .PHONY: build-chart
 build-chart: build-installer kubebuilder ## Build the helm chart.
-	$(KUBEBUILDER) edit --plugins=helm/v2-alpha
+	mkdir -p helm
+	$(KUBEBUILDER) edit --plugins=helm/v2-alpha --manifests=bundle.yaml --output-dir=./helm
 	rm -rf .github/workflows/test-chart.yml
 	$(call require_clean_work_tree,'run make build-chart and commit changes')
 
