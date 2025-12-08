@@ -119,6 +119,19 @@ func commonLabels(component, instance, kind string) map[string]string {
 	}
 }
 
+// commonControllerManagerLabels returns the standard labels used across all controller manager resources.
+func commonControllerManagerLabels(component, instance, kind string) map[string]string {
+	return map[string]string{
+		"control-plane":                "controller-manager",
+		"app.kubernetes.io/name":       kind,
+		"app.kubernetes.io/instance":   instance,
+		"app.kubernetes.io/component":  component,
+		"app.kubernetes.io/created-by": DefaultCreatedBy,
+		"app.kubernetes.io/part-of":    DefaultPartOf,
+		"app.kubernetes.io/managed-by": DefaultManagedBy,
+	}
+}
+
 // prefixName prefixes the name with the default name prefix.
 func prefixName(name string) string {
 	return fmt.Sprintf("%s%s", DefaultNamePrefix, name)
@@ -149,15 +162,7 @@ func ControllerManagerServiceMonitor() *monitoringv1.ServiceMonitor {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      prefixName("controller-manager-metrics-monitor"),
 			Namespace: DefaultNamespace,
-			Labels: map[string]string{
-				"control-plane":                "controller-manager",
-				"app.kubernetes.io/name":       "servicemonitor",
-				"app.kubernetes.io/instance":   prefixName("controller-manager-metrics-monitor"),
-				"app.kubernetes.io/component":  "metrics",
-				"app.kubernetes.io/created-by": DefaultCreatedBy,
-				"app.kubernetes.io/part-of":    DefaultPartOf,
-				"app.kubernetes.io/managed-by": DefaultManagedBy,
-			},
+			Labels:    commonControllerManagerLabels("metrics", "controller-manager-metrics-monitor", "servicemonitor"),
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
 			Endpoints: []monitoringv1.Endpoint{
@@ -190,16 +195,8 @@ func ControllerManagerNamespace() *corev1.Namespace {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: prefixName(DefaultNamespace),
-			Labels: map[string]string{
-				"control-plane":                "controller-manager",
-				"app.kubernetes.io/name":       "namespace",
-				"app.kubernetes.io/instance":   DefaultNamespace,
-				"app.kubernetes.io/component":  "manager",
-				"app.kubernetes.io/created-by": DefaultCreatedBy,
-				"app.kubernetes.io/part-of":    DefaultPartOf,
-				"app.kubernetes.io/managed-by": DefaultManagedBy,
-			},
+			Name:   prefixName(DefaultNamespace),
+			Labels: commonControllerManagerLabels("manager", DefaultNamespace, "namespace"),
 		},
 	}
 }
@@ -215,15 +212,7 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      prefixName(ManagerName),
 			Namespace: DefaultNamespace,
-			Labels: map[string]string{
-				"control-plane":                "controller-manager",
-				"app.kubernetes.io/name":       "deployment",
-				"app.kubernetes.io/instance":   ManagerName,
-				"app.kubernetes.io/component":  "manager",
-				"app.kubernetes.io/created-by": DefaultCreatedBy,
-				"app.kubernetes.io/part-of":    DefaultPartOf,
-				"app.kubernetes.io/managed-by": DefaultManagedBy,
-			},
+			Labels:    commonControllerManagerLabels("manager", ManagerName, "deployment"),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
