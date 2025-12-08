@@ -1,10 +1,13 @@
-# permissions for end users to view thanoscompacts.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanoscompact-viewer-role
     app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
   name: thanoscompact-viewer-role
 rules:
 - apiGroups:

@@ -20,4 +20,6 @@ spec:
           targetPort: https
     selector:
         control-plane: controller-manager
+status:
+    loadBalancer: {}
 {{- end }}

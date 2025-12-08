@@ -3,18 +3,18 @@ kind: ThanosCompact
 metadata:
   name: example-compact
 spec:
-  storage:
-    size: "100Mi"
-  shardingConfig:
-    - shardName: example
-      externalLabelSharding:
-        - label: tenant_id
-          value: "a"
   objectStorageConfig:
-    name: thanos-object-storage
     key: thanos.yaml
+    name: thanos-object-storage
   retentionConfig:
-    raw: 30d
     fiveMinutes: 30d
     oneHour: 30d
-
+    raw: 30d
+  shardingConfig:
+  - externalLabelSharding:
+    - label: tenant_id
+      value: a
+    shardName: example
+  storage:
+    size: 100Mi
+status: {}

@@ -10,10 +10,6 @@ spec:
   labels:
     some-label: xyz
   logFormat: logfmt
-  replicaLabels:
-    - prometheus_replica
-    - replica
-    - rule_replica
   queryFrontend:
     compressResponses: true
     imagePullPolicy: IfNotPresent
@@ -25,4 +21,21 @@ spec:
         operator.thanos.io/query-api: "true"
     queryRangeMaxRetries: 3
     replicas: 2
+  replicaLabels:
+  - prometheus_replica
+  - replica
+  - rule_replica
   replicas: 1
+status:
+  querierStatus:
+    availableReplicas: 0
+    readyReplicas: 0
+    replicas: 0
+    unavailableReplicas: 0
+    updatedReplicas: 0
+  queryFrontendStatus:
+    availableReplicas: 0
+    readyReplicas: 0
+    replicas: 0
+    unavailableReplicas: 0
+    updatedReplicas: 0
