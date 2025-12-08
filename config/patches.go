@@ -1,4 +1,4 @@
-package goconfig
+package config
 
 // ManagerAuthProxyPatch creates the manager auth proxy patch
 // DO NOT IMPORT. This is only used for maintaining https://github.com/thanos-community/thanos-operator/blob/main/config/default/manager_auth_proxy_patch.yaml.

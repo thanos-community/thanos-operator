@@ -1,4 +1,4 @@
-package goconfig
+package config
 
 import (
 	"fmt"
