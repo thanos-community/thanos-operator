@@ -38,7 +38,7 @@ MDOX_VALIDATE_CONFIG ?= .mdox.validate.yaml
 CRD_REF_DOCS_CONFIG ?= .crd_ref.yaml
 
 .PHONY: all
-all: build build-installer docs
+all: build build-chart docs
 
 ##@ General
 
@@ -60,8 +60,10 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: $(MAGE)
+manifests: deps controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	"$(CONTROLLER_GEN)" crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	"$(MAGE)" config:generate
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -71,17 +73,21 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 deps: ## Ensures fresh go.mod and go.sum.
 	@go mod tidy
 	@go mod verify
+	@cd magefiles && go mod tidy
+	@cd magefiles && go mod verify
 
 .PHONY: format
 format: ## Formats Go code.
 format: $(GOIMPORTS)
-	go fmt ./...
 	@echo ">> formatting code"
+	go fmt ./...
 	@$(GOIMPORTS) -local github.com/thanos-community/thanos-operator -w $(FILES_TO_FMT)
+	cd magefiles && go fmt ./...
 
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
+	cd magefiles && go vet ./...
 
 .PHONY: test
 test: manifests generate format vet envtest ## Run tests.

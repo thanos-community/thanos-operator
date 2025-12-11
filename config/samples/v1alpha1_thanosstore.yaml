@@ -3,16 +3,17 @@ kind: ThanosStore
 metadata:
   name: example-store
 spec:
+  ignoreDeletionMarksDelay: 24h
   imagePullPolicy: IfNotPresent
+  labels:
+    some-label: xyz
   logFormat: logfmt
   objectStorageConfig:
-    name: thanos-object-storage
     key: thanos.yaml
+    name: thanos-object-storage
   shardingStrategy:
     shards: 2
     type: block
   storage:
     size: 1Gi
-  ignoreDeletionMarksDelay: 24h
-  labels:
-    some-label: xyz
+status: {}

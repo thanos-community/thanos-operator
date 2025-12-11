@@ -60,7 +60,7 @@ import (
 )
 
 const (
-	prometheusOperatorVersion = "v0.86.0"
+	prometheusOperatorVersion = "v0.87.0"
 	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
 		"releases/download/%s/bundle.yaml"
 

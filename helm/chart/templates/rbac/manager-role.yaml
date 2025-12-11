@@ -61,11 +61,11 @@ rules:
     - apiGroups:
         - monitoring.thanos.io
       resources:
-        - thanoscompacts
         - thanosqueries
-        - thanosreceives
-        - thanosrulers
         - thanosstores
+        - thanosreceives
+        - thanoscompacts
+        - thanosrulers
       verbs:
         - create
         - delete
@@ -77,21 +77,21 @@ rules:
     - apiGroups:
         - monitoring.thanos.io
       resources:
-        - thanoscompacts/finalizers
         - thanosqueries/finalizers
-        - thanosreceives/finalizers
-        - thanosrulers/finalizers
         - thanosstores/finalizers
+        - thanosreceives/finalizers
+        - thanoscompacts/finalizers
+        - thanosrulers/finalizers
       verbs:
         - update
     - apiGroups:
         - monitoring.thanos.io
       resources:
-        - thanoscompacts/status
         - thanosqueries/status
-        - thanosreceives/status
-        - thanosrulers/status
         - thanosstores/status
+        - thanosreceives/status
+        - thanoscompacts/status
+        - thanosrulers/status
       verbs:
         - get
         - patch

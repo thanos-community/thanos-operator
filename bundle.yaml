@@ -10,6 +10,8 @@ metadata:
     app.kubernetes.io/part-of: thanos-operator
     control-plane: controller-manager
   name: thanos-operator-system
+spec: {}
+status: {}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -36452,11 +36454,11 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanoscompacts
   - thanosqueries
-  - thanosreceives
-  - thanosrulers
   - thanosstores
+  - thanosreceives
+  - thanoscompacts
+  - thanosrulers
   verbs:
   - create
   - delete
@@ -36468,21 +36470,21 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanoscompacts/finalizers
   - thanosqueries/finalizers
-  - thanosreceives/finalizers
-  - thanosrulers/finalizers
   - thanosstores/finalizers
+  - thanosreceives/finalizers
+  - thanoscompacts/finalizers
+  - thanosrulers/finalizers
   verbs:
   - update
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanoscompacts/status
   - thanosqueries/status
-  - thanosreceives/status
-  - thanosrulers/status
   - thanosstores/status
+  - thanosreceives/status
+  - thanoscompacts/status
+  - thanosrulers/status
   verbs:
   - get
   - patch
@@ -36546,8 +36548,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanoscompact-editor-role
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
   name: thanos-operator-thanoscompact-editor-role
 rules:
 - apiGroups:
@@ -36573,8 +36579,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanoscompact-viewer-role
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
   name: thanos-operator-thanoscompact-viewer-role
 rules:
 - apiGroups:
@@ -36654,8 +36664,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanosreceive-editor-role
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
   name: thanos-operator-thanosreceive-editor-role
 rules:
 - apiGroups:
@@ -36681,8 +36695,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanosreceive-viewer-role
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: thanos-operator
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
   name: thanos-operator-thanosreceive-viewer-role
 rules:
 - apiGroups:
@@ -36898,6 +36916,8 @@ spec:
     targetPort: https
   selector:
     control-plane: controller-manager
+status:
+  loadBalancer: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -36917,6 +36937,7 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+  strategy: {}
   template:
     metadata:
       annotations:
@@ -36986,6 +37007,7 @@ spec:
         runAsNonRoot: true
       serviceAccountName: thanos-operator-controller-manager
       terminationGracePeriodSeconds: 10
+status: {}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -37005,9 +37027,12 @@ spec:
   - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     path: /metrics
     port: https
-    scheme: https
+    scheme: HTTPS
     tlsConfig:
+      ca: {}
+      cert: {}
       insecureSkipVerify: true
+  namespaceSelector: {}
   selector:
     matchLabels:
       control-plane: controller-manager
