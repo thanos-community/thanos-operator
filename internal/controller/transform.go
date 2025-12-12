@@ -174,9 +174,10 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate feat
 	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional)
 
 	ropts := manifestreceive.RouterOptions{
-		Options:           opts,
-		ReplicationFactor: router.ReplicationFactor,
-		ExternalLabels:    router.ExternalLabels,
+		Options:                opts,
+		ReplicationFactor:      router.ReplicationFactor,
+		ExternalLabels:         router.ExternalLabels,
+		EnableKubeResourceSync: featureGate.KubeResourceSyncEnabled(),
 	}
 
 	if router.ReplicationProtocol != nil {

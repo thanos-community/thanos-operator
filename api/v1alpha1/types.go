@@ -188,6 +188,20 @@ type PodDisruptionBudgetConfig struct {
 	Enable *bool `json:"enable,omitempty"`
 }
 
+// KubeResourceSyncConfig is the configuration for the kube-resource-sync sidecar container.
+type KubeResourceSyncConfig struct {
+	// Enable the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// Image is the container image to use for the kube-resource-sync sidecar.
+	// +kubebuilder:default="quay.io/philipgough/kube-resource-sync:main"
+	// +kubebuilder:validation:Optional
+	Image *string `json:"image,omitempty"`
+	// ResourceRequirements for the kube-resource-sync sidecar container.
+	// +kubebuilder:validation:Optional
+	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
+}
+
 func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
 	return corev1.SecretKeySelector{
 		LocalObjectReference: corev1.LocalObjectReference{Name: osc.Name},

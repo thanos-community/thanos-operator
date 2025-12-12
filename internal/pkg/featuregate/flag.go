@@ -42,3 +42,8 @@ func (f *Flag) EnablesServiceMonitor() bool {
 func (f *Flag) EnablesPrometheusRule() bool {
 	return f.Contains(PrometheusRule)
 }
+
+// EnablesKubeResourceSync returns true if KubeResourceSync features should be enabled.
+func (f *Flag) EnablesKubeResourceSync() bool {
+	return f.Contains(KubeResourceSync)
+}

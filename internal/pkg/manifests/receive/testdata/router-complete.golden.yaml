@@ -159,6 +159,7 @@
           volumeMounts:
           - mountPath: /var/lib/thanos-receive
             name: hashring-config
+        securityContext: {}
         serviceAccountName: thanos-receive-router-test-owner
         volumes:
         - configMap:

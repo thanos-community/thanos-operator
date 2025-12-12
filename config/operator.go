@@ -260,16 +260,28 @@ func WithPrometheusRule() DeploymentOption {
 	}
 }
 
+// WithSync enables the kube-resource-sync feature.
+// When enabled, the controller will add a kube-resource-sync sidecar
+// container to Thanos Receive router deployments. This sidecar provides
+// immediate synchronization of ConfigMap changes without requiring pod
+// restarts, improving the responsiveness of hashring configuration updates.
+func WithSync() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.featureGate.EnableKubeResourceSync = true
+	}
+}
+
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
 //
 // Available features:
 //   - "service-monitor": Enables ServiceMonitor management
 //   - "prometheus-rule": Enables PrometheusRule discovery
+//   - "kube-resource-sync": Enables kube-resource-sync sidecar
 //
 // Example:
 //
-//	WithFeatures("service-monitor", "prometheus-rule")
+//	WithFeatures("service-monitor", "prometheus-rule", "kube-resource-sync")
 func WithFeatures(features ...string) DeploymentOption {
 	return func(c *deploymentConfig) {
 		for _, feature := range features {
@@ -278,6 +290,8 @@ func WithFeatures(features ...string) DeploymentOption {
 				c.featureGate.EnableServiceMonitor = true
 			case featuregate.PrometheusRule:
 				c.featureGate.EnablePrometheusRuleDiscovery = true
+			case featuregate.KubeResourceSync:
+				c.featureGate.EnableKubeResourceSync = true
 			}
 		}
 	}
@@ -442,6 +456,9 @@ func buildManagerArgs(featureGate featuregate.Config) []string {
 	}
 	if featureGate.EnablePrometheusRuleDiscovery {
 		args = append(args, "--enable-feature="+featuregate.PrometheusRule)
+	}
+	if featureGate.EnableKubeResourceSync {
+		args = append(args, "--enable-feature="+featuregate.KubeResourceSync)
 	}
 
 	return args
