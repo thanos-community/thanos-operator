@@ -118,6 +118,7 @@ spec:
         image: test-image:latest
         name: test-container
         resources: {}
+      securityContext: {}
       serviceAccountName: thanos-receive-router
       volumes:
       - configMap:

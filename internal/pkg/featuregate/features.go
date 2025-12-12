@@ -14,6 +14,9 @@ const (
 	// PrometheusRule enables discovery of PrometheusRule objects to set on Thanos Ruler.
 	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule
 	PrometheusRule = "prometheus-rule"
+
+	// KubeResourceSync enables the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
+	KubeResourceSync = "kube-resource-sync"
 )
 
 // AllFeatures returns a slice of all available feature flag names.
@@ -22,6 +25,7 @@ func AllFeatures() []string {
 	return []string{
 		ServiceMonitor,
 		PrometheusRule,
+		KubeResourceSync,
 	}
 }
 
@@ -42,6 +46,8 @@ type Config struct {
 	EnableServiceMonitor bool
 	// EnablePrometheusRuleDiscovery enables the discovery of PrometheusRule objects.
 	EnablePrometheusRuleDiscovery bool
+	// EnableKubeResourceSync enables the kube-resource-sync sidecar container.
+	EnableKubeResourceSync bool
 }
 
 // ServiceMonitorEnabled returns true if ServiceMonitor management is enabled.
@@ -54,11 +60,17 @@ func (c Config) PrometheusRuleEnabled() bool {
 	return c.EnablePrometheusRuleDiscovery
 }
 
+// KubeResourceSyncEnabled returns true if KubeResourceSync sidecar is enabled.
+func (c Config) KubeResourceSyncEnabled() bool {
+	return c.EnableKubeResourceSync
+}
+
 // ToFeatureGate converts a Flag to a Config struct for use by controllers.
 func (f *Flag) ToFeatureGate() Config {
 	return Config{
 		EnableServiceMonitor:          f.EnablesServiceMonitor(),
 		EnablePrometheusRuleDiscovery: f.EnablesPrometheusRule(),
+		EnableKubeResourceSync:        f.EnablesKubeResourceSync(),
 	}
 }
 
