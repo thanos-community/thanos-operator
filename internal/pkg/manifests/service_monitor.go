@@ -82,3 +82,7 @@ func HasPrometheusRuleEnabled(in *v1alpha1.FeatureGates) bool {
 func HasPodDisruptionBudgetEnabled(in *v1alpha1.FeatureGates) bool {
 	return in != nil && in.PodDisruptionBudgetConfig != nil && *in.PodDisruptionBudgetConfig.Enable
 }
+
+func HasKubeResourceSyncEnabled(in *v1alpha1.FeatureGates) bool {
+	return in != nil && in.KubeResourceSyncConfig != nil && *in.KubeResourceSyncConfig.Enable
+}

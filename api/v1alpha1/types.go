@@ -185,6 +185,12 @@ type FeatureGates struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={enable: true}
 	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudget,omitempty"`
+	// KubeResourceSyncConfig is the configuration for the kube-resource-sync sidecar container.
+	// When enabled, replaces ConfigMap volume mounts with immediate synchronization via sidecar.
+	// This setting is only applicable to ThanosReceive router components.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={enable: false}
+	KubeResourceSyncConfig *KubeResourceSyncConfig `json:"kubeResourceSync,omitempty"`
 }
 
 // ServiceMonitorConfig is the configuration for the ServiceMonitor.
@@ -210,6 +216,20 @@ type PodDisruptionBudgetConfig struct {
 	// MinAvailable is the minimum number of pods that must still be available during the disruption.
 	// +kubebuilder:validation:Optional
 	MinAvailable *int32 `json:"minAvailable,omitempty"`
+}
+
+// KubeResourceSyncConfig is the configuration for the kube-resource-sync sidecar container.
+type KubeResourceSyncConfig struct {
+	// Enable the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// Image is the container image to use for the kube-resource-sync sidecar.
+	// +kubebuilder:default="ghcr.io/philipgough/kube-resource-sync:latest"
+	// +kubebuilder:validation:Optional
+	Image *string `json:"image,omitempty"`
+	// ResourceRequirements for the kube-resource-sync sidecar container.
+	// +kubebuilder:validation:Optional
+	ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
 }
 
 func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {

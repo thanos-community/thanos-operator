@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -104,6 +106,8 @@ type Options struct {
 	PlacementConfig     *Placement
 	// Domain of the cluster
 	ClusterDomain string
+	// FeatureGates is the feature gates configuration
+	FeatureGates *v1alpha1.FeatureGates
 }
 
 // Placement is a struct that holds the placement configuration for the component

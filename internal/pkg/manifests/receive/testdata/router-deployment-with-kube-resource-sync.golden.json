@@ -1,0 +1,185 @@
+{
+  "kind": "Deployment",
+  "apiVersion": "apps/v1",
+  "metadata": {
+    "name": "thanos-receive-router-test-receive",
+    "namespace": "test-ns",
+    "labels": {
+      "app.kubernetes.io/component": "thanos-receive-router",
+      "app.kubernetes.io/instance": "thanos-receive-router-test-receive",
+      "app.kubernetes.io/managed-by": "thanos-operator",
+      "app.kubernetes.io/name": "thanos-receive",
+      "app.kubernetes.io/part-of": "thanos",
+      "operator.thanos.io/owner": "test-receive"
+    },
+    "annotations": {
+      "test": "annotation"
+    }
+  },
+  "spec": {
+    "replicas": 0,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/component": "thanos-receive-router",
+        "app.kubernetes.io/instance": "thanos-receive-router-test-receive",
+        "app.kubernetes.io/managed-by": "thanos-operator",
+        "app.kubernetes.io/name": "thanos-receive",
+        "app.kubernetes.io/part-of": "thanos",
+        "operator.thanos.io/owner": "test-receive"
+      }
+    },
+    "template": {
+      "metadata": {
+        "name": "thanos-receive-router-test-receive",
+        "namespace": "test-ns",
+        "labels": {
+          "app.kubernetes.io/component": "thanos-receive-router",
+          "app.kubernetes.io/instance": "thanos-receive-router-test-receive",
+          "app.kubernetes.io/managed-by": "thanos-operator",
+          "app.kubernetes.io/name": "thanos-receive",
+          "app.kubernetes.io/part-of": "thanos",
+          "operator.thanos.io/owner": "test-receive"
+        }
+      },
+      "spec": {
+        "volumes": [
+          {
+            "name": "hashring-config",
+            "emptyDir": {}
+          }
+        ],
+        "containers": [
+          {
+            "name": "thanos-receive-router",
+            "image": "quay.io/thanos/thanos:v0.39.0:v0.39.0",
+            "args": [
+              "receive",
+              "--log.level=info",
+              "--log.format=logfmt",
+              "--grpc-address=0.0.0.0:10901",
+              "--http-address=0.0.0.0:10902",
+              "--remote-write.address=0.0.0.0:19291",
+              "--receive.replication-factor=0",
+              "--receive.hashrings-file=/var/lib/thanos-receive/hashrings.json",
+              "--receive.grpc-service-config={\n  \"loadBalancingPolicy\":\"round_robin\",\n  \"retryPolicy\": {\n    \"maxAttempts\": 2,\n    \"initialBackoff\": \"0.1s\",\n    \"backoffMultiplier\": 1,\n    \"retryableStatusCodes\": [\n  \t  \"UNAVAILABLE\"\n    ]\n  }\n}"
+            ],
+            "ports": [
+              {
+                "name": "grpc",
+                "containerPort": 10901
+              },
+              {
+                "name": "capnproto",
+                "containerPort": 19391
+              },
+              {
+                "name": "http",
+                "containerPort": 10902
+              },
+              {
+                "name": "remote-write",
+                "containerPort": 19291
+              }
+            ],
+            "env": [
+              {
+                "name": "POD_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "fieldPath": "metadata.name"
+                  }
+                }
+              },
+              {
+                "name": "POD_NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              }
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "hashring-config",
+                "mountPath": "/var/lib/thanos-receive"
+              }
+            ],
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/-/healthy",
+                "port": 10902
+              },
+              "initialDelaySeconds": 5,
+              "timeoutSeconds": 1,
+              "periodSeconds": 30,
+              "successThreshold": 1,
+              "failureThreshold": 8
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 10902
+              },
+              "initialDelaySeconds": 5,
+              "timeoutSeconds": 1,
+              "periodSeconds": 30,
+              "successThreshold": 1,
+              "failureThreshold": 8
+            },
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "allowPrivilegeEscalation": false
+            }
+          },
+          {
+            "name": "kube-resource-sync",
+            "image": "ghcr.io/philipgough/kube-resource-sync:v0.1.0",
+            "args": [
+              "--configmap-name=thanos-receive-router-test-receive",
+              "--configmap-namespace=test-ns",
+              "--configmap-key=hashrings.json",
+              "--output-path=/var/lib/thanos-receive/hashrings.json"
+            ],
+            "resources": {},
+            "volumeMounts": [
+              {
+                "name": "hashring-config",
+                "mountPath": "/var/lib/thanos-receive"
+              }
+            ],
+            "imagePullPolicy": "Always",
+            "securityContext": {
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "allowPrivilegeEscalation": false
+            }
+          }
+        ],
+        "serviceAccountName": "thanos-receive-router-test-receive",
+        "automountServiceAccountToken": true,
+        "securityContext": {}
+      }
+    },
+    "strategy": {
+      "type": "RollingUpdate",
+      "rollingUpdate": {
+        "maxUnavailable": 1,
+        "maxSurge": 0
+      }
+    },
+    "revisionHistoryLimit": 10
+  },
+  "status": {}
+}
