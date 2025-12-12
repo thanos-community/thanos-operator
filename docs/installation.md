@@ -26,10 +26,10 @@ curl -sL https://raw.githubusercontent.com/thanos-community/thanos-operator/refs
 (cd $TMPDIR && kustomize edit set namespace $NAMESPACE) && kubectl create -k "$TMPDIR"
 ```
 
-It can take some time for the operator to be up and running. You can wait for operator pods to become ready via,
+It can take some time for the operator to be up and running. You can wait for the operator's deployment to become available via,
 
 ```bash
-kubectl wait --for=condition=Ready pod \
+kubectl wait --for=condition=Available deployment \
   -l app.kubernetes.io/component=manager,app.kubernetes.io/part-of=thanos-operator,control-plane=controller-manager \
   -n thanos-operator-system \
   --timeout=2m
