@@ -17,6 +17,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -437,25 +438,25 @@ func TestNewRouterService(t *testing.T) {
 
 func TestKubeResourceSyncFeatureGate(t *testing.T) {
 	tests := []struct {
-		name                    string
-		featureGateEnabled      bool
-		expectedContainerCount  int
-		expectedVolumeType      string
-		expectedSidecarPresent  bool
+		name                   string
+		featureGateEnabled     bool
+		expectedContainerCount int
+		expectedVolumeType     string
+		expectedSidecarPresent bool
 	}{
 		{
-			name:                    "kube-resource-sync disabled (default)",
-			featureGateEnabled:      false,
-			expectedContainerCount:  1,
-			expectedVolumeType:      "ConfigMap",
-			expectedSidecarPresent:  false,
+			name:                   "kube-resource-sync disabled (default)",
+			featureGateEnabled:     false,
+			expectedContainerCount: 1,
+			expectedVolumeType:     "ConfigMap",
+			expectedSidecarPresent: false,
 		},
 		{
-			name:                    "kube-resource-sync enabled",
-			featureGateEnabled:      true,
-			expectedContainerCount:  2,
-			expectedVolumeType:      "EmptyDir",
-			expectedSidecarPresent:  true,
+			name:                   "kube-resource-sync enabled",
+			featureGateEnabled:     true,
+			expectedContainerCount: 2,
+			expectedVolumeType:     "EmptyDir",
+			expectedSidecarPresent: true,
 		},
 	}
 
@@ -473,6 +474,7 @@ func TestKubeResourceSyncFeatureGate(t *testing.T) {
 				opts.FeatureGates = &v1alpha1.FeatureGates{
 					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
 						Enable: ptr.To(true),
+						Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
 					},
 				}
 			}
@@ -513,28 +515,29 @@ func TestKubeResourceSyncFeatureGate(t *testing.T) {
 			// Test sidecar container presence
 			sidecarPresent := false
 			thanosRouterPresent := false
-			
+
 			for _, container := range deployment.Spec.Template.Spec.Containers {
 				if container.Name == kubeResourceSyncContainerName {
 					sidecarPresent = true
-					
+
 					// Verify sidecar configuration
 					if !tt.expectedSidecarPresent {
 						t.Error("kube-resource-sync sidecar should not be present when feature gate is disabled")
 					}
-					
+
 					// Check sidecar arguments
 					expectedArgs := []string{
-						"--configmap-name=" + opts.GetGeneratedResourceName(),
-						"--configmap-namespace=" + opts.Namespace,
-						"--configmap-key=" + HashringConfigKey,
-						"--output-path=" + hashringMountPath + "/" + HashringConfigKey,
+						"--resource-type=configmap",
+						"--resource-name=" + opts.GetGeneratedResourceName(),
+						"--namespace=" + opts.Namespace,
+						"--resource-key=" + HashringConfigKey,
+						"--write-path=" + hashringMountPath + "/" + HashringConfigKey,
 					}
-					
+
 					if !reflect.DeepEqual(container.Args, expectedArgs) {
 						t.Errorf("expected sidecar args %v, got %v", expectedArgs, container.Args)
 					}
-					
+
 					// Check volume mount
 					if len(container.VolumeMounts) != 1 {
 						t.Errorf("expected 1 volume mount for sidecar, got %d", len(container.VolumeMounts))
@@ -567,7 +570,7 @@ var update = flag.Bool("update", false, "update golden files")
 
 func TestKubeResourceSyncFeatureGate_Golden(t *testing.T) {
 	tests := []struct {
-		name             string
+		name               string
 		featureGateEnabled bool
 	}{
 		{
@@ -602,13 +605,13 @@ func TestKubeResourceSyncFeatureGate_Golden(t *testing.T) {
 				opts.FeatureGates = &v1alpha1.FeatureGates{
 					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
 						Enable: ptr.To(true),
-						Image:  ptr.To("ghcr.io/philipgough/kube-resource-sync:v0.1.0"),
+						Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
 					},
 				}
 			}
 
 			deployment := NewRouterDeployment(opts)
-			
+
 			// Remove runtime fields that can vary between test runs
 			deployment.CreationTimestamp = metav1.Time{}
 			for i := range deployment.Spec.Template.Spec.Containers {
@@ -645,6 +648,107 @@ func TestKubeResourceSyncFeatureGate_Golden(t *testing.T) {
 
 			// Compare the objects
 			assert.Equal(t, expected, *deployment)
+		})
+	}
+}
+
+func TestKubeResourceSyncRBAC(t *testing.T) {
+	tests := []struct {
+		name                string
+		featureGateEnabled  bool
+		expectedRBACObjects int
+	}{
+		{
+			name:                "kube-resource-sync disabled - no RBAC",
+			featureGateEnabled:  false,
+			expectedRBACObjects: 0,
+		},
+		{
+			name:                "kube-resource-sync enabled - RBAC created",
+			featureGateEnabled:  true,
+			expectedRBACObjects: 2, // Role + RoleBinding
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:latest"),
+				},
+				HashringConfig: `[{"hashring": "test"}]`,
+			}
+
+			if tt.featureGateEnabled {
+				opts.FeatureGates = &v1alpha1.FeatureGates{
+					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
+						Enable: ptr.To(true),
+					},
+				}
+			}
+
+			objects := opts.Build()
+
+			// Count RBAC objects (Role and RoleBinding)
+			rbacCount := 0
+			var role *rbacv1.Role
+			var roleBinding *rbacv1.RoleBinding
+
+			for _, obj := range objects {
+				switch o := obj.(type) {
+				case *rbacv1.Role:
+					rbacCount++
+					role = o
+				case *rbacv1.RoleBinding:
+					rbacCount++
+					roleBinding = o
+				}
+			}
+
+			if rbacCount != tt.expectedRBACObjects {
+				t.Errorf("expected %d RBAC objects, got %d", tt.expectedRBACObjects, rbacCount)
+			}
+
+			if tt.featureGateEnabled {
+				// Verify Role permissions
+				if role == nil {
+					t.Error("expected Role to be created when feature gate is enabled")
+				} else {
+					expectedRules := []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"configmaps"},
+							Verbs:     []string{"get", "list", "watch"},
+						},
+					}
+					if !reflect.DeepEqual(role.Rules, expectedRules) {
+						t.Errorf("expected Role rules %v, got %v", expectedRules, role.Rules)
+					}
+				}
+
+				// Verify RoleBinding
+				if roleBinding == nil {
+					t.Error("expected RoleBinding to be created when feature gate is enabled")
+				} else {
+					if roleBinding.RoleRef.Name != opts.GetGeneratedResourceName() {
+						t.Errorf("expected RoleBinding to reference role %s, got %s",
+							opts.GetGeneratedResourceName(), roleBinding.RoleRef.Name)
+					}
+
+					expectedSubjects := []rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      opts.GetGeneratedResourceName(),
+							Namespace: opts.Namespace,
+						},
+					}
+					if !reflect.DeepEqual(roleBinding.Subjects, expectedSubjects) {
+						t.Errorf("expected RoleBinding subjects %v, got %v", expectedSubjects, roleBinding.Subjects)
+					}
+				}
+			}
 		})
 	}
 }

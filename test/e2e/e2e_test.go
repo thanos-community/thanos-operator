@@ -271,6 +271,12 @@ var _ = Describe("controller", Ordered, func() {
 								"receive": "true",
 							},
 						},
+						FeatureGates: &v1alpha1.FeatureGates{
+							KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
+								Enable: ptr.To(true),
+								Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
+							},
+						},
 					},
 				}
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
@@ -319,6 +325,47 @@ var _ = Describe("controller", Ordered, func() {
 					Eventually(func() bool {
 						return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
 					}, time.Minute*5, time.Second*10).Should(BeTrue())
+				})
+				It("should have kube-resource-sync sidecar in router deployment", func() {
+					deployment := &appsv1.Deployment{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: routerName, Namespace: namespace}, deployment)
+					Expect(err).To(BeNil())
+
+					// Check that there are 2 containers (router + sidecar)
+					Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(2))
+
+					// Check that one container is the kube-resource-sync sidecar
+					var sidecarFound bool
+					for _, container := range deployment.Spec.Template.Spec.Containers {
+						if container.Name == "kube-resource-sync" {
+							sidecarFound = true
+							Expect(container.Image).To(Equal("quay.io/philipgough/kube-resource-sync:main"))
+
+							// Verify sidecar arguments
+							expectedArgs := []string{
+								"--resource-type=configmap",
+								"--resource-name=" + routerName,
+								"--namespace=" + namespace,
+								"--resource-key=hashrings.json",
+								"--write-path=/var/lib/thanos-receive/hashrings.json",
+							}
+							Expect(container.Args).To(Equal(expectedArgs))
+							break
+						}
+					}
+					Expect(sidecarFound).To(BeTrue())
+
+					// Verify that the volume is an emptyDir (not ConfigMap)
+					var hashringVolumeFound bool
+					for _, volume := range deployment.Spec.Template.Spec.Volumes {
+						if volume.Name == "hashring-config" {
+							hashringVolumeFound = true
+							Expect(volume.EmptyDir).NotTo(BeNil())
+							Expect(volume.ConfigMap).To(BeNil())
+							break
+						}
+					}
+					Expect(hashringVolumeFound).To(BeTrue())
 				})
 			})
 

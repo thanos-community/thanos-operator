@@ -224,7 +224,7 @@ type KubeResourceSyncConfig struct {
 	// +kubebuilder:validation:Optional
 	Enable *bool `json:"enable,omitempty"`
 	// Image is the container image to use for the kube-resource-sync sidecar.
-	// +kubebuilder:default="ghcr.io/philipgough/kube-resource-sync:latest"
+	// +kubebuilder:default="quay.io/philipgough/kube-resource-sync:main"
 	// +kubebuilder:validation:Optional
 	Image *string `json:"image,omitempty"`
 	// ResourceRequirements for the kube-resource-sync sidecar container.

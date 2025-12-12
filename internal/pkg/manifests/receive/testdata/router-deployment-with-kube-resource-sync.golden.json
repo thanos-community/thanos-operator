@@ -141,12 +141,13 @@
           },
           {
             "name": "kube-resource-sync",
-            "image": "ghcr.io/philipgough/kube-resource-sync:v0.1.0",
+            "image": "quay.io/philipgough/kube-resource-sync:main",
             "args": [
-              "--configmap-name=thanos-receive-router-test-receive",
-              "--configmap-namespace=test-ns",
-              "--configmap-key=hashrings.json",
-              "--output-path=/var/lib/thanos-receive/hashrings.json"
+              "--resource-type=configmap",
+              "--resource-name=thanos-receive-router-test-receive",
+              "--namespace=test-ns",
+              "--resource-key=hashrings.json",
+              "--write-path=/var/lib/thanos-receive/hashrings.json"
             ],
             "resources": {},
             "volumeMounts": [
@@ -155,7 +156,7 @@
                 "mountPath": "/var/lib/thanos-receive"
               }
             ],
-            "imagePullPolicy": "Always",
+            "imagePullPolicy": "IfNotPresent",
             "securityContext": {
               "capabilities": {
                 "drop": [

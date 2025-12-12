@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -134,6 +135,11 @@ func (opts RouterOptions) Build() []client.Object {
 	objs = append(objs, newRouterService(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
+
+	if manifests.HasKubeResourceSyncEnabled(opts.FeatureGates) {
+		objs = append(objs, newRouterRole(name, opts.Namespace, objectMetaLabels))
+		objs = append(objs, newRouterRoleBinding(name, opts.Namespace, objectMetaLabels))
+	}
 
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
@@ -419,8 +425,8 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 }
 
 const (
-	hashringVolumeName = "hashring-config"
-	hashringMountPath  = "/var/lib/thanos-receive"
+	hashringVolumeName            = "hashring-config"
+	hashringMountPath             = "/var/lib/thanos-receive"
 	kubeResourceSyncContainerName = "kube-resource-sync"
 )
 
@@ -435,7 +441,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 	name := opts.GetGeneratedResourceName()
 	volumes := buildRouterVolumes(opts, name)
 	containers := buildRouterContainers(opts)
-	
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -459,9 +465,9 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 					Labels:    objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{},
-					Volumes: volumes,
-					Containers: containers,
+					SecurityContext:              &corev1.PodSecurityContext{},
+					Volumes:                      volumes,
+					Containers:                   containers,
 					ServiceAccountName:           name,
 					AutomountServiceAccountToken: ptr.To(true),
 				},
@@ -651,7 +657,7 @@ func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
 			},
 		}
 	}
-	
+
 	// Default behavior: mount ConfigMap directly
 	return []corev1.Volume{
 		{
@@ -671,11 +677,11 @@ func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
 // buildRouterContainers builds the containers for the router pod based on feature gate settings
 func buildRouterContainers(opts RouterOptions) []corev1.Container {
 	containers := []corev1.Container{buildThanosRouterContainer(opts)}
-	
+
 	if manifests.HasKubeResourceSyncEnabled(opts.FeatureGates) {
 		containers = append(containers, buildKubeResourceSyncContainer(opts))
 	}
-	
+
 	return containers
 }
 
@@ -772,15 +778,15 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 
 // buildKubeResourceSyncContainer builds the kube-resource-sync sidecar container
 func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
-	image := "ghcr.io/philipgough/kube-resource-sync:latest"
+	image := "quay.io/philipgough/kube-resource-sync:main"
 	if opts.FeatureGates.KubeResourceSyncConfig.Image != nil {
 		image = *opts.FeatureGates.KubeResourceSyncConfig.Image
 	}
-	
+
 	container := corev1.Container{
 		Name:            kubeResourceSyncContainerName,
 		Image:           image,
-		ImagePullPolicy: corev1.PullAlways,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
@@ -791,10 +797,11 @@ func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
 			},
 		},
 		Args: []string{
-			"--configmap-name=" + opts.GetGeneratedResourceName(),
-			"--configmap-namespace=" + opts.Namespace,
-			"--configmap-key=" + HashringConfigKey,
-			"--output-path=" + hashringMountPath + "/" + HashringConfigKey,
+			"--resource-type=configmap",
+			"--resource-name=" + opts.GetGeneratedResourceName(),
+			"--namespace=" + opts.Namespace,
+			"--resource-key=" + HashringConfigKey,
+			"--write-path=" + hashringMountPath + "/" + HashringConfigKey,
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -805,11 +812,60 @@ func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 	}
-	
+
 	// Apply resource requirements if specified
 	if opts.FeatureGates.KubeResourceSyncConfig.ResourceRequirements != nil {
 		container.Resources = *opts.FeatureGates.KubeResourceSyncConfig.ResourceRequirements
 	}
-	
+
 	return container
+}
+
+// newRouterRole creates a Role for the router when kube-resource-sync is enabled
+func newRouterRole(name, namespace string, labels map[string]string) *rbacv1.Role {
+	return &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Role",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+	}
+}
+
+// newRouterRoleBinding creates a RoleBinding for the router when kube-resource-sync is enabled
+func newRouterRoleBinding(name, namespace string, labels map[string]string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     name,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
+	}
 }
