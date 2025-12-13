@@ -1,4 +1,4 @@
-include .bingo/Variables.mk
+# Tools are now managed with go tool
 
 WEBSITE_BASE_URL ?= https://thanos-operator.dev
 
@@ -60,10 +60,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: $(MAGE)
 manifests: deps controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	"$(MAGE)" config:generate
+	go tool mage config:generate
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -78,10 +77,9 @@ deps: ## Ensures fresh go.mod and go.sum.
 
 .PHONY: format
 format: ## Formats Go code.
-format: $(GOIMPORTS)
 	@echo ">> formatting code"
 	go fmt ./...
-	@$(GOIMPORTS) -local github.com/thanos-community/thanos-operator -w $(FILES_TO_FMT)
+	@go tool goimports -local github.com/thanos-community/thanos-operator -w $(FILES_TO_FMT)
 	cd magefiles && go fmt ./...
 
 .PHONY: vet
@@ -119,19 +117,19 @@ endef
 
 .PHONY: lint ## Runs various static analysis against our code.
 lint: all
-lint: $(FAILLINT) $(GOLANGCI_LINT) deps
+lint: deps
 	$(call require_clean_work_tree,"detected not clean main before running lint")
 	@echo ">> verifying modules being imported"
-	@$(FAILLINT) -paths "fmt.{Print,Printf,Println}" -ignore-tests ./...
+	@go tool faillint -paths "fmt.{Print,Printf,Println}" -ignore-tests ./...
 	@echo ">> examining all of the Go files"
 	@go vet -stdmethods=false ./...
 	@echo ">> linting all of the Go files GOGC=${GOGC}"
-	@$(GOLANGCI_LINT) run
+	@go tool golangci-lint run
 	$(call require_clean_work_tree,"run make lint file and commit changes.")
 
 .PHONY: lint-fix
-lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint linter and perform fixes
-	$(GOLANGCI_LINT) run --fix
+lint-fix: ## Run golangci-lint linter and perform fixes
+	go tool golangci-lint run --fix
 
 ##@ Docs
 
@@ -161,8 +159,7 @@ MDOX_CONFIG_FILE := .mdox.yaml
 
 .PHONY: docs
 docs: ## Generates docs for website
-docs: $(MDOX)
-	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt $(MD_FILES_TO_FORMAT)
+	go tool mdox fmt $(MD_FILES_TO_FORMAT)
 	@echo ">> generating docs for website (Input: $(INPUT_DIR), Output: $(OUTPUT_DIR))"
 	export INPUT_DIR="$(INPUT_DIR)"; \
 	export OUTPUT_DIR="$(OUTPUT_DIR)"; \
@@ -170,15 +167,15 @@ docs: $(MDOX)
 	\
 	rm -rf "$(OUTPUT_DIR)"; \
 	\
-	PATH="${PATH}:$(GOBIN)" $(MDOX) transform --log.level=debug --config-file=$(MDOX_CONFIG_FILE)
+	go tool mdox transform --log.level=debug --config-file=$(MDOX_CONFIG_FILE)
 	$(MAKE) generate-api-docs
 
 .PHONY: generate-api-docs
 generate-api-docs: ## Generate documentation from CRD
-generate-api-docs: $(CRD_REF_DOCS) generate format
-	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./website/content/docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
+generate-api-docs: generate format
+	go tool crd-ref-docs --source-path=./api --renderer=markdown --output-path=./website/content/docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
 	mv ./website/content/docs/api-reference/monitoring.thanos.io.md ./website/content/docs/api-reference/api.md
-	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
+	go tool crd-ref-docs --source-path=./api --renderer=markdown --output-path=./docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
 	mv ./docs/api-reference/monitoring.thanos.io.md ./docs/api-reference/api.md
 	$(SED) -i'' '/^# API Reference */d' ./website/content/docs/api-reference/api.md
 	@tmpfile=$$(mktemp); \
@@ -198,9 +195,9 @@ generate-api-docs: $(CRD_REF_DOCS) generate format
 
 .PHONY: check-docs
 check-docs: ## Checks docs against discrepancy with flags, links, white noise.
-check-docs: build docs $(MDOX)
+check-docs: build docs
 	@echo ">> checking docs"
-	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
+	go tool mdox fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
 	$(call require_clean_work_tree,'run make docs and commit changes')
 
 ##@ Build
@@ -340,15 +337,13 @@ uninstall-example: manifests kustomize ## Uninstall example definitions from K8s
 
 .PHONY: website-dev
 website-dev: ## Start website development server
-website-dev: $(HUGO)
 	@echo ">> starting website development server"
-	@cd website && npm install && "$(HUGO)" serve
+	@cd website && npm install && go tool hugo serve
 
 .PHONY: website
 website: ## Build website for production
-website: $(HUGO)
 	@echo ">> building website for production"
-	@cd website && npm install && "$(HUGO)" -b $(WEBSITE_BASE_URL)
+	@cd website && npm install && go tool hugo -b $(WEBSITE_BASE_URL)
 
 ##@ Dependencies
 
