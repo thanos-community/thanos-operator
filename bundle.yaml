@@ -36454,11 +36454,11 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanosqueries
-  - thanosstores
-  - thanosreceives
   - thanoscompacts
+  - thanosqueries
+  - thanosreceives
   - thanosrulers
+  - thanosstores
   verbs:
   - create
   - delete
@@ -36470,21 +36470,21 @@ rules:
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanosqueries/finalizers
-  - thanosstores/finalizers
-  - thanosreceives/finalizers
   - thanoscompacts/finalizers
+  - thanosqueries/finalizers
+  - thanosreceives/finalizers
   - thanosrulers/finalizers
+  - thanosstores/finalizers
   verbs:
   - update
 - apiGroups:
   - monitoring.thanos.io
   resources:
-  - thanosqueries/status
-  - thanosstores/status
-  - thanosreceives/status
   - thanoscompacts/status
+  - thanosqueries/status
+  - thanosreceives/status
   - thanosrulers/status
+  - thanosstores/status
   verbs:
   - get
   - patch
