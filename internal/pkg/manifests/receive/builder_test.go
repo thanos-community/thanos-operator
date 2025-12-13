@@ -1,13 +1,24 @@
 package receive
 
 import (
+	"encoding/json"
+	"flag"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -421,6 +432,323 @@ func TestNewRouterService(t *testing.T) {
 			utils.ValidateNameNamespaceAndLabels(t, router, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
 			utils.ValidateHasLabels(t, router, extraLabels)
 			utils.ValidateHasLabels(t, router, opts.GetSelectorLabels())
+		})
+	}
+}
+
+func TestKubeResourceSyncFeatureGate(t *testing.T) {
+	tests := []struct {
+		name                   string
+		featureGateEnabled     bool
+		expectedContainerCount int
+		expectedVolumeType     string
+		expectedSidecarPresent bool
+	}{
+		{
+			name:                   "kube-resource-sync disabled (default)",
+			featureGateEnabled:     false,
+			expectedContainerCount: 1,
+			expectedVolumeType:     "ConfigMap",
+			expectedSidecarPresent: false,
+		},
+		{
+			name:                   "kube-resource-sync enabled",
+			featureGateEnabled:     true,
+			expectedContainerCount: 2,
+			expectedVolumeType:     "EmptyDir",
+			expectedSidecarPresent: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:latest"),
+				},
+			}
+
+			if tt.featureGateEnabled {
+				opts.FeatureGates = &v1alpha1.FeatureGates{
+					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
+						Enable: ptr.To(true),
+						Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
+					},
+				}
+			}
+
+			deployment := NewRouterDeployment(opts)
+
+			// Test container count
+			if len(deployment.Spec.Template.Spec.Containers) != tt.expectedContainerCount {
+				t.Errorf("expected %d containers, got %d", tt.expectedContainerCount, len(deployment.Spec.Template.Spec.Containers))
+			}
+
+			// Test volume configuration
+			if len(deployment.Spec.Template.Spec.Volumes) != 1 {
+				t.Errorf("expected 1 volume, got %d", len(deployment.Spec.Template.Spec.Volumes))
+			}
+
+			volume := deployment.Spec.Template.Spec.Volumes[0]
+			if volume.Name != hashringVolumeName {
+				t.Errorf("expected volume name %s, got %s", hashringVolumeName, volume.Name)
+			}
+
+			if tt.expectedVolumeType == "ConfigMap" {
+				if volume.VolumeSource.ConfigMap == nil {
+					t.Error("expected ConfigMap volume source but got nil")
+				}
+				if volume.VolumeSource.EmptyDir != nil {
+					t.Error("expected no EmptyDir volume source but found one")
+				}
+			} else if tt.expectedVolumeType == "EmptyDir" {
+				if volume.VolumeSource.EmptyDir == nil {
+					t.Error("expected EmptyDir volume source but got nil")
+				}
+				if volume.VolumeSource.ConfigMap != nil {
+					t.Error("expected no ConfigMap volume source but found one")
+				}
+			}
+
+			// Test sidecar container presence
+			sidecarPresent := false
+			thanosRouterPresent := false
+
+			for _, container := range deployment.Spec.Template.Spec.Containers {
+				if container.Name == kubeResourceSyncContainerName {
+					sidecarPresent = true
+
+					// Verify sidecar configuration
+					if !tt.expectedSidecarPresent {
+						t.Error("kube-resource-sync sidecar should not be present when feature gate is disabled")
+					}
+
+					// Check sidecar arguments
+					expectedArgs := []string{
+						"--resource-type=configmap",
+						"--resource-name=" + opts.GetGeneratedResourceName(),
+						"--namespace=" + opts.Namespace,
+						"--resource-key=" + HashringConfigKey,
+						"--write-path=" + hashringMountPath + "/" + HashringConfigKey,
+					}
+
+					if !reflect.DeepEqual(container.Args, expectedArgs) {
+						t.Errorf("expected sidecar args %v, got %v", expectedArgs, container.Args)
+					}
+
+					// Check volume mount
+					if len(container.VolumeMounts) != 1 {
+						t.Errorf("expected 1 volume mount for sidecar, got %d", len(container.VolumeMounts))
+					} else {
+						mount := container.VolumeMounts[0]
+						if mount.Name != hashringVolumeName {
+							t.Errorf("expected volume mount name %s, got %s", hashringVolumeName, mount.Name)
+						}
+						if mount.MountPath != hashringMountPath {
+							t.Errorf("expected volume mount path %s, got %s", hashringMountPath, mount.MountPath)
+						}
+					}
+				} else if container.Name == RouterComponentName {
+					thanosRouterPresent = true
+				}
+			}
+
+			if tt.expectedSidecarPresent && !sidecarPresent {
+				t.Error("expected kube-resource-sync sidecar to be present when feature gate is enabled")
+			}
+
+			if !thanosRouterPresent {
+				t.Error("Thanos router container should always be present")
+			}
+		})
+	}
+}
+
+var update = flag.Bool("update", false, "update golden files")
+
+func TestKubeResourceSyncFeatureGate_Golden(t *testing.T) {
+	tests := []struct {
+		name               string
+		featureGateEnabled bool
+	}{
+		{
+			name:               "router-deployment-without-kube-resource-sync",
+			featureGateEnabled: false,
+		},
+		{
+			name:               "router-deployment-with-kube-resource-sync",
+			featureGateEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:v0.39.0"),
+					Version:   ptr.To("v0.39.0"),
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-receive",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+				},
+				HashringConfig: `[{"hashring": "test", "tenants": ["tenant1"], "endpoints": ["http://test:10901"]}]`,
+			}
+
+			if tt.featureGateEnabled {
+				opts.FeatureGates = &v1alpha1.FeatureGates{
+					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
+						Enable: ptr.To(true),
+						Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
+					},
+				}
+			}
+
+			deployment := NewRouterDeployment(opts)
+
+			// Remove runtime fields that can vary between test runs
+			deployment.CreationTimestamp = metav1.Time{}
+			for i := range deployment.Spec.Template.Spec.Containers {
+				if deployment.Spec.Template.Spec.Containers[i].TerminationMessagePath != "" {
+					deployment.Spec.Template.Spec.Containers[i].TerminationMessagePath = ""
+				}
+				if deployment.Spec.Template.Spec.Containers[i].TerminationMessagePolicy != "" {
+					deployment.Spec.Template.Spec.Containers[i].TerminationMessagePolicy = ""
+				}
+			}
+
+			// Create golden file path
+			goldenFilePath := filepath.Join("testdata", tt.name+".golden.json")
+
+			if *update {
+				// Update golden file
+				bytes, err := json.MarshalIndent(deployment, "", "  ")
+				require.NoError(t, err)
+
+				err = os.MkdirAll(filepath.Dir(goldenFilePath), 0755)
+				require.NoError(t, err)
+
+				err = os.WriteFile(goldenFilePath, bytes, 0644)
+				require.NoError(t, err)
+			}
+
+			// Read golden file
+			bytes, err := os.ReadFile(goldenFilePath)
+			require.NoError(t, err)
+
+			var expected appsv1.Deployment
+			err = json.Unmarshal(bytes, &expected)
+			require.NoError(t, err)
+
+			// Compare the objects
+			assert.Equal(t, expected, *deployment)
+		})
+	}
+}
+
+func TestKubeResourceSyncRBAC(t *testing.T) {
+	tests := []struct {
+		name                string
+		featureGateEnabled  bool
+		expectedRBACObjects int
+	}{
+		{
+			name:                "kube-resource-sync disabled - no RBAC",
+			featureGateEnabled:  false,
+			expectedRBACObjects: 0,
+		},
+		{
+			name:                "kube-resource-sync enabled - RBAC created",
+			featureGateEnabled:  true,
+			expectedRBACObjects: 2, // Role + RoleBinding
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:latest"),
+				},
+				HashringConfig: `[{"hashring": "test"}]`,
+			}
+
+			if tt.featureGateEnabled {
+				opts.FeatureGates = &v1alpha1.FeatureGates{
+					KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
+						Enable: ptr.To(true),
+					},
+				}
+			}
+
+			objects := opts.Build()
+
+			// Count RBAC objects (Role and RoleBinding)
+			rbacCount := 0
+			var role *rbacv1.Role
+			var roleBinding *rbacv1.RoleBinding
+
+			for _, obj := range objects {
+				switch o := obj.(type) {
+				case *rbacv1.Role:
+					rbacCount++
+					role = o
+				case *rbacv1.RoleBinding:
+					rbacCount++
+					roleBinding = o
+				}
+			}
+
+			if rbacCount != tt.expectedRBACObjects {
+				t.Errorf("expected %d RBAC objects, got %d", tt.expectedRBACObjects, rbacCount)
+			}
+
+			if tt.featureGateEnabled {
+				// Verify Role permissions
+				if role == nil {
+					t.Error("expected Role to be created when feature gate is enabled")
+				} else {
+					expectedRules := []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"configmaps"},
+							Verbs:     []string{"get", "list", "watch"},
+						},
+					}
+					if !reflect.DeepEqual(role.Rules, expectedRules) {
+						t.Errorf("expected Role rules %v, got %v", expectedRules, role.Rules)
+					}
+				}
+
+				// Verify RoleBinding
+				if roleBinding == nil {
+					t.Error("expected RoleBinding to be created when feature gate is enabled")
+				} else {
+					if roleBinding.RoleRef.Name != opts.GetGeneratedResourceName() {
+						t.Errorf("expected RoleBinding to reference role %s, got %s",
+							opts.GetGeneratedResourceName(), roleBinding.RoleRef.Name)
+					}
+
+					expectedSubjects := []rbacv1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      opts.GetGeneratedResourceName(),
+							Namespace: opts.Namespace,
+						},
+					}
+					if !reflect.DeepEqual(roleBinding.Subjects, expectedSubjects) {
+						t.Errorf("expected RoleBinding subjects %v, got %v", expectedSubjects, roleBinding.Subjects)
+					}
+				}
+			}
 		})
 	}
 }

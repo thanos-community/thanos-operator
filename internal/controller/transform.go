@@ -391,6 +391,7 @@ func commonToOpts(
 		},
 		ClusterDomain: clusterDomain,
 		StatefulSet:   statefulSetToOpts(statefulSet),
+		FeatureGates:  featureGates,
 	}
 }
 
