@@ -41,7 +41,6 @@ func (c Config) Generate() error {
 	rbacGen.Add("auth_proxy_service.yaml", encoding.GhodssYAML(config.AuthProxyService()))
 	rbacGen.Add("leader_election_role.yaml", encoding.GhodssYAML(config.LeaderElectionRole()))
 	rbacGen.Add("leader_election_role_binding.yaml", encoding.GhodssYAML(config.LeaderElectionRoleBinding()))
-	rbacGen.Add("role.yaml", encoding.GhodssYAML(config.ManagerClusterRole()))
 	rbacGen.Add("role_binding.yaml", encoding.GhodssYAML(config.ManagerClusterRoleBinding()))
 	rbacGen.Add("service_account.yaml", encoding.GhodssYAML(config.ManagerServiceAccount()))
 	for _, crd := range config.CRDList {

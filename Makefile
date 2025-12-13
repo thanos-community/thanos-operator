@@ -163,7 +163,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: deps controller-gen mage ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	"$(CONTROLLER_GEN)" crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	"$(MAGE)" config:generate
 
 .PHONY: generate
