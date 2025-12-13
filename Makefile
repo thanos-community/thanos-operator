@@ -1,4 +1,106 @@
-include .bingo/Variables.mk
+##@ Dependencies
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Versions
+KUSTOMIZE_VERSION ?= v5.7.1
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+ENVTEST_VERSION ?= latest
+KUBEBUILDER_VERSION ?= v4.10.1
+CRD_REF_DOCS_VERSION ?= v0.2.0
+FAILLINT_VERSION ?= v1.15.0
+GOLANGCI_LINT_VERSION ?= v1.63.4
+GOIMPORTS_VERSION ?= v0.38.0
+HUGO_VERSION ?= v0.152.2
+MAGE_VERSION ?= v1.15.0
+MDOX_VERSION ?= v0.9.1-0.20220713110358-25b9abcf90a0
+
+## Tool Binaries
+KUBECTL ?= kubectl
+KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
+ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
+KUBEBUILDER ?= $(LOCALBIN)/kubebuilder-$(KUBEBUILDER_VERSION)
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs-$(CRD_REF_DOCS_VERSION)
+FAILLINT ?= $(LOCALBIN)/faillint-$(FAILLINT_VERSION)
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+GOIMPORTS ?= $(LOCALBIN)/goimports-$(GOIMPORTS_VERSION)
+HUGO ?= $(LOCALBIN)/hugo-$(HUGO_VERSION)
+MAGE ?= $(LOCALBIN)/mage-$(MAGE_VERSION)
+MDOX ?= $(LOCALBIN)/mdox-$(MDOX_VERSION)
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+
+.PHONY: kubebuilder
+kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.
+$(KUBEBUILDER): $(LOCALBIN)
+	$(call go-install-tool,$(KUBEBUILDER),sigs.k8s.io/kubebuilder/v4,$(KUBEBUILDER_VERSION))
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	$(call go-install-tool,$(CRD_REF_DOCS),github.com/elastic/crd-ref-docs,$(CRD_REF_DOCS_VERSION))
+
+.PHONY: faillint
+faillint: $(FAILLINT) ## Download faillint locally if necessary.
+$(FAILLINT): $(LOCALBIN)
+	$(call go-install-tool,$(FAILLINT),github.com/fatih/faillint,$(FAILLINT_VERSION))
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+.PHONY: goimports
+goimports: $(GOIMPORTS) ## Download goimports locally if necessary.
+$(GOIMPORTS): $(LOCALBIN)
+	$(call go-install-tool,$(GOIMPORTS),golang.org/x/tools/cmd/goimports,$(GOIMPORTS_VERSION))
+
+.PHONY: hugo
+hugo: $(HUGO) ## Download hugo locally if necessary.
+$(HUGO): $(LOCALBIN)
+	$(call go-install-tool,$(HUGO),github.com/gohugoio/hugo,$(HUGO_VERSION),-tags=extended,withdeploy)
+
+.PHONY: mage
+mage: $(MAGE) ## Download mage locally if necessary.
+$(MAGE): $(LOCALBIN)
+	$(call go-install-tool,$(MAGE),github.com/magefile/mage,$(MAGE_VERSION))
+
+.PHONY: mdox
+mdox: $(MDOX) ## Download mdox locally if necessary.
+$(MDOX): $(LOCALBIN)
+	$(call go-install-tool,$(MDOX),github.com/bwplotka/mdox,$(MDOX_VERSION))
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary (ideally with version)
+# $2 - package url which can be installed
+# $3 - specific version of package
+# $4 - additional flags for go install
+define go-install-tool
+@[ -f $(1) ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+GOBIN=$(LOCALBIN) go install $${package} $${4} ;\
+mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
+}
+endef
 
 WEBSITE_BASE_URL ?= https://thanos-operator.dev
 
@@ -60,8 +162,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: $(MAGE)
-manifests: deps controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: deps controller-gen mage ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	"$(MAGE)" config:generate
 
@@ -78,7 +179,7 @@ deps: ## Ensures fresh go.mod and go.sum.
 
 .PHONY: format
 format: ## Formats Go code.
-format: $(GOIMPORTS)
+format: goimports
 	@echo ">> formatting code"
 	go fmt ./...
 	@$(GOIMPORTS) -local github.com/thanos-community/thanos-operator -w $(FILES_TO_FMT)
@@ -119,7 +220,7 @@ endef
 
 .PHONY: lint ## Runs various static analysis against our code.
 lint: all
-lint: $(FAILLINT) $(GOLANGCI_LINT) deps
+lint: faillint golangci-lint deps
 	$(call require_clean_work_tree,"detected not clean main before running lint")
 	@echo ">> verifying modules being imported"
 	@$(FAILLINT) -paths "fmt.{Print,Printf,Println}" -ignore-tests ./...
@@ -130,7 +231,7 @@ lint: $(FAILLINT) $(GOLANGCI_LINT) deps
 	$(call require_clean_work_tree,"run make lint file and commit changes.")
 
 .PHONY: lint-fix
-lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint linter and perform fixes
+lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
 
 ##@ Docs
@@ -161,7 +262,7 @@ MDOX_CONFIG_FILE := .mdox.yaml
 
 .PHONY: docs
 docs: ## Generates docs for website
-docs: $(MDOX)
+docs: mdox
 	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt $(MD_FILES_TO_FORMAT)
 	@echo ">> generating docs for website (Input: $(INPUT_DIR), Output: $(OUTPUT_DIR))"
 	export INPUT_DIR="$(INPUT_DIR)"; \
@@ -175,7 +276,7 @@ docs: $(MDOX)
 
 .PHONY: generate-api-docs
 generate-api-docs: ## Generate documentation from CRD
-generate-api-docs: $(CRD_REF_DOCS) generate format
+generate-api-docs: crd-ref-docs generate format
 	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./website/content/docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
 	mv ./website/content/docs/api-reference/monitoring.thanos.io.md ./website/content/docs/api-reference/api.md
 	$(CRD_REF_DOCS) --source-path=./api --renderer=markdown --output-path=./docs/api-reference --output-mode=group --config=$(CRD_REF_DOCS_CONFIG)
@@ -198,7 +299,7 @@ generate-api-docs: $(CRD_REF_DOCS) generate format
 
 .PHONY: check-docs
 check-docs: ## Checks docs against discrepancy with flags, links, white noise.
-check-docs: build docs $(MDOX)
+check-docs: build docs mdox
 	@echo ">> checking docs"
 	PATH="${PATH}:$(GOBIN)" $(MDOX) fmt -l --links.validate.config-file=$(MDOX_VALIDATE_CONFIG) $(MD_FILES_TO_FORMAT)
 	$(call require_clean_work_tree,'run make docs and commit changes')
@@ -340,66 +441,12 @@ uninstall-example: manifests kustomize ## Uninstall example definitions from K8s
 
 .PHONY: website-dev
 website-dev: ## Start website development server
-website-dev: $(HUGO)
+website-dev: hugo
 	@echo ">> starting website development server"
 	@cd website && npm install && "$(HUGO)" serve
 
 .PHONY: website
 website: ## Build website for production
-website: $(HUGO)
+website: hugo
 	@echo ">> building website for production"
 	@cd website && npm install && "$(HUGO)" -b $(WEBSITE_BASE_URL)
-
-##@ Dependencies
-
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-## Tool Binaries
-KUBECTL ?= kubectl
-KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
-ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
-KUBEBUILDER ?= $(LOCALBIN)/kubebuilder-$(KUBEBUILDER_VERSION)
-
-## Tool Versions
-KUSTOMIZE_VERSION ?= v5.7.1
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
-ENVTEST_VERSION ?= latest
-KUBEBUILDER_VERSION ?= v4.10.1
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
-
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
-
-.PHONY: kubebuilder
-kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.
-$(KUBEBUILDER): $(LOCALBIN)
-	$(call go-install-tool,$(KUBEBUILDER),sigs.k8s.io/kubebuilder/v4,$(KUBEBUILDER_VERSION))
-
-# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
-# $1 - target path with name of binary (ideally with version)
-# $2 - package url which can be installed
-# $3 - specific version of package
-define go-install-tool
-@[ -f $(1) ] || { \
-set -e; \
-package=$(2)@$(3) ;\
-echo "Downloading $${package}" ;\
-GOBIN=$(LOCALBIN) go install $${package} ;\
-mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
-}
-endef
