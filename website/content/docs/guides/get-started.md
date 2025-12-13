@@ -49,10 +49,10 @@ curl -sL https://raw.githubusercontent.com/thanos-community/thanos-operator/refs
 
 ### Verify installation
 
-Wait for the operator to be ready:
+Wait for the operator's deployment to be available:
 
 ```bash
-kubectl wait --for=condition=Ready pod \
+kubectl wait --for=condition=Available deployment \
   -l app.kubernetes.io/component=manager,app.kubernetes.io/part-of=thanos-operator,control-plane=controller-manager \
   -n thanos-operator-system \
   --timeout=2m
