@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: rolebinding
     app.kubernetes.io/part-of: thanos-operator
   name: leader-election-rolebinding
+  namespace: system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

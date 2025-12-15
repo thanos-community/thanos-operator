@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: role
     app.kubernetes.io/part-of: thanos-operator
   name: leader-election-role
+  namespace: system
 rules:
 - apiGroups:
   - ""
