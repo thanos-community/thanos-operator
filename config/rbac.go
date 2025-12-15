@@ -43,8 +43,9 @@ func LeaderElectionRole() *rbacv1.Role {
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   prefixName(LeaderElectionRoleName),
-			Labels: commonLabels("rbac", LeaderElectionRoleName, "role"),
+			Name:      prefixName(LeaderElectionRoleName),
+			Labels:    commonLabels("rbac", LeaderElectionRoleName, "role"),
+			Namespace: DefaultNamespace,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -74,8 +75,9 @@ func LeaderElectionRoleBinding() *rbacv1.RoleBinding {
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   prefixName("leader-election-rolebinding"),
-			Labels: commonLabels("rbac", "leader-election-rolebinding", "rolebinding"),
+			Name:      prefixName("leader-election-rolebinding"),
+			Labels:    commonLabels("rbac", "leader-election-rolebinding", "rolebinding"),
+			Namespace: DefaultNamespace,
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",

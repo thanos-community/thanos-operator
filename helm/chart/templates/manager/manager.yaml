@@ -13,10 +13,15 @@ metadata:
     namespace: {{ .Release.Namespace }}
 spec:
     replicas: 1
+    revisionHistoryLimit: 10
     selector:
         matchLabels:
             control-plane: controller-manager
-    strategy: {}
+    strategy:
+        rollingUpdate:
+            maxSurge: 25%
+            maxUnavailable: 25%
+        type: RollingUpdate
     template:
         metadata:
             annotations:
@@ -57,19 +62,28 @@ spec:
                   command:
                     - /manager
                   image: quay.io/thanos/thanos-operator:main
+                  imagePullPolicy: IfNotPresent
                   livenessProbe:
+                    failureThreshold: 3
                     httpGet:
                         path: /healthz
                         port: 8081
+                        scheme: HTTP
                     initialDelaySeconds: 15
                     periodSeconds: 20
+                    successThreshold: 1
+                    timeoutSeconds: 1
                   name: manager
                   readinessProbe:
+                    failureThreshold: 3
                     httpGet:
                         path: /readyz
                         port: 8081
+                        scheme: HTTP
                     initialDelaySeconds: 5
                     periodSeconds: 10
+                    successThreshold: 1
+                    timeoutSeconds: 1
                   resources:
                     limits:
                         cpu: 500m

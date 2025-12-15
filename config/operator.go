@@ -215,10 +215,18 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 			Labels:    commonControllerManagerLabels("manager", ManagerName, "deployment"),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas:             &replicas,
+			RevisionHistoryLimit: ptr.To(int32(10)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"control-plane": "controller-manager",
+				},
+			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxSurge:       &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
+					MaxUnavailable: &intstr.IntOrString{Type: intstr.String, StrVal: "25%"},
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -238,10 +246,11 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 					TerminationGracePeriodSeconds: ptr.To(int64(10)),
 					Containers: []corev1.Container{
 						{
-							Name:    "manager",
-							Image:   DefaultManagerImage,
-							Command: []string{"/manager"},
-							Args:    []string{"--leader-elect"},
+							Name:            "manager",
+							Image:           DefaultManagerImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/manager"},
+							Args:            []string{"--leader-elect"},
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
@@ -251,22 +260,30 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.FromInt(8081),
+										Path:   "/healthz",
+										Port:   intstr.FromInt(8081),
+										Scheme: corev1.URISchemeHTTP,
 									},
 								},
 								InitialDelaySeconds: 15,
 								PeriodSeconds:       20,
+								TimeoutSeconds:      1,
+								FailureThreshold:    3,
+								SuccessThreshold:    1,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readyz",
-										Port: intstr.FromInt(8081),
+										Path:   "/readyz",
+										Port:   intstr.FromInt(8081),
+										Scheme: corev1.URISchemeHTTP,
 									},
 								},
 								InitialDelaySeconds: 5,
 								PeriodSeconds:       10,
+								TimeoutSeconds:      1,
+								FailureThreshold:    3,
+								SuccessThreshold:    1,
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
@@ -287,9 +304,10 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 
 	if enableAuthProxy {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
-			Name:  "kube-rbac-proxy",
-			Image: DefaultAuthProxyImage,
-			Args:  []string{"--secure-listen-address=0.0.0.0:8443", "--upstream=http://127.0.0.1:8080/", "--logtostderr=true", "--v=0"},
+			Name:            "kube-rbac-proxy",
+			Image:           DefaultAuthProxyImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Args:            []string{"--secure-listen-address=0.0.0.0:8443", "--upstream=http://127.0.0.1:8080/", "--logtostderr=true", "--v=0"},
 			SecurityContext: &corev1.SecurityContext{
 				AllowPrivilegeEscalation: ptr.To(false),
 				Capabilities: &corev1.Capabilities{
