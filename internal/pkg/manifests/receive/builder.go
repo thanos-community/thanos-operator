@@ -219,9 +219,6 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
-					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptr.To(int64(1001)),
-					},
 					Containers: []corev1.Container{
 						{
 							Image:           opts.GetContainerImage(),
@@ -455,7 +452,6 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 					Labels:    objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{},
 					Volumes: []corev1.Volume{
 						{
 							Name: hashringVolumeName,

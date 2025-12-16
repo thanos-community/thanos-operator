@@ -389,8 +389,9 @@ func commonToOpts(
 			Affinity:     common.Affinity,
 			Tolerations:  common.Tolerations,
 		},
-		ClusterDomain: clusterDomain,
-		StatefulSet:   statefulSetToOpts(statefulSet),
+		ClusterDomain:   clusterDomain,
+		StatefulSet:     statefulSetToOpts(statefulSet),
+		SecurityContext: common.SecurityContext,
 	}
 }
 
