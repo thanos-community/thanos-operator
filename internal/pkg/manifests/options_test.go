@@ -754,3 +754,165 @@ func TestAugmentWithOptions_UnsupportedType(t *testing.T) {
 	// Verify the object wasn't modified
 	assert.Equal(t, originalObj, obj)
 }
+
+func TestAugmentWithOptions_SecurityContext_Deployment(t *testing.T) {
+	tests := []struct {
+		name                     string
+		securityContext          *corev1.PodSecurityContext
+		expectSecurityContext    *corev1.PodSecurityContext
+		expectSecurityContextNil bool
+	}{
+		{
+			name: "SecurityContext with FSGroup is set on Deployment",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(1001)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(1001)),
+			},
+		},
+		{
+			name: "SecurityContext with custom FSGroup is set on Deployment",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(2000)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(2000)),
+			},
+		},
+		{
+			name: "SecurityContext with RunAsUser and RunAsGroup",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup:    ptr.To(int64(1001)),
+				RunAsUser:  ptr.To(int64(1000)),
+				RunAsGroup: ptr.To(int64(1000)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup:    ptr.To(int64(1001)),
+				RunAsUser:  ptr.To(int64(1000)),
+				RunAsGroup: ptr.To(int64(1000)),
+			},
+		},
+		{
+			name:                     "nil SecurityContext is not set on Deployment",
+			securityContext:          nil,
+			expectSecurityContextNil: true,
+		},
+		{
+			name:                  "empty SecurityContext is set on Deployment",
+			securityContext:       &corev1.PodSecurityContext{},
+			expectSecurityContext: &corev1.PodSecurityContext{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deployment := &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := Options{
+				Owner:           "test",
+				Namespace:       "default",
+				SecurityContext: tt.securityContext,
+			}
+
+			AugmentWithOptions(deployment, opts)
+
+			if tt.expectSecurityContextNil {
+				assert.Nil(t, deployment.Spec.Template.Spec.SecurityContext)
+			} else {
+				assert.Equal(t, tt.expectSecurityContext, deployment.Spec.Template.Spec.SecurityContext)
+			}
+		})
+	}
+}
+
+func TestAugmentWithOptions_SecurityContext_StatefulSet(t *testing.T) {
+	tests := []struct {
+		name                     string
+		securityContext          *corev1.PodSecurityContext
+		expectSecurityContext    *corev1.PodSecurityContext
+		expectSecurityContextNil bool
+	}{
+		{
+			name: "SecurityContext with FSGroup is set on StatefulSet",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(1001)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(1001)),
+			},
+		},
+		{
+			name: "SecurityContext with custom FSGroup is set on StatefulSet",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(2000)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(int64(2000)),
+			},
+		},
+		{
+			name: "SecurityContext with RunAsUser and RunAsGroup",
+			securityContext: &corev1.PodSecurityContext{
+				FSGroup:    ptr.To(int64(1001)),
+				RunAsUser:  ptr.To(int64(1000)),
+				RunAsGroup: ptr.To(int64(1000)),
+			},
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup:    ptr.To(int64(1001)),
+				RunAsUser:  ptr.To(int64(1000)),
+				RunAsGroup: ptr.To(int64(1000)),
+			},
+		},
+		{
+			name:                     "nil SecurityContext is not set on StatefulSet",
+			securityContext:          nil,
+			expectSecurityContextNil: true,
+		},
+		{
+			name:                  "empty SecurityContext is set on StatefulSet",
+			securityContext:       &corev1.PodSecurityContext{},
+			expectSecurityContext: &corev1.PodSecurityContext{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statefulSet := &appsv1.StatefulSet{
+				Spec: appsv1.StatefulSetSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := Options{
+				Owner:           "test",
+				Namespace:       "default",
+				SecurityContext: tt.securityContext,
+			}
+
+			AugmentWithOptions(statefulSet, opts)
+
+			if tt.expectSecurityContextNil {
+				assert.Nil(t, statefulSet.Spec.Template.Spec.SecurityContext)
+			} else {
+				assert.Equal(t, tt.expectSecurityContext, statefulSet.Spec.Template.Spec.SecurityContext)
+			}
+		})
+	}
+}

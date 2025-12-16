@@ -112,6 +112,12 @@ type CommonFields struct {
 	// Tolerations defines the workloads tolerations if specified.
 	// +kubebuilder:validation:Optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.
+	// If not specified, the operator will default to FSGroup=1001.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={fsGroup: 1001}
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 }
 
 // StatefulSetFields are the options available to all Thanos components.

@@ -118,7 +118,6 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
-					SecurityContext:    &corev1.PodSecurityContext{},
 					Containers: []corev1.Container{
 						{
 							Name:  Name,

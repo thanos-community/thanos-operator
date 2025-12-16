@@ -87,10 +87,10 @@ config:
 		AfterEach(func() {
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosCompact")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			if err == nil {
+				By("Cleanup the specific resource instance ThanosCompact")
+				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			}
 		})
 
 		It("should reconcile correctly", func() {
@@ -216,6 +216,72 @@ config:
 					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 					return verifier.Verify(k8sClient, name, ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+		})
+
+		It("should reconcile with custom SecurityContext", func() {
+			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
+				Skip("Skipping ThanosCompact controller tests")
+			}
+
+			// Use a different resource name to avoid interference from previous test cleanup
+			securityContextResourceName := "test-compact-security-context"
+			customFSGroup := int64(2000)
+			customRunAsUser := int64(1000)
+			customRunAsGroup := int64(1000)
+
+			resource := &monitoringthanosiov1alpha1.ThanosCompact{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      securityContextResourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						SecurityContext: &corev1.PodSecurityContext{
+							FSGroup:    ptr.To(customFSGroup),
+							RunAsUser:  ptr.To(customRunAsUser),
+							RunAsGroup: ptr.To(customRunAsGroup),
+						},
+					},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+				},
+			}
+
+			By("creating ThanosCompact and verifying SecurityContext is set on StatefulSet pod spec", func() {
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				name := compact.Options{Options: manifests.Options{Owner: securityContextResourceName}}.GetGeneratedResourceName()
+
+				EventuallyWithOffset(1, func() bool {
+					statefulSet := &appsv1.StatefulSet{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      name,
+						Namespace: ns,
+					}, statefulSet); err != nil {
+						return false
+					}
+
+					sc := statefulSet.Spec.Template.Spec.SecurityContext
+					if sc == nil {
+						return false
+					}
+
+					return sc.FSGroup != nil && *sc.FSGroup == customFSGroup &&
+						sc.RunAsUser != nil && *sc.RunAsUser == customRunAsUser &&
+						sc.RunAsGroup != nil && *sc.RunAsGroup == customRunAsGroup
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+			})
+
+			By("cleaning up the SecurityContext test resource", func() {
+				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 			})
 		})
 	})

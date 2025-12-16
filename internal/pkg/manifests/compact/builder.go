@@ -164,9 +164,6 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 					Labels: metaLabels,
 				},
 				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptr.To(int64(1001)),
-					},
 					ServiceAccountName: name,
 					Containers: []corev1.Container{
 						{

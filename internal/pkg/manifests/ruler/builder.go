@@ -278,10 +278,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Labels: objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					Affinity: &podAffinity,
-					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptr.To(int64(1001)),
-					},
+					Affinity:           &podAffinity,
 					Containers:         []corev1.Container{rulerContainer},
 					ServiceAccountName: name,
 					Volumes:            volumes,

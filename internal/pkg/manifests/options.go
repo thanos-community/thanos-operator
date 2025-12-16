@@ -104,6 +104,9 @@ type Options struct {
 	PlacementConfig     *Placement
 	// Domain of the cluster
 	ClusterDomain string
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
+	SecurityContext *corev1.PodSecurityContext
 }
 
 // Placement is a struct that holds the placement configuration for the component
@@ -256,6 +259,10 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			)
 		}
 
+		if opts.SecurityContext != nil {
+			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -306,6 +313,10 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			)
 		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
+
+		if opts.SecurityContext != nil {
+			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
+		}
 
 	default:
 		//no-op
