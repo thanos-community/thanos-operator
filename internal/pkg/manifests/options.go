@@ -265,10 +265,6 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
-		} else {
-			o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
-				FSGroup: ptr.To(DefaultFSGroup),
-			}
 		}
 
 	case *appsv1.StatefulSet:
@@ -322,12 +318,11 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
+		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+			FSGroup: ptr.To(DefaultFSGroup),
+		}
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
-		} else {
-			o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
-				FSGroup: ptr.To(DefaultFSGroup),
-			}
 		}
 
 	default:
