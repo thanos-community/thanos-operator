@@ -108,7 +108,10 @@
             "operator": "Exists",
             "effect": "NoSchedule"
           }
-        ]
+        ],
+        "securityContext": {
+          "fsGroup": 1001
+        }
       }
     },
     "serviceName": "",

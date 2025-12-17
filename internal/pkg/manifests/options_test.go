@@ -875,9 +875,11 @@ func TestAugmentWithOptions_SecurityContext_StatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name:                     "nil SecurityContext is not set on StatefulSet",
-			securityContext:          nil,
-			expectSecurityContextNil: true,
+			name:            "nil SecurityContext sets default FSGroup on StatefulSet",
+			securityContext: nil,
+			expectSecurityContext: &corev1.PodSecurityContext{
+				FSGroup: ptr.To(DefaultFSGroup),
+			},
 		},
 		{
 			name:                  "empty SecurityContext is set on StatefulSet",
