@@ -21,6 +21,10 @@ const (
 
 	defaultLogLevel  = "info"
 	defaultLogFormat = "logfmt"
+
+	// DefaultFSGroup is the default FSGroup to use for pod security context
+	// when none is specified by the user.
+	DefaultFSGroup = int64(1001)
 )
 
 type Buildable interface {
@@ -314,6 +318,9 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
+		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+			FSGroup: ptr.To(DefaultFSGroup),
+		}
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}

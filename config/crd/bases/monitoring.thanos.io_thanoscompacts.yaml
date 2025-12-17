@@ -5063,8 +5063,6 @@ spec:
                 - raw
                 type: object
               securityContext:
-                default:
-                  fsGroup: 1001
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.
                   This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.
