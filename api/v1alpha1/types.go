@@ -116,7 +116,6 @@ type CommonFields struct {
 	// This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.
 	// If not specified, the operator will default to FSGroup=1001.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={fsGroup: 1001}
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
 }
 
