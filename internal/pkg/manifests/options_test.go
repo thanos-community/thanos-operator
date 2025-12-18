@@ -918,3 +918,45 @@ func TestAugmentWithOptions_SecurityContext_StatefulSet(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndSanitizeNameToValidLabelValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name:     "foo",
+			expected: "foo",
+		},
+		{
+			name:     "fooooooo_[______oooooooo****\n**abcoooo-----ooooooooaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expected: "fooooooo-------oooooooo------ab-174fe7fbf0af6d98bf879542c5396db",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ValidateAndSanitizeNameToValidLabelValue(tt.name))
+		})
+	}
+}
+
+func TestSanitizeName(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name:     "foo",
+			expected: "foo",
+		},
+		{
+			name:     "fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+			expected: "fooooooooooooooooooooooooooooooooooooooooooooo-b53d78db8af60430",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, SanitizeName(tt.name))
+		})
+	}
+}
