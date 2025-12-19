@@ -1,8 +1,9 @@
 package manifests
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -25,7 +26,11 @@ const (
 	// DefaultFSGroup is the default FSGroup to use for pod security context
 	// when none is specified by the user.
 	DefaultFSGroup = int64(1001)
+
+	hashSuffixLength = 16
 )
+
+var alphaNumericRe = regexp.MustCompile("[a-z0-9]")
 
 type Buildable interface {
 	Build() []client.Object
@@ -125,8 +130,9 @@ func ValidateAndSanitizeResourceName(name string) string {
 	if n := validation.IsDNS1123Subdomain(name); len(n) == 0 {
 		return name
 	}
+
 	// we can create a longer name here if we wish, it will be obfuscated at this point regardless
-	return sanitizeToLength(name, 63)
+	return sanitizeToLength(ensureAlphaNumericTrailingChars(name), validation.DNS1123LabelMaxLength)
 }
 
 // ValidateAndSanitizeNameToValidLabelValue sanitizes the provided name to a valid label value.
@@ -135,7 +141,20 @@ func ValidateAndSanitizeNameToValidLabelValue(value string) string {
 	if l := validation.IsValidLabelValue(value); len(l) == 0 {
 		return value
 	}
-	return sanitizeToLength(value, 63)
+
+	return sanitizeToLength(ensureAlphaNumericTrailingChars(value), validation.DNS1123LabelMaxLength)
+}
+
+func ensureAlphaNumericTrailingChars(s string) string {
+	// Valid label values must start and end with alphanumeric character.
+	return strings.TrimRightFunc(
+		strings.TrimLeftFunc(s, func(r rune) bool {
+			return !alphaNumericRe.MatchString(string(r))
+		}),
+		func(r rune) bool {
+			return !alphaNumericRe.MatchString(string(r))
+		},
+	)
 }
 
 func sanitizeToLength(value string, length int) string {
@@ -151,9 +170,12 @@ func sanitizeToLength(value string, length int) string {
 	value = strings.Replace(value, "\"", "", -1)
 	value = strings.Replace(value, "'", "", -1)
 	if len(value) > length {
-		hash := md5.Sum([]byte(value))
-		value = fmt.Sprintf("%s-%x", value[:31], hash)
-		value = value[:length]
+		if length > hashSuffixLength {
+			hash := hashString(value, hashSuffixLength)
+			value = fmt.Sprintf("%s-%s", value[:(length-hashSuffixLength-1)], hash)
+		} else {
+			value = value[:length]
+		}
 	}
 	value = strings.Replace(value, ".", "-", -1)
 	value = strings.ToLower(value)
@@ -174,11 +196,16 @@ func SanitizeName(name string) string {
 		}
 		return r
 	}, name)
-	if len(name) > 63 {
-		hash := md5.Sum([]byte(name))
-		name = fmt.Sprintf("%s-%x", name[:46], hash[:8])
+	if len(name) > validation.DNS1123LabelMaxLength {
+		hash := hashString(name, hashSuffixLength)
+		name = fmt.Sprintf("%s-%s", name[:validation.DNS1123LabelMaxLength-len(hash)-1], hash)
 	}
 	return name
+}
+
+// hashString returns the hex hash of the input string.
+func hashString(s string, length int) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))[:min(sha256.Size, length)]
 }
 
 // ToFlags returns the flags for the Options
