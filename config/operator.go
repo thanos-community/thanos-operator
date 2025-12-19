@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+
 	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 
