@@ -34,13 +34,11 @@ func (f *Flag) Contains(feature string) bool {
 }
 
 // EnablesServiceMonitor returns true if ServiceMonitor features should be enabled.
-// This is true if either ServiceMonitor or PrometheusOperatorCRDs is enabled.
 func (f *Flag) EnablesServiceMonitor() bool {
-	return f.Contains(ServiceMonitor) || f.Contains(PrometheusOperatorCRDs)
+	return f.Contains(ServiceMonitor)
 }
 
 // EnablesPrometheusRule returns true if PrometheusRule features should be enabled.
-// This is true if either PrometheusRule or PrometheusOperatorCRDs is enabled.
 func (f *Flag) EnablesPrometheusRule() bool {
-	return f.Contains(PrometheusRule) || f.Contains(PrometheusOperatorCRDs)
+	return f.Contains(PrometheusRule)
 }

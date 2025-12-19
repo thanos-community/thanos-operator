@@ -7,7 +7,6 @@ import (
 
 func TestAllFeatures(t *testing.T) {
 	expected := []string{
-		"prometheus-operator-crds",
 		"service-monitor",
 		"prometheus-rule",
 	}
@@ -24,11 +23,6 @@ func TestIsValidFeature(t *testing.T) {
 		feature string
 		want    bool
 	}{
-		{
-			name:    "valid prometheus-operator-crds",
-			feature: PrometheusOperatorCRDs,
-			want:    true,
-		},
 		{
 			name:    "valid service-monitor",
 			feature: ServiceMonitor,

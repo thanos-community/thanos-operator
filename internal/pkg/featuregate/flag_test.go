@@ -12,11 +12,6 @@ func TestFlag_Set(t *testing.T) {
 		errContains string
 	}{
 		{
-			name:    "valid prometheus-operator-crds",
-			feature: PrometheusOperatorCRDs,
-			wantErr: false,
-		},
-		{
 			name:    "valid service-monitor",
 			feature: ServiceMonitor,
 			wantErr: false,
@@ -72,11 +67,6 @@ func TestFlag_EnablesServiceMonitor(t *testing.T) {
 			want:     false,
 		},
 		{
-			name:     "prometheus-operator-crds enables service monitor",
-			features: []string{PrometheusOperatorCRDs},
-			want:     true,
-		},
-		{
 			name:     "service-monitor enables service monitor",
 			features: []string{ServiceMonitor},
 			want:     true,
@@ -117,11 +107,6 @@ func TestFlag_EnablesPrometheusRule(t *testing.T) {
 			name:     "no features",
 			features: []string{},
 			want:     false,
-		},
-		{
-			name:     "prometheus-operator-crds enables prometheus rule",
-			features: []string{PrometheusOperatorCRDs},
-			want:     true,
 		},
 		{
 			name:     "prometheus-rule enables prometheus rule",

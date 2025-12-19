@@ -3,10 +3,6 @@ package featuregate
 // Feature flag names for use with --enable-feature flag.
 // These follow Prometheus convention of kebab-case feature names.
 const (
-	// PrometheusOperatorCRDs enables both ServiceMonitor and PrometheusRule management.
-	// This is a convenience flag that enables both service monitor and prometheus rule features.
-	PrometheusOperatorCRDs = "prometheus-operator-crds"
-
 	// ServiceMonitor enables management of ServiceMonitor objects.
 	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor
 	ServiceMonitor = "service-monitor"
@@ -20,7 +16,6 @@ const (
 // This is useful for validation and help text generation.
 func AllFeatures() []string {
 	return []string{
-		PrometheusOperatorCRDs,
 		ServiceMonitor,
 		PrometheusRule,
 	}
