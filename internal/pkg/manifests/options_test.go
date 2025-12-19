@@ -694,7 +694,6 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 	}
 }
 
-
 func TestAugmentWithOptions_UnsupportedType(t *testing.T) {
 	// Test that passing an unsupported type doesn't modify the object or cause errors
 	obj := &corev1.Service{

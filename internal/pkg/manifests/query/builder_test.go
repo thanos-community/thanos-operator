@@ -290,4 +290,3 @@ func TestBuildQueryGolden(t *testing.T) {
 		})
 	}
 }
-

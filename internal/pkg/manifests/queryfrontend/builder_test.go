@@ -324,4 +324,3 @@ func TestBuildQueryFrontendGolden(t *testing.T) {
 		})
 	}
 }
-

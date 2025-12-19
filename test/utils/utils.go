@@ -887,7 +887,7 @@ func ValidateObjectsAgainstGoldenFile(t *testing.T, objs []client.Object, golden
 		}
 		yamlDocs = append(yamlDocs, string(yamlBytes))
 	}
-	
+
 	combinedYAML := strings.Join(yamlDocs, "---\n")
 	golden.Assert(t, combinedYAML, goldenFileName)
 }

@@ -48,7 +48,7 @@ func TestNewService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := NewService(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(obj)
 			if err != nil {

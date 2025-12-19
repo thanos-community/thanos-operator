@@ -248,7 +248,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ruler := NewRulerStatefulSet(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(ruler)
 			if err != nil {
@@ -300,7 +300,7 @@ func TestNewRulerService(t *testing.T) {
 	}
 
 	ruler := NewRulerService(opts)
-	
+
 	// Test against golden file
 	yamlBytes, err := yaml.Marshal(ruler)
 	if err != nil {
@@ -487,4 +487,3 @@ func TestBucketSize(t *testing.T) {
 		})
 	}
 }
-

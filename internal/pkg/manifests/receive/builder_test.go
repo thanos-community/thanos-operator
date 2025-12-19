@@ -9,8 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"gotest.tools/v3/golden"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
@@ -167,7 +167,7 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorStatefulSet(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(ingester)
 			if err != nil {
@@ -263,7 +263,7 @@ func TestNewRouterDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterDeployment(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(router)
 			if err != nil {
@@ -300,7 +300,7 @@ func TestNewIngestorService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorService(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(ingester)
 			if err != nil {
@@ -337,7 +337,7 @@ func TestNewRouterService(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterService(tc.opts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(router)
 			if err != nil {
@@ -366,7 +366,7 @@ func TestBuildRouterGolden(t *testing.T) {
 	}
 
 	objs := opts.Build()
-	
+
 	// Validate against golden file containing all router resources
 	yamlBytes, err := yaml.Marshal(objs)
 	if err != nil {

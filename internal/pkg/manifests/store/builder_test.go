@@ -56,7 +56,6 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		ns    = "ns"
 	)
 
-
 	buildDefaultOpts := func() Options {
 		return Options{
 			Options: manifests.Options{
@@ -124,7 +123,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()
 			store := NewStoreStatefulSet(builtOpts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(store)
 			if err != nil {
@@ -134,7 +133,6 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		})
 	}
 }
-
 
 func TestNewStoreService(t *testing.T) {
 	const (
@@ -170,7 +168,7 @@ func TestNewStoreService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()
 			storeSvc := NewStoreService(builtOpts)
-			
+
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(storeSvc)
 			if err != nil {
