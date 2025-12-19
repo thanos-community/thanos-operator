@@ -175,11 +175,6 @@ type Additional struct {
 
 // FeatureGates holds the configuration for behaviour that is behind feature flags in the operator.
 type FeatureGates struct {
-	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
-	// This setting requires the feature gate for ServiceMonitor management to be enabled.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={enable: true}
-	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
 	// PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
 	// This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
 	// +kubebuilder:validation:Optional
