@@ -236,7 +236,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResourcesGlobal(r.featureGate, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the receiver", errCount)
 	}
 
