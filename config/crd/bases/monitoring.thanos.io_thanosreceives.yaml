@@ -40,9 +40,6 @@ spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:

@@ -185,7 +185,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	name := manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName()
 	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResourcesGlobal(r.featureGate, []string{name}, query.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(r.featureGate, query.Spec.FeatureGates, []string{name}, query.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the query", errCount)
 	}
 

@@ -4822,9 +4822,6 @@ spec:
                     type: integer
                 type: object
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:
