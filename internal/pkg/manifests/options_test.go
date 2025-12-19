@@ -3,6 +3,7 @@ package manifests
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
@@ -878,6 +880,153 @@ func TestAugmentWithOptions_SecurityContext_StatefulSet(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectSecurityContext, statefulSet.Spec.Template.Spec.SecurityContext)
 			}
+		})
+	}
+}
+
+func TestSanitizeToLength(t *testing.T) {
+	tests := []struct {
+		name     string
+		length   int
+		expected string
+	}{
+		{
+			name:     "foo",
+			length:   32,
+			expected: "foo",
+		},
+		{
+			name:     strings.Repeat("a", 15) + strings.Repeat("b", 17),
+			length:   32,
+			expected: "aaaaaaaaaaaaaaabbbbbbbbbbbbbbbbb",
+		},
+		{
+			name:     strings.Repeat("a", 15) + strings.Repeat("b", 18),
+			length:   32,
+			expected: "aaaaaaaaaaaaaaa-fc6f21d23086dfb7",
+		},
+		{
+			name:     strings.Repeat("a", 15) + strings.Repeat("b", 18),
+			length:   16,
+			expected: "aaaaaaaaaaaaaaab",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.name) > tt.length {
+				assert.Len(t, tt.expected, tt.length)
+			}
+			assert.Equal(t, tt.expected, sanitizeToLength(tt.name, tt.length))
+		})
+	}
+}
+
+func TestValidateAndSanitizeResourceName(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name:     "foo",
+			expected: "foo",
+		},
+		{
+			name:     "fooooooo_[______oooooooo****\n**abcoooo-----ooooooooaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expected: "fooooooo-------oooooooo------abcoooo-----ooooo-50b6c177a638d6af",
+		},
+		{
+			name:     "foo_bar",
+			expected: "foo-bar",
+		},
+		{
+			name:     "-foo",
+			expected: "foo",
+		},
+		{
+			name:     "foo-",
+			expected: "foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.name) > validation.DNS1123LabelMaxLength {
+				assert.Len(t, tt.expected, validation.DNS1123LabelMaxLength)
+			}
+
+			name := ValidateAndSanitizeResourceName(tt.name)
+			assert.Equal(t, tt.expected, name)
+			assert.Len(t, validation.IsDNS1123Subdomain(name), 0)
+		})
+	}
+}
+
+func TestValidateAndSanitizeNameToValidLabelValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name:     "foo",
+			expected: "foo",
+		},
+		{
+			name:     "fooooooo_[______oooooooo****\n**abcoooo-----ooooooooaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expected: "fooooooo-------oooooooo------abcoooo-----ooooo-50b6c177a638d6af",
+		},
+		{
+			name:     "foo_bar",
+			expected: "foo_bar",
+		},
+		{
+			name:     "-foo",
+			expected: "foo",
+		},
+		{
+			name:     "foo-",
+			expected: "foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.name) > validation.DNS1123LabelMaxLength {
+				assert.Len(t, tt.expected, validation.DNS1123LabelMaxLength)
+			}
+
+			name := ValidateAndSanitizeNameToValidLabelValue(tt.name)
+			assert.Equal(t, tt.expected, name)
+			assert.Len(t, validation.IsValidLabelValue(name), 0)
+		})
+	}
+}
+
+func TestSanitizeName(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{
+			name:     "foo",
+			expected: "foo",
+		},
+		{
+			name:     "fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo",
+			expected: "fooooooooooooooooooooooooooooooooooooooooooooo-555e92efc8fa5986",
+		},
+		{
+			name:     "foo.bar_",
+			expected: "foo-bar-",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if len(tt.name) > validation.DNS1123LabelMaxLength {
+				assert.Len(t, tt.expected, validation.DNS1123LabelMaxLength)
+			}
+
+			assert.Equal(t, tt.expected, SanitizeName(tt.name))
 		})
 	}
 }
