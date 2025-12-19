@@ -168,7 +168,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResourcesGlobal(r.featureGate, expectShards, store.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(r.featureGate, store.Spec.FeatureGates, expectShards, store.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the store", errCount)
 	}
 
