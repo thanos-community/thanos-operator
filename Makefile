@@ -194,6 +194,10 @@ vet: ## Run go vet against code.
 test: manifests generate format vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
+.PHONY: test-update-golden
+test-update-golden: ## Update golden test files.
+	go test ./internal/pkg/manifests/... -update
+
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
 .PHONY: test-e2e  # Run the e2e tests against a Kind k8s instance that is spun up.
 test-e2e:

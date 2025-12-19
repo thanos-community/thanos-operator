@@ -152,10 +152,7 @@ When you modify manifest generation code, you may need to update the golden file
 
 ```bash
 # Update golden files for all manifest packages
-go test -update ./internal/pkg/manifests/...
-
-# Update golden files for a specific package
-go test -update github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact
+make test-update-golden
 ```
 
 
