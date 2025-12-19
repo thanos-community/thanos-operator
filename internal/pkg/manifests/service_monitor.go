@@ -68,4 +68,3 @@ func (opts ServiceMonitorOptions) applyDefaults() ServiceMonitorOptions {
 	}
 	return opts
 }
-

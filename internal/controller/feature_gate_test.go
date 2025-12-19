@@ -145,7 +145,6 @@ config:
 				}).Should(BeTrue())
 			})
 
-
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
@@ -220,7 +219,6 @@ config:
 				}
 			})
 
-
 			By("creating the PDB when enabled", func() {
 				for _, workload := range workloads {
 					Eventually(func() bool {
@@ -285,7 +283,6 @@ config:
 				}).Should(BeTrue())
 			})
 
-
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
@@ -339,7 +336,6 @@ config:
 						return utils.VerifyServiceMonitorExists(k8sClient, firstShard, ns)
 					}).Should(BeTrue())
 				})
-
 
 				By("creating the PDB when enabled", func() {
 					Eventually(func() bool {
