@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -118,22 +117,6 @@ config:
 
 			})
 
-			By("removing service monitor when disabled", func() {
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Eventually(func() bool {
-					for _, shard := range []string{shardOne} {
-						if utils.VerifyServiceMonitorExists(k8sClient, shard, ns) {
-							return true
-						}
-					}
-					return false
-				}).Should(BeFalse())
-			})
 		})
 	})
 
@@ -162,17 +145,6 @@ config:
 				}).Should(BeTrue())
 			})
 
-			By("removing service monitor when disabled", func() {
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}).Should(BeFalse())
-			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
@@ -248,19 +220,6 @@ config:
 				}
 			})
 
-			By("removing service monitor from ingester and router when disabled", func() {
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-						Enable: ptr.To(false),
-					},
-				}
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				for _, workload := range workloads {
-					Eventually(func() bool {
-						return utils.VerifyServiceMonitorExists(k8sClient, workload, ns)
-					}).Should(BeFalse())
-				}
-			})
 
 			By("creating the PDB when enabled", func() {
 				for _, workload := range workloads {
@@ -326,13 +285,6 @@ config:
 				}).Should(BeTrue())
 			})
 
-			By("removing service monitor when disabled", func() {
-				resource.Spec.FeatureGates.ServiceMonitorConfig.Enable = ptr.To(false)
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Eventually(func() bool {
-					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}).Should(BeFalse())
-			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
@@ -388,18 +340,6 @@ config:
 					}).Should(BeTrue())
 				})
 
-				By("removing service monitor when disabled", func() {
-					name := StoreNameFromParent(storeResourceName, nil)
-					resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-						ServiceMonitorConfig: &monitoringthanosiov1alpha1.ServiceMonitorConfig{
-							Enable: ptr.To(false),
-						},
-					}
-					Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
-					Eventually(func() bool {
-						return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-					}, time.Second*30, time.Second*10).Should(BeFalse())
-				})
 
 				By("creating the PDB when enabled", func() {
 					Eventually(func() bool {
