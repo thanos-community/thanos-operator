@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prometheus/prometheus/model/labels"
+	"github.com/stretchr/testify/assert"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -800,5 +801,27 @@ func TestStaticMergeDesiredStateNotMet(t *testing.T) {
 	}
 	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+}
+
+func TestHashAsMetricValue(t *testing.T) {
+	tests := []struct {
+		data     []byte
+		expected float64
+	}{
+		{
+			data:     []byte(`foo`),
+			expected: float64(2.80823948650028e+14),
+		},
+		{
+			data:     []byte(`bar`),
+			expected: float64(1.82360791047932e+14),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.data), func(t *testing.T) {
+			assert.Equal(t, tt.expected, HashAsMetricValue(tt.data))
+		})
 	}
 }

@@ -1,7 +1,7 @@
 package receive
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -283,11 +283,11 @@ func (e *Endpoint) UnmarshalJSON(data []byte) error {
 
 // HashAsMetricValue hashes the given data and returns a float64 value.
 func HashAsMetricValue(data []byte) float64 {
-	sum := md5.Sum(data)
-	smallSum := sum[0:6]
-	var bytes = make([]byte, 8)
-	copy(bytes, smallSum)
-	return float64(binary.LittleEndian.Uint64(bytes))
+	sum := sha256.Sum256(data)
+	b := make([]byte, 8)
+	// Keep only the first 6 bits.
+	copy(b, sum[:6])
+	return float64(binary.LittleEndian.Uint64(b))
 }
 
 func trimTo[T any](s []T, target int) []T {
