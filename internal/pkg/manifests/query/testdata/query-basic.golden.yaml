@@ -112,7 +112,6 @@
             runAsNonRoot: true
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: FallbackToLogsOnError
-        securityContext: {}
         serviceAccountName: thanos-query-test-owner
   status: {}
 - apiVersion: v1

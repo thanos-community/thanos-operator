@@ -78,6 +78,5 @@ spec:
         image: test-image:latest
         name: test-container
         resources: {}
-      securityContext: {}
       serviceAccountName: thanos-query-frontend-test-qf
 status: {}

@@ -78,6 +78,5 @@ spec:
             drop:
             - ALL
           runAsNonRoot: true
-      securityContext: {}
       serviceAccountName: thanos-query-frontend-test-qf
 status: {}

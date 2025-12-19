@@ -105,6 +105,5 @@ spec:
         volumeMounts:
         - mountPath: /test-sd-file
           name: test-sd
-      securityContext: {}
       serviceAccountName: thanos-query-test-q
 status: {}

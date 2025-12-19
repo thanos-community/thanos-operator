@@ -126,7 +126,6 @@
           image: sidecar:latest
           name: sidecar
           resources: {}
-        securityContext: {}
         serviceAccountName: thanos-query-test-owner
         volumes:
         - configMap:

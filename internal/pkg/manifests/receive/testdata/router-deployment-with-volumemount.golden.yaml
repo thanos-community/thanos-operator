@@ -112,7 +112,6 @@ spec:
           name: hashring-config
         - mountPath: /http-config
           name: http-config
-      securityContext: {}
       serviceAccountName: thanos-receive-router-
       volumes:
       - configMap:

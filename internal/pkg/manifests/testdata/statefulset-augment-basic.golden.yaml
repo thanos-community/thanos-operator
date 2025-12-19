@@ -26,6 +26,8 @@ spec:
           requests:
             cpu: "1"
             memory: 1Gi
+      securityContext:
+        fsGroup: 1001
   updateStrategy: {}
 status:
   availableReplicas: 0

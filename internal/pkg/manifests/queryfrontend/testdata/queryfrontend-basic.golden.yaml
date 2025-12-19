@@ -79,7 +79,6 @@
               drop:
               - ALL
             runAsNonRoot: true
-        securityContext: {}
         serviceAccountName: thanos-query-frontend-test-owner
   status: {}
 - apiVersion: v1

@@ -58,6 +58,8 @@ spec:
         resources: {}
       nodeSelector:
         disktype: ssd
+      securityContext:
+        fsGroup: 1001
       tolerations:
       - effect: NoSchedule
         key: example-key

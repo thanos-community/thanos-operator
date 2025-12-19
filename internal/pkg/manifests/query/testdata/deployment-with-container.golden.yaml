@@ -110,6 +110,5 @@ spec:
         image: test-image:latest
         name: test-container
         resources: {}
-      securityContext: {}
       serviceAccountName: thanos-query-test-q
 status: {}
