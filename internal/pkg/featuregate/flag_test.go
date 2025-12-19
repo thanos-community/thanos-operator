@@ -6,9 +6,9 @@ import (
 
 func TestFlag_Set(t *testing.T) {
 	tests := []struct {
-		name       string
-		feature    string
-		wantErr    bool
+		name        string
+		feature     string
+		wantErr     bool
 		errContains string
 	}{
 		{
@@ -33,7 +33,7 @@ func TestFlag_Set(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &Flag{}
 			err := f.Set(tt.feature)
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("Flag.Set(%q) expected error but got none", tt.feature)
@@ -89,7 +89,7 @@ func TestFlag_EnablesServiceMonitor(t *testing.T) {
 			for _, feature := range tt.features {
 				_ = f.Set(feature)
 			}
-			
+
 			if got := f.EnablesServiceMonitor(); got != tt.want {
 				t.Errorf("Flag.EnablesServiceMonitor() = %v, want %v", got, tt.want)
 			}
@@ -131,7 +131,7 @@ func TestFlag_EnablesPrometheusRule(t *testing.T) {
 			for _, feature := range tt.features {
 				_ = f.Set(feature)
 			}
-			
+
 			if got := f.EnablesPrometheusRule(); got != tt.want {
 				t.Errorf("Flag.EnablesPrometheusRule() = %v, want %v", got, tt.want)
 			}
@@ -143,19 +143,19 @@ func TestFlag_String(t *testing.T) {
 	f := &Flag{}
 	_ = f.Set(ServiceMonitor)
 	_ = f.Set(PrometheusRule)
-	
+
 	got := f.String()
 	expected := "service-monitor,prometheus-rule"
-	
+
 	if got != expected {
 		t.Errorf("Flag.String() = %q, want %q", got, expected)
 	}
 }
 
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && s[len(s)-len(substr):] == substr || 
-		   len(s) >= len(substr) && s[:len(substr)] == substr ||
-		   (len(s) > len(substr) && containsStringHelper(s, substr))
+	return len(s) >= len(substr) && s[len(s)-len(substr):] == substr ||
+		len(s) >= len(substr) && s[:len(substr)] == substr ||
+		(len(s) > len(substr) && containsStringHelper(s, substr))
 }
 
 func containsStringHelper(s, substr string) bool {

@@ -10,7 +10,7 @@ func TestAllFeatures(t *testing.T) {
 		"service-monitor",
 		"prometheus-rule",
 	}
-	
+
 	got := AllFeatures()
 	if !reflect.DeepEqual(got, expected) {
 		t.Errorf("AllFeatures() = %v, want %v", got, expected)
