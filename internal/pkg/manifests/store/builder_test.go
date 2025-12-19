@@ -1,7 +1,6 @@
 package store
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -10,7 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
+	"gotest.tools/v3/golden"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -55,10 +56,6 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		ns    = "ns"
 	)
 
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	buildDefaultOpts := func() Options {
 		return Options{
@@ -79,17 +76,20 @@ func TestNewStoreStatefulSet(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts func() Options
+		name   string
+		golden string
+		opts   func() Options
 	}{
 		{
-			name: "test store stateful correctness",
+			name:   "test store stateful correctness",
+			golden: "statefulset-basic.golden.yaml",
 			opts: func() Options {
 				return buildDefaultOpts()
 			},
 		},
 		{
-			name: "test additional volumemount",
+			name:   "test additional volumemount",
+			golden: "statefulset-with-volumemount.golden.yaml",
 			opts: func() Options {
 				opts := buildDefaultOpts()
 				opts.Additional.VolumeMounts = []corev1.VolumeMount{
@@ -102,7 +102,8 @@ func TestNewStoreStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional container",
+			name:   "test additional container",
+			golden: "statefulset-with-container.golden.yaml",
 			opts: func() Options {
 				opts := buildDefaultOpts()
 				opts.Additional.Containers = []corev1.Container{
@@ -123,70 +124,22 @@ func TestNewStoreStatefulSet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()
 			store := NewStoreStatefulSet(builtOpts)
-			objectMetaLabels := GetLabels(builtOpts)
-			name := builtOpts.GetGeneratedResourceName()
-
-			utils.ValidateNameNamespaceAndLabels(t, store, name, ns, objectMetaLabels)
-			utils.ValidateHasLabels(t, store, builtOpts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, store, extraLabels)
-			objName := builtOpts.GetGeneratedResourceName()
-
-			if store.Spec.ServiceName != objName {
-				t.Errorf("expected store statefulset to have serviceName %s, got %s", objName, store.Spec.ServiceName)
+			
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(store)
+			if err != nil {
+				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
 			}
-
-			if store.Spec.Template.Spec.ServiceAccountName != objName {
-				t.Errorf("expected store statefulset to have service account owner %s, got %s", objName, store.Spec.Template.Spec.ServiceAccountName)
-			}
-
-			if len(store.Spec.Template.Spec.Containers) != (len(builtOpts.Additional.Containers) + 1) {
-				t.Errorf("expected store statefulset to have %d containers, got %d", len(builtOpts.Additional.Containers)+1, len(store.Spec.Template.Spec.Containers))
-			}
-
-			if store.Annotations["test"] != "annotation" {
-				t.Errorf("expected store statefulset annotation test to be annotation, got %s", store.Annotations["test"])
-			}
-
-			expectArgs := storeArgsFrom(builtOpts)
-			var found bool
-			for _, c := range store.Spec.Template.Spec.Containers {
-				if c.Name == Name {
-					found = true
-					if c.Image != builtOpts.GetContainerImage() {
-						t.Errorf("expected store statefulset to have image %s, got %s", builtOpts.GetContainerImage(), c.Image)
-					}
-
-					if !reflect.DeepEqual(c.Args, expectArgs) {
-						t.Errorf("expected store statefulset to have args %v, got %v", expectArgs, c.Args)
-					}
-
-					if len(c.VolumeMounts) != len(builtOpts.Additional.VolumeMounts)+1 {
-						if c.VolumeMounts[0].Name != dataVolumeName {
-							t.Errorf("expected store statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
-						}
-						if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
-							t.Errorf("expected store statefulset to have volumemount mounted at /var/thanos/store, got %s", c.VolumeMounts[0].MountPath)
-						}
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected store statefulset to have container named %s", Name)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
+
 
 func TestNewStoreService(t *testing.T) {
 	const (
 		ns = "ns"
 	)
-
-	extraLabels := map[string]string{
-		"some-custom-label":          someCustomLabelValue,
-		"some-other-label":           someOtherLabelValue,
-		string(manifests.GroupLabel): "true",
-	}
 
 	opts := Options{
 		Options: manifests.Options{
@@ -202,11 +155,13 @@ func TestNewStoreService(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts func() Options
+		name   string
+		golden string
+		opts   func() Options
 	}{
 		{
-			name: "test store service correctness",
+			name:   "test store service correctness",
+			golden: "service-basic.golden.yaml",
 			opts: func() Options {
 				return opts
 			},
@@ -215,14 +170,13 @@ func TestNewStoreService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()
 			storeSvc := NewStoreService(builtOpts)
-			objectMetaLabels := GetLabels(builtOpts)
-			utils.ValidateNameNamespaceAndLabels(t, storeSvc, opts.GetGeneratedResourceName(), ns, objectMetaLabels)
-			utils.ValidateHasLabels(t, storeSvc, extraLabels)
-			utils.ValidateHasLabels(t, storeSvc, opts.GetSelectorLabels())
-
-			if storeSvc.Spec.ClusterIP != corev1.ClusterIPNone {
-				t.Errorf("expected store service to have ClusterIP 'None', got %s", storeSvc.Spec.ClusterIP)
+			
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(storeSvc)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
 			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
