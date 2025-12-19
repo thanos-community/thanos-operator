@@ -13,7 +13,9 @@ import (
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	"gotest.tools/v3/golden"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -84,17 +86,15 @@ func TestBuildRuler(t *testing.T) {
 }
 
 func TestNewRulerStatefulSet(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	for _, tc := range []struct {
-		name string
-		opts Options
+		name   string
+		golden string
+		opts   Options
 	}{
 		{
-			name: "test ruler statefulset correctness",
+			name:   "test ruler statefulset correctness",
+			golden: "statefulset-basic.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -137,7 +137,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional volumemount",
+			name:   "test additional volumemount",
+			golden: "statefulset-with-volumemount.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -188,7 +189,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional container",
+			name:   "test additional container",
+			golden: "statefulset-with-container.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -245,64 +247,19 @@ func TestNewRulerStatefulSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			name := tc.opts.GetGeneratedResourceName()
 			ruler := NewRulerStatefulSet(tc.opts)
-			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ruler, name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ruler, tc.opts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, ruler, extraLabels)
 
-			if ruler.Spec.ServiceName != name {
-				t.Errorf("expected ruler statefulset to have serviceName %s, got %s", name, ruler.Spec.ServiceName)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(ruler)
+			if err != nil {
+				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
 			}
-
-			if ruler.Spec.Template.Spec.ServiceAccountName != name {
-				t.Errorf("expected ruler statefulset to have service account name %s, got %s", name, ruler.Spec.Template.Spec.ServiceAccountName)
-			}
-
-			if len(ruler.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
-				t.Errorf("expected ruler statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ruler.Spec.Template.Spec.Containers))
-			}
-
-			if ruler.Annotations["test"] != "annotation" {
-				t.Errorf("expected ruler statefulset annotation test to be annotation, got %s", ruler.Annotations["test"])
-			}
-
-			expectArgs := rulerArgs(tc.opts)
-			var found bool
-			for _, c := range ruler.Spec.Template.Spec.Containers {
-				if c.Name == Name {
-					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected ruler statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
-					}
-
-					if !reflect.DeepEqual(c.Args, expectArgs) {
-						t.Errorf("expected ruler statefulset to have args %v, got %v", expectArgs, c.Args)
-					}
-
-					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
-						if c.VolumeMounts[0].Name != dataVolumeName {
-							t.Errorf("expected ruler statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
-						}
-						if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
-							t.Errorf("expected ruler statefulset to have volumemount mounted at /var/thanos/ruler, got %s", c.VolumeMounts[0].MountPath)
-						}
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected ruler statfulset to have container named %s", Name)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
 
 func TestNewRulerService(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	opts := Options{
 		Options: manifests.Options{
@@ -342,27 +299,14 @@ func TestNewRulerService(t *testing.T) {
 		},
 	}
 
-	for _, tc := range []struct {
-		name string
-		opts Options
-	}{
-		{
-			name: "test ruler service correctness",
-			opts: opts,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ruler := NewRulerService(tc.opts)
-			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ruler, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ruler, extraLabels)
-			utils.ValidateHasLabels(t, ruler, tc.opts.GetSelectorLabels())
+	ruler := NewRulerService(opts)
 
-			if ruler.Spec.ClusterIP != corev1.ClusterIPNone {
-				t.Errorf("expected ruler service to have ClusterIP 'None', got %s", ruler.Spec.ClusterIP)
-			}
-		})
+	// Test against golden file
+	yamlBytes, err := yaml.Marshal(ruler)
+	if err != nil {
+		t.Fatalf("failed to marshal service to YAML: %v", err)
 	}
+	golden.Assert(t, string(yamlBytes), "service-basic.golden.yaml")
 }
 
 func TestGenerateRuleFileContent(t *testing.T) {

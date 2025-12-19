@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    test: annotation
+  labels:
+    app.kubernetes.io/component: thanos-receive-ingester
+    app.kubernetes.io/instance: thanos-receive-ingester--
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: ""
+    operator.thanos.io/store-api: "true"
+    some-custom-label: xyz
+    some-other-label: abc
+  name: thanos-receive-ingester--
+  namespace: ns
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: thanos-receive-ingester
+      app.kubernetes.io/instance: thanos-receive-ingester--
+      app.kubernetes.io/managed-by: thanos-operator
+      app.kubernetes.io/name: thanos-receive
+      app.kubernetes.io/part-of: thanos
+      operator.thanos.io/owner: ""
+      operator.thanos.io/store-api: "true"
+  serviceName: thanos-receive-ingester--
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: thanos-receive-ingester
+        app.kubernetes.io/instance: thanos-receive-ingester--
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-receive
+        app.kubernetes.io/part-of: thanos
+        operator.thanos.io/owner: ""
+        operator.thanos.io/store-api: "true"
+        some-custom-label: xyz
+        some-other-label: abc
+    spec:
+      containers:
+      - args:
+        - receive
+        - --log.level=info
+        - --log.format=logfmt
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:10902
+        - --remote-write.address=0.0.0.0:19291
+        - --tsdb.path=/var/thanos/receive
+        - --objstore.config=$(OBJSTORE_CONFIG)
+        - --receive.local-endpoint=$(POD_NAME).thanos-receive-ingester--.$(POD_NAMESPACE).svc.:10901
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OBJSTORE_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: ""
+              optional: false
+        image: some-custom-image:v0.39.0
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /-/healthy
+            port: 10902
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: thanos-receive-ingester
+        ports:
+        - containerPort: 10901
+          name: grpc
+        - containerPort: 19391
+          name: capnproto
+        - containerPort: 10902
+          name: http
+        - containerPort: 19291
+          name: remote-write
+        readinessProbe:
+          failureThreshold: 15
+          httpGet:
+            path: /-/ready
+            port: 10902
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /var/thanos/receive
+          name: data
+        - mountPath: /http-config
+          name: http-config
+      securityContext:
+        fsGroup: 1001
+      serviceAccountName: thanos-receive-ingester--
+  updateStrategy: {}
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app.kubernetes.io/component: thanos-receive-ingester
+        app.kubernetes.io/instance: thanos-receive-ingester--
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-receive
+        app.kubernetes.io/part-of: thanos
+        operator.thanos.io/owner: ""
+        operator.thanos.io/store-api: "true"
+        some-custom-label: xyz
+        some-other-label: abc
+      name: data
+      namespace: ns
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: "0"
+    status: {}
+status:
+  availableReplicas: 0
+  replicas: 0

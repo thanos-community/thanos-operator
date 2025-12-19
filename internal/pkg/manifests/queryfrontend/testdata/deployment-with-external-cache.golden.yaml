@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: query-frontend
+    app.kubernetes.io/instance: thanos-query-frontend-test-owner
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-query-frontend
+    app.kubernetes.io/part-of: thanos
+    app.kubernetes.io/version: v0.40.1
+    operator.thanos.io/owner: test-owner
+  name: thanos-query-frontend-test-owner
+  namespace: test-namespace
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: query-frontend
+      app.kubernetes.io/instance: thanos-query-frontend-test-owner
+      app.kubernetes.io/managed-by: thanos-operator
+      app.kubernetes.io/name: thanos-query-frontend
+      app.kubernetes.io/part-of: thanos
+      operator.thanos.io/owner: test-owner
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: query-frontend
+        app.kubernetes.io/instance: thanos-query-frontend-test-owner
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-query-frontend
+        app.kubernetes.io/part-of: thanos
+        app.kubernetes.io/version: v0.40.1
+        operator.thanos.io/owner: test-owner
+    spec:
+      containers:
+      - args:
+        - query-frontend
+        - --http-address=0.0.0.0:9090
+        - --query-frontend.downstream-url=http://thanos-query.test-namespace.svc.:0
+        - --query-frontend.log-queries-longer-than=5s
+        - --query-range.split-interval=1h
+        - --query-range.max-retries-per-request=0
+        - --labels.max-retries-per-request=0
+        - --cache-compression-type=snappy
+        - --query-range.response-cache-config=$(CACHE_CONFIG)
+        - --labels.response-cache-config=$(CACHE_CONFIG)
+        - --query-frontend.compress-responses
+        env:
+        - name: CACHE_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: config.yaml
+              name: cache-config
+        image: quay.io/thanos/thanos:v0.40.1:v0.39.0
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: 9090
+        name: thanos-query-frontend
+        ports:
+        - containerPort: 9090
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: 9090
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+      securityContext: {}
+      serviceAccountName: thanos-query-frontend-test-owner
+status: {}

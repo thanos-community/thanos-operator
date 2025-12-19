@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    test: annotation
+  labels:
+    app.kubernetes.io/component: object-storage-gateway
+    app.kubernetes.io/instance: thanos-store-test
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-store
+    app.kubernetes.io/owner: expect-to-be-discarded
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: test
+    operator.thanos.io/store-api: "true"
+    some-custom-label: xyz
+    some-other-label: abc
+  name: thanos-store-test
+  namespace: ns
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: object-storage-gateway
+      app.kubernetes.io/instance: thanos-store-test
+      app.kubernetes.io/managed-by: thanos-operator
+      app.kubernetes.io/name: thanos-store
+      app.kubernetes.io/part-of: thanos
+      operator.thanos.io/owner: test
+      operator.thanos.io/store-api: "true"
+  serviceName: thanos-store-test
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: object-storage-gateway
+        app.kubernetes.io/instance: thanos-store-test
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-store
+        app.kubernetes.io/owner: expect-to-be-discarded
+        app.kubernetes.io/part-of: thanos
+        operator.thanos.io/owner: test
+        operator.thanos.io/store-api: "true"
+        some-custom-label: xyz
+        some-other-label: abc
+    spec:
+      containers:
+      - args:
+        - store
+        - --log.level=info
+        - --log.format=logfmt
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:10902
+        - --objstore.config=$(OBJSTORE_CONFIG)
+        - --data-dir=/var/thanos/store
+        env:
+        - name: OBJSTORE_CONFIG
+          valueFrom:
+            secretKeyRef:
+              key: ""
+              optional: false
+        image: some-custom-image:v0.39.0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /-/healthy
+            port: 10902
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: thanos-store
+        ports:
+        - containerPort: 10901
+          name: grpc
+        - containerPort: 10902
+          name: http
+        readinessProbe:
+          failureThreshold: 15
+          httpGet:
+            path: /-/ready
+            port: 10902
+          initialDelaySeconds: 20
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /var/thanos/store
+          name: data
+      securityContext:
+        fsGroup: 1001
+      serviceAccountName: thanos-store-test
+  updateStrategy: {}
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app.kubernetes.io/component: object-storage-gateway
+        app.kubernetes.io/instance: thanos-store-test
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-store
+        app.kubernetes.io/owner: expect-to-be-discarded
+        app.kubernetes.io/part-of: thanos
+        operator.thanos.io/owner: test
+        operator.thanos.io/store-api: "true"
+        some-custom-label: xyz
+        some-other-label: abc
+      name: data
+      namespace: ns
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: "0"
+    status: {}
+status:
+  availableReplicas: 0
+  replicas: 0

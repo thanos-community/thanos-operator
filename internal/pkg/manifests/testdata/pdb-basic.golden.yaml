@@ -1,0 +1,19 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    test: annotation
+  labels:
+    test: label
+  name: test-name
+  namespace: test-namespace
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      test: label
+status:
+  currentHealthy: 0
+  desiredHealthy: 0
+  disruptionsAllowed: 0
+  expectedPods: 0

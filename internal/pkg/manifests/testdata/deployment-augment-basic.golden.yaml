@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-query
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: thanos-query
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: thanos-query
+    spec:
+      containers:
+      - args:
+        - query
+        - --log.level=info
+        image: quay.io/thanos/thanos:v0.39.0
+        name: thanos
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+status: {}

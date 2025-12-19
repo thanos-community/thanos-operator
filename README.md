@@ -139,6 +139,19 @@ As an example, to run only integration tests for ThanosStore, you can run the fo
 EXCLUDE_COMPACT=true EXCLUDE_QUERY=true EXCLUDE_RULER=true EXCLUDE_RECEIVE=true make test
 ```
 
+### Golden File Testing
+
+The Thanos Operator uses golden file testing for manifest generation tests. Golden files contain the expected YAML output for Kubernetes resources and are located in `testdata/` directories within each package. They are named according to the test scenario they represent.
+
+#### Updating Golden Files
+
+When you modify manifest generation code, you may need to update the golden files to reflect the new expected output:
+
+```bash
+# Update golden files for all manifest packages
+make test-update-golden
+```
+
 ## Initial Authors
 
 [@philipgough](https://github.com/PhilipGough) [@saswatamcode](https://github.com/saswatamcode)

@@ -1,7 +1,6 @@
 package receive
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -10,7 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 
+	"gotest.tools/v3/golden"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -82,17 +83,15 @@ func TestBuildRouter(t *testing.T) {
 }
 
 func TestNewIngestorStatefulSet(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	for _, tc := range []struct {
-		name string
-		opts IngesterOptions
+		name   string
+		golden string
+		opts   IngesterOptions
 	}{
 		{
-			name: "test ingester statefulset correctness",
+			name:   "test ingester statefulset correctness",
+			golden: "ingester-statefulset-basic.golden.yaml",
 			opts: IngesterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -109,7 +108,8 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional volumemount",
+			name:   "test additional volumemount",
+			golden: "ingester-statefulset-with-volumemount.golden.yaml",
 			opts: IngesterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -134,7 +134,8 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional container",
+			name:   "test additional container",
+			golden: "ingester-statefulset-with-container.golden.yaml",
 			opts: IngesterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -166,70 +167,27 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorStatefulSet(tc.opts)
-			objectMetaLabels := GetIngesterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ingester, tc.opts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, ingester, extraLabels)
-			name := tc.opts.GetGeneratedResourceName()
 
-			if ingester.Spec.ServiceName != name {
-				t.Errorf("expected ingester statefulset to have serviceName %s, got %s", name, ingester.Spec.ServiceName)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(ingester)
+			if err != nil {
+				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
 			}
-
-			if ingester.Spec.Template.Spec.ServiceAccountName != name {
-				t.Errorf("expected ingester statefulset to have service account name %s, got %s", name, ingester.Spec.Template.Spec.ServiceAccountName)
-			}
-
-			if len(ingester.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
-				t.Errorf("expected ingester statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(ingester.Spec.Template.Spec.Containers))
-			}
-
-			if ingester.Annotations["test"] != "annotation" {
-				t.Errorf("expected ingester statefulset annotation test to be annotation, got %s", ingester.Annotations["test"])
-			}
-
-			expectArgs := ingestorArgsFrom(tc.opts)
-			var found bool
-			for _, c := range ingester.Spec.Template.Spec.Containers {
-				if c.Name == IngestComponentName {
-					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected ingester statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
-					}
-
-					if !reflect.DeepEqual(c.Args, expectArgs) {
-						t.Errorf("expected ingester statefulset to have args %v, got %v", expectArgs, c.Args)
-					}
-
-					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
-						if c.VolumeMounts[1].Name != "http-config" {
-							t.Errorf("expected ingester to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
-						}
-						if c.VolumeMounts[1].MountPath != "/http-config" {
-							t.Errorf("expected ingester to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
-						}
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected ingester to have container named %s", IngestComponentName)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
 
 func TestNewRouterDeployment(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	for _, tc := range []struct {
-		name string
-		opts RouterOptions
+		name   string
+		golden string
+		opts   RouterOptions
 	}{
 		{
-			name: "test router deployment correctness",
+			name:   "test router deployment correctness",
+			golden: "router-deployment-basic.golden.yaml",
 			opts: RouterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -246,7 +204,8 @@ func TestNewRouterDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional volumemount",
+			name:   "test additional volumemount",
+			golden: "router-deployment-with-volumemount.golden.yaml",
 			opts: RouterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -271,7 +230,8 @@ func TestNewRouterDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional container",
+			name:   "test additional container",
+			golden: "router-deployment-with-container.golden.yaml",
 			opts: RouterOptions{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -303,58 +263,18 @@ func TestNewRouterDeployment(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterDeployment(tc.opts)
-			objectMetaLabels := GetRouterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, router, tc.opts.GetGeneratedResourceName(), tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, router, tc.opts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, router, extraLabels)
-			name := tc.opts.GetGeneratedResourceName()
 
-			if router.Spec.Template.Spec.ServiceAccountName != name {
-				t.Errorf("expected deployment to use service account %s, got %s", name, router.Spec.Template.Spec.ServiceAccountName)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(router)
+			if err != nil {
+				t.Fatalf("failed to marshal deployment to YAML: %v", err)
 			}
-			if len(router.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
-				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(router.Spec.Template.Spec.Containers))
-			}
-
-			if router.Annotations["test"] != "annotation" {
-				t.Errorf("expected router deployment annotation test to be annotation, got %s", router.Annotations["test"])
-			}
-
-			expectArgs := routerArgsFrom(tc.opts)
-			var found bool
-			for _, c := range router.Spec.Template.Spec.Containers {
-				if c.Name == RouterComponentName {
-					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected router deployment to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
-					}
-
-					if !reflect.DeepEqual(c.Args, expectArgs) {
-						t.Errorf("expected router deployment to have args %v, got %v", expectArgs, c.Args)
-					}
-
-					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
-						if c.VolumeMounts[1].Name != "http-config" {
-							t.Errorf("expected router deployment to have volumemount named http-config, got %s", c.VolumeMounts[0].Name)
-						}
-						if c.VolumeMounts[1].MountPath != "/http-config" {
-							t.Errorf("expected router deployment to have volumemount mounted at /http-config, got %s", c.VolumeMounts[0].MountPath)
-						}
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected router deployment to have container named %s", RouterComponentName)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
 
 func TestNewIngestorService(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	opts := IngesterOptions{
 		Options: manifests.Options{
@@ -368,33 +288,31 @@ func TestNewIngestorService(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts IngesterOptions
+		name   string
+		golden string
+		opts   IngesterOptions
 	}{
 		{
-			name: "test ingester service correctness",
-			opts: opts,
+			name:   "test ingester service correctness",
+			golden: "ingester-service-basic.golden.yaml",
+			opts:   opts,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorService(tc.opts)
-			objectMetaLabels := GetIngesterLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, ingester, tc.opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, ingester, extraLabels)
-			utils.ValidateHasLabels(t, ingester, tc.opts.GetSelectorLabels())
 
-			if ingester.Spec.ClusterIP != corev1.ClusterIPNone {
-				t.Errorf("expected store service to have ClusterIP 'None', got %s", ingester.Spec.ClusterIP)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(ingester)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
 			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
 
 func TestNewRouterService(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
+
 	opts := RouterOptions{
 		Options: manifests.Options{
 			Namespace: "ns",
@@ -407,20 +325,52 @@ func TestNewRouterService(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts RouterOptions
+		name   string
+		golden string
+		opts   RouterOptions
 	}{
 		{
-			name: "test router service correctness",
-			opts: opts,
+			name:   "test router service correctness",
+			golden: "router-service-basic.golden.yaml",
+			opts:   opts,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterService(tc.opts)
-			objectMetaLabels := GetRouterLabels(opts)
-			utils.ValidateNameNamespaceAndLabels(t, router, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, router, extraLabels)
-			utils.ValidateHasLabels(t, router, opts.GetSelectorLabels())
+
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(router)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
+}
+
+// TestBuildRouterGolden demonstrates using golden files for router manifest testing
+// This test shows how to validate the complete structure of generated manifests
+// Run with -update to regenerate golden files
+func TestBuildRouterGolden(t *testing.T) {
+	opts := RouterOptions{
+		Options: manifests.Options{
+			Owner:     "test-owner",
+			Namespace: "test-namespace",
+			Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
+			Labels: map[string]string{
+				"app.kubernetes.io/version": "v0.40.1",
+			},
+			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
+		},
+		HashringConfig: `[{"hashring":"test","endpoints":["test:19291"]}]`,
+	}
+
+	objs := opts.Build()
+
+	// Validate against golden file containing all router resources
+	yamlBytes, err := yaml.Marshal(objs)
+	if err != nil {
+		t.Fatalf("failed to marshal objects to YAML: %v", err)
+	}
+	golden.Assert(t, string(yamlBytes), "router-complete.golden.yaml")
 }
