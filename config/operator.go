@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -201,8 +203,56 @@ func ControllerManagerNamespace() *corev1.Namespace {
 	}
 }
 
+// DeploymentOption represents a functional option for configuring the controller manager deployment.
+type DeploymentOption func(*deploymentConfig)
+
+// deploymentConfig holds the configuration for the controller manager deployment.
+type deploymentConfig struct {
+	enableAuthProxy bool
+	featureGate     controller.FeatureGate
+}
+
+// WithAuthProxy enables the auth proxy sidecar.
+func WithAuthProxy() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.enableAuthProxy = true
+	}
+}
+
+// WithServiceMonitor enables the service monitor feature.
+func WithServiceMonitor() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.featureGate.EnableServiceMonitor = true
+	}
+}
+
+// WithPrometheusRule enables the prometheus rule feature.
+func WithPrometheusRule() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.featureGate.EnablePrometheusRuleDiscovery = true
+	}
+}
+
+// WithFeatures enables specific features.
+func WithFeatures(features ...string) DeploymentOption {
+	return func(c *deploymentConfig) {
+		for _, feature := range features {
+			switch feature {
+			case featuregate.ServiceMonitor:
+				c.featureGate.EnableServiceMonitor = true
+			case featuregate.PrometheusRule:
+				c.featureGate.EnablePrometheusRuleDiscovery = true
+			}
+		}
+	}
+}
+
 // ControllerManagerDeployment creates the Deployment for the controller manager.
-func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
+func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
+	config := &deploymentConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
 	replicas := int32(1)
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -250,7 +300,7 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 							Image:           DefaultManagerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/manager"},
-							Args:            []string{"--leader-elect"},
+							Args:            buildManagerArgs(config.featureGate),
 							SecurityContext: &corev1.SecurityContext{
 								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
@@ -302,7 +352,7 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 		},
 	}
 
-	if enableAuthProxy {
+	if config.enableAuthProxy {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
 			Name:            "kube-rbac-proxy",
 			Image:           DefaultAuthProxyImage,
@@ -333,6 +383,7 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 			},
 		})
 
+		// Update manager container args for auth proxy mode
 		for i, container := range deployment.Spec.Template.Spec.Containers {
 			if container.Name == "manager" {
 				deployment.Spec.Template.Spec.Containers[i].Args = append(deployment.Spec.Template.Spec.Containers[i].Args, "--metrics-bind-address=:8080")
@@ -344,4 +395,18 @@ func ControllerManagerDeployment(enableAuthProxy bool) *appsv1.Deployment {
 	}
 
 	return deployment
+}
+
+// buildManagerArgs constructs the manager container arguments including feature flags.
+func buildManagerArgs(featureGate controller.FeatureGate) []string {
+	args := []string{"--leader-elect"}
+
+	if featureGate.EnableServiceMonitor {
+		args = append(args, "--enable-feature="+featuregate.ServiceMonitor)
+	}
+	if featureGate.EnablePrometheusRuleDiscovery {
+		args = append(args, "--enable-feature="+featuregate.PrometheusRule)
+	}
+
+	return args
 }
