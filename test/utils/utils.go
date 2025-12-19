@@ -38,6 +38,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/prometheus/prometheus/util/fmtutil"
+	"gotest.tools/v3/golden"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
@@ -57,6 +58,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -857,4 +859,35 @@ func ValidateIsNamedPodDisruptionBudget(t *testing.T, obj client.Object, b manif
 	}
 	ValidateNameAndNamespace(t, obj, b.GetGeneratedResourceName(), namespace)
 	ValidateLabelsMatch(t, obj, matching)
+}
+
+// ValidateObjectAgainstGoldenFile compares a Kubernetes object against a golden YAML file
+// using gotest.tools/v3/golden for consistent behavior with prometheus-operator.
+func ValidateObjectAgainstGoldenFile(t *testing.T, obj client.Object, goldenFileName string) {
+	t.Helper()
+
+	yamlBytes, err := yaml.Marshal(obj)
+	if err != nil {
+		t.Fatalf("failed to marshal object to YAML: %v", err)
+	}
+
+	golden.Assert(t, string(yamlBytes), goldenFileName)
+}
+
+// ValidateObjectsAgainstGoldenFile validates multiple objects against a single golden file
+// containing multiple YAML documents separated by "---"
+func ValidateObjectsAgainstGoldenFile(t *testing.T, objs []client.Object, goldenFileName string) {
+	t.Helper()
+
+	var yamlDocs []string
+	for _, obj := range objs {
+		yamlBytes, err := yaml.Marshal(obj)
+		if err != nil {
+			t.Fatalf("failed to marshal object to YAML: %v", err)
+		}
+		yamlDocs = append(yamlDocs, string(yamlBytes))
+	}
+	
+	combinedYAML := strings.Join(yamlDocs, "---\n")
+	golden.Assert(t, combinedYAML, goldenFileName)
 }
