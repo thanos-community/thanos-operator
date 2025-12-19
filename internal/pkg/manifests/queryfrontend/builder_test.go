@@ -1,17 +1,18 @@
 package queryfrontend
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	"gotest.tools/v3/golden"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -61,20 +62,18 @@ func TestBuildQueryFrontend(t *testing.T) {
 }
 
 func TestNewQueryFrontendDeployment(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	for _, tc := range []struct {
-		name      string
-		opts      Options
-		expectEnv []corev1.EnvVar
+		name   string
+		golden string
+		opts   Options
 	}{
 		{
-			name: "test query frontend deployment correctness",
+			name:   "test query frontend deployment correctness",
+			golden: "deployment-basic.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
+					Owner:     "test-qf",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -97,9 +96,11 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional volumemount",
+			name:   "test additional volumemount",
+			golden: "deployment-with-volumemount.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
+					Owner:     "test-qf",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -130,9 +131,11 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "test additional container",
+			name:   "test additional container",
+			golden: "deployment-with-container.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
+					Owner:     "test-qf",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -168,10 +171,11 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 			},
 		},
 		{
-			name: "test with external cache",
+			name:   "test with external cache",
+			golden: "deployment-with-cache.golden.yaml",
 			opts: Options{
-
 				Options: manifests.Options{
+					Owner:     "test-qf",
 					Namespace: "ns",
 					Image:     ptr.To("some-custom-image"),
 					Labels: map[string]string{
@@ -196,98 +200,26 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 					FromSecret:          &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}},
 				},
 			},
-			expectEnv: []corev1.EnvVar{
-				{
-					Name: externalCacheEnvVarName,
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "test-secret",
-							},
-						},
-					},
-				},
-			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			name := tc.opts.GetGeneratedResourceName()
 			deployment := NewQueryFrontendDeployment(tc.opts)
-			objectMetaLabels := GetLabels(tc.opts)
-			utils.ValidateNameNamespaceAndLabels(t, deployment, name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, deployment, tc.opts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, deployment, extraLabels)
 
-			if deployment.Spec.Template.Spec.ServiceAccountName != name {
-				t.Errorf("expected deployment to use service account %s, got %s", name, deployment.Spec.Template.Spec.ServiceAccountName)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(deployment)
+			if err != nil {
+				t.Fatalf("failed to marshal deployment to YAML: %v", err)
 			}
-			if len(deployment.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
-				t.Errorf("expected store statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(deployment.Spec.Template.Spec.Containers))
-			}
-
-			if !reflect.DeepEqual(deployment.Spec.Template.Spec.Containers[0].Env, tc.expectEnv) {
-				t.Errorf("expected deployment to have env %v, got %v", tc.expectEnv, deployment.Spec.Template.Spec.Containers[0].Env)
-			}
-
-			if *deployment.Spec.Replicas != tc.opts.Replicas {
-				t.Errorf("expected deployment replicas to be %d, got %d", tc.opts.Replicas, *deployment.Spec.Replicas)
-			}
-
-			if deployment.Annotations["test"] != "annotation" {
-				t.Errorf("expected deployment annotation test to be annotation, got %s", deployment.Annotations["test"])
-			}
-
-			// Check containers
-			containers := deployment.Spec.Template.Spec.Containers
-			if len(tc.opts.Additional.Containers)+1 != len(containers) {
-				t.Errorf("expected deployment to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(containers))
-			}
-
-			var found bool
-			for _, c := range containers {
-				if c.Name == Name {
-					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected container image to be %s, got %s", tc.opts.GetContainerImage(), c.Image)
-					}
-
-					expectedArgs := queryFrontendArgs(tc.opts)
-					if !equality.Semantic.DeepEqual(c.Args, expectedArgs) {
-						t.Errorf("expected container args to be %v, got %v", expectedArgs, c.Args)
-					}
-
-					if len(c.Ports) != 1 || c.Ports[0].ContainerPort != HTTPPort {
-						t.Errorf("expected container to have 1 port (%d), got %v", HTTPPort, c.Ports)
-					}
-
-					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts) {
-						t.Errorf("expected query fe deployment to have 1 volumemount, got %d", len(c.VolumeMounts))
-					}
-					if len(c.VolumeMounts) > 0 {
-						if c.VolumeMounts[0].Name != "test-sd" {
-							t.Errorf("expected query fe deployment to have volumemount named test-sd, got %s", c.VolumeMounts[0].Name)
-						}
-						if c.VolumeMounts[0].MountPath != "/test-sd-file" {
-							t.Errorf("expected query fe deployment to have volumemount mounted at /test-sd-file, got %s", c.VolumeMounts[0].MountPath)
-						}
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected deployment to have container named %s", Name)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
 
 func TestNewQueryFrontendService(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	opts := Options{
 		Options: manifests.Options{
+			Owner:     "test-qf",
 			Namespace: "ns",
 			Labels: map[string]string{
 				"some-custom-label":      someCustomLabelValue,
@@ -297,13 +229,99 @@ func TestNewQueryFrontendService(t *testing.T) {
 		},
 	}
 
-	service := NewQueryFrontendService(opts)
-	objectMetaLabels := GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, service, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-	utils.ValidateHasLabels(t, service, extraLabels)
-	utils.ValidateHasLabels(t, service, opts.GetSelectorLabels())
+	for _, tc := range []struct {
+		name   string
+		golden string
+		opts   Options
+	}{
+		{
+			name:   "test query frontend service correctness",
+			golden: "service-basic.golden.yaml",
+			opts:   opts,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			service := NewQueryFrontendService(tc.opts)
 
-	if len(service.Spec.Ports) != 1 || service.Spec.Ports[0].Port != HTTPPort {
-		t.Errorf("expected service to have 1 port (%d), got %v", HTTPPort, service.Spec.Ports)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(service)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
+		})
 	}
 }
+
+// TestBuildQueryFrontendGolden uses golden files to validate complete query frontend manifest generation
+func TestBuildQueryFrontendGolden(t *testing.T) {
+	tests := []struct {
+		name string
+		opts Options
+	}{
+		{
+			name: "queryfrontend-basic",
+			opts: Options{
+				Options: manifests.Options{
+					Owner:     "test-owner",
+					Namespace: "test-namespace",
+					Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
+					Labels: map[string]string{
+						"app.kubernetes.io/version": "v0.40.1",
+					},
+					PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
+				},
+				QueryService:         "thanos-query",
+				LogQueriesLongerThan: "5s",
+				CompressResponses:    true,
+				RangeSplitInterval:   "1h",
+				LabelsSplitInterval:  "30m",
+				RangeMaxRetries:      5,
+				LabelsMaxRetries:     3,
+			},
+		},
+		{
+			name: "queryfrontend-with-cache",
+			opts: Options{
+				Options: manifests.Options{
+					Owner:     "test-owner",
+					Namespace: "test-namespace",
+					Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
+					Labels: map[string]string{
+						"app.kubernetes.io/version": "v0.40.1",
+					},
+					Annotations: map[string]string{
+						"test-annotation": "test-value",
+					},
+					PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
+				},
+				QueryService:         "thanos-query",
+				LogQueriesLongerThan: "10s",
+				CompressResponses:    true,
+				RangeSplitInterval:   "2h",
+				LabelsSplitInterval:  "1h",
+				RangeMaxRetries:      3,
+				LabelsMaxRetries:     2,
+				ResponseCacheConfig: manifests.CacheConfig{
+					InMemoryCacheConfig: &manifests.InMemoryCacheConfig{
+						MaxSize:     "256MB",
+						MaxItemSize: "32MB",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objs := tt.opts.Build()
+
+			yamlBytes, err := yaml.Marshal(objs)
+			if err != nil {
+				t.Fatalf("failed to marshal objects to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tt.name+".golden.yaml")
+		})
+	}
+}
+
