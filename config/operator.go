@@ -259,13 +259,14 @@ func WithPrometheusRule() DeploymentOption {
 
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
-// 
+//
 // Available features:
 //   - "service-monitor": Enables ServiceMonitor management
 //   - "prometheus-rule": Enables PrometheusRule discovery
 //
 // Example:
-//   WithFeatures("service-monitor", "prometheus-rule")
+//
+//	WithFeatures("service-monitor", "prometheus-rule")
 func WithFeatures(features ...string) DeploymentOption {
 	return func(c *deploymentConfig) {
 		for _, feature := range features {
