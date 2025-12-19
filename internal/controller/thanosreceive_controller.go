@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
@@ -67,6 +68,7 @@ type ThanosReceiveReconciler struct {
 	disableConditionUpdate bool
 
 	clusterDomain string
+	featureGate   featuregate.Config
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
@@ -78,6 +80,7 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 		metrics:       controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:      conf.InstrumentationConfig.EventRecorder,
 		clusterDomain: conf.ClusterDomain,
+		featureGate:   conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -233,7 +236,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResourcesGlobal(r.featureGate, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the receiver", errCount)
 	}
 
@@ -243,7 +246,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
 	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
-		opt := receiverV1Alpha1ToIngesterOptions(receiver, v, r.clusterDomain)
+		opt := receiverV1Alpha1ToIngesterOptions(receiver, v, r.clusterDomain, r.featureGate)
 		opt.HashringName = v.Name
 		opts[i] = opt
 	}
@@ -251,7 +254,7 @@ func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosi
 }
 
 func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) manifests.Buildable {
-	opts := receiverV1Alpha1ToRouterOptions(receiver, r.clusterDomain)
+	opts := receiverV1Alpha1ToRouterOptions(receiver, r.clusterDomain, r.featureGate)
 	opts.HashringConfig = hashringConfig
 	return opts
 }

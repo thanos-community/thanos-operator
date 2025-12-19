@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
@@ -53,6 +54,7 @@ type ThanosCompactReconciler struct {
 	disableConditionUpdate bool
 
 	clusterDomain string
+	featureGate   featuregate.Config
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
@@ -128,6 +130,7 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 		metrics:       controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:      conf.InstrumentationConfig.EventRecorder,
 		clusterDomain: conf.ClusterDomain,
+		featureGate:   conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -176,7 +179,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(compact.Spec.FeatureGates, expectResources, compact.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResourcesGlobal(r.featureGate, expectResources, compact.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
 	}
 
@@ -193,7 +196,7 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
 	if len(compact.Spec.ShardingConfig) == 0 {
-		return []manifests.Buildable{compactV1Alpha1ToOptions(compact, r.clusterDomain)}
+		return []manifests.Buildable{compactV1Alpha1ToOptions(compact, r.clusterDomain, r.featureGate)}
 	}
 
 	buildable := make([]manifests.Buildable, 0, len(compact.Spec.ShardingConfig))
@@ -206,7 +209,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 				Regex:       v.Value,
 			})
 		}
-		opts := compactV1Alpha1ToOptions(compact, r.clusterDomain)
+		opts := compactV1Alpha1ToOptions(compact, r.clusterDomain, r.featureGate)
 		opts.ShardName = ptr.To(shard.ShardName)
 		opts.RelabelConfigs = relabelsConfigs
 		buildable = append(buildable, opts)

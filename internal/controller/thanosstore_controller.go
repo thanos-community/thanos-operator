@@ -24,6 +24,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
@@ -55,6 +56,7 @@ type ThanosStoreReconciler struct {
 	disableConditionUpdate bool
 
 	clusterDomain string
+	featureGate   featuregate.Config
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
@@ -66,6 +68,7 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:       controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:      conf.InstrumentationConfig.EventRecorder,
 		clusterDomain: conf.ClusterDomain,
+		featureGate:   conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -165,7 +168,7 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(store.Spec.FeatureGates, expectShards, store.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResourcesGlobal(r.featureGate, expectShards, store.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the store", errCount)
 	}
 
@@ -175,13 +178,13 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.clusterDomain)}
+		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.clusterDomain, r.featureGate)}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		storeShardOpts := storeV1Alpha1ToOptions(store, r.clusterDomain)
+		storeShardOpts := storeV1Alpha1ToOptions(store, r.clusterDomain, r.featureGate)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",
