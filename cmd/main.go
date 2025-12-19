@@ -35,6 +35,7 @@ import (
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
@@ -63,27 +64,6 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-// featureFlag implements flag.Value for repeatable feature flags
-type featureFlag []string
-
-func (f *featureFlag) String() string {
-	return strings.Join(*f, ",")
-}
-
-func (f *featureFlag) Set(value string) error {
-	*f = append(*f, value)
-	return nil
-}
-
-// contains checks if the feature flag slice contains a specific feature
-func (f *featureFlag) contains(feature string) bool {
-	for _, v := range *f {
-		if v == feature {
-			return true
-		}
-	}
-	return false
-}
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -100,7 +80,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 
-	var enabledFeatures featureFlag
+	var enabledFeatures featuregate.Flag
 	var clusterDomain string
 
 	var logLevelStr string
@@ -115,7 +95,7 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.Var(&enabledFeatures, "enable-feature", "Experimental feature to enable. Repeat for multiple features. Available features: 'prometheus-operator-crds', 'service-monitor', 'prometheus-rule'.")
+	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
 	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
@@ -209,14 +189,10 @@ func main() {
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
 	buildConfig := func(component string) controller.Config {
-		// Determine feature enablement based on --enable-feature flags
-		enableServiceMonitor := enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("service-monitor")
-		enablePrometheusRuleDiscovery := enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("prometheus-rule")
-
 		return controller.Config{
 			FeatureGate: controller.FeatureGate{
-				EnableServiceMonitor:          enableServiceMonitor,
-				EnablePrometheusRuleDiscovery: enablePrometheusRuleDiscovery,
+				EnableServiceMonitor:          enabledFeatures.EnablesServiceMonitor(),
+				EnablePrometheusRuleDiscovery: enabledFeatures.EnablesPrometheusRule(),
 			},
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
