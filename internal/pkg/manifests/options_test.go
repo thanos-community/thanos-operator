@@ -1,22 +1,19 @@
 package manifests
 
 import (
-	"encoding/json"
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/golden"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 )
 
 func TestOptions_GetContainerImage(t *testing.T) {
@@ -235,7 +232,7 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 		opts    mockOptionsForGolden
 	}{
 		{
-			name: "deployment-basic",
+			name: "deployment-augment-basic",
 			objInit: func() *appsv1.Deployment {
 				return &appsv1.Deployment{
 					TypeMeta: metav1.TypeMeta{
@@ -296,7 +293,7 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 			},
 		},
 		{
-			name: "deployment-complete",
+			name: "deployment-augment-complete",
 			objInit: func() *appsv1.Deployment {
 				return &appsv1.Deployment{
 					TypeMeta: metav1.TypeMeta{
@@ -449,30 +446,14 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 			obj := tt.objInit()
 			AugmentWithOptions(obj, tt.opts.Options)
 
-			// Create golden file path
-			goldenFilePath := filepath.Join("testdata", tt.name+".golden.json")
-
-			if *update {
-				// Update golden file
-				bytes, err := json.MarshalIndent(obj, "", "  ")
-				require.NoError(t, err)
-
-				err = os.MkdirAll(filepath.Dir(goldenFilePath), 0755)
-				require.NoError(t, err)
-
-				err = os.WriteFile(goldenFilePath, bytes, 0644)
-				require.NoError(t, err)
+			// Marshal to YAML for comparison
+			yamlBytes, err := yaml.Marshal(obj)
+			if err != nil {
+				t.Fatalf("failed to marshal object to YAML: %v", err)
 			}
 
-			// Read golden file
-			bytes, err := os.ReadFile(goldenFilePath)
-			require.NoError(t, err)
-
-			var expected appsv1.Deployment
-			err = json.Unmarshal(bytes, &expected)
-			require.NoError(t, err)
-
-			assert.Equal(t, expected.String(), obj.String())
+			// Use gotest.tools golden file testing
+			golden.Assert(t, string(yamlBytes), tt.name+".golden.yaml")
 		})
 	}
 }
@@ -485,7 +466,7 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 		opts    mockOptionsForGolden
 	}{
 		{
-			name: "statefulset-basic",
+			name: "statefulset-augment-basic",
 			objInit: func() *appsv1.StatefulSet {
 				return &appsv1.StatefulSet{
 					TypeMeta: metav1.TypeMeta{
@@ -546,7 +527,7 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 			},
 		},
 		{
-			name: "statefulset-complete",
+			name: "statefulset-augment-complete",
 			objInit: func() *appsv1.StatefulSet {
 				return &appsv1.StatefulSet{
 					TypeMeta: metav1.TypeMeta{
@@ -701,35 +682,18 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 			obj := tt.objInit()
 			AugmentWithOptions(obj, tt.opts.Options)
 
-			// Create golden file path
-			goldenFilePath := filepath.Join("testdata", tt.name+".golden.json")
-
-			if *update {
-				// Update golden file
-				bytes, err := json.MarshalIndent(obj, "", "  ")
-				require.NoError(t, err)
-
-				err = os.MkdirAll(filepath.Dir(goldenFilePath), 0755)
-				require.NoError(t, err)
-
-				err = os.WriteFile(goldenFilePath, bytes, 0644)
-				require.NoError(t, err)
+			// Marshal to YAML for comparison
+			yamlBytes, err := yaml.Marshal(obj)
+			if err != nil {
+				t.Fatalf("failed to marshal object to YAML: %v", err)
 			}
 
-			// Read golden file
-			bytes, err := os.ReadFile(goldenFilePath)
-			require.NoError(t, err)
-
-			var expected appsv1.StatefulSet
-			err = json.Unmarshal(bytes, &expected)
-			require.NoError(t, err)
-
-			assert.Equal(t, expected.String(), obj.String())
+			// Use gotest.tools golden file testing
+			golden.Assert(t, string(yamlBytes), tt.name+".golden.yaml")
 		})
 	}
 }
 
-var update = flag.Bool("update", false, "update golden files")
 
 func TestAugmentWithOptions_UnsupportedType(t *testing.T) {
 	// Test that passing an unsupported type doesn't modify the object or cause errors

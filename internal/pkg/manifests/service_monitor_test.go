@@ -2,6 +2,9 @@ package manifests
 
 import (
 	"testing"
+
+	"gotest.tools/v3/golden"
+	"sigs.k8s.io/yaml"
 )
 
 func TestBuildServiceMonitor(t *testing.T) {
@@ -18,40 +21,25 @@ func TestBuildServiceMonitor(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name string
-		opts ServiceMonitorOptions
+		name   string
+		golden string
+		opts   ServiceMonitorOptions
 	}{
 		{
-			name: "test service monitor correctness with defaults",
-			opts: ServiceMonitorOptions{},
+			name:   "test service monitor correctness with defaults",
+			golden: "servicemonitor-basic.golden.yaml",
+			opts:   ServiceMonitorOptions{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sm := BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.opts)
-			if sm.GetName() != name {
-				t.Errorf("expected service monitor name to be %s, got %s", name, sm.GetName())
+
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(sm)
+			if err != nil {
+				t.Fatalf("failed to marshal ServiceMonitor to YAML: %v", err)
 			}
-			if sm.GetNamespace() != ns {
-				t.Errorf("expected service monitor namespace to be %s, got %s", ns, sm.GetNamespace())
-			}
-			if len(sm.Spec.Selector.MatchLabels) != 1 {
-				t.Errorf("expected service monitor to have 1 match labels, got %d", len(sm.Spec.Selector.MatchLabels))
-			}
-			if len(sm.Spec.NamespaceSelector.MatchNames) != 1 {
-				t.Errorf("expected service monitor to have 1 match name, got %d", len(sm.Spec.NamespaceSelector.MatchNames))
-			}
-			if sm.Spec.NamespaceSelector.MatchNames[0] != ns {
-				t.Errorf("expected service monitor match name to be %s, got %s", ns, sm.Spec.NamespaceSelector.MatchNames[0])
-			}
-			if len(sm.Spec.Endpoints) != 1 {
-				t.Errorf("expected service monitor to have 1 endpoint, got %d", len(sm.Spec.Endpoints))
-			}
-			if sm.Spec.Endpoints[0].Port != "http" {
-				t.Errorf("expected service monitor endpoint port to be http, got %s", sm.Spec.Endpoints[0].Port)
-			}
-			if sm.Spec.Endpoints[0].Path != "/metrics" {
-				t.Errorf("expected service monitor endpoint path to be /metrics, got %s", sm.Spec.Endpoints[0].Path)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }

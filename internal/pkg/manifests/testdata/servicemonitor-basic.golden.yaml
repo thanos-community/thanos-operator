@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    some-random-label: some-random
+  name: thanos-stack
+  namespace: ns
+spec:
+  endpoints:
+  - interval: 30s
+    path: /metrics
+    port: http
+  namespaceSelector:
+    matchNames:
+    - ns
+  selector:
+    matchLabels:
+      some-random-selector-label: some-random

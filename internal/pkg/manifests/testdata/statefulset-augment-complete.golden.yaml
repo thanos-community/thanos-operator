@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store
+  namespace: monitoring
+spec:
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: thanos-store
+  serviceName: ""
+  template:
+    metadata:
+      labels:
+        app: thanos-store
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/e2e-az-name
+                operator: In
+                values:
+                - e2e-az1
+                - e2e-az2
+      containers:
+      - args:
+        - store
+        - --log.level=info
+        - --store.grpc-series-max-concurrency=20
+        env:
+        - name: THANOS_LOG_FORMAT
+          value: json
+        image: quay.io/thanos/thanos:v0.39.0
+        name: thanos
+        ports:
+        - containerPort: 10902
+          name: http
+          protocol: TCP
+        - containerPort: 10901
+          name: grpc
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /data
+          name: data
+      - args:
+        - --verbose
+        image: sidecar:latest
+        name: sidecar
+        resources: {}
+      nodeSelector:
+        disktype: ssd
+      tolerations:
+      - effect: NoSchedule
+        key: example-key
+        operator: Exists
+      volumes:
+      - configMap:
+          name: thanos-store-config
+        name: config
+  updateStrategy: {}
+status:
+  availableReplicas: 0
+  replicas: 0

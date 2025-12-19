@@ -2,6 +2,9 @@ package manifests
 
 import (
 	"testing"
+
+	"gotest.tools/v3/golden"
+	"sigs.k8s.io/yaml"
 )
 
 func TestNewPodDisruptionBudget(t *testing.T) {
@@ -14,11 +17,13 @@ func TestNewPodDisruptionBudget(t *testing.T) {
 		conf             PodDisruptionBudgetOptions
 	}
 	tests := []struct {
-		name string
-		args args
+		name   string
+		golden string
+		args   args
 	}{
 		{
-			name: "Test NewPodDisruptionBudget",
+			name:   "Test NewPodDisruptionBudget",
+			golden: "pdb-basic.golden.yaml",
 			args: args{
 				name:             "test-name",
 				namespace:        "test-namespace",
@@ -32,15 +37,13 @@ func TestNewPodDisruptionBudget(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pdb := NewPodDisruptionBudget(tt.args.name, tt.args.namespace, tt.args.selectorLabels, tt.args.objectMetaLabels, tt.args.annotations, tt.args.conf)
-			if pdb.Name != tt.args.name {
-				t.Errorf("pdb.Name = %v, want %v", pdb.Name, tt.args.name)
+
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(pdb)
+			if err != nil {
+				t.Fatalf("failed to marshal PodDisruptionBudget to YAML: %v", err)
 			}
-			if pdb.Namespace != tt.args.namespace {
-				t.Errorf("pdb.Namespace = %v, want %v", pdb.Namespace, tt.args.namespace)
-			}
-			if pdb.Spec.MaxUnavailable.IntVal != int32(1) {
-				t.Errorf("pdb.Spec.MinAvailable.IntVal = %v, want %v", pdb.Spec.MaxUnavailable.IntVal, 1)
-			}
+			golden.Assert(t, string(yamlBytes), tt.golden)
 		})
 	}
 }
