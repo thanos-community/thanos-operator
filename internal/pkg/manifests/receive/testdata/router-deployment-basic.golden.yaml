@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    test: annotation
+  labels:
+    app.kubernetes.io/component: thanos-receive-router
+    app.kubernetes.io/instance: thanos-receive-router-
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: ""
+    some-custom-label: xyz
+    some-other-label: abc
+  name: thanos-receive-router-
+  namespace: ns
+spec:
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: thanos-receive-router
+      app.kubernetes.io/instance: thanos-receive-router-
+      app.kubernetes.io/managed-by: thanos-operator
+      app.kubernetes.io/name: thanos-receive
+      app.kubernetes.io/part-of: thanos
+      operator.thanos.io/owner: ""
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: thanos-receive-router
+        app.kubernetes.io/instance: thanos-receive-router-
+        app.kubernetes.io/managed-by: thanos-operator
+        app.kubernetes.io/name: thanos-receive
+        app.kubernetes.io/part-of: thanos
+        operator.thanos.io/owner: ""
+        some-custom-label: xyz
+        some-other-label: abc
+      name: thanos-receive-router-
+      namespace: ns
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - receive
+        - --log.level=info
+        - --log.format=logfmt
+        - --grpc-address=0.0.0.0:10901
+        - --http-address=0.0.0.0:10902
+        - --remote-write.address=0.0.0.0:19291
+        - --receive.replication-factor=0
+        - --receive.hashrings-file=/var/lib/thanos-receive/hashrings.json
+        - "--receive.grpc-service-config={\n  \"loadBalancingPolicy\":\"round_robin\",\n
+          \ \"retryPolicy\": {\n    \"maxAttempts\": 2,\n    \"initialBackoff\": \"0.1s\",\n
+          \   \"backoffMultiplier\": 1,\n    \"retryableStatusCodes\": [\n  \t  \"UNAVAILABLE\"\n
+          \   ]\n  }\n}"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: some-custom-image:v0.39.0
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /-/healthy
+            port: 10902
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: thanos-receive-router
+        ports:
+        - containerPort: 10901
+          name: grpc
+        - containerPort: 19391
+          name: capnproto
+        - containerPort: 10902
+          name: http
+        - containerPort: 19291
+          name: remote-write
+        readinessProbe:
+          failureThreshold: 8
+          httpGet:
+            path: /-/ready
+            port: 10902
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /var/lib/thanos-receive
+          name: hashring-config
+      securityContext: {}
+      serviceAccountName: thanos-receive-router-
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: thanos-receive-router-
+        name: hashring-config
+status: {}

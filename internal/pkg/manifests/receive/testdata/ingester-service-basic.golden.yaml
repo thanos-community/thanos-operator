@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: thanos-receive-ingester
+    app.kubernetes.io/instance: thanos-receive-ingester--
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: ""
+    operator.thanos.io/store-api: "true"
+    some-custom-label: xyz
+    some-other-label: abc
+  name: thanos-receive-ingester--
+  namespace: ns
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 10901
+    protocol: TCP
+    targetPort: 10901
+  - name: capnproto
+    port: 19391
+    protocol: TCP
+    targetPort: 19391
+  - name: http
+    port: 10902
+    protocol: TCP
+    targetPort: 10902
+  - name: remote-write
+    port: 19291
+    protocol: TCP
+    targetPort: 19291
+  selector:
+    app.kubernetes.io/component: thanos-receive-ingester
+    app.kubernetes.io/instance: thanos-receive-ingester--
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-receive
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: ""
+    operator.thanos.io/store-api: "true"
+status:
+  loadBalancer: {}
