@@ -100,7 +100,6 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 
-	var featureGatePrometheusOperator bool
 	var enabledFeatures featureFlag
 	var clusterDomain string
 
@@ -116,8 +115,6 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
-		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
 	flag.Var(&enabledFeatures, "enable-feature", "Experimental feature to enable. Repeat for multiple features. Available features: 'prometheus-operator-crds', 'service-monitor', 'prometheus-rule'.")
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
@@ -212,17 +209,9 @@ func main() {
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
 	buildConfig := func(component string) controller.Config {
-		// Determine feature enablement based on both old and new flags
-		// Priority: new flags override old flags when specified
-		enableServiceMonitor := featureGatePrometheusOperator
-		enablePrometheusRuleDiscovery := featureGatePrometheusOperator
-
-		// New --enable-feature flags take precedence
-		if len(enabledFeatures) > 0 {
-			// If any --enable-feature flags are specified, use only those
-			enableServiceMonitor = enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("service-monitor")
-			enablePrometheusRuleDiscovery = enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("prometheus-rule")
-		}
+		// Determine feature enablement based on --enable-feature flags
+		enableServiceMonitor := enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("service-monitor")
+		enablePrometheusRuleDiscovery := enabledFeatures.contains("prometheus-operator-crds") || enabledFeatures.contains("prometheus-rule")
 
 		return controller.Config{
 			FeatureGate: controller.FeatureGate{
