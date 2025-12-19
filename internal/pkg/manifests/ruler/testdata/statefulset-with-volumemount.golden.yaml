@@ -5,7 +5,7 @@ metadata:
     test: annotation
   labels:
     app.kubernetes.io/component: rule-evaluation-engine
-    app.kubernetes.io/instance: thanos-ruler-
+    app.kubernetes.io/instance: thanos-ruler
     app.kubernetes.io/managed-by: thanos-operator
     app.kubernetes.io/name: thanos-ruler
     app.kubernetes.io/part-of: thanos
@@ -13,24 +13,24 @@ metadata:
     operator.thanos.io/store-api: "true"
     some-custom-label: xyz
     some-other-label: abc
-  name: thanos-ruler-
+  name: thanos-ruler
   namespace: ns
 spec:
   replicas: 0
   selector:
     matchLabels:
       app.kubernetes.io/component: rule-evaluation-engine
-      app.kubernetes.io/instance: thanos-ruler-
+      app.kubernetes.io/instance: thanos-ruler
       app.kubernetes.io/managed-by: thanos-operator
       app.kubernetes.io/name: thanos-ruler
       app.kubernetes.io/part-of: thanos
       operator.thanos.io/owner: ""
-  serviceName: thanos-ruler-
+  serviceName: thanos-ruler
   template:
     metadata:
       labels:
         app.kubernetes.io/component: rule-evaluation-engine
-        app.kubernetes.io/instance: thanos-ruler-
+        app.kubernetes.io/instance: thanos-ruler
         app.kubernetes.io/managed-by: thanos-operator
         app.kubernetes.io/name: thanos-ruler
         app.kubernetes.io/part-of: thanos
@@ -48,7 +48,7 @@ spec:
                 - key: app.kubernetes.io/name
                   operator: In
                   values:
-                  - thanos-ruler-
+                  - thanos-ruler
               namespaces:
               - ns
               topologyKey: kubernetes.io/hostname
@@ -124,7 +124,7 @@ spec:
           name: some-rule
       securityContext:
         fsGroup: 1001
-      serviceAccountName: thanos-ruler-
+      serviceAccountName: thanos-ruler
       volumes:
       - configMap:
           name: test-rules
@@ -134,7 +134,7 @@ spec:
   - metadata:
       labels:
         app.kubernetes.io/component: rule-evaluation-engine
-        app.kubernetes.io/instance: thanos-ruler-
+        app.kubernetes.io/instance: thanos-ruler
         app.kubernetes.io/managed-by: thanos-operator
         app.kubernetes.io/name: thanos-ruler
         app.kubernetes.io/part-of: thanos

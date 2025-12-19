@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: rule-evaluation-engine
-    app.kubernetes.io/instance: thanos-ruler-
+    app.kubernetes.io/instance: thanos-ruler
     app.kubernetes.io/managed-by: thanos-operator
     app.kubernetes.io/name: thanos-ruler
     app.kubernetes.io/part-of: thanos
@@ -11,7 +11,7 @@ metadata:
     operator.thanos.io/store-api: "true"
     some-custom-label: xyz
     some-other-label: abc
-  name: thanos-ruler-
+  name: thanos-ruler
   namespace: ns
 spec:
   clusterIP: None
@@ -24,7 +24,7 @@ spec:
     targetPort: 9090
   selector:
     app.kubernetes.io/component: rule-evaluation-engine
-    app.kubernetes.io/instance: thanos-ruler-
+    app.kubernetes.io/instance: thanos-ruler
     app.kubernetes.io/managed-by: thanos-operator
     app.kubernetes.io/name: thanos-ruler
     app.kubernetes.io/part-of: thanos

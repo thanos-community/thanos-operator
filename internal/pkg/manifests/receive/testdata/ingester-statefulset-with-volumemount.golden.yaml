@@ -5,7 +5,7 @@ metadata:
     test: annotation
   labels:
     app.kubernetes.io/component: thanos-receive-ingester
-    app.kubernetes.io/instance: thanos-receive-ingester--
+    app.kubernetes.io/instance: thanos-receive-ingester
     app.kubernetes.io/managed-by: thanos-operator
     app.kubernetes.io/name: thanos-receive
     app.kubernetes.io/part-of: thanos
@@ -13,25 +13,25 @@ metadata:
     operator.thanos.io/store-api: "true"
     some-custom-label: xyz
     some-other-label: abc
-  name: thanos-receive-ingester--
+  name: thanos-receive-ingester
   namespace: ns
 spec:
   replicas: 0
   selector:
     matchLabels:
       app.kubernetes.io/component: thanos-receive-ingester
-      app.kubernetes.io/instance: thanos-receive-ingester--
+      app.kubernetes.io/instance: thanos-receive-ingester
       app.kubernetes.io/managed-by: thanos-operator
       app.kubernetes.io/name: thanos-receive
       app.kubernetes.io/part-of: thanos
       operator.thanos.io/owner: ""
       operator.thanos.io/store-api: "true"
-  serviceName: thanos-receive-ingester--
+  serviceName: thanos-receive-ingester
   template:
     metadata:
       labels:
         app.kubernetes.io/component: thanos-receive-ingester
-        app.kubernetes.io/instance: thanos-receive-ingester--
+        app.kubernetes.io/instance: thanos-receive-ingester
         app.kubernetes.io/managed-by: thanos-operator
         app.kubernetes.io/name: thanos-receive
         app.kubernetes.io/part-of: thanos
@@ -50,7 +50,7 @@ spec:
         - --remote-write.address=0.0.0.0:19291
         - --tsdb.path=/var/thanos/receive
         - --objstore.config=$(OBJSTORE_CONFIG)
-        - --receive.local-endpoint=$(POD_NAME).thanos-receive-ingester--.$(POD_NAMESPACE).svc.:10901
+        - --receive.local-endpoint=$(POD_NAME).thanos-receive-ingester.$(POD_NAMESPACE).svc.:10901
         env:
         - name: POD_NAME
           valueFrom:
@@ -111,13 +111,13 @@ spec:
           name: http-config
       securityContext:
         fsGroup: 1001
-      serviceAccountName: thanos-receive-ingester--
+      serviceAccountName: thanos-receive-ingester
   updateStrategy: {}
   volumeClaimTemplates:
   - metadata:
       labels:
         app.kubernetes.io/component: thanos-receive-ingester
-        app.kubernetes.io/instance: thanos-receive-ingester--
+        app.kubernetes.io/instance: thanos-receive-ingester
         app.kubernetes.io/managed-by: thanos-operator
         app.kubernetes.io/name: thanos-receive
         app.kubernetes.io/part-of: thanos
