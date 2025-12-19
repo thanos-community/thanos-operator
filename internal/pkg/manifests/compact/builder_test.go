@@ -1,15 +1,17 @@
 package compact
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	"gotest.tools/v3/golden"
+
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -18,48 +20,55 @@ const (
 )
 
 func TestNewService(t *testing.T) {
-	opts := Options{
-		Options: manifests.Options{
-			Namespace: "any",
-			Owner:     "standalone",
+	for _, tc := range []struct {
+		name   string
+		golden string
+		opts   Options
+	}{
+		{
+			name:   "standalone service",
+			golden: "service-standalone.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "any",
+					Owner:     "standalone",
+				},
+			},
 		},
-	}
-	obj := NewService(opts)
-	objectMetaLabels := GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
-
-	if obj.Spec.Ports[0].Name != HTTPPortName {
-		t.Errorf("expected service port name to be 'http', got %s", obj.Spec.Ports[0].Name)
-	}
-	if obj.Spec.Ports[0].Port != HTTPPort {
-		t.Errorf("expected service port to be %d, got %d", HTTPPort, obj.Spec.Ports[0].Port)
-	}
-
-	opts = Options{
-		Options: manifests.Options{
-			Namespace: "any",
-			Owner:     "shard",
+		{
+			name:   "shard service",
+			golden: "service-shard.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "any",
+					Owner:     "shard",
+				},
+			},
 		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			obj := NewService(tc.opts)
+			
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(obj)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
+		})
 	}
-	obj = NewService(opts)
-	objectMetaLabels = GetLabels(opts)
-	utils.ValidateNameNamespaceAndLabels(t, obj, opts.GetGeneratedResourceName(), opts.Namespace, objectMetaLabels)
-	utils.ValidateHasLabels(t, obj, opts.GetSelectorLabels())
 }
 
 func TestNewStatefulSet(t *testing.T) {
-	extraLabels := map[string]string{
-		"some-custom-label": someCustomLabelValue,
-		"some-other-label":  someOtherLabelValue,
-	}
 
 	for _, tc := range []struct {
-		name string
-		opts Options
+		name   string
+		opts   Options
+		golden string
 	}{
 		{
-			name: "test compact sts correctness with no shard name",
+			name:   "test compact sts correctness with no shard name",
+			golden: "statefulset-no-shard.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
 					Owner:     "test",
@@ -77,7 +86,8 @@ func TestNewStatefulSet(t *testing.T) {
 			},
 		},
 		{
-			name: "test compact sts correctness with no shard name",
+			name:   "test compact sts correctness with shard name",
+			golden: "statefulset-with-shard.golden.yaml",
 			opts: Options{
 				Options: manifests.Options{
 					Owner:     "some-shard",
@@ -97,60 +107,13 @@ func TestNewStatefulSet(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			compact := NewStatefulSet(tc.opts)
-			objectMetaLabels := GetLabels(tc.opts)
-			name := tc.opts.GetGeneratedResourceName()
-			utils.ValidateNameNamespaceAndLabels(t, compact, name, tc.opts.Namespace, objectMetaLabels)
-			utils.ValidateHasLabels(t, compact, tc.opts.GetSelectorLabels())
-			utils.ValidateHasLabels(t, compact, extraLabels)
 
-			if compact.Spec.ServiceName != name {
-				t.Errorf("expected compact statefulset to have serviceName %s, got %s", name, compact.Spec.ServiceName)
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(compact)
+			if err != nil {
+				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
 			}
-
-			if compact.Spec.Template.Spec.ServiceAccountName != name {
-				t.Errorf("expected compact statefulset to have service account name %s, got %s", name, compact.Spec.Template.Spec.ServiceAccountName)
-			}
-
-			if *compact.Spec.Replicas != *ptr.To(int32(1)) {
-				t.Errorf("expected compact statefulset to have 1 replica, got %d", *compact.Spec.Replicas)
-			}
-
-			if len(compact.Spec.Template.Spec.Containers) != (len(tc.opts.Additional.Containers) + 1) {
-				t.Errorf("expected compact statefulset to have %d containers, got %d", len(tc.opts.Additional.Containers)+1, len(compact.Spec.Template.Spec.Containers))
-			}
-
-			if compact.Annotations["test"] != "annotation" {
-				t.Errorf("expected compact statefulset annotation test to be annotation, got %s", compact.Annotations["test"])
-			}
-
-			expectArgs := compactorArgsFrom(tc.opts)
-			var found bool
-			for _, c := range compact.Spec.Template.Spec.Containers {
-				if c.Name == Name {
-					found = true
-					if c.Image != tc.opts.GetContainerImage() {
-						t.Errorf("expected compact statefulset to have image %s, got %s", tc.opts.GetContainerImage(), c.Image)
-					}
-
-					if !reflect.DeepEqual(c.Args, expectArgs) {
-						t.Errorf("expected compact statefulset to have args %v, got %v", expectArgs, c.Args)
-					}
-
-					if len(c.VolumeMounts) != len(tc.opts.Additional.VolumeMounts)+1 {
-						t.Errorf("expected compact statefulset to have 2 containers, got %d", len(compact.Spec.Template.Spec.Containers))
-					}
-
-					if c.VolumeMounts[0].Name != dataVolumeName {
-						t.Errorf("expected compact statefulset to have volumemount named data, got %s", c.VolumeMounts[0].Name)
-					}
-					if c.VolumeMounts[0].MountPath != dataVolumeMountPath {
-						t.Errorf("expected compact statefulset to have volumemount mounted at /var/thanos/compact, got %s", c.VolumeMounts[0].MountPath)
-					}
-				}
-			}
-			if !found {
-				t.Errorf("expected compact statefulset to have container named %s", Name)
-			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }
