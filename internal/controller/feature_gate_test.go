@@ -290,11 +290,7 @@ config:
 			})
 
 			By("removing PDB when disabled", func() {
-				resource.Spec.FeatureGates = &monitoringthanosiov1alpha1.FeatureGates{
-					PodDisruptionBudgetConfig: &monitoringthanosiov1alpha1.PodDisruptionBudgetConfig{
-						Enable: ptr.To(false),
-					},
-				}
+				resource.Spec.FeatureGates.PodDisruptionBudgetConfig.Enable = ptr.To(false)
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
