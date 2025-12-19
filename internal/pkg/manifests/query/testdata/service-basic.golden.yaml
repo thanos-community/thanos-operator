@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: query-layer
+    app.kubernetes.io/instance: thanos-query-test-q
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: test-q
+    operator.thanos.io/query-api: "true"
+    some-custom-label: xyz
+    some-other-label: abc
+  name: thanos-query-test-q
+  namespace: ns
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 10901
+    targetPort: 10901
+  - name: http
+    port: 9090
+    targetPort: 9090
+  selector:
+    app.kubernetes.io/component: query-layer
+    app.kubernetes.io/instance: thanos-query-test-q
+    app.kubernetes.io/managed-by: thanos-operator
+    app.kubernetes.io/name: thanos-query
+    app.kubernetes.io/part-of: thanos
+    operator.thanos.io/owner: test-q
+    operator.thanos.io/query-api: "true"
+status:
+  loadBalancer: {}
