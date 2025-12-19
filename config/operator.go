@@ -205,6 +205,19 @@ func ControllerManagerNamespace() *corev1.Namespace {
 }
 
 // DeploymentOption represents a functional option for configuring the controller manager deployment.
+// Use functional options to customize deployment behavior:
+//
+//	// Basic deployment
+//	ControllerManagerDeployment()
+//
+//	// With auth proxy
+//	ControllerManagerDeployment(WithAuthProxy())
+//
+//	// With feature flags
+//	ControllerManagerDeployment(WithServiceMonitor(), WithPrometheusRule())
+//
+//	// Combined options
+//	ControllerManagerDeployment(WithAuthProxy(), WithServiceMonitor())
 type DeploymentOption func(*deploymentConfig)
 
 // deploymentConfig holds the configuration for the controller manager deployment.
@@ -214,6 +227,8 @@ type deploymentConfig struct {
 }
 
 // WithAuthProxy enables the auth proxy sidecar.
+// This adds a kube-rbac-proxy container alongside the manager container
+// and configures metrics to be served through the proxy.
 func WithAuthProxy() DeploymentOption {
 	return func(c *deploymentConfig) {
 		c.enableAuthProxy = true
@@ -221,20 +236,36 @@ func WithAuthProxy() DeploymentOption {
 }
 
 // WithServiceMonitor enables the service monitor feature.
+// When enabled, the controller will manage ServiceMonitor objects for
+// monitoring Thanos components. This requires prometheus-operator to be
+// installed in the cluster. The controller will create ServiceMonitor
+// resources that configure Prometheus to scrape metrics from Thanos components.
 func WithServiceMonitor() DeploymentOption {
 	return func(c *deploymentConfig) {
 		c.featureGate.EnableServiceMonitor = true
 	}
 }
 
-// WithPrometheusRule enables the prometheus rule feature.
+// WithPrometheusRule enables the prometheus rule discovery feature.
+// When enabled, the controller will discover and manage PrometheusRule
+// objects to configure alerting rules on Thanos Ruler instances. This
+// allows automatic discovery of PrometheusRule CRDs in the cluster and
+// configures Thanos Ruler to evaluate these rules for alerting.
 func WithPrometheusRule() DeploymentOption {
 	return func(c *deploymentConfig) {
 		c.featureGate.EnablePrometheusRuleDiscovery = true
 	}
 }
 
-// WithFeatures enables specific features.
+// WithFeatures enables multiple specific features at once.
+// Accepts feature names as defined in the featuregate package.
+// 
+// Available features:
+//   - "service-monitor": Enables ServiceMonitor management
+//   - "prometheus-rule": Enables PrometheusRule discovery
+//
+// Example:
+//   WithFeatures("service-monitor", "prometheus-rule")
 func WithFeatures(features ...string) DeploymentOption {
 	return func(c *deploymentConfig) {
 		for _, feature := range features {

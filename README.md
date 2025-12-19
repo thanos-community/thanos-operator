@@ -96,11 +96,18 @@ Read more about getting started [here](docs/get-started.md) and how to [install]
 
 ### Feature Gates
 
-The CRDs within Thanos Operator have the ability to create/read certain Prometheus Operator objects, such as ServiceMonitors and PrometheusRules. However not all environments may have Prometheus Operator installed.
+The controllers within Thanos Operator have the ability to extend behaviour beyond standard features.
+This behaviour is generally controlled behind feature gates since it may require the presence of other operators or components.
 
-So the Thanos Operator binary and CRDs have flags to disable these using feature gates (they are enabled by default). You can set them using:
-* `-feature-gate.enable-prometheus-operator-crds` flag on the binary
-* `featureGates` on the relevant CRDs
+Feature flags can be enabled using the `--enable-feature` flag.
+The following feature gates are available:
+
+`service-monitor` - Enables ServiceMonitor management by the operator for Thanos components it deploys.
+This requires Prometheus Operator to be installed in the cluster.
+
+`prometheus-rule` - Enables PrometheusRule discovery for Thanos Ruler.
+This requires Prometheus Operator to be installed in the cluster.
+This allows ThanosRuler to discover PrometheusRule objects in the cluster and apply them to itself.
 
 ## Contributing and development
 
