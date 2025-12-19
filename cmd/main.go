@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"strings"
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -34,6 +35,7 @@ import (
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestscompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
@@ -77,7 +79,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 
-	var featureGatePrometheusOperator bool
+	var enabledFeatures featuregate.Flag
 	var clusterDomain string
 
 	var logLevelStr string
@@ -92,8 +94,7 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.BoolVar(&featureGatePrometheusOperator, "feature-gate.enable-prometheus-operator-crds", true,
-		"If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator.")
+	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
 	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
 	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
@@ -189,8 +190,8 @@ func main() {
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
 			FeatureGate: controller.FeatureGate{
-				EnableServiceMonitor:          featureGatePrometheusOperator,
-				EnablePrometheusRuleDiscovery: featureGatePrometheusOperator,
+				EnableServiceMonitor:          enabledFeatures.EnablesServiceMonitor(),
+				EnablePrometheusRuleDiscovery: enabledFeatures.EnablesPrometheusRule(),
 			},
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),

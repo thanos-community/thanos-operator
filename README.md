@@ -36,10 +36,10 @@ Thanos Operator binary CLI Options include,
 Usage of ./bin/manager:
   -cluster-domain string
     	The domain of the cluster. (default "cluster.local")
+  -enable-feature value
+    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule.
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
-  -feature-gate.enable-prometheus-operator-crds
-    	If set, the operator will manage ServiceMonitors for components it deploys, and discover PrometheusRule objects to set on Thanos Ruler, from Prometheus Operator. (default true)
   -health-probe-bind-address string
     	The address the probe endpoint binds to. (default ":8081")
   -kubeconfig string
@@ -96,11 +96,13 @@ Read more about getting started [here](docs/get-started.md) and how to [install]
 
 ### Feature Gates
 
-The CRDs within Thanos Operator have the ability to create/read certain Prometheus Operator objects, such as ServiceMonitors and PrometheusRules. However not all environments may have Prometheus Operator installed.
+The controllers within Thanos Operator have the ability to extend behaviour beyond standard features. This behaviour is generally controlled behind feature gates since it may require the presence of other operators or components.
 
-So the Thanos Operator binary and CRDs have flags to disable these using feature gates (they are enabled by default). You can set them using:
-* `-feature-gate.enable-prometheus-operator-crds` flag on the binary
-* `featureGates` on the relevant CRDs
+Feature flags can be enabled using the `--enable-feature` flag. The following feature gates are available:
+
+`service-monitor` - Enables ServiceMonitor management by the operator for Thanos components it deploys. This requires Prometheus Operator to be installed in the cluster.
+
+`prometheus-rule` - Enables PrometheusRule discovery for Thanos Ruler. This requires Prometheus Operator to be installed in the cluster. This allows ThanosRuler to discover PrometheusRule objects in the cluster and apply them to itself.
 
 ## Contributing and development
 

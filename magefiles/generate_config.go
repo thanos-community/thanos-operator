@@ -26,7 +26,7 @@ func (Config) generator(component string) *mimic.Generator {
 // Generate generates the config files for the operator.
 func (c Config) Generate() error {
 	managerGen := c.generator("manager")
-	managerGen.Add("manager.yaml", encoding.GhodssYAML(config.ControllerManagerNamespace(), config.ControllerManagerDeployment(false)))
+	managerGen.Add("manager.yaml", encoding.GhodssYAML(config.ControllerManagerNamespace(), config.ControllerManagerDeployment()))
 
 	prometheusGen := c.generator("prometheus")
 	prometheusGen.Add("monitor.yaml", encoding.GhodssYAML(config.ControllerManagerServiceMonitor()))
