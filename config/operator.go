@@ -5,7 +5,6 @@ import (
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
-	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -223,7 +222,7 @@ type DeploymentOption func(*deploymentConfig)
 // deploymentConfig holds the configuration for the controller manager deployment.
 type deploymentConfig struct {
 	enableAuthProxy bool
-	featureGate     controller.FeatureGate
+	featureGate     featuregate.Config
 }
 
 // WithAuthProxy enables the auth proxy sidecar.
@@ -431,7 +430,7 @@ func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
 }
 
 // buildManagerArgs constructs the manager container arguments including feature flags.
-func buildManagerArgs(featureGate controller.FeatureGate) []string {
+func buildManagerArgs(featureGate featuregate.Config) []string {
 	args := []string{"--leader-elect"}
 
 	if featureGate.EnableServiceMonitor {
