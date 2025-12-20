@@ -602,46 +602,42 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
-		statefulSetName := controller.RulerNameFromParent(rulerName)
-		svcName := controller.QueryNameFromParent(queryName)
-		cr := &v1alpha1.ThanosRuler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      rulerName,
-				Namespace: namespace,
-				Labels: map[string]string{
-					manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-				},
-			},
-			Spec: v1alpha1.ThanosRulerSpec{
-				QueryLabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-					},
-				},
-				CommonFields: v1alpha1.CommonFields{
-					Version: getThanosVersion(),
-				},
-				StorageConfiguration: v1alpha1.StorageConfiguration{
-					Size: "100Mi",
-				},
-				PrometheusRuleSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
-					},
-				},
-				ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: objStoreSecret,
-					},
-					Key: objStoreSecretKey,
-				},
-				AlertmanagerURL: "http://alertmanager.com:9093",
-			},
-		}
-
 		Context("When ThanosRuler is created", func() {
 			It("should bring up the rulers components", func() {
-
+				cr := &v1alpha1.ThanosRuler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      rulerName,
+						Namespace: namespace,
+						Labels: map[string]string{
+							manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+						},
+					},
+					Spec: v1alpha1.ThanosRulerSpec{
+						QueryLabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+							},
+						},
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "100Mi",
+						},
+						PrometheusRuleSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							},
+						},
+						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: objStoreSecret,
+							},
+							Key: objStoreSecretKey,
+						},
+						AlertmanagerURL: "http://alertmanager.com:9093",
+					},
+				}
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
@@ -649,9 +645,8 @@ var _ = Describe("controller", Ordered, func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, statefulSetName, namespace)
 				}, time.Minute*5, time.Second*1).Should(BeTrue())
-			})
 
-			It("should validate the ruler has discovered the query service", func() {
+				svcName := controller.QueryNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
@@ -659,10 +654,8 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
 					)
-				}, time.Minute*3, time.Second*1).Should(BeTrue())
-			})
+				}, time.Minute*2, time.Second*1).Should(BeTrue())
 
-			It("should pick up a rule configmap when configured", func() {
 				cfgmap := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-rules",
@@ -685,19 +678,10 @@ var _ = Describe("controller", Ordered, func() {
 `,
 					},
 				}
-				err := c.Create(context.Background(), cfgmap, &client.CreateOptions{})
-				Expect(err).To(BeNil())
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(c,
-						statefulSetName,
-						namespace,
-						0,
-						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
-					)
-				}, time.Minute*3, time.Second*1).Should(BeTrue())
-			})
 
-			It("should pick up PrometheusRule resources when configured", func() {
+				err = c.Create(context.Background(), cfgmap, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
 				promRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "example-prometheus-rule",
@@ -726,8 +710,18 @@ var _ = Describe("controller", Ordered, func() {
 						},
 					},
 				}
-				err := c.Create(context.Background(), promRule, &client.CreateOptions{})
+				err = c.Create(context.Background(), promRule, &client.CreateOptions{})
 				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(c,
+						statefulSetName,
+						namespace,
+						0,
+						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
+					)
+				}, time.Minute*2, time.Second*1).Should(BeTrue())
+
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
@@ -735,7 +729,7 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
-				}, time.Minute*3, time.Second*1).Should(BeTrue())
+				}, time.Minute*2, time.Second*1).Should(BeTrue())
 			})
 		})
 	})
