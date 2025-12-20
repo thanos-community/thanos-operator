@@ -12,23 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// getDisabledFeatureGatedResourcesGlobal returns resources that should be deleted when features are globally disabled.
-func getDisabledFeatureGatedResourcesGlobal(fg featuregate.Config, expectResourceNames []string, namespace string) []client.Object {
-	var objs []client.Object
-	if !featuregate.HasServiceMonitorEnabled(fg) {
-		for _, resource := range expectResourceNames {
-			objs = append(objs, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: namespace}})
-		}
-	}
-
-	if !featuregate.HasPodDisruptionBudgetEnabled(fg) {
-		for _, resource := range expectResourceNames {
-			objs = append(objs, &v1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: namespace}})
-		}
-	}
-	return objs
-}
-
 // getDisabledFeatureGatedResources returns resources that should be deleted based on both global and per-resource feature gates.
 func getDisabledFeatureGatedResources(globalFG featuregate.Config, resourceFG *v1alpha1.FeatureGates, expectResourceNames []string, namespace string) []client.Object {
 	var objs []client.Object
