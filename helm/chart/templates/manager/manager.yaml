@@ -59,6 +59,7 @@ spec:
                     - --leader-elect
                     - --log.format=logfmt
                     - --log.level=debug
+                    - --enable-feature=prometheus-rule
                   command:
                     - /manager
                   image: quay.io/thanos/thanos-operator:main
