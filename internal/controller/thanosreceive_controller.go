@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	policyv1 "k8s.io/api/policy/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -214,12 +215,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 	// we won't error out here yet as we don't want to delay updating the router configmap
 
-	// prune the ingest resources that are no longer needed/have changed
-	pruneErrCount := r.pruneOrphanedResources(ctx, receiver.GetNamespace(), receiver.GetName(), expectIngesters)
-	if pruneErrCount > 0 {
-		return fmt.Errorf("failed to prune %d orphaned resources for receive ingester(s)", errCount)
-	}
-
 	hashringConfig, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
 		return fmt.Errorf("failed to build hashring config: %w", err)
@@ -235,12 +230,13 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 		return fmt.Errorf("failed to create or update %d resources for receive hashring(s)", errCount)
 	}
 
-	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, receiver.Spec.FeatureGates, append(expectIngesters, routerOpts.GetGeneratedResourceName()), receiver.GetNamespace())); errCount > 0 {
-		return fmt.Errorf("failed to delete %d feature gated resources for the receiver", errCount)
+	cleanupErrCount := r.cleanup(ctx, receiver, expectIngesters, routerOpts.GetGeneratedResourceName())
+	if cleanupErrCount > 0 {
+		return fmt.Errorf("failed to clean up %d orphaned resources for the receiver", cleanupErrCount)
 	}
 
 	return nil
+
 }
 
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
@@ -257,14 +253,6 @@ func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosi
 	opts := receiverV1Alpha1ToRouterOptions(receiver, r.clusterDomain, r.featureGate)
 	opts.HashringConfig = hashringConfig
 	return opts
-}
-
-func (r *ThanosReceiveReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
-	listOpt := manifests.GetLabelSelectorForOwner(manifestreceive.IngesterOptions{Options: manifests.Options{Owner: owner}})
-	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
-
-	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectShards, listOpts...)
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
@@ -380,6 +368,39 @@ func (r *ThanosReceiveReconciler) enqueueForEndpointSlice(c client.Client) handl
 			},
 		}
 	})
+}
+
+func (r *ThanosReceiveReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosReceive, expectedIngesters []string, routerName string) int {
+	var errCount int
+	ns := resource.GetNamespace()
+	owner := resource.GetName()
+
+	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedIngesters)
+	errCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, append(expectedIngesters, routerName), ns))
+
+	if resource.Spec.Router.Replicas < 2 {
+		listOpt := manifests.GetLabelSelectorForOwner(manifestreceive.RouterOptions{Options: manifests.Options{Owner: owner}})
+		listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+		errCount += r.handler.NewResourcePruner().WithPodDisruptionBudget().Prune(ctx, []string{}, listOpts...)
+	}
+
+	for _, hashring := range resource.Spec.Ingester.Hashrings {
+		var objs []client.Object
+		if hashring.Replicas < 2 {
+			objs = append(objs, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: ReceiveIngesterNameFromParent(resource.GetName(), hashring.Name), Namespace: ns}})
+		}
+		errCount += r.handler.DeleteResource(ctx, objs)
+	}
+
+	return errCount
+}
+
+func (r *ThanosReceiveReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestreceive.IngesterOptions{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectShards, listOpts...)
 }
 
 func (r *ThanosReceiveReconciler) DisableConditionUpdate() *ThanosReceiveReconciler {

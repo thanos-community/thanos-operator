@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"log"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -180,7 +181,7 @@ config:
 					Router: monitoringthanosiov1alpha1.RouterSpec{
 						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
 						Labels:            map[string]string{"test": "my-router-test"},
-						ReplicationFactor: 3,
+						ReplicationFactor: 1,
 						Replicas:          2,
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
@@ -226,13 +227,16 @@ config:
 
 			By("removing PDB when scaled to 1", func() {
 				resource.Spec.Router.Replicas = 1
-				for _, hr := range resource.Spec.Ingester.Hashrings {
-					hr.Replicas = 1
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				for i := range resource.Spec.Ingester.Hashrings {
+					resource.Spec.Ingester.Hashrings[i].Replicas = 1
 				}
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				for _, workload := range workloads {
 					Eventually(func() bool {
-						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
+						result := utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
+						log.Printf("PDB result for %s: %v", workload, result)
+						return result
 					}).Should(BeFalse())
 				}
 			})
