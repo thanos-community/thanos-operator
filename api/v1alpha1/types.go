@@ -175,11 +175,6 @@ type Additional struct {
 
 // FeatureGates holds the configuration for behaviour that is behind feature flags in the operator.
 type FeatureGates struct {
-	// ServiceMonitorConfig is the configuration for the ServiceMonitor.
-	// This setting requires the feature gate for ServiceMonitor management to be enabled.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={enable: true}
-	ServiceMonitorConfig *ServiceMonitorConfig `json:"serviceMonitor,omitempty"`
 	// PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
 	// This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
 	// +kubebuilder:validation:Optional
@@ -190,17 +185,6 @@ type FeatureGates struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={enable: true}
 	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudget,omitempty"`
-}
-
-// ServiceMonitorConfig is the configuration for the ServiceMonitor.
-type ServiceMonitorConfig struct {
-	// Enable the management of ServiceMonitors for the Thanos component.
-	// If not specified, the operator will default to true.
-	// +kubebuilder:validation:Optional
-	Enable *bool `json:"enable,omitempty"`
-	// Labels to add to the ServiceMonitor.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.

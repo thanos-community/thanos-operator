@@ -36,4 +36,5 @@ spec:
         - --leader-elect
         - --log.format=logfmt
         - --log.level=debug
+        - --enable-feature=prometheus-rule
         name: manager

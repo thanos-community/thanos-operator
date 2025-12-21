@@ -77,7 +77,7 @@ type ThanosRulerSpec struct {
 	Paused *bool `json:"paused,omitempty"`
 	// FeatureGates are feature gates for the rule component.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={"serviceMonitor":{"enable":true}, "prometheusRuleEnabled":true}
+	// +kubebuilder:default:={"prometheusRuleEnabled":true}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
 	// Once detected, these rules are made into configmaps and added to the Ruler.

@@ -317,7 +317,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `serviceMonitor` _[ServiceMonitorConfig](#servicemonitorconfig)_ | ServiceMonitorConfig is the configuration for the ServiceMonitor.<br />This setting requires the feature gate for ServiceMonitor management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 | `prometheusRuleEnabled` _boolean_ | PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.<br />This setting is only applicable to ThanosRuler CRD, will be ignored for other components. | true | Optional: \{\} <br /> |
 | `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
@@ -651,23 +650,6 @@ _Appears in:_
 | `tenantValueLabel` _string_ | TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label<br />for particular rules configured on ThanosRuler. |  | Required: \{\} <br /> |
 
 
-#### ServiceMonitorConfig
-
-
-
-ServiceMonitorConfig is the configuration for the ServiceMonitor.
-
-
-
-_Appears in:_
-- [FeatureGates](#featuregates)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enable` _boolean_ | Enable the management of ServiceMonitors for the Thanos component.<br />If not specified, the operator will default to true. |  | Optional: \{\} <br /> |
-| `labels` _object (keys:string, values:string)_ | Labels to add to the ServiceMonitor. |  | Optional: \{\} <br /> |
-
-
 #### ShardingConfig
 
 
@@ -952,7 +934,7 @@ _Appears in:_
 | `debugConfig` _[DebugConfig](#debugconfig)_ | DebugConfig is the debug configuration for the compact component. |  | Optional: \{\} <br /> |
 | `timeRangeConfig` _[TimeRangeConfig](#timerangeconfig)_ | TimeRangeConfig configures the time range of data to serve for the compact component.. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
@@ -1055,7 +1037,7 @@ _Appears in:_
 | `grpcProxyStrategy` _string_ | GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes. | eager | Enum: [eager lazy] <br /> |
 | `queryFrontend` _[QueryFrontendSpec](#queryfrontendspec)_ | QueryFrontend is the configuration for the Query Frontend<br />If you specify this, the operator will create a Query Frontend in front of your query deployment. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |
@@ -1143,7 +1125,7 @@ _Appears in:_
 | `routerSpec` _[RouterSpec](#routerspec)_ | Router is the configuration for the router. |  | Required: \{\} <br /> |
 | `ingesterSpec` _[IngesterSpec](#ingesterspec)_ | Ingester is the configuration for the ingestor. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. |  | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 
 
@@ -1245,7 +1227,7 @@ _Appears in:_
 | `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the rule component. | \{ prometheusRuleEnabled:true \} | Optional: \{\} <br /> |
 | `prometheusRuleSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.<br />Once detected, these rules are made into configmaps and added to the Ruler. | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `ruleTenancyConfig` _[RuleTenancyConfig](#ruletenancyconfig)_ | RuleTenancyConfig is the configuration for the rule tenancy. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
@@ -1359,7 +1341,7 @@ _Appears in:_
 | `indexHeaderConfig` _[IndexHeaderConfig](#indexheaderconfig)_ | IndexHeaderConfig allows configuration of the Store Gateway index header. |  | Optional: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
-| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. | \{ serviceMonitor:map[enable:true] \} | Optional: \{\} <br /> |
+| `featureGates` _[FeatureGates](#featuregates)_ | FeatureGates are feature gates for the compact component. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
 | `additionalVolumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#volume-v1-core) array_ | Additional volumes to add to the Thanos components. |  | Optional: \{\} <br /> |

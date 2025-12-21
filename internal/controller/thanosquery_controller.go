@@ -26,6 +26,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
@@ -65,6 +66,7 @@ type ThanosQueryReconciler struct {
 	disableConditionUpdate bool
 
 	clusterDomain string
+	featureGate   featuregate.Config
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
@@ -76,6 +78,7 @@ func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:       controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:      conf.InstrumentationConfig.EventRecorder,
 		clusterDomain: conf.ClusterDomain,
+		featureGate:   conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -182,7 +185,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	name := manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName()
 	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(query.Spec.FeatureGates, []string{name}, query.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(r.featureGate, query.Spec.FeatureGates, []string{name}, query.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the query", errCount)
 	}
 
@@ -195,7 +198,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return nil, err
 	}
 
-	opts := queryV1Alpha1ToOptions(query, r.clusterDomain)
+	opts := queryV1Alpha1ToOptions(query, r.clusterDomain, r.featureGate)
 	opts.Endpoints = endpoints
 
 	return opts, nil
@@ -256,7 +259,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(query, r.clusterDomain)
+	return queryV1Alpha1ToQueryFrontEndOptions(query, r.clusterDomain, r.featureGate)
 }
 
 func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {

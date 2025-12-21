@@ -27,6 +27,7 @@ import (
 	promlabels "github.com/prometheus/prometheus/model/labels"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
@@ -66,6 +67,7 @@ type ThanosRulerReconciler struct {
 	disableConditionUpdate bool
 
 	clusterDomain string
+	featureGate   featuregate.Config
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
@@ -77,6 +79,7 @@ func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:       controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:      conf.InstrumentationConfig.EventRecorder,
 		clusterDomain: conf.ClusterDomain,
+		featureGate:   conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -174,7 +177,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	}
 
 	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(ruler.Spec.FeatureGates, []string{RulerNameFromParent(ruler.GetName())}, ruler.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(r.featureGate, ruler.Spec.FeatureGates, []string{RulerNameFromParent(ruler.GetName())}, ruler.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the ruler", errCount)
 	}
 
@@ -198,7 +201,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
 	promRuleConfigMaps := []corev1.ConfigMapKeySelector{}
-	if manifests.HasPrometheusRuleEnabled(ruler.Spec.FeatureGates) {
+	if featuregate.HasPrometheusRuleEnabled(r.featureGate) {
 		promRuleConfigMaps, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
 		if err != nil {
 			return nil, err
@@ -227,7 +230,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler, r.clusterDomain)
+	opts := rulerV1Alpha1ToOptions(ruler, r.clusterDomain, r.featureGate)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

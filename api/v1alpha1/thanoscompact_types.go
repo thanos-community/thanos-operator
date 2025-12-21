@@ -68,7 +68,6 @@ type ThanosCompactSpec struct {
 	Paused *bool `json:"paused,omitempty"`
 	// FeatureGates are feature gates for the compact component.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,

@@ -277,7 +277,7 @@ var _ = Describe("controller", Ordered, func() {
 				Expect(err).To(BeNil())
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, ingesterName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*2).Should(BeTrue())
 			})
 
 			Context("When the ingesters have been created", func() {
@@ -343,7 +343,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				Eventually(func() error {
 					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
-				}, time.Minute*2, time.Second*5).Should(Succeed())
+				}, time.Minute*2, time.Second*1).Should(Succeed())
 
 			})
 		})
@@ -398,11 +398,11 @@ var _ = Describe("controller", Ordered, func() {
 
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, capnprotoIngesterName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*2).Should(BeTrue())
 
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, capnprotoRouterName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*2).Should(BeTrue())
 			})
 
 			It("should create ConfigMap with capnproto_address fields", func() {
@@ -467,7 +467,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				Eventually(func() error {
 					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
-				}, time.Minute*2, time.Second*5).Should(Succeed())
+				}, time.Minute*2, time.Second*1).Should(Succeed())
 			})
 
 			AfterAll(func() {
@@ -518,7 +518,7 @@ var _ = Describe("controller", Ordered, func() {
 				deploymentName := controller.QueryNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 				svcName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(c,
@@ -527,7 +527,7 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
 					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 		})
 		Context("When Query Frontend is enabled", func() {
@@ -558,7 +558,7 @@ var _ = Describe("controller", Ordered, func() {
 				deploymentName := controller.QueryFrontendNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 2, deploymentName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*1).Should(BeTrue())
 
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(c,
@@ -587,7 +587,7 @@ var _ = Describe("controller", Ordered, func() {
 				deploymentName := controller.QueryFrontendNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 3, deploymentName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*1).Should(BeTrue())
 
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(c,
@@ -596,57 +596,62 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						"--query-frontend.log-queries-longer-than=20s",
 					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
+		statefulSetName := controller.RulerNameFromParent(rulerName)
+		svcName := controller.QueryNameFromParent(queryName)
+		cr := &v1alpha1.ThanosRuler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rulerName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
+				},
+			},
+			Spec: v1alpha1.ThanosRulerSpec{
+				QueryLabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+					},
+				},
+				CommonFields: v1alpha1.CommonFields{
+					Version: getThanosVersion(),
+				},
+				StorageConfiguration: v1alpha1.StorageConfiguration{
+					Size: "100Mi",
+				},
+				PrometheusRuleSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+					},
+				},
+				ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: objStoreSecret,
+					},
+					Key: objStoreSecretKey,
+				},
+				AlertmanagerURL: "http://alertmanager.com:9093",
+			},
+		}
+
 		Context("When ThanosRuler is created", func() {
 			It("should bring up the rulers components", func() {
-				cr := &v1alpha1.ThanosRuler{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      rulerName,
-						Namespace: namespace,
-						Labels: map[string]string{
-							manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
-						},
-					},
-					Spec: v1alpha1.ThanosRulerSpec{
-						QueryLabelSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-							},
-						},
-						CommonFields: v1alpha1.CommonFields{
-							Version: getThanosVersion(),
-						},
-						StorageConfiguration: v1alpha1.StorageConfiguration{
-							Size: "100Mi",
-						},
-						PrometheusRuleSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
-							},
-						},
-						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: objStoreSecret,
-							},
-							Key: objStoreSecretKey,
-						},
-						AlertmanagerURL: "http://alertmanager.com:9093",
-					},
-				}
+
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
 				Expect(err).To(BeNil())
 
 				statefulSetName := controller.RulerNameFromParent(rulerName)
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, statefulSetName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*1).Should(BeTrue())
+			})
 
-				svcName := controller.QueryNameFromParent(queryName)
+			It("should validate the ruler has discovered the query service", func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
@@ -654,8 +659,10 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
 					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
 
+			It("should pick up a rule configmap when configured", func() {
 				cfgmap := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-rules",
@@ -678,10 +685,19 @@ var _ = Describe("controller", Ordered, func() {
 `,
 					},
 				}
-
-				err = c.Create(context.Background(), cfgmap, &client.CreateOptions{})
+				err := c.Create(context.Background(), cfgmap, &client.CreateOptions{})
 				Expect(err).To(BeNil())
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(c,
+						statefulSetName,
+						namespace,
+						0,
+						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
+					)
+				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
 
+			It("should pick up PrometheusRule resources when configured", func() {
 				promRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "example-prometheus-rule",
@@ -710,18 +726,8 @@ var _ = Describe("controller", Ordered, func() {
 						},
 					},
 				}
-				err = c.Create(context.Background(), promRule, &client.CreateOptions{})
+				err := c.Create(context.Background(), promRule, &client.CreateOptions{})
 				Expect(err).To(BeNil())
-
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(c,
-						statefulSetName,
-						namespace,
-						0,
-						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
-					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
-
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(c,
 						statefulSetName,
@@ -729,7 +735,7 @@ var _ = Describe("controller", Ordered, func() {
 						0,
 						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*3, time.Second*1).Should(BeTrue())
 			})
 		})
 	})
@@ -782,7 +788,7 @@ var _ = Describe("controller", Ordered, func() {
   regex: 0`
 
 					return utils.VerifyStatefulSetArgs(c, firstShard, namespace, 0, expect)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*1).Should(BeTrue())
 			})
 		})
 	})
@@ -817,7 +823,7 @@ var _ = Describe("controller", Ordered, func() {
 				stsName := compact.Options{Options: manifests.Options{Owner: compactName}}.GetGeneratedResourceName()
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, stsName, namespace)
-				}, time.Minute*5, time.Second*10).Should(BeTrue())
+				}, time.Minute*5, time.Second*1).Should(BeTrue())
 			})
 		})
 	})

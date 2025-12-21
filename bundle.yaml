@@ -4836,9 +4836,6 @@ spec:
                     type: integer
                 type: object
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:
@@ -4870,24 +4867,6 @@ spec:
                       PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
                       This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
                     type: boolean
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                 type: object
               imagePullPolicy:
                 default: IfNotPresent
@@ -10296,9 +10275,6 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:
@@ -10330,24 +10306,6 @@ spec:
                       PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
                       This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
                     type: boolean
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                 type: object
               grpcProxyStrategy:
                 default: eager
@@ -16243,9 +16201,6 @@ spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:
@@ -16277,24 +16232,6 @@ spec:
                       PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
                       This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
                     type: boolean
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                 type: object
               ingesterSpec:
                 description: Ingester is the configuration for the ingestor.
@@ -31674,8 +31611,6 @@ spec:
               featureGates:
                 default:
                   prometheusRuleEnabled: true
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the rule component.
                 properties:
                   podDisruptionBudget:
@@ -31707,24 +31642,6 @@ spec:
                       PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
                       This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
                     type: boolean
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                 type: object
               imagePullPolicy:
                 default: IfNotPresent
@@ -37224,9 +37141,6 @@ spec:
                     type: object
                 type: object
               featureGates:
-                default:
-                  serviceMonitor:
-                    enable: true
                 description: FeatureGates are feature gates for the compact component.
                 properties:
                   podDisruptionBudget:
@@ -37258,24 +37172,6 @@ spec:
                       PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
                       This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
                     type: boolean
-                  serviceMonitor:
-                    default:
-                      enable: true
-                    description: |-
-                      ServiceMonitorConfig is the configuration for the ServiceMonitor.
-                      This setting requires the feature gate for ServiceMonitor management to be enabled.
-                    properties:
-                      enable:
-                        description: |-
-                          Enable the management of ServiceMonitors for the Thanos component.
-                          If not specified, the operator will default to true.
-                        type: boolean
-                      labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to add to the ServiceMonitor.
-                        type: object
-                    type: object
                 type: object
               ignoreDeletionMarksDelay:
                 default: 24h
@@ -38626,6 +38522,7 @@ spec:
         - --leader-elect
         - --log.format=logfmt
         - --log.level=debug
+        - --enable-feature=prometheus-rule
         command:
         - /manager
         image: quay.io/thanos/thanos-operator:main

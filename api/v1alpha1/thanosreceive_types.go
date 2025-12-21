@@ -211,7 +211,6 @@ type ThanosReceiveSpec struct {
 	Paused *bool `json:"paused,omitempty"`
 	// FeatureGates are feature gates for the compact component.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={"serviceMonitor":{"enable":true}}
 	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// StatefulSetFields are the options available to all Thanos stateful
 	// components.

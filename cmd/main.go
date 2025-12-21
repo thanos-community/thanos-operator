@@ -189,10 +189,7 @@ func main() {
 
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: controller.FeatureGate{
-				EnableServiceMonitor:          enabledFeatures.EnablesServiceMonitor(),
-				EnablePrometheusRuleDiscovery: enabledFeatures.EnablesPrometheusRule(),
-			},
+			FeatureGate: enabledFeatures.ToFeatureGate(),
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),

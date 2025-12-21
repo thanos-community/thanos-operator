@@ -29,6 +29,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -111,7 +112,7 @@ var _ = BeforeSuite(func() {
 	logger := ctrl.Log.WithName("suite-test")
 	buildConfig := func(component string) Config {
 		return Config{
-			FeatureGate: FeatureGate{
+			FeatureGate: featuregate.Config{
 				EnableServiceMonitor:          true,
 				EnablePrometheusRuleDiscovery: true,
 			},
