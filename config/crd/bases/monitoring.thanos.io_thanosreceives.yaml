@@ -42,29 +42,6 @@ spec:
               featureGates:
                 description: FeatureGates are feature gates for the compact component.
                 properties:
-                  podDisruptionBudget:
-                    default:
-                      enable: true
-                    description: |-
-                      PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
-                      This setting requires the feature gate for PodDisruptionBudget management to be enabled.
-                    properties:
-                      enable:
-                        description: Enabled enables the creation of a PodDisruptionBudget
-                          for the Thanos component.
-                        type: boolean
-                      maxUnavailable:
-                        description: |-
-                          MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.
-                          If neither MaxUnavailable nor MinAvailable is specified, the default is 1.
-                        format: int32
-                        type: integer
-                      minAvailable:
-                        description: MinAvailable is the minimum number of pods that
-                          must still be available during the disruption.
-                        format: int32
-                        type: integer
-                    type: object
                   prometheusRuleEnabled:
                     default: true
                     description: |-
@@ -4920,6 +4897,20 @@ spec:
                           - key
                           type: object
                           x-kubernetes-map-type: atomic
+                        podDisruptionBudgetConfig:
+                          default:
+                            enable: true
+                          description: |-
+                            PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.
+                            This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.
+                            When enabled, a resource that has more than one replica will have a PodDisruptionBudget created
+                            that sets maxUnavailable to 1.
+                          properties:
+                            enable:
+                              description: Enabled enables the creation of a PodDisruptionBudget
+                                for the Thanos component.
+                              type: boolean
+                          type: object
                         replicas:
                           default: 1
                           description: Replicas is the number of replicas/members
@@ -10173,6 +10164,20 @@ spec:
                       type: string
                     description: NodeSelector defines on which Nodes the workloads
                       are scheduled.
+                    type: object
+                  podDisruptionBudgetConfig:
+                    default:
+                      enable: true
+                    description: |-
+                      PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.
+                      This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.
+                      When enabled, a resource that has more than one replica will have a PodDisruptionBudget created
+                      that sets maxUnavailable to 1.
+                    properties:
+                      enable:
+                        description: Enabled enables the creation of a PodDisruptionBudget
+                          for the Thanos component.
+                        type: boolean
                     type: object
                   replicas:
                     default: 1

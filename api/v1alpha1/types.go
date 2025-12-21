@@ -117,6 +117,13 @@ type CommonFields struct {
 	// If not specified, the operator will default to FSGroup=1001.
 	// +kubebuilder:validation:Optional
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+	// PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.
+	// This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.
+	// When enabled, a resource that has more than one replica will have a PodDisruptionBudget created
+	// that sets maxUnavailable to 1.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={enable: true}
+	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudgetConfig,omitempty"`
 }
 
 // StatefulSetFields are the options available to all Thanos components.
@@ -180,25 +187,14 @@ type FeatureGates struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=true
 	PrometheusRuleEnabled *bool `json:"prometheusRuleEnabled,omitempty"`
-	// PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
-	// This setting requires the feature gate for PodDisruptionBudget management to be enabled.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={enable: true}
-	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudget,omitempty"`
 }
 
 // PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
+// +kubebuilder:validation:Optional
 type PodDisruptionBudgetConfig struct {
 	// Enabled enables the creation of a PodDisruptionBudget for the Thanos component.
 	// +kubebuilder:validation:Optional
 	Enable *bool `json:"enable,omitempty"`
-	// MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.
-	// If neither MaxUnavailable nor MinAvailable is specified, the default is 1.
-	// +kubebuilder:validation:Optional
-	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
-	// MinAvailable is the minimum number of pods that must still be available during the disruption.
-	// +kubebuilder:validation:Optional
-	MinAvailable *int32 `json:"minAvailable,omitempty"`
 }
 
 func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
