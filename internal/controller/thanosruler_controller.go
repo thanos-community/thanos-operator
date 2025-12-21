@@ -172,13 +172,9 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
 
-	if errCount := r.pruneOrphanedResources(ctx, ruler.GetNamespace(), ruler.GetName(), expectedResources); errCount > 0 {
-		return fmt.Errorf("failed to prune %d orphaned resources for query or query frontend", errCount)
-	}
-
-	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, ruler.Spec.FeatureGates, []string{RulerNameFromParent(ruler.GetName())}, ruler.GetNamespace())); errCount > 0 {
-		return fmt.Errorf("failed to delete %d feature gated resources for the ruler", errCount)
+	cleanErrCount := r.cleanup(ctx, ruler, expectedResources)
+	if cleanErrCount > 0 {
+		return fmt.Errorf("failed to clean up %d orphaned resources for the ruler", cleanErrCount)
 	}
 
 	return nil
@@ -683,6 +679,23 @@ func enforceTenantLabelInPromQL(expr string, tenantLabel string, tenantValue str
 		return "", err
 	}
 	return expr, nil
+}
+
+func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosRuler, expectedResources []string) int {
+	var cleanErrCount int
+	ns := resource.GetNamespace()
+	owner := resource.GetName()
+
+	cleanErrCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
+
+	cleanErrCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, []string{RulerNameFromParent(owner)}, ns))
+
+	if resource.Spec.Replicas < 2 {
+		listOpt := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})
+		listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+		cleanErrCount += r.handler.NewResourcePruner().WithPodDisruptionBudget().Prune(ctx, []string{}, listOpts...)
+	}
+	return cleanErrCount
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {
