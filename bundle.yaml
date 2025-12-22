@@ -4835,16 +4835,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              featureGates:
-                description: FeatureGates are feature gates for the compact component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
-                type: object
               imagePullPolicy:
                 default: IfNotPresent
                 description: |-
@@ -10265,16 +10255,6 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
-              featureGates:
-                description: FeatureGates are feature gates for the compact component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
-                type: object
               grpcProxyStrategy:
                 default: eager
                 description: GRPCProxyStrategy is the strategy to use when proxying
@@ -16196,16 +16176,6 @@ spec:
           spec:
             description: Spec defines the desired state of ThanosReceive
             properties:
-              featureGates:
-                description: FeatureGates are feature gates for the compact component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
-                type: object
               ingesterSpec:
                 description: Ingester is the configuration for the ingestor.
                 properties:
@@ -31609,18 +31579,6 @@ spec:
                 description: ExternalLabels set on Ruler TSDB, for query time deduplication.
                 minProperties: 1
                 type: object
-              featureGates:
-                default:
-                  prometheusRuleEnabled: true
-                description: FeatureGates are feature gates for the rule component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
-                type: object
               imagePullPolicy:
                 default: IfNotPresent
                 description: |-
@@ -37131,16 +37089,6 @@ spec:
                         pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
                         type: string
                     type: object
-                type: object
-              featureGates:
-                description: FeatureGates are feature gates for the compact component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
                 type: object
               ignoreDeletionMarksDelay:
                 default: 24h

@@ -180,15 +180,6 @@ type Additional struct {
 	ServicePorts []corev1.ServicePort `json:"additionalServicePorts,omitempty"`
 }
 
-// FeatureGates holds the configuration for behaviour that is behind feature flags in the operator.
-type FeatureGates struct {
-	// PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-	// This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=true
-	PrometheusRuleEnabled *bool `json:"prometheusRuleEnabled,omitempty"`
-}
-
 // PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
 // +kubebuilder:validation:Optional
 type PodDisruptionBudgetConfig struct {

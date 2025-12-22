@@ -14,8 +14,7 @@ import (
 func getDisabledFeatureGatedResources(fg featuregate.Config, expectResourceNames []string, namespace string) []client.Object {
 	var objs []client.Object
 
-	// ServiceMonitor is now only controlled globally
-	if !featuregate.HasServiceMonitorEnabled(fg) {
+	if !fg.ServiceMonitorEnabled() {
 		for _, resource := range expectResourceNames {
 			objs = append(objs, &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: resource, Namespace: namespace}})
 		}

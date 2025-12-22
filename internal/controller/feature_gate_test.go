@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"log"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -234,9 +233,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				for _, workload := range workloads {
 					Eventually(func() bool {
-						result := utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
-						log.Printf("PDB result for %s: %v", workload, result)
-						return result
+						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
 					}).Should(BeFalse())
 				}
 			})

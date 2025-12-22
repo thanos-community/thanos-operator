@@ -390,12 +390,18 @@ func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoring
 
 	if resource.Spec.Replicas < 2 {
 		pruner := r.handler.NewResourcePruner().WithPodDisruptionBudget()
-		errCount += pruner.Prune(ctx, []string{}, manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}}), client.InNamespace(ns))
+		errCount += pruner.Prune(ctx, []string{},
+			manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}}),
+			client.InNamespace(ns),
+		)
 	}
 
 	if resource.Spec.QueryFrontend != nil && resource.Spec.QueryFrontend.Replicas < 2 {
 		pruner := r.handler.NewResourcePruner().WithPodDisruptionBudget()
-		errCount += pruner.Prune(ctx, []string{}, manifests.GetLabelSelectorForOwner(manifestqueryfrontend.Options{Options: manifests.Options{Owner: owner}}))
+		errCount += pruner.Prune(ctx, []string{},
+			manifests.GetLabelSelectorForOwner(manifestqueryfrontend.Options{Options: manifests.Options{Owner: owner}}),
+			client.InNamespace(ns),
+		)
 	}
 
 	return errCount
