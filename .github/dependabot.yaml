@@ -6,11 +6,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 20
+    allow:
+      - dependency-type: all
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule: 
+    schedule:
       interval: weekly
