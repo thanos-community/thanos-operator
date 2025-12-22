@@ -158,7 +158,7 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) error {
 	var objs []client.Object
 
-	opts, err := r.buildRuler(ctx, ruler)
+	opts, expectedPromRuleConfigMaps, err := r.buildRuler(ctx, ruler)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
 
-	cleanErrCount := r.cleanup(ctx, ruler, expectedResources)
+	cleanErrCount := r.cleanup(ctx, ruler, expectedResources, expectedPromRuleConfigMaps)
 	if cleanErrCount > 0 {
 		return fmt.Errorf("failed to clean up %d orphaned resources for the ruler", cleanErrCount)
 	}
@@ -178,27 +178,28 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 	return nil
 }
 
-func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (manifests.Buildable, error) {
+func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (manifests.Buildable, []string, error) {
 	endpoints, err := r.getQueryAPIServiceEndpoints(ctx, ruler)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(endpoints) == 0 {
-		return nil, fmt.Errorf("no query API services found")
+		return nil, nil, fmt.Errorf("no query API services found")
 	}
 
 	ruleFiles, err := r.getRuleConfigMaps(ctx, ruler)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
-	var promRuleConfigMaps []corev1.ConfigMapKeySelector
+	promRuleConfigMaps := []corev1.ConfigMapKeySelector{}
+	expectedPromRuleConfigMapNames := []string{}
 	if r.featureGate.PrometheusRuleEnabled() {
-		promRuleConfigMaps, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
+		promRuleConfigMaps, expectedPromRuleConfigMapNames, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 	}
@@ -228,7 +229,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
-	return opts, nil
+	return opts, expectedPromRuleConfigMapNames, nil
 }
 
 func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
@@ -325,16 +326,17 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 	return ruleFiles, nil
 }
 
-// getPrometheusRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
-func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
+// getPrometheusRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler,
+// along with the names of the ConfigMaps created for cleanup purposes.
+func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, []string, error) {
 	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
 		r.logger.Info("no prometheus rule selector specified, skipping", "ruler", ruler.Name)
-		return []corev1.ConfigMapKeySelector{}, nil
+		return []corev1.ConfigMapKeySelector{}, []string{}, nil
 	}
 
 	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
+		return nil, nil, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
 	}
 
 	promRules := &monitoringv1.PrometheusRuleList{}
@@ -342,11 +344,11 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		client.InNamespace(ruler.Namespace),
 		client.MatchingLabelsSelector{Selector: labelSelector},
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(promRules.Items) == 0 {
-		return []corev1.ConfigMapKeySelector{}, nil
+		return []corev1.ConfigMapKeySelector{}, []string{}, nil
 	}
 
 	r.logger.Info("processing prometheus rules",
@@ -376,7 +378,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 
 			if value == "" {
 				err := fmt.Errorf("tenant in labels of PrometheusRule %s is empty", rule.Name)
-				return nil, err
+				return nil, nil, err
 			}
 
 			if _, exists := tenantRuleGroupCount[value]; !exists {
@@ -425,22 +427,25 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 	// Now create ConfigMaps from all rules together
 	configMaps, err := manifestruler.MakeRulesConfigMaps(allRuleFiles)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create config maps for rules: %w", err)
+		return nil, nil, fmt.Errorf("failed to create config maps for rules: %w", err)
 	}
 
 	var ruleFileCfgMaps []corev1.ConfigMapKeySelector
 	objs := []client.Object{}
+	expectedConfigMapNames := make([]string, 0, len(configMaps))
 
 	// Create ConfigMaps with proper names and metadata
 	for i, cm := range configMaps {
 		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%d", ruler.Name, i))
+		expectedConfigMapNames = append(expectedConfigMapNames, cmName)
 
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,
 				Namespace: ruler.Namespace,
 				Labels: map[string]string{
-					manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+					manifests.DefaultRuleConfigLabel:        manifests.DefaultRuleConfigValue,
+					manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -473,10 +478,10 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		r.metrics.ConfigMapCreationFailures.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(errCount))
-		return nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
+		return nil, nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
 	}
 
-	return ruleFileCfgMaps, nil
+	return ruleFileCfgMaps, expectedConfigMapNames, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -679,7 +684,7 @@ func enforceTenantLabelInPromQL(expr string, tenantLabel string, tenantValue str
 	return expr, nil
 }
 
-func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosRuler, expectedResources []string) int {
+func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosRuler, expectedResources []string, expectedPromRuleConfigMaps []string) int {
 	var cleanErrCount int
 	ns := resource.GetNamespace()
 	owner := resource.GetName()
@@ -693,7 +698,23 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 		listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 		cleanErrCount += r.handler.NewResourcePruner().WithPodDisruptionBudget().Prune(ctx, []string{}, listOpts...)
 	}
+
+	// Clean up orphaned PrometheusRule-derived ConfigMaps
+	cleanErrCount += r.pruneOrphanedPrometheusRuleConfigMaps(ctx, ns, expectedPromRuleConfigMaps)
+
 	return cleanErrCount
+}
+
+func (r *ThanosRulerReconciler) pruneOrphanedPrometheusRuleConfigMaps(ctx context.Context, ns string, expectedPromRuleConfigMaps []string) int {
+	listOpts := []client.ListOption{
+		client.InNamespace(ns),
+		client.MatchingLabels{
+			manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
+		},
+	}
+
+	pruner := r.handler.NewResourcePruner().WithConfigMap()
+	return pruner.Prune(ctx, expectedPromRuleConfigMaps, listOpts...)
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {
