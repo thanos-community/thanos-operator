@@ -384,7 +384,7 @@ func commonToOpts(
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOptsGlobal(globalFeatureGate, labels),
-		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(replicas),
+		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(replicas, common.PodDisruptionBudgetConfig),
 		PlacementConfig: &manifests.Placement{
 			NodeSelector: common.NodeSelector,
 			Affinity:     common.Affinity,
@@ -427,8 +427,12 @@ func serviceMonitorConfigToOptsGlobal(fg featuregate.Config, labels map[string]s
 	}
 }
 
-func podDisruptionBudgetConfigToOpts(replicas int32) *manifests.PodDisruptionBudgetOptions {
-	if replicas < 2 {
+func podDisruptionBudgetConfigToOpts(replicas int32, pdb *v1alpha1.PodDisruptionBudgetConfig) *manifests.PodDisruptionBudgetOptions {
+	if replicas < 2 || pdb == nil {
+		return nil
+	}
+
+	if pdb.Enable != nil && !*pdb.Enable {
 		return nil
 	}
 
