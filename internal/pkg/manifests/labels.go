@@ -39,6 +39,11 @@ const (
 	// DefaultPrometheusRuleValue is the default label value for PrometheusRule CRDs
 	DefaultPrometheusRuleValue = "true"
 
+	// PromRuleDerivedConfigMapLabel is the label key for PrometheusRule-derived ConfigMaps
+	PromRuleDerivedConfigMapLabel = "operator.thanos.io/prometheus-rule-derived-configmap"
+	// PromRuleDerivedConfigMapValue is the label value for PrometheusRule-derived ConfigMaps
+	PromRuleDerivedConfigMapValue = "true"
+
 	// OwnerLabel is the label used to identify the owner of the object.
 	// This relates to the CustomResource or entity that created the object.
 	OwnerLabel = "operator.thanos.io/owner"
