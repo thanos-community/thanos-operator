@@ -66,29 +66,27 @@ type ThanosRulerReconciler struct {
 	handler                *handlers.Handler
 	disableConditionUpdate bool
 
-	clusterDomain string
-	featureGate   featuregate.Config
+	featureGate featuregate.Config
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
 func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
 	reconciler := &ThanosRulerReconciler{
-		Client:        client,
-		Scheme:        scheme,
-		logger:        conf.InstrumentationConfig.Logger,
-		metrics:       controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:      conf.InstrumentationConfig.EventRecorder,
-		clusterDomain: conf.ClusterDomain,
-		featureGate:   conf.FeatureGate,
+		Client:      client,
+		Scheme:      scheme,
+		logger:      conf.InstrumentationConfig.Logger,
+		metrics:     controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:    conf.InstrumentationConfig.EventRecorder,
+		featureGate: conf.FeatureGate,
 	}
 
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	h := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
 		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("ruler").Set(float64(len(featureGates)))
-		handler.SetFeatureGates(featureGates)
+		h.SetFeatureGates(featureGates)
 	}
-	reconciler.handler = handler
+	reconciler.handler = h
 
 	return reconciler
 }
@@ -226,7 +224,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler, r.clusterDomain, r.featureGate)
+	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

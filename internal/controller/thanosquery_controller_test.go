@@ -128,7 +128,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
-				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc.%s", receive.GRPCPortName, receiveSvcName, ns, clusterDomain)
+				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
@@ -178,7 +178,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
-					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc.%s", receive.GRPCPortName, receiveSvcName, ns, clusterDomain)
+					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
 					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
 					}
@@ -248,7 +248,7 @@ config:
 
 			By("verifying query frontend is linked to query service", func() {
 				EventuallyWithOffset(1, func() error {
-					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.%s:9090", name, ns, clusterDomain)
+					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:9090", name, ns)
 					if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}

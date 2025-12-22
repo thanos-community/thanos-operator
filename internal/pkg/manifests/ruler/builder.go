@@ -393,7 +393,7 @@ func rulerArgs(opts Options) []string {
 	}
 
 	for _, endpoint := range opts.Endpoints {
-		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc.%s", endpoint.ServiceName, endpoint.Namespace, opts.ClusterDomain))
+		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
 	}
 
 	for _, label := range opts.AlertLabelDrop {

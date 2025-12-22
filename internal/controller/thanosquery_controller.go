@@ -67,29 +67,27 @@ type ThanosQueryReconciler struct {
 	handler                *handlers.Handler
 	disableConditionUpdate bool
 
-	clusterDomain string
-	featureGate   featuregate.Config
+	featureGate featuregate.Config
 }
 
 // NewThanosQueryReconciler returns a reconciler for ThanosQuery resources.
 func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosQueryReconciler {
 	reconciler := &ThanosQueryReconciler{
-		Client:        client,
-		Scheme:        scheme,
-		logger:        conf.InstrumentationConfig.Logger,
-		metrics:       controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:      conf.InstrumentationConfig.EventRecorder,
-		clusterDomain: conf.ClusterDomain,
-		featureGate:   conf.FeatureGate,
+		Client:      client,
+		Scheme:      scheme,
+		logger:      conf.InstrumentationConfig.Logger,
+		metrics:     controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:    conf.InstrumentationConfig.EventRecorder,
+		featureGate: conf.FeatureGate,
 	}
 
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	h := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
-		handler.SetFeatureGates(featureGates)
+		h.SetFeatureGates(featureGates)
 		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("query").Set(float64(len(featureGates)))
 	}
-	reconciler.handler = handler
+	reconciler.handler = h
 
 	return reconciler
 }
@@ -194,7 +192,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return nil, err
 	}
 
-	opts := queryV1Alpha1ToOptions(query, r.clusterDomain, r.featureGate)
+	opts := queryV1Alpha1ToOptions(query, r.featureGate)
 	opts.Endpoints = endpoints
 
 	return opts, nil
@@ -255,7 +253,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(query, r.clusterDomain, r.featureGate)
+	return queryV1Alpha1ToQueryFrontEndOptions(query, r.featureGate)
 }
 
 // SetupWithManager sets up the controller with the Manager.

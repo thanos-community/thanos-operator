@@ -208,7 +208,7 @@ func queryFrontendArgs(opts Options) []string {
 	args := []string{
 		"query-frontend",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
-		fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc.%s:%d", opts.QueryService, opts.Namespace, opts.ClusterDomain, opts.QueryPort),
+		fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:%d", opts.QueryService, opts.Namespace, opts.QueryPort),
 		fmt.Sprintf("--query-frontend.log-queries-longer-than=%s", opts.LogQueriesLongerThan),
 		fmt.Sprintf("--query-range.split-interval=%s", opts.RangeSplitInterval),
 		fmt.Sprintf("--labels.split-interval=%s", opts.LabelsSplitInterval),

@@ -53,8 +53,7 @@ type ThanosCompactReconciler struct {
 	handler                *handlers.Handler
 	disableConditionUpdate bool
 
-	clusterDomain string
-	featureGate   featuregate.Config
+	featureGate featuregate.Config
 }
 
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
@@ -124,13 +123,12 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // NewThanosCompactReconciler returns a reconciler for ThanosCompact resources.
 func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosCompactReconciler {
 	reconciler := &ThanosCompactReconciler{
-		Client:        client,
-		Scheme:        scheme,
-		logger:        conf.InstrumentationConfig.Logger,
-		metrics:       controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:      conf.InstrumentationConfig.EventRecorder,
-		clusterDomain: conf.ClusterDomain,
-		featureGate:   conf.FeatureGate,
+		Client:      client,
+		Scheme:      scheme,
+		logger:      conf.InstrumentationConfig.Logger,
+		metrics:     controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:    conf.InstrumentationConfig.EventRecorder,
+		featureGate: conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -196,7 +194,7 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
 	if len(compact.Spec.ShardingConfig) == 0 {
-		return []manifests.Buildable{compactV1Alpha1ToOptions(compact, r.clusterDomain, r.featureGate)}
+		return []manifests.Buildable{compactV1Alpha1ToOptions(compact, r.featureGate)}
 	}
 
 	buildable := make([]manifests.Buildable, 0, len(compact.Spec.ShardingConfig))
@@ -209,7 +207,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 				Regex:       v.Value,
 			})
 		}
-		opts := compactV1Alpha1ToOptions(compact, r.clusterDomain, r.featureGate)
+		opts := compactV1Alpha1ToOptions(compact, r.featureGate)
 		opts.ShardName = ptr.To(shard.ShardName)
 		opts.RelabelConfigs = relabelsConfigs
 		buildable = append(buildable, opts)

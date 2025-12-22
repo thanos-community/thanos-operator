@@ -111,8 +111,6 @@ type Options struct {
 	// If not set, the PodDisruptionBudget will not be created.
 	PodDisruptionConfig *PodDisruptionBudgetOptions
 	PlacementConfig     *Placement
-	// Domain of the cluster
-	ClusterDomain string
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext

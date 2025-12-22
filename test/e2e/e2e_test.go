@@ -294,7 +294,7 @@ var _ = Describe("controller", Ordered, func() {
 		"external_labels": {},
         "endpoints": [
             {
-                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+                "address": "%s-0.%s.thanos-operator-system.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             }
@@ -309,7 +309,7 @@ var _ = Describe("controller", Ordered, func() {
 		"external_labels": {},
         "endpoints": [
             {
-                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
+                "address": "%s-0.%s.thanos-operator-system.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             }
@@ -413,8 +413,8 @@ var _ = Describe("controller", Ordered, func() {
 		"external_labels": {},
         "endpoints": [
             {
-                "address": "%s-0.%s.thanos-operator-system.svc.cluster.local:10901",
-				"capnproto_address": "%s-0.%s.thanos-operator-system.svc.cluster.local:19391",
+                "address": "%s-0.%s.thanos-operator-system.svc:10901",
+				"capnproto_address": "%s-0.%s.thanos-operator-system.svc:19391",
                 "az": ""
             }
         ]
@@ -525,7 +525,7 @@ var _ = Describe("controller", Ordered, func() {
 						deploymentName,
 						namespace,
 						0,
-						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
+						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.thanos-operator-system.svc", svcName),
 					)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
@@ -565,7 +565,7 @@ var _ = Describe("controller", Ordered, func() {
 						deploymentName,
 						namespace,
 						0,
-						"--query-frontend.downstream-url=http://"+svcName+"."+namespace+".svc.cluster.local:9090",
+						"--query-frontend.downstream-url=http://"+svcName+"."+namespace+".svc:9090",
 					)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
 			})
@@ -657,7 +657,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc.cluster.local", svcName),
+						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc", svcName),
 					)
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
 			})

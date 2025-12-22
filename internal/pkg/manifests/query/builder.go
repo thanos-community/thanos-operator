@@ -297,13 +297,13 @@ func queryArgs(opts Options) []string {
 		switch ep.Type {
 		case manifests.RegularLabel:
 			// TODO(saswatamcode): For regular probably use SD file.
-			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc.%s", ep.ServiceName, ep.Namespace, opts.ClusterDomain))
+			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
 		case manifests.StrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc.%s", ep.ServiceName, ep.Namespace, opts.ClusterDomain))
+			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
 		case manifests.GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc.%s:%d", ep.ServiceName, ep.Namespace, opts.ClusterDomain, ep.Port))
+			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		case manifests.GroupStrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc.%s:%d", ep.ServiceName, ep.Namespace, opts.ClusterDomain, ep.Port))
+			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		default:
 			panic("unknown endpoint type")
 		}

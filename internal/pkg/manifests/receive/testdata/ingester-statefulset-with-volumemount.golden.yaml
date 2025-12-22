@@ -50,7 +50,7 @@ spec:
         - --remote-write.address=0.0.0.0:19291
         - --tsdb.path=/var/thanos/receive
         - --objstore.config=$(OBJSTORE_CONFIG)
-        - --receive.local-endpoint=$(POD_NAME).thanos-receive-ingester.$(POD_NAMESPACE).svc.:10901
+        - --receive.local-endpoint=$(POD_NAME).thanos-receive-ingester.$(POD_NAMESPACE).svc:10901
         env:
         - name: POD_NAME
           valueFrom:

@@ -34,8 +34,6 @@ Thanos Operator binary CLI Options include,
 
 ```bash mdox-exec="./bin/manager --help"
 Usage of ./bin/manager:
-  -cluster-domain string
-    	The domain of the cluster. (default "cluster.local")
   -enable-feature value
     	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule.
   -enable-http2
