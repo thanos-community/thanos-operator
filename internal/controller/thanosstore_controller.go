@@ -55,8 +55,7 @@ type ThanosStoreReconciler struct {
 	handler                *handlers.Handler
 	disableConditionUpdate bool
 
-	clusterDomain string
-	featureGate   featuregate.Config
+	featureGate featuregate.Config
 }
 
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.

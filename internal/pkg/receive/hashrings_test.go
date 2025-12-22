@@ -1,7 +1,6 @@
 package receive
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -38,7 +37,7 @@ func TestDefaultEndpointConverter(t *testing.T) {
 	}
 
 	expected := Endpoint{
-		Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
+		Address: "test-host.test-service.default.svc:10901",
 	}
 
 	result := DefaultEndpointConverter(eps, ep)
@@ -73,8 +72,8 @@ func TestCapnProtoEndpointConverter(t *testing.T) {
 	}
 
 	expected := Endpoint{
-		Address:          fmt.Sprintf("test-host.test-service.default.svc:10901"),
-		CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc:19391"),
+		Address:          "test-host.test-service.default.svc:10901",
+		CapnProtoAddress: "test-host.test-service.default.svc:19391",
 	}
 
 	result := CapnProtoEndpointConverter(eps, ep)
@@ -217,7 +216,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			converter: DefaultEndpointConverter,
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
+					Address: "test-host.test-service.default.svc:10901",
 				},
 			},
 		},
@@ -253,7 +252,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady()},
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
+					Address: "test-host.test-service.default.svc:10901",
 				},
 			},
 		},
@@ -289,8 +288,8 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady()},
 			expected: []Endpoint{
 				{
-					Address:          fmt.Sprintf("test-host.test-service.default.svc:10901"),
-					CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc:19391"),
+					Address:          "test-host.test-service.default.svc:10901",
+					CapnProtoAddress: "test-host.test-service.default.svc:19391",
 				},
 			},
 		},
@@ -329,7 +328,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady(), FilterEndpointByOwnerRef("expected-owner")},
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
+					Address: "test-host.test-service.default.svc:10901",
 				},
 			},
 		},
