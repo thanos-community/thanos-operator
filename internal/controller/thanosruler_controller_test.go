@@ -108,7 +108,7 @@ config:
 						},
 						Key: "thanos.yaml",
 					},
-					PrometheusRuleSelector: metav1.LabelSelector{
+					RuleConfigSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 						},
@@ -175,7 +175,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-rules",
 						Namespace: ns,
-						Labels:    requiredRuleConfigMapLabels,
+						Labels:    defaultRuleLabels,
 					},
 					Data: map[string]string{
 						"my-rules.yaml": `groups:

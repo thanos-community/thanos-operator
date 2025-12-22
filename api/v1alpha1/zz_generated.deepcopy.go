@@ -1383,7 +1383,6 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	in.PrometheusRuleSelector.DeepCopyInto(&out.PrometheusRuleSelector)
 	if in.RuleTenancyConfig != nil {
 		in, out := &in.RuleTenancyConfig, &out.RuleTenancyConfig
 		*out = new(RuleTenancyConfig)

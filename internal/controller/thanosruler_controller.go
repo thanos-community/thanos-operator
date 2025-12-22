@@ -282,7 +282,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 
 // getRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
 func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, requiredRuleConfigMapLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 	if err != nil {
 		return nil, err
 	}
@@ -329,12 +329,12 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 
 // getPrometheusRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
 func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
-	if ruler.Spec.PrometheusRuleSelector.MatchLabels == nil {
+	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
 		r.logger.Info("no prometheus rule selector specified, skipping", "ruler", ruler.Name)
 		return []corev1.ConfigMapKeySelector{}, nil
 	}
 
-	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.PrometheusRuleSelector, nil)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
 	}
@@ -495,7 +495,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	svcPredicate := predicate.Or(svcOnLabelChangePredicate, svcOnGenChangePredicate)
 
 	configMapPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: requiredRuleConfigMapLabels,
+		MatchLabels: defaultRuleLabels,
 	})
 	if err != nil {
 		return err
@@ -582,7 +582,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 // that matches the Service.
 func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if !manifests.HasRequiredLabels(obj, requiredRuleConfigMapLabels) {
+		if !manifests.HasRequiredLabels(obj, defaultRuleLabels) {
 			return []reconcile.Request{}
 		}
 
@@ -599,7 +599,7 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, requiredRuleConfigMapLabels)
+			selector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler rule config selector", "ruler", ruler.GetName())
 				continue
@@ -630,8 +630,8 @@ var requiredQueryServiceLabels = map[string]string{
 	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 }
 
-var requiredRuleConfigMapLabels = map[string]string{
-	manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+var defaultRuleLabels = map[string]string{
+	manifests.DefaultPrometheusRuleLabel: manifests.DefaultRuleConfigValue,
 }
 
 // Add this new function to handle PrometheusRule events
@@ -645,7 +645,7 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.PrometheusRuleSelector, nil)
+			selector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, nil)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler PrometheusRule selector",
 					"ruler", ruler.GetName())

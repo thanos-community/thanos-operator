@@ -12,7 +12,6 @@ spec:
     rule_replica: $(NAME)
   imagePullPolicy: IfNotPresent
   logFormat: logfmt
-  prometheusRuleSelector: {}
   queryLabelSelector:
     matchLabels:
       app.kubernetes.io/part-of: thanos
