@@ -4821,16 +4821,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              featureGates:
-                description: FeatureGates are feature gates for the compact component.
-                properties:
-                  prometheusRuleEnabled:
-                    default: true
-                    description: |-
-                      PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                      This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                    type: boolean
-                type: object
               imagePullPolicy:
                 default: IfNotPresent
                 description: |-

@@ -209,9 +209,6 @@ type ThanosReceiveSpec struct {
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
-	// FeatureGates are feature gates for the compact component.
-	// +kubebuilder:validation:Optional
-	FeatureGates *FeatureGates `json:"featureGates,omitempty"`
 	// StatefulSetFields are the options available to all Thanos stateful
 	// components.
 	StatefulSetFields `json:",inline"`

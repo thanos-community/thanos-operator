@@ -4555,16 +4555,6 @@ spec:
                                         type: object
                                 type: object
                                 x-kubernetes-map-type: atomic
-                            featureGates:
-                                description: FeatureGates are feature gates for the compact component.
-                                properties:
-                                    prometheusRuleEnabled:
-                                        default: true
-                                        description: |-
-                                            PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.
-                                            This setting is only applicable to ThanosRuler CRD, will be ignored for other components.
-                                        type: boolean
-                                type: object
                             grpcProxyStrategy:
                                 default: eager
                                 description: GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes.
