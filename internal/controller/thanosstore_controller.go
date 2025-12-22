@@ -62,13 +62,12 @@ type ThanosStoreReconciler struct {
 // NewThanosStoreReconciler returns a reconciler for ThanosStore resources.
 func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosStoreReconciler {
 	reconciler := &ThanosStoreReconciler{
-		Client:        client,
-		Scheme:        scheme,
-		logger:        conf.InstrumentationConfig.Logger,
-		metrics:       controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:      conf.InstrumentationConfig.EventRecorder,
-		clusterDomain: conf.ClusterDomain,
-		featureGate:   conf.FeatureGate,
+		Client:      client,
+		Scheme:      scheme,
+		logger:      conf.InstrumentationConfig.Logger,
+		metrics:     controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:    conf.InstrumentationConfig.EventRecorder,
+		featureGate: conf.FeatureGate,
 	}
 
 	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
@@ -186,13 +185,13 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.clusterDomain, r.featureGate)}
+		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.featureGate)}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		storeShardOpts := storeV1Alpha1ToOptions(store, r.clusterDomain, r.featureGate)
+		storeShardOpts := storeV1Alpha1ToOptions(store, r.featureGate)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",

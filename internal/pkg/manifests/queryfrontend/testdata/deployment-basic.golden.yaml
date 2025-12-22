@@ -41,7 +41,7 @@ spec:
       - args:
         - query-frontend
         - --http-address=0.0.0.0:9090
-        - --query-frontend.downstream-url=http://thanos-query.ns.svc.:0
+        - --query-frontend.downstream-url=http://thanos-query.ns.svc:0
         - --query-frontend.log-queries-longer-than=5s
         - --query-range.split-interval=1h
         - --labels.split-interval=30m

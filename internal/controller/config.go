@@ -15,8 +15,6 @@ type Config struct {
 	FeatureGate featuregate.Config
 	// InstrumentationConfig contains the common instrumentation configuration for all controllers.
 	InstrumentationConfig InstrumentationConfig
-	// ClusterDomain contains the domain of the cluster.
-	ClusterDomain string
 }
 
 // InstrumentationConfig contains the common instrumentation configuration for all controllers.

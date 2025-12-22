@@ -57,8 +57,7 @@ var (
 )
 
 const (
-	skipValue     = "true"
-	clusterDomain = "cluster.local"
+	skipValue = "true"
 )
 
 func TestControllers(t *testing.T) {
@@ -122,7 +121,6 @@ var _ = BeforeSuite(func() {
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
 			},
-			ClusterDomain: clusterDomain,
 		}
 	}
 

@@ -67,30 +67,27 @@ type ThanosReceiveReconciler struct {
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
-
-	clusterDomain string
-	featureGate   featuregate.Config
+	featureGate            featuregate.Config
 }
 
 // NewThanosReceiveReconciler returns a reconciler for ThanosReceive resources.
 func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosReceiveReconciler {
 	reconciler := &ThanosReceiveReconciler{
-		Client:        client,
-		Scheme:        scheme,
-		logger:        conf.InstrumentationConfig.Logger,
-		metrics:       controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:      conf.InstrumentationConfig.EventRecorder,
-		clusterDomain: conf.ClusterDomain,
-		featureGate:   conf.FeatureGate,
+		Client:      client,
+		Scheme:      scheme,
+		logger:      conf.InstrumentationConfig.Logger,
+		metrics:     controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:    conf.InstrumentationConfig.EventRecorder,
+		featureGate: conf.FeatureGate,
 	}
 
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
+	h := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
 	featureGates := conf.FeatureGate.ToGVK()
 	if len(featureGates) > 0 {
-		handler.SetFeatureGates(featureGates)
+		h.SetFeatureGates(featureGates)
 		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("receive").Set(float64(len(featureGates)))
 	}
-	reconciler.handler = handler
+	reconciler.handler = h
 
 	return reconciler
 }
@@ -242,7 +239,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
 	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
-		opt := receiverV1Alpha1ToIngesterOptions(receiver, v, r.clusterDomain, r.featureGate)
+		opt := receiverV1Alpha1ToIngesterOptions(receiver, v, r.featureGate)
 		opt.HashringName = v.Name
 		opts[i] = opt
 	}
@@ -250,7 +247,7 @@ func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosi
 }
 
 func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) manifests.Buildable {
-	opts := receiverV1Alpha1ToRouterOptions(receiver, r.clusterDomain, r.featureGate)
+	opts := receiverV1Alpha1ToRouterOptions(receiver, r.featureGate)
 	opts.HashringConfig = hashringConfig
 	return opts
 }
@@ -289,7 +286,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 
 		hc := receive.HashringConfig{
 			Name:      hashring.Name,
-			Endpoints: receive.EndpointSliceListToEndpoints(converter, *eps, r.clusterDomain, filters...),
+			Endpoints: receive.EndpointSliceListToEndpoints(converter, *eps, filters...),
 		}
 
 		if hashring.TenancyConfig != nil {

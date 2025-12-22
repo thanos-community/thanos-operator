@@ -80,7 +80,6 @@ func main() {
 	var enableHTTP2 bool
 
 	var enabledFeatures featuregate.Flag
-	var clusterDomain string
 
 	var logLevelStr string
 	var logFormatStr string
@@ -95,7 +94,6 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
-	flag.StringVar(&clusterDomain, "cluster-domain", "cluster.local", "The domain of the cluster.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
 	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
 	flag.Parse()
@@ -196,7 +194,6 @@ func main() {
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
 			},
-			ClusterDomain: clusterDomain,
 		}
 	}
 

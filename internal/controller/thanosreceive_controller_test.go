@@ -339,23 +339,23 @@ config:
 		"external_labels": {},
         "endpoints": [
             {
-                "address": "some-hostname-b.%s.treceive.svc.%s:10901",
+                "address": "some-hostname-b.%s.treceive.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             },
             {
-                "address": "some-hostname-c.%s.treceive.svc.%s:10901",
+                "address": "some-hostname-c.%s.treceive.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             },
             {
-                "address": "some-hostname.%s.treceive.svc.%s:10901",
+                "address": "some-hostname.%s.treceive.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             }
         ]
     }
-]`, svcName, clusterDomain, svcName, clusterDomain, svcName, clusterDomain)
+]`, svcName, svcName, svcName)
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
@@ -534,23 +534,23 @@ config:
 		"external_labels": {},
         "endpoints": [
             {
-                "address": "capnproto-hostname-a.%s.treceive.svc.%s:10901",
-				"capnproto_address": "capnproto-hostname-a.%s.treceive.svc.%s:19391",
+                "address": "capnproto-hostname-a.%s.treceive.svc:10901",
+				"capnproto_address": "capnproto-hostname-a.%s.treceive.svc:19391",
                 "az": ""
             },
             {
-                "address": "capnproto-hostname-b.%s.treceive.svc.%s:10901",
-				"capnproto_address": "capnproto-hostname-b.%s.treceive.svc.%s:19391",
+                "address": "capnproto-hostname-b.%s.treceive.svc:10901",
+				"capnproto_address": "capnproto-hostname-b.%s.treceive.svc:19391",
                 "az": ""
             },
             {
-                "address": "capnproto-hostname-c.%s.treceive.svc.%s:10901",
-				"capnproto_address": "capnproto-hostname-c.%s.treceive.svc.%s:19391",
+                "address": "capnproto-hostname-c.%s.treceive.svc:10901",
+				"capnproto_address": "capnproto-hostname-c.%s.treceive.svc:19391",
                 "az": ""
             }
         ]
     }
-]`, svcName, clusterDomain, svcName, clusterDomain, svcName, clusterDomain, svcName, clusterDomain, svcName, clusterDomain, svcName, clusterDomain)
+]`, svcName, svcName, svcName, svcName, svcName, svcName)
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)

@@ -12,10 +12,6 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const (
-	clusterDomain = "cluster.local"
-)
-
 func TestDefaultEndpointConverter(t *testing.T) {
 	eps := discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,10 +38,10 @@ func TestDefaultEndpointConverter(t *testing.T) {
 	}
 
 	expected := Endpoint{
-		Address: fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
+		Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
 	}
 
-	result := DefaultEndpointConverter(eps, ep, clusterDomain)
+	result := DefaultEndpointConverter(eps, ep)
 	if result != expected {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
@@ -77,11 +73,11 @@ func TestCapnProtoEndpointConverter(t *testing.T) {
 	}
 
 	expected := Endpoint{
-		Address:          fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
-		CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc.%s:19391", clusterDomain),
+		Address:          fmt.Sprintf("test-host.test-service.default.svc:10901"),
+		CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc:19391"),
 	}
 
-	result := CapnProtoEndpointConverter(eps, ep, clusterDomain)
+	result := CapnProtoEndpointConverter(eps, ep)
 	if result != expected {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
@@ -221,7 +217,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			converter: DefaultEndpointConverter,
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
+					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
 				},
 			},
 		},
@@ -257,7 +253,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady()},
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
+					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
 				},
 			},
 		},
@@ -293,8 +289,8 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady()},
 			expected: []Endpoint{
 				{
-					Address:          fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
-					CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc.%s:19391", clusterDomain),
+					Address:          fmt.Sprintf("test-host.test-service.default.svc:10901"),
+					CapnProtoAddress: fmt.Sprintf("test-host.test-service.default.svc:19391"),
 				},
 			},
 		},
@@ -333,7 +329,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 			filters:   []EndpointFilter{FilterEndpointReady(), FilterEndpointByOwnerRef("expected-owner")},
 			expected: []Endpoint{
 				{
-					Address: fmt.Sprintf("test-host.test-service.default.svc.%s:10901", clusterDomain),
+					Address: fmt.Sprintf("test-host.test-service.default.svc:10901"),
 				},
 			},
 		},
@@ -341,7 +337,7 @@ func TestEndpointSliceListToEndpoints(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := EndpointSliceListToEndpoints(tt.converter, tt.eps, clusterDomain, tt.filters...)
+			result := EndpointSliceListToEndpoints(tt.converter, tt.eps, tt.filters...)
 			if len(result) != len(tt.expected) {
 				t.Fatalf("expected %d endpoints, got %d", len(tt.expected), len(result))
 			}

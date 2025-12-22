@@ -66,7 +66,7 @@ spec:
         - --alertmanagers.url=http://test-alertmanager.com:9093
         - --label=rule_replica="0"
         - --rule-file=/etc/thanos/rules/test-rules/rules.yaml
-        - --query=dnssrv+_http._tcp.test-query.ns.svc.
+        - --query=dnssrv+_http._tcp.test-query.ns.svc
         env:
         - name: NAME
           valueFrom:
