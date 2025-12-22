@@ -54,12 +54,6 @@ func (c Config) PrometheusRuleEnabled() bool {
 	return c.EnablePrometheusRuleDiscovery
 }
 
-// PodDisruptionBudgetEnabled returns true if PodDisruptionBudget management is enabled.
-// Note: Currently always returns true as PDB is not controlled by feature gates yet.
-func (c Config) PodDisruptionBudgetEnabled() bool {
-	return true
-}
-
 // ToFeatureGate converts a Flag to a Config struct for use by controllers.
 func (f *Flag) ToFeatureGate() Config {
 	return Config{
@@ -96,9 +90,4 @@ func HasServiceMonitorEnabled(fg Config) bool {
 // HasPrometheusRuleEnabled checks if PrometheusRule is enabled using global feature gate.
 func HasPrometheusRuleEnabled(fg Config) bool {
 	return fg.PrometheusRuleEnabled()
-}
-
-// HasPodDisruptionBudgetEnabled checks if PodDisruptionBudget is enabled using global feature gate.
-func HasPodDisruptionBudgetEnabled(fg Config) bool {
-	return fg.PodDisruptionBudgetEnabled()
 }

@@ -384,7 +384,7 @@ func commonToOpts(
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
 		ServiceMonitorConfig: serviceMonitorConfigToOptsGlobal(globalFeatureGate, labels),
-		PodDisruptionConfig:  podDisruptionBudgetConfigToOptsGlobal(globalFeatureGate),
+		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(replicas, common.PodDisruptionBudgetConfig),
 		PlacementConfig: &manifests.Placement{
 			NodeSelector: common.NodeSelector,
 			Affinity:     common.Affinity,
@@ -418,8 +418,8 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 	}
 }
 
-func serviceMonitorConfigToOptsGlobal(globalFeatureGate featuregate.Config, labels map[string]string) *manifests.ServiceMonitorConfig {
-	if !globalFeatureGate.ServiceMonitorEnabled() {
+func serviceMonitorConfigToOptsGlobal(fg featuregate.Config, labels map[string]string) *manifests.ServiceMonitorConfig {
+	if !fg.ServiceMonitorEnabled() {
 		return nil
 	}
 	return &manifests.ServiceMonitorConfig{
@@ -427,12 +427,16 @@ func serviceMonitorConfigToOptsGlobal(globalFeatureGate featuregate.Config, labe
 	}
 }
 
-func podDisruptionBudgetConfigToOptsGlobal(globalFeatureGate featuregate.Config) *manifests.PodDisruptionBudgetOptions {
-	if !globalFeatureGate.PodDisruptionBudgetEnabled() {
+func podDisruptionBudgetConfigToOpts(replicas int32, pdb *v1alpha1.PodDisruptionBudgetConfig) *manifests.PodDisruptionBudgetOptions {
+	if replicas < 2 || pdb == nil {
 		return nil
 	}
 
-	// If enabled but no specific config, set default maxUnavailable to 1
+	if pdb.Enable != nil && !*pdb.Enable {
+		return nil
+	}
+
+	// set the basic pdb config
 	return &manifests.PodDisruptionBudgetOptions{
 		MaxUnavailable: ptr.To(int32(1)),
 	}

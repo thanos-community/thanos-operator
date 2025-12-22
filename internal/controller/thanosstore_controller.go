@@ -161,18 +161,26 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
 	}
 
-	// prune the store resources that are no longer needed/have changed
-	errCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
-	if errCount > 0 {
-		return fmt.Errorf("failed to prune %d orphaned resources for store shard(s)", errCount)
-	}
-
-	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, store.Spec.FeatureGates, expectShards, store.GetNamespace())); errCount > 0 {
-		return fmt.Errorf("failed to delete %d feature gated resources for the store", errCount)
+	if cleanErrCount := r.cleanup(ctx, store, expectShards); cleanErrCount > 0 {
+		return fmt.Errorf("failed to cleanup resources: %v", cleanErrCount)
 	}
 
 	return nil
+}
+
+func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore, expectShards []string) int {
+	var cleanErrCount int
+
+	cleanErrCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
+	cleanErrCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, expectShards, store.GetNamespace()))
+
+	if store.Spec.Replicas < 2 {
+		listOpt := manifests.GetLabelSelectorForOwner(manifestsstore.Options{Options: manifests.Options{Owner: store.GetName()}})
+		listOpts := []client.ListOption{listOpt, client.InNamespace(store.GetNamespace())}
+		cleanErrCount += r.handler.NewResourcePruner().WithPodDisruptionBudget().Prune(ctx, []string{}, listOpts...)
+	}
+
+	return cleanErrCount
 }
 
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {

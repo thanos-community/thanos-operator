@@ -140,7 +140,11 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 func (h *handler) deleteResource(ctx context.Context, obj client.Object) error {
 	logger := loggerForObj(h.logger, obj)
 	if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) {
-		logger.Error(err, "failed to delete resource")
+		logger.Error(err, fmt.Sprintf("failed to delete resource %s, name: %s",
+			obj.GetObjectKind().GroupVersionKind().GroupKind().String(),
+			obj.GetName(),
+		))
+
 		return err
 	}
 

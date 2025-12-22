@@ -179,7 +179,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, compact.Spec.FeatureGates, expectResources, compact.GetNamespace())); errCount > 0 {
+		getDisabledFeatureGatedResources(r.featureGate, expectResources, compact.GetNamespace())); errCount > 0 {
 		return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
 	}
 

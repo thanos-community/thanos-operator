@@ -163,6 +163,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
 #### CompactConfig
@@ -318,7 +319,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `prometheusRuleEnabled` _boolean_ | PrometheusRuleEnabled enables the loading of PrometheusRules into the Thanos Ruler.<br />This setting is only applicable to ThanosRuler CRD, will be ignored for other components. | true | Optional: \{\} <br /> |
-| `podDisruptionBudget` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.<br />This setting requires the feature gate for PodDisruptionBudget management to be enabled. | \{ enable:true \} | Optional: \{\} <br /> |
 
 
 #### GRPCCompression
@@ -414,6 +414,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `name` _string_ | Name is the name of the hashring.<br />Name will be used to generate the names for the resources created for the hashring. |  | MaxLength: 253 <br />MinLength: 1 <br />Pattern: `^$\|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$` <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the ingester components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key. |  | Optional: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels to add to the ingesters tsdb blocks. | \{ replica:$(POD_NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
@@ -485,13 +486,18 @@ PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
 
 
 _Appears in:_
-- [FeatureGates](#featuregates)
+- [CommonFields](#commonfields)
+- [IngesterHashringSpec](#ingesterhashringspec)
+- [QueryFrontendSpec](#queryfrontendspec)
+- [RouterSpec](#routerspec)
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosQuerySpec](#thanosqueryspec)
+- [ThanosRulerSpec](#thanosrulerspec)
+- [ThanosStoreSpec](#thanosstorespec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enable` _boolean_ | Enabled enables the creation of a PodDisruptionBudget for the Thanos component. |  | Optional: \{\} <br /> |
-| `maxUnavailable` _integer_ | MaxUnavailable is the maximum number of pods that can be unavailable during the disruption.<br />If neither MaxUnavailable nor MinAvailable is specified, the default is 1. |  | Optional: \{\} <br /> |
-| `minAvailable` _integer_ | MinAvailable is the minimum number of pods that must still be available during the disruption. |  | Optional: \{\} <br /> |
 
 
 #### PodManagementPolicyType
@@ -540,6 +546,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `replicas` _integer_ |  | 1 | Minimum: 1 <br /> |
 | `compressResponses` _boolean_ | CompressResponses enables response compression | true |  |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | By default, the operator will add the first discoverable Query API to the<br />Query Frontend, if they have query labels. You can optionally choose to override default<br />Query selector labels, to select a subset of QueryAPIs to query. | \{ matchLabels:map[operator.thanos.io/query-api:true] \} | Optional: \{\} <br /> |
@@ -618,6 +625,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the router components.<br />Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of router replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `replicationFactor` _integer_ | ReplicationFactor is the replication factor for the router. | 1 | Enum: [1 3 5] <br />Required: \{\} <br /> |
@@ -921,6 +929,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Compact component. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the object storage configuration for the compact component. |  | Required: \{\} <br /> |
@@ -1028,6 +1037,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of querier replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Querier component. |  | Optional: \{\} <br /> |
 | `replicaLabels` _string array_ | ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.<br />Data can still be queried without deduplication using 'dedup=false' parameter.<br />Data includes time series, recording rules, and alerting rules.<br />Refer to https://thanos.io/tip/components/query.md/#deduplication-replica-labels | [replica] | Optional: \{\} <br /> |
@@ -1214,6 +1224,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Ruler component. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
@@ -1327,6 +1338,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
+| `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of store or store shard replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to the Store component. |  | Optional: \{\} <br /> |

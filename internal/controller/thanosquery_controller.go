@@ -23,6 +23,8 @@ import (
 
 	"github.com/go-logr/logr"
 
+	manifestqueryfrontend "github.com/thanos-community/thanos-operator/internal/pkg/manifests/queryfrontend"
+
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
@@ -179,14 +181,8 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
 
-	if errCount := r.pruneOrphanedResources(ctx, query.GetNamespace(), query.GetName(), expectedResources); errCount > 0 {
-		return fmt.Errorf("failed to prune %d orphaned resources for query or query frontend", errCount)
-	}
-
-	name := manifestquery.Options{Options: manifests.Options{Owner: query.GetName()}}.GetGeneratedResourceName()
-	if errCount := r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, query.Spec.FeatureGates, []string{name}, query.GetNamespace())); errCount > 0 {
-		return fmt.Errorf("failed to delete %d feature gated resources for the query", errCount)
+	if cleanupErrCount := r.cleanup(ctx, query, expectedResources); cleanupErrCount > 0 {
+		return fmt.Errorf("failed to clean up %d resources for the query or query frontend", cleanupErrCount)
 	}
 
 	return nil
@@ -260,14 +256,6 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
 	return queryV1Alpha1ToQueryFrontEndOptions(query, r.clusterDomain, r.featureGate)
-}
-
-func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
-	listOpt := manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}})
-	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
-
-	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithDeployment().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectedResources, listOpts...)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -388,4 +376,35 @@ func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *moni
 	if err := r.Status().Update(ctx, query); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosQuery", "name", query.Name)
 	}
+}
+
+func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosQuery, expectedResources []string) int {
+	var errCount int
+	ns := resource.GetNamespace()
+	owner := resource.GetName()
+
+	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
+
+	name := manifestquery.Options{Options: manifests.Options{Owner: owner}}.GetGeneratedResourceName()
+	errCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, []string{name}, ns))
+
+	if resource.Spec.Replicas < 2 {
+		pruner := r.handler.NewResourcePruner().WithPodDisruptionBudget()
+		errCount += pruner.Prune(ctx, []string{}, manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}}), client.InNamespace(ns))
+	}
+
+	if resource.Spec.QueryFrontend != nil && resource.Spec.QueryFrontend.Replicas < 2 {
+		pruner := r.handler.NewResourcePruner().WithPodDisruptionBudget()
+		errCount += pruner.Prune(ctx, []string{}, manifests.GetLabelSelectorForOwner(manifestqueryfrontend.Options{Options: manifests.Options{Owner: owner}}))
+	}
+
+	return errCount
+}
+
+func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
+	listOpt := manifests.GetLabelSelectorForOwner(manifestquery.Options{Options: manifests.Options{Owner: owner}})
+	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
+
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithDeployment().WithPodDisruptionBudget().WithServiceMonitor()
+	return pruner.Prune(ctx, expectedResources, listOpts...)
 }
