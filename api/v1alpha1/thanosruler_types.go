@@ -44,9 +44,13 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"defaultObjectStorageConfig,omitempty"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
+	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
+	// PrometheusRules are converted them into ConfigMaps with rule files internally.
 	// It enables adding additional labels to build a custom label selector for discoverable rule files.
 	// Values provided here will be appended to the default which is:
-	// {"operator.thanos.io/rule-file": "true"}.
+	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/rule-file": "true"}}
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="ruleConfigSelector must have at least one label selector"
 	RuleConfigSelector *metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
 	// AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
 	// The scheme should not be empty e.g http might be used. The scheme may be prefixed with
@@ -75,12 +79,6 @@ type ThanosRulerSpec struct {
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
 	Paused *bool `json:"paused,omitempty"`
-	// PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
-	// Once detected, these rules are made into configmaps and added to the Ruler.
-	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/prometheus-rule": "true"}}
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="PrometheusRuleSelector must have at least one label selector"
-	PrometheusRuleSelector metav1.LabelSelector `json:"prometheusRuleSelector,omitempty"`
 	// RuleTenancyConfig is the configuration for the rule tenancy.
 	// +kubebuilder:validation:Optional
 	RuleTenancyConfig *RuleTenancyConfig `json:"ruleTenancyConfig,omitempty"`

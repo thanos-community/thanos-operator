@@ -4637,58 +4637,6 @@ spec:
                                     - OrderedReady
                                     - Parallel
                                 type: string
-                            prometheusRuleSelector:
-                                default:
-                                    matchLabels:
-                                        operator.thanos.io/prometheus-rule: "true"
-                                description: |-
-                                    PrometheusRuleSelector is the label selector to discover PrometheusRule CRDs.
-                                    Once detected, these rules are made into configmaps and added to the Ruler.
-                                properties:
-                                    matchExpressions:
-                                        description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
-                                        items:
-                                            description: |-
-                                                A label selector requirement is a selector that contains values, a key, and an operator that
-                                                relates the key and values.
-                                            properties:
-                                                key:
-                                                    description: key is the label key that the selector applies to.
-                                                    type: string
-                                                operator:
-                                                    description: |-
-                                                        operator represents a key's relationship to a set of values.
-                                                        Valid operators are In, NotIn, Exists and DoesNotExist.
-                                                    type: string
-                                                values:
-                                                    description: |-
-                                                        values is an array of string values. If the operator is In or NotIn,
-                                                        the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                                        the values array must be empty. This array is replaced during a strategic
-                                                        merge patch.
-                                                    items:
-                                                        type: string
-                                                    type: array
-                                                    x-kubernetes-list-type: atomic
-                                            required:
-                                                - key
-                                                - operator
-                                            type: object
-                                        type: array
-                                        x-kubernetes-list-type: atomic
-                                    matchLabels:
-                                        additionalProperties:
-                                            type: string
-                                        description: |-
-                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
-                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
-                                        type: object
-                                type: object
-                                x-kubernetes-map-type: atomic
-                                x-kubernetes-validations:
-                                    - message: PrometheusRuleSelector must have at least one label selector
-                                      rule: self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1
                             queryLabelSelector:
                                 description: |-
                                     QueryLabelSelector is the label selector to discover Queriers.
@@ -4808,11 +4756,15 @@ spec:
                                 pattern: ^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})))$
                                 type: string
                             ruleConfigSelector:
+                                default:
+                                    matchLabels:
+                                        operator.thanos.io/rule-file: "true"
                                 description: |-
                                     RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
+                                    It also discovers PrometheusRule CustomResources if the feature flag is enabled.
+                                    PrometheusRules are converted them into ConfigMaps with rule files internally.
                                     It enables adding additional labels to build a custom label selector for discoverable rule files.
                                     Values provided here will be appended to the default which is:
-                                    {"operator.thanos.io/rule-file": "true"}.
                                 properties:
                                     matchExpressions:
                                         description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
@@ -4855,6 +4807,9 @@ spec:
                                         type: object
                                 type: object
                                 x-kubernetes-map-type: atomic
+                                x-kubernetes-validations:
+                                    - message: ruleConfigSelector must have at least one label selector
+                                      rule: self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1
                             ruleTenancyConfig:
                                 description: RuleTenancyConfig is the configuration for the rule tenancy.
                                 properties:
@@ -5168,9 +5123,9 @@ spec:
                             - alertmanagerURL
                             - defaultObjectStorageConfig
                             - externalLabels
-                            - prometheusRuleSelector
                             - replicas
                             - retention
+                            - ruleConfigSelector
                             - storage
                         type: object
                     status:

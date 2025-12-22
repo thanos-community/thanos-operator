@@ -624,7 +624,7 @@ var _ = Describe("controller", Ordered, func() {
 				StorageConfiguration: v1alpha1.StorageConfiguration{
 					Size: "100Mi",
 				},
-				PrometheusRuleSelector: metav1.LabelSelector{
+				RuleConfigSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 					},
@@ -668,7 +668,7 @@ var _ = Describe("controller", Ordered, func() {
 						Name:      "my-rules",
 						Namespace: namespace,
 						Labels: map[string]string{
-							manifests.DefaultRuleConfigLabel: manifests.DefaultRuleConfigValue,
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultRuleConfigValue,
 						},
 					},
 					Data: map[string]string{
