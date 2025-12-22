@@ -81,13 +81,3 @@ func (c Config) ToGVK() []schema.GroupVersionKind {
 	}
 	return gvk
 }
-
-// HasServiceMonitorEnabled checks if ServiceMonitor is enabled using global feature gate.
-func HasServiceMonitorEnabled(fg Config) bool {
-	return fg.ServiceMonitorEnabled()
-}
-
-// HasPrometheusRuleEnabled checks if PrometheusRule is enabled using global feature gate.
-func HasPrometheusRuleEnabled(fg Config) bool {
-	return fg.PrometheusRuleEnabled()
-}

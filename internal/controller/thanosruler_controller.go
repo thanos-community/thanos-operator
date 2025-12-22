@@ -196,8 +196,8 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	}
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
-	promRuleConfigMaps := []corev1.ConfigMapKeySelector{}
-	if featuregate.HasPrometheusRuleEnabled(r.featureGate) {
+	var promRuleConfigMaps []corev1.ConfigMapKeySelector
+	if r.featureGate.PrometheusRuleEnabled() {
 		promRuleConfigMaps, err = r.getPrometheusRuleConfigMaps(ctx, ruler)
 		if err != nil {
 			return nil, err
