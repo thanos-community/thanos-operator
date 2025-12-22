@@ -702,66 +702,21 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 	}
 
 	// Clean up orphaned PrometheusRule-derived ConfigMaps
-	cleanErrCount += r.pruneOrphanedPrometheusRuleConfigMaps(ctx, resource, expectedPromRuleConfigMaps)
+	cleanErrCount += r.pruneOrphanedPrometheusRuleConfigMaps(ctx, ns, expectedPromRuleConfigMaps)
 
 	return cleanErrCount
 }
 
-// pruneOrphanedPrometheusRuleConfigMaps deletes ConfigMaps that were created from PrometheusRules
-// but are no longer needed (e.g., when PrometheusRuleSelector changes).
-func (r *ThanosRulerReconciler) pruneOrphanedPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler, expectedConfigMapNames []string) int {
-	var errCount int
-
-	// List all ConfigMaps with the PrometheusRule label in the ruler's namespace
-	configMaps := &corev1.ConfigMapList{}
+func (r *ThanosRulerReconciler) pruneOrphanedPrometheusRuleConfigMaps(ctx context.Context, ns string, expectedPromRuleConfigMaps []string) int {
 	listOpts := []client.ListOption{
-		client.InNamespace(ruler.Namespace),
+		client.InNamespace(ns),
 		client.MatchingLabels{
 			manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
 		},
 	}
 
-	if err := r.List(ctx, configMaps, listOpts...); err != nil {
-		r.logger.Error(err, "failed to list PrometheusRule ConfigMaps for cleanup", "ruler", ruler.Name)
-		return 1
-	}
-
-	expectedSet := make(map[string]struct{}, len(expectedConfigMapNames))
-	for _, name := range expectedConfigMapNames {
-		expectedSet[name] = struct{}{}
-	}
-
-	for _, cm := range configMaps.Items {
-		// Check if this ConfigMap is owned by this ThanosRuler
-		isOwned := false
-		for _, ownerRef := range cm.OwnerReferences {
-			if ownerRef.UID == ruler.UID {
-				isOwned = true
-				break
-			}
-		}
-
-		if !isOwned {
-			continue
-		}
-
-		// Delete if not in expected list
-		if _, expected := expectedSet[cm.Name]; !expected {
-			r.logger.Info("deleting orphaned PrometheusRule ConfigMap",
-				"configmap", cm.Name,
-				"ruler", ruler.Name,
-				"namespace", ruler.Namespace)
-
-			if err := r.Delete(ctx, &cm); err != nil && !apierrors.IsNotFound(err) {
-				r.logger.Error(err, "failed to delete orphaned PrometheusRule ConfigMap",
-					"configmap", cm.Name,
-					"ruler", ruler.Name)
-				errCount++
-			}
-		}
-	}
-
-	return errCount
+	pruner := r.handler.NewResourcePruner().WithConfigMap()
+	return pruner.Prune(ctx, expectedPromRuleConfigMaps, listOpts...)
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {
