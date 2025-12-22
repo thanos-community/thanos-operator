@@ -433,8 +433,8 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 	}
 
 	var ruleFileCfgMaps []corev1.ConfigMapKeySelector
-	var expectedConfigMapNames []string
 	objs := []client.Object{}
+	expectedConfigMapNames := make([]string, 0, len(configMaps))
 
 	// Create ConfigMaps with proper names and metadata
 	for i, cm := range configMaps {
