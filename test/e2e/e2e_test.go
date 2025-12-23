@@ -668,7 +668,7 @@ var _ = Describe("controller", Ordered, func() {
 						Name:      "my-rules",
 						Namespace: namespace,
 						Labels: map[string]string{
-							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleLabel,
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 						},
 					},
 					Data: map[string]string{
