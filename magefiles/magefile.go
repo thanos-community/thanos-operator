@@ -18,9 +18,13 @@ const (
 	projectImage      = "quay.io/thanos/thanos-operator"
 )
 
+var Aliases = map[string]interface{}{
+	"interactive-demo": InteractiveDemo,
+}
+
 // InteractiveDemo runs an interactive demo.
 func InteractiveDemo() error {
-	if err := KindCluster(); err != nil {
+	if err := kindCluster(); err != nil {
 		return err
 	}
 
@@ -28,7 +32,7 @@ func InteractiveDemo() error {
 		return err
 	}
 
-	if err := PrometheusOperator(); err != nil {
+	if err := prometheusOperator(); err != nil {
 		return err
 	}
 
@@ -40,7 +44,7 @@ func InteractiveDemo() error {
 		return err
 	}
 
-	if err := Minio(); err != nil {
+	if err := minio(); err != nil {
 		return err
 	}
 
@@ -48,17 +52,55 @@ func InteractiveDemo() error {
 		return err
 	}
 
-	if err := InstallCRDS(); err != nil {
+	if err := installCRDS(); err != nil {
 		return err
 	}
 
-	if err := InstallSamples(); err != nil {
+	if err := certManager(); err != nil {
 		return err
 	}
 
-	if err := ConfigurePrometheusRules(); err != nil {
+	if err := openTelemetryOperator(); err != nil {
+		return fmt.Errorf("failed to install OpenTelemetry Operator: %w", err)
+	}
+
+	if err := configureSidecarCollector(); err != nil {
+		return fmt.Errorf("failed to configure sidecar collector: %w", err)
+	}
+
+	if err := configureJaegerV2(); err != nil {
+		return fmt.Errorf("failed to configure Jaeger v2: %w", err)
+	}
+
+	if err := installSamples(); err != nil {
 		return err
 	}
+
+	if err := configurePrometheusRules(); err != nil {
+		return err
+	}
+
+	log.Println("🎉 Interactive demo setup complete!")
+	log.Println("")
+	log.Println("📊 Access the UIs:")
+	log.Println("  Thanos Query Frontend: kubectl -n thanos-operator-system port-forward svc/thanos-query-frontend-example-query 9090")
+	log.Println("  Then visit: http://localhost:9090")
+	log.Println("")
+	log.Println("  Prometheus UI: kubectl -n default port-forward svc/prometheus-operated 9090")
+	log.Println("  Then visit: http://localhost:9090")
+	log.Println("")
+	log.Println("🔍 Jaeger v2 Tracing UI: kubectl -n thanos-operator-system port-forward svc/jaeger-v2-ui 16686")
+	log.Println("  Then visit: http://localhost:16686")
+	log.Println("")
+	log.Println("📈 Check metrics and tracing correlation:")
+	log.Println("  - View traces in Jaeger to see request flow")
+	log.Println("  - Query metrics in Thanos to see performance data")
+	log.Println("  - OpenTelemetry collector handles both metrics and tracing")
+	log.Println("")
+	log.Println("🔧 Tracing Setup:")
+	log.Println("  - OTLP endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:4318")
+	log.Println("  - Jaeger endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:14250")
+	log.Println("  - Send traces to collector using OTLP or Jaeger protocols")
 
 	if err := KubeStateMetrics(); err != nil {
 		return err
@@ -70,8 +112,8 @@ func InteractiveDemo() error {
 	return nil
 }
 
-// Creates a new KinD cluster named 'thanos-operator-cluster'
-func KindCluster() error {
+// kindCluster creates a new KinD cluster named 'thanos-operator-cluster'
+func kindCluster() error {
 	o, err := sh.Output("kind", "get", "clusters")
 	if err != nil {
 		return fmt.Errorf("failed to get KinD clusters: %w", err)
@@ -85,13 +127,13 @@ func KindCluster() error {
 	return sh.Run("kind", "create", "cluster", "--name", kindClusterName)
 }
 
-// Installs the Prometheus Operator in the Kubernetes cluster
-func PrometheusOperator() error {
+// prometheusOperator installs the Prometheus Operator in the Kubernetes cluster
+func prometheusOperator() error {
 	return utils.InstallPrometheusOperator()
 }
 
-// Installs MinIO in the Kubernetes cluster
-func Minio() error {
+// minio installs MinIO in the Kubernetes cluster
+func minio() error {
 	err := utils.InstallMinIO()
 	if err != nil {
 		return err
@@ -99,27 +141,27 @@ func Minio() error {
 	return utils.CreateMinioObjectStorageSecret()
 }
 
-// Builds the container image and loads it into the KinD cluster
+// BuildAndLoadLocalImage Builds the container image and loads it into the KinD cluster
 func BuildAndLoadLocalImage() error {
-	err := BuildLocalImage()
+	err := buildLocalImage()
 	if err != nil {
 		return err
 	}
 	return utils.LoadImageToKindClusterWithName(getImageName())
 }
 
-// Builds the container image
-func BuildLocalImage() error {
+// buildLocalImage builds the container image
+func buildLocalImage() error {
 	return sh.Run("docker", "build", "--load", ".", "-t", getImageName())
 }
 
-// Applies the Thanos Operators CRDs into the Kubernetes cluster
-func InstallCRDS() error {
+// installCRDS applies the Thanos Operators CRDs into the Kubernetes cluster
+func installCRDS() error {
 	return sh.Run("kubectl", "apply", "--server-side", "-f", "config/crd/bases/")
 }
 
-// Installs the Thanos Operator sample resources into the Kubernetes cluster
-func InstallSamples() error {
+// installSamples installs the Thanos Operator sample resources into the Kubernetes cluster
+func installSamples() error {
 	env := map[string]string{"IMG_MAIN": getImageName()}
 	if err := sh.RunWith(env, "make", "install-sample"); err != nil {
 		return err
@@ -257,8 +299,188 @@ spec:
 	return err
 }
 
-// ConfigurePrometheusRules creates a PrometheusRule object with basic alerts
-func ConfigurePrometheusRules() error {
+// certManager installs cert-manager which is required by both OpenTelemetry and Jaeger operators
+func certManager() error {
+	log.Println("Installing cert-manager...")
+
+	// Check if cert-manager is already installed by looking for deployments
+	if output, err := sh.Output("kubectl", "get", "deployment", "cert-manager", "-n", "cert-manager", "--ignore-not-found"); err == nil && strings.Contains(output, "cert-manager") {
+		log.Println("cert-manager already installed, skipping...")
+		return nil
+	}
+
+	log.Println("Installing cert-manager...")
+	if err := sh.Run("kubectl", "apply", "-f", "https://github.com/cert-manager/cert-manager/releases/download/v1.14.1/cert-manager.yaml"); err != nil {
+		return fmt.Errorf("failed to install cert-manager: %w", err)
+	}
+
+	// Wait for cert-manager to be ready
+	log.Println("Waiting for cert-manager to be ready...")
+	if err := sh.Run("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment/cert-manager", "-n", "cert-manager"); err != nil {
+		return fmt.Errorf("cert-manager not ready: %w", err)
+	}
+	if err := sh.Run("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment/cert-manager-cainjector", "-n", "cert-manager"); err != nil {
+		return fmt.Errorf("cert-manager-cainjector not ready: %w", err)
+	}
+	if err := sh.Run("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment/cert-manager-webhook", "-n", "cert-manager"); err != nil {
+		return fmt.Errorf("cert-manager-webhook not ready: %w", err)
+	}
+
+	return nil
+}
+
+// openTelemetryOperator installs the OpenTelemetry Operator in the Kubernetes cluster
+func openTelemetryOperator() error {
+	log.Println("Installing OpenTelemetry Operator...")
+
+	// Check if OpenTelemetry operator is already installed by looking for deployments
+	if output, err := sh.Output("kubectl", "get", "deployment", "opentelemetry-operator-controller-manager", "-n", "opentelemetry-operator-system", "--ignore-not-found"); err == nil && strings.Contains(output, "opentelemetry-operator-controller-manager") {
+		log.Println("OpenTelemetry operator already installed, skipping...")
+		return nil
+	}
+
+	log.Println("Installing OpenTelemetry operator...")
+	if err := sh.Run("kubectl", "apply", "-f", "https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml"); err != nil {
+		return fmt.Errorf("failed to install OpenTelemetry operator: %w", err)
+	}
+
+	// Wait for OpenTelemetry operator to be ready
+	log.Println("Waiting for OpenTelemetry operator to be ready...")
+	if err := sh.Run("kubectl", "wait", "--for=condition=available", "--timeout=300s", "deployment/opentelemetry-operator-controller-manager", "-n", "opentelemetry-operator-system"); err != nil {
+		return fmt.Errorf("OpenTelemetry operator not ready: %w", err)
+	}
+
+	return nil
+}
+
+// configureJaegerV2 creates a Jaeger v2 instance using OpenTelemetry collector
+func configureJaegerV2() error {
+	log.Println("Configuring Jaeger v2 with OpenTelemetry...")
+	log.Println("Creating Jaeger v2 collector deployment...")
+	content := `
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: jaeger-v2-instance
+  namespace: thanos-operator-system
+spec:
+  image: jaegertracing/jaeger:latest
+  ports:
+  - name: jaeger-ui
+    port: 16686
+    targetPort: 16686
+  - name: jaeger-grpc
+    port: 14250
+    targetPort: 14250
+  config:
+    service:
+      extensions: [jaeger_storage, jaeger_query]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [jaeger_storage_exporter]
+    extensions:
+      jaeger_query:
+        storage:
+          traces: memstore
+      jaeger_storage:
+        backends:
+          memstore:
+            memory:
+              max_traces: 100000
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    exporters:
+      jaeger_storage_exporter:
+        trace_storage: memstore
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-v2-ui
+  namespace: thanos-operator-system
+  labels:
+    app.kubernetes.io/name: jaeger-v2
+    app.kubernetes.io/component: query
+spec:
+  type: NodePort
+  ports:
+  - port: 16686
+    targetPort: 16686
+    nodePort: 30686
+    name: jaeger-ui
+  selector:
+    app.kubernetes.io/name: jaeger-v2-instance-collector
+`
+	_, err := applyNamespacedKubeResources(content, operatorNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to create Jaeger v2 collector: %w", err)
+	}
+	
+	log.Println("Successfully created Jaeger v2 collector")
+	return nil
+}
+
+// configureSidecarCollector creates a default sidecar OpenTelemetryCollector for automatic injection
+func configureSidecarCollector() error {
+	log.Println("Configuring OpenTelemetry Sidecar Collector...")
+	log.Println("Creating default sidecar collector for annotation sidecar.opentelemetry.io/inject=true...")
+	content := `
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: default
+  namespace: thanos-operator-system
+spec:
+  mode: sidecar
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+      resource:
+        attributes:
+        - key: service.name
+          value: "thanos"
+          action: upsert
+
+    exporters:
+      otlp/jaeger:
+        endpoint: jaeger-v2-instance-collector.thanos-operator-system.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [resource, batch]
+          exporters: [otlp/jaeger]
+`
+	_, err := applyNamespacedKubeResources(content, operatorNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to create sidecar collector: %w", err)
+	}
+	
+	log.Println("Successfully created default sidecar collector")
+	return nil
+}
+
+// configurePrometheusRules creates a PrometheusRule object with basic alerts
+func configurePrometheusRules() error {
 	content := `
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
