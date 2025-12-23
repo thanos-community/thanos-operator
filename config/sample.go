@@ -211,9 +211,9 @@ func SampleCR(crd CRD) any {
 					ImagePullPolicy: ptr.To(corev1.PullIfNotPresent),
 				},
 				Replicas: 1,
-				RuleConfigSelector: &metav1.LabelSelector{
+				RuleConfigSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"operator.thanos.io/rule-file": "true",
+						"operator.thanos.io/prometheus-rule": "true",
 					},
 				},
 				QueryLabelSelector: &metav1.LabelSelector{

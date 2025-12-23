@@ -281,7 +281,12 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 
 // getRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
 func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
+		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
+		return []corev1.ConfigMapKeySelector{}, fmt.Errorf("no prometheus rule selector specified")
+	}
+
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 	if err != nil {
 		return nil, err
 	}
@@ -330,11 +335,11 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 // along with the names of the ConfigMaps created for cleanup purposes.
 func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, []string, error) {
 	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
-		r.logger.Info("no prometheus rule selector specified, skipping", "ruler", ruler.Name)
-		return []corev1.ConfigMapKeySelector{}, []string{}, nil
+		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
+		return []corev1.ConfigMapKeySelector{}, []string{}, fmt.Errorf("no prometheus rule selector specified")
 	}
 
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, nil)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
 	}
@@ -439,14 +444,16 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%d", ruler.Name, i))
 		expectedConfigMapNames = append(expectedConfigMapNames, cmName)
 
+		defaultCfgMapLabels := map[string]string{
+			manifests.DefaultPrometheusRuleLabel:    manifests.DefaultPrometheusRuleValue,
+			manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
+		}
+
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,
 				Namespace: ruler.Namespace,
-				Labels: map[string]string{
-					manifests.DefaultRuleConfigLabel:        manifests.DefaultRuleConfigValue,
-					manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
-				},
+				Labels:    manifests.MergeLabels(ruler.Spec.RuleConfigSelector.MatchLabels, defaultCfgMapLabels),
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						APIVersion: ruler.APIVersion,
@@ -602,7 +609,7 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler rule config selector", "ruler", ruler.GetName())
 				continue
@@ -634,7 +641,7 @@ var requiredQueryServiceLabels = map[string]string{
 }
 
 var defaultRuleLabels = map[string]string{
-	manifests.DefaultPrometheusRuleLabel: manifests.DefaultRuleConfigValue,
+	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
 // Add this new function to handle PrometheusRule events
@@ -648,7 +655,7 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RuleConfigSelector, nil)
+			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, nil)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler PrometheusRule selector",
 					"ruler", ruler.GetName())

@@ -47,11 +47,11 @@ type ThanosRulerSpec struct {
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
 	// It enables adding additional labels to build a custom label selector for discoverable rule files.
-	// Values provided here will be appended to the default which is:
-	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/rule-file": "true"}}
+	// Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true"
+	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/prometheus-rule": "true"}}
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="ruleConfigSelector must have at least one label selector"
-	RuleConfigSelector *metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
+	RuleConfigSelector metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
 	// AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
 	// The scheme should not be empty e.g http might be used. The scheme may be prefixed with
 	// 'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.

@@ -108,7 +108,7 @@ config:
 						},
 						Key: "thanos.yaml",
 					},
-					RuleConfigSelector: &metav1.LabelSelector{
+					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 						},
@@ -277,6 +277,71 @@ config:
 `)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
 
+			})
+
+			By("updating RuleConfigSelector with additional custom label foo:bar", func() {
+				customLabelKey := "foo"
+				customLabelValue := "bar"
+
+				// Update the ThanosRuler to add custom label to selector
+				Expect(k8sClient.Get(context.Background(), typeNamespacedName, resource)).Should(Succeed())
+				resource.Spec.RuleConfigSelector.MatchLabels[customLabelKey] = customLabelValue
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+
+				// Create a PrometheusRule with matching custom label
+				promRuleWithCustomLabel := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "custom-label-promrule",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							customLabelKey:                       customLabelValue,
+							"operator.thanos.io/tenant":          "test",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "custom-group",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "CustomAlert",
+										Expr:  intstr.FromString(`up == 0`),
+										Labels: map[string]string{
+											"severity": "critical",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRuleWithCustomLabel)).Should(Succeed())
+
+				// Verify the rule file with custom label is configured
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRuleWithCustomLabel.Name + ".yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				// Verify the ConfigMap has the custom label from selector
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					cm := &corev1.ConfigMap{}
+					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: cfgmapName, Namespace: ns}, cm); err != nil {
+						return false
+					}
+					// Check that custom label is present on the ConfigMap
+					return cm.Labels[customLabelKey] == customLabelValue &&
+						cm.Labels[manifests.PromRuleDerivedConfigMapLabel] == manifests.PromRuleDerivedConfigMapValue
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				// Verify the previous PrometheusRules without custom label are no longer picked up
+				// (test-promrule and test-promrule-2 don't have foo:bar label)
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/test-promrule.yaml"
+					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
 		})

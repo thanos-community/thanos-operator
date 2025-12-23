@@ -31913,13 +31913,13 @@ spec:
               ruleConfigSelector:
                 default:
                   matchLabels:
-                    operator.thanos.io/rule-file: "true"
+                    operator.thanos.io/prometheus-rule: "true"
                 description: |-
                   RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
                   It also discovers PrometheusRule CustomResources if the feature flag is enabled.
                   PrometheusRules are converted them into ConfigMaps with rule files internally.
                   It enables adding additional labels to build a custom label selector for discoverable rule files.
-                  Values provided here will be appended to the default which is:
+                  Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true"
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.

@@ -30,10 +30,6 @@ const (
 	DefaultQueryAPILabel = "operator.thanos.io/query-api"
 	DefaultQueryAPIValue = "true"
 
-	// The following label is used to identify Rule Configs and will be set on the resources created by the operator.
-	DefaultRuleConfigLabel = "operator.thanos.io/rule-file"
-	DefaultRuleConfigValue = "true"
-
 	// DefaultPrometheusRuleLabel is the default label key for PrometheusRule CRDs
 	DefaultPrometheusRuleLabel = "operator.thanos.io/prometheus-rule"
 	// DefaultPrometheusRuleValue is the default label value for PrometheusRule CRDs
