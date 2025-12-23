@@ -76,7 +76,7 @@
           - --query.auto-downsampling
           - --query.promql-engine=thanos
           - --query.max-concurrent=20
-          image: quay.io/thanos/thanos:v0.40.1:v0.39.0
+          image: quay.io/thanos/thanos:v0.40.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 4

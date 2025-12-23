@@ -72,7 +72,7 @@
               max_size: 256MB
               max_item_size: 32MB
           - --query-frontend.compress-responses
-          image: quay.io/thanos/thanos:v0.40.1:v0.39.0
+          image: quay.io/thanos/thanos:v0.40.1
           livenessProbe:
             httpGet:
               path: /-/healthy
