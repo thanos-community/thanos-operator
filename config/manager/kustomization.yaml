@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/thanos/thanos-operator
-  newTag: sync-ctrl-pt-2-safe-2025-12-22-5c681b1
+  newTag: main
