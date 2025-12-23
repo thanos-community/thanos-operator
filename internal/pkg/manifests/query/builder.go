@@ -343,3 +343,4 @@ func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceM
 		Interval: from.Interval,
 	}
 }
+

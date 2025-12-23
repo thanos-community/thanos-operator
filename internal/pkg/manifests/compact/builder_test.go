@@ -116,6 +116,28 @@ func TestNewStatefulSet(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "statefulset-with-otel-sidecar.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Owner:     "test",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+					Features: manifests.Features{
+						EnableOtelSidecar: true,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			compact := NewStatefulSet(tc.opts)

@@ -129,6 +129,15 @@ func TestNewStoreStatefulSet(t *testing.T) {
 				return opts
 			},
 		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "statefulset-with-otel-sidecar.golden.yaml",
+			opts: func() Options {
+				opts := buildDefaultOpts()
+				opts.Features.EnableOtelSidecar = true
+				return opts
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			builtOpts := tc.opts()

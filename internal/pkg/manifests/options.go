@@ -304,6 +304,25 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}
 
+		if opts.Features.EnableOtelSidecar {
+			if o.Spec.Template.ObjectMeta.Annotations == nil {
+				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+			}
+			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
+			
+			// Add tracing configuration for OpenTelemetry sidecar
+			tracingConfig := `type: OTLP
+config:
+  client_type: http
+  endpoint: localhost:4318
+  insecure: true`
+			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				tracingArg,
+			)
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -360,6 +379,25 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		}
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
+		}
+
+		if opts.Features.EnableOtelSidecar {
+			if o.Spec.Template.ObjectMeta.Annotations == nil {
+				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+			}
+			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
+			
+			// Add tracing configuration for OpenTelemetry sidecar
+			tracingConfig := `type: OTLP
+config:
+  client_type: http
+  endpoint: localhost:4318
+  insecure: true`
+			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				tracingArg,
+			)
 		}
 
 	default:
