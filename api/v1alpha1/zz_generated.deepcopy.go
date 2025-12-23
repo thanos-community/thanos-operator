@@ -1360,11 +1360,7 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
-	if in.RuleConfigSelector != nil {
-		in, out := &in.RuleConfigSelector, &out.RuleConfigSelector
-		*out = new(v1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
+	in.RuleConfigSelector.DeepCopyInto(&out.RuleConfigSelector)
 	if in.ExternalLabels != nil {
 		in, out := &in.ExternalLabels, &out.ExternalLabels
 		*out = make(ExternalLabels, len(*in))

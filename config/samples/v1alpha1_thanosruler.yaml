@@ -20,7 +20,7 @@ spec:
   retention: 2h
   ruleConfigSelector:
     matchLabels:
-      operator.thanos.io/rule-file: "true"
+      operator.thanos.io/prometheus-rule: "true"
   storage:
     size: 1Gi
 status: {}
