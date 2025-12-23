@@ -114,6 +114,8 @@ type Options struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext
+	// Features holds feature flags for the component
+	Features Features
 }
 
 // Placement is a struct that holds the placement configuration for the component
@@ -121,6 +123,10 @@ type Placement struct {
 	NodeSelector map[string]string
 	Affinity     *corev1.Affinity
 	Tolerations  []corev1.Toleration
+}
+
+type Features struct {
+	EnableOtelSidecar bool
 }
 
 // ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.

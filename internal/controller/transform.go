@@ -435,6 +435,9 @@ func commonToOpts(
 		},
 		StatefulSet:     statefulSetToOpts(statefulSet),
 		SecurityContext: common.SecurityContext,
+		Features: manifests.Features{
+			EnableOtelSidecar: featureGate.OtelSidecarEnabled(),
+		},
 	}
 }
 
