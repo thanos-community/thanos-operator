@@ -43,6 +43,11 @@ func (f *Flag) EnablesPrometheusRule() bool {
 	return f.Contains(PrometheusRule)
 }
 
+// EnablesOtelSidecar returns true if OpenTelemetry sidecar features should be enabled.
+func (f *Flag) EnablesOtelSidecar() bool {
+	return f.Contains(OtelSidecar)
+}
+
 // EnablesKubeResourceSync returns true if KubeResourceSync features should be enabled.
 func (f *Flag) EnablesKubeResourceSync() bool {
 	return f.Contains(KubeResourceSync)

@@ -15,6 +15,10 @@ const (
 	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule
 	PrometheusRule = "prometheus-rule"
 
+	// OtelSidecar enables OpenTelemetry collector sidecar injection for Thanos components.
+	// This allows automatic injection of OpenTelemetry collectors into Thanos pods for tracing.
+	OtelSidecar = "otel-sidecar"
+
 	// KubeResourceSync enables the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
 	// See https://github.com/philipgough/kube-resource-sync
 	KubeResourceSync = "kube-resource-sync"
@@ -27,6 +31,7 @@ func AllFeatures() []string {
 		ServiceMonitor,
 		PrometheusRule,
 		KubeResourceSync,
+		OtelSidecar,
 	}
 }
 
@@ -47,6 +52,8 @@ type Config struct {
 	EnableServiceMonitor bool
 	// EnablePrometheusRuleDiscovery enables the discovery of PrometheusRule objects.
 	EnablePrometheusRuleDiscovery bool
+	// EnableOtelSidecar enables OpenTelemetry collector sidecar injection.
+	EnableOtelSidecar bool
 	// EnableKubeResourceSync enables the kube-resource-sync sidecar container.
 	EnableKubeResourceSync bool
 	// KubeResourceSyncImage specifies the image to use for the kube-resource-sync sidecar.
@@ -61,6 +68,11 @@ func (c Config) ServiceMonitorEnabled() bool {
 // PrometheusRuleEnabled returns true if PrometheusRule discovery is enabled.
 func (c Config) PrometheusRuleEnabled() bool {
 	return c.EnablePrometheusRuleDiscovery
+}
+
+// OtelSidecarEnabled returns true if OpenTelemetry sidecar injection is enabled.
+func (c Config) OtelSidecarEnabled() bool {
+	return c.EnableOtelSidecar
 }
 
 // KubeResourceSyncEnabled returns true if KubeResourceSync sidecar is enabled.
@@ -78,6 +90,7 @@ func (f *Flag) ToFeatureGate() Config {
 	return Config{
 		EnableServiceMonitor:          f.EnablesServiceMonitor(),
 		EnablePrometheusRuleDiscovery: f.EnablesPrometheusRule(),
+		EnableOtelSidecar:             f.EnablesOtelSidecar(),
 		EnableKubeResourceSync:        f.EnablesKubeResourceSync(),
 	}
 }
