@@ -228,6 +228,12 @@ func (o Options) GetContainerImage() string {
 		o.Image = ptr.To(DefaultThanosImage)
 	}
 
+	// If the image already contains a tag (colon), return it as is
+	if strings.Contains(*o.Image, ":") {
+		return *o.Image
+	}
+
+	// Otherwise, append the version
 	if o.Version == nil || *o.Version == "" {
 		o.Version = ptr.To(DefaultThanosVersion)
 	}
