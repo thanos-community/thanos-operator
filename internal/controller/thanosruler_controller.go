@@ -336,36 +336,10 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
-	// If tenant labels are not configured, use old behavior (direct mounting without parsing)
-	if ruler.Spec.RuleTenancyConfig == nil {
-		r.logger.Info("tenant labels not configured, using direct ConfigMap mounting")
-		ruleFiles := make([]corev1.ConfigMapKeySelector, 0, len(cfgmaps.Items))
-		for _, cfgmap := range cfgmaps.Items {
-			if cfgmap.Data == nil || len(cfgmap.Data) != 1 {
-				r.logger.Info("skipping invalid config map",
-					"name", cfgmap.Name,
-					"dataKeys", len(cfgmap.Data),
-					"ruler", ruler.Name)
-				continue
-			}
-
-			for key := range cfgmap.Data {
-				ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cfgmap.GetName(),
-					},
-					Key:      key,
-					Optional: ptr.To(true),
-				})
-			}
-		}
-		return ruleFiles, []string{}, nil
-	}
-
 	tenantRuleGroupCount := make(map[string]int)
 	tenantRuleGroupCount[""] = 0
 
-	// Collect all rule files from ConfigMaps (only when tenant labels are configured)
+	// Collect all rule files from ConfigMaps
 	allRuleFiles := make(map[string]string)
 	for _, cfgmap := range cfgmaps.Items {
 		if cfgmap.Data == nil || len(cfgmap.Data) != 1 {
