@@ -183,9 +183,9 @@ config:
   rules:
   - alert: HighRequestLatency
     expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
-	for: 10m
-	labels:
-	  severity: page
+    for: 10m
+    labels:
+      severity: page
 `,
 					},
 				}
@@ -258,7 +258,8 @@ config:
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					arg := "--rule-file=/etc/thanos/rules/" + cfgmap.GetName() + "/my-rules.yaml"
+					// When RuleTenancyConfig is enabled, user ConfigMaps are processed and bucketed
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/my-rules-my-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 

@@ -692,7 +692,7 @@ var _ = Describe("controller", Ordered, func() {
 						statefulSetName,
 						namespace,
 						0,
-						"--rule-file=/etc/thanos/rules/"+cfgmap.GetName()+"/my-rules.yaml",
+						"--rule-file=/etc/thanos/rules/"+rulerName+"-usercfgmap-0/my-rules-my-rules.yaml",
 					)
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
 			})

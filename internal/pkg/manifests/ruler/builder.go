@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
@@ -520,4 +521,10 @@ func bucketSize(bucket map[string]string) int {
 	}
 
 	return totalSize
+}
+
+// UnmarshalYAML unmarshals YAML data into the provided interface.
+// Uses sigs.k8s.io/yaml which properly handles Kubernetes types like intstr.IntOrString.
+func UnmarshalYAML(data []byte, v any) error {
+	return k8syaml.Unmarshal(data, v)
 }
