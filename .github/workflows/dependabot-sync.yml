@@ -1,0 +1,50 @@
+name: Dependabot Go Modules Sync
+
+on:
+  pull_request:
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'magefiles/go.mod'
+      - 'magefiles/go.sum'
+
+env:
+  golang-version: '1.25'
+
+jobs:
+  sync-modules:
+    # Only run on dependabot PRs (hack as there is no multimodule support in Dependabot yet
+    # https://github.com/dependabot/dependabot-core/issues/6678
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.golang-version }}
+
+      - name: Sync Go modules
+        run: make deps
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add go.mod go.sum magefiles/go.mod magefiles/go.sum
+          git commit -m "chore: sync go modules across root and magefiles"
+          git push
