@@ -40,6 +40,11 @@ const (
 	// PromRuleDerivedConfigMapValue is the label value for PrometheusRule-derived ConfigMaps
 	PromRuleDerivedConfigMapValue = "true"
 
+	// UserConfigMapSourceLabel is the label key for user-provided ConfigMap-derived bucketed ConfigMaps
+	UserConfigMapSourceLabel = "operator.thanos.io/user-configmap-source"
+	// UserConfigMapSourceValue is the label value for user-provided ConfigMap-derived bucketed ConfigMaps
+	UserConfigMapSourceValue = "true"
+
 	// OwnerLabel is the label used to identify the owner of the object.
 	// This relates to the CustomResource or entity that created the object.
 	OwnerLabel = "operator.thanos.io/owner"

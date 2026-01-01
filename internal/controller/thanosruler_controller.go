@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus-community/prom-label-proxy/injectproxy"
@@ -40,6 +41,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -188,12 +190,14 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		return nil, nil, fmt.Errorf("no query API services found")
 	}
 
-	ruleFiles, err := r.getRuleConfigMaps(ctx, ruler)
+	// Get user-provided rule ConfigMaps.
+	ruleFiles, expectedUserConfigMapNames, err := r.getRuleConfigMaps(ctx, ruler)
 	if err != nil {
 		return nil, nil, err
 	}
 	r.logger.Info("found rule configmaps", "count", len(ruleFiles), "ruler", ruler.Name)
 
+	// Get PrometheusRule-based ConfigMaps
 	promRuleConfigMaps := []corev1.ConfigMapKeySelector{}
 	expectedPromRuleConfigMapNames := []string{}
 	if r.featureGate.PrometheusRuleEnabled() {
@@ -203,6 +207,9 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		}
 		r.logger.Info("found prometheus rule-based configmaps", "count", len(promRuleConfigMaps), "ruler", ruler.Name)
 	}
+
+	// Merge expected ConfigMap names for cleanup
+	expectedDerivedConfigMapNames := append(expectedUserConfigMapNames, expectedPromRuleConfigMapNames...)
 
 	// PrometheusRule-based configmaps take precedence.
 	uniqueRuleFiles := make(map[string]corev1.ConfigMapKeySelector)
@@ -229,7 +236,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
-	return opts, expectedPromRuleConfigMapNames, nil
+	return opts, expectedDerivedConfigMapNames, nil
 }
 
 func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
@@ -279,27 +286,49 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 	return endpoints, nil
 }
 
-// getRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler.
-func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, error) {
+// getRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler,
+// along with the names of the ConfigMaps created for cleanup purposes.
+func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]corev1.ConfigMapKeySelector, []string, error) {
 	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
 		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
-		return []corev1.ConfigMapKeySelector{}, fmt.Errorf("no prometheus rule selector specified")
+		return []corev1.ConfigMapKeySelector{}, []string{}, fmt.Errorf("no prometheus rule selector specified")
 	}
 
 	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: labelSelector}, client.InNamespace(ruler.Namespace)}
+	// Add a requirement to exclude derived ConfigMaps (those created from PrometheusRules)
+	excludeDerivedReq, err := labels.NewRequirement(
+		manifests.PromRuleDerivedConfigMapLabel,
+		selection.NotIn,
+		[]string{manifests.PromRuleDerivedConfigMapValue},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Add a requirement to exclude user-provided ConfigMaps (those created from user-provided ConfigMaps)
+	excludeDerivedConfigMapReq, err := labels.NewRequirement(
+		manifests.UserConfigMapSourceLabel,
+		selection.NotIn,
+		[]string{manifests.UserConfigMapSourceValue},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	combinedSelector := labelSelector.Add(*excludeDerivedReq, *excludeDerivedConfigMapReq)
+	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: combinedSelector}, client.InNamespace(ruler.Namespace)}
 	cfgmaps := &corev1.ConfigMapList{}
 	if err := r.List(ctx, cfgmaps, opts...); err != nil {
-		return []corev1.ConfigMapKeySelector{}, err
+		return []corev1.ConfigMapKeySelector{}, []string{}, err
 	}
 
 	if len(cfgmaps.Items) == 0 {
 		r.recorder.Event(&ruler, corev1.EventTypeWarning, "NoRuleConfigsFound", "No rule ConfigMaps found")
-		return []corev1.ConfigMapKeySelector{}, nil
+		return []corev1.ConfigMapKeySelector{}, []string{}, nil
 	}
 
 	r.logger.Info("processing rule config maps",
@@ -307,7 +336,11 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
-	ruleFiles := make([]corev1.ConfigMapKeySelector, 0, len(cfgmaps.Items))
+	tenantRuleGroupCount := make(map[string]int)
+	tenantRuleGroupCount[""] = 0
+
+	// Collect all rule files from ConfigMaps
+	allRuleFiles := make(map[string]string)
 	for _, cfgmap := range cfgmaps.Items {
 		if cfgmap.Data == nil || len(cfgmap.Data) != 1 {
 			r.logger.Info("skipping invalid config map",
@@ -317,18 +350,69 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			continue
 		}
 
-		for key := range cfgmap.Data {
-			ruleFiles = append(ruleFiles, corev1.ConfigMapKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: cfgmap.GetName(),
-				},
-				Key:      key,
-				Optional: ptr.To(true),
-			})
+		for key, content := range cfgmap.Data {
+			// Parse YAML content to extract rule groups
+			groups, err := parseRuleFileContent(content)
+			if err != nil {
+				r.logger.Error(err, "failed to parse rule file content",
+					"configMap", cfgmap.Name,
+					"key", key)
+				continue
+			}
+
+			// Apply tenant labels if configured
+			var tenantValue string
+			if ruler.Spec.RuleTenancyConfig != nil {
+				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
+				value, exists := cfgmap.Labels[tenantValueLabel]
+				if !exists {
+					r.logger.Info("tenant value label key not found in ConfigMap labels",
+						"tenantValueLabel", tenantValueLabel,
+						"configMap", cfgmap.Name)
+					tenantRuleGroupCount[""] += len(groups)
+				} else {
+					if value == "" {
+						err := fmt.Errorf("tenant in labels of ConfigMap %s is empty", cfgmap.Name)
+						return nil, nil, err
+					}
+					tenantValue = value
+
+					if _, exists := tenantRuleGroupCount[value]; !exists {
+						tenantRuleGroupCount[value] = 0
+					}
+					tenantRuleGroupCount[value] += len(groups)
+				}
+			}
+
+			// Process rule groups with tenancy
+			processedGroups := r.processRuleGroupsWithTenancy(
+				groups,
+				ruler.Spec.RuleTenancyConfig,
+				tenantValue,
+				cfgmap.Name,
+			)
+
+			ruleContent := manifestruler.GenerateRuleFileContent(processedGroups)
+			// Strip .yaml or .yml extension from key to avoid double extensions
+			keyWithoutExt := strings.TrimSuffix(strings.TrimSuffix(key, ".yaml"), ".yml")
+			allRuleFiles[fmt.Sprintf("%s-%s.yaml", cfgmap.Name, keyWithoutExt)] = ruleContent
 		}
 	}
 
-	return ruleFiles, nil
+	if ruler.Spec.RuleTenancyConfig != nil {
+		for tenant, count := range tenantRuleGroupCount {
+			r.metrics.PrometheusRuleGroupsTenantCount.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), tenant).Set(float64(count))
+		}
+	}
+
+	if len(allRuleFiles) == 0 {
+		return []corev1.ConfigMapKeySelector{}, []string{}, nil
+	}
+
+	additionalLabels := map[string]string{
+		manifests.UserConfigMapSourceLabel: manifests.UserConfigMapSourceValue,
+	}
+	return r.createBucketedRuleConfigMaps(ctx, ruler, allRuleFiles, "usercfgmap", additionalLabels)
 }
 
 // getPrometheusRuleConfigMaps returns the list of ruler configmaps of rule files to set on ThanosRuler,
@@ -361,134 +445,72 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		"ruler", ruler.Name,
 		"namespace", ruler.Namespace)
 
-	if ruler.Spec.RuleTenancyConfig != nil {
-		tenantLabel := ruler.Spec.RuleTenancyConfig.TenantLabel
-		tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
+	r.metrics.PrometheusRulesFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(promRules.Items)))
 
-		tenantRuleGroupCount := make(map[string]int)
-		// Empty key to handle no tenant label.
-		tenantRuleGroupCount[""] = 0
+	// Process tenant labels if configured
+	tenantRuleGroupCount := make(map[string]int)
+	tenantRuleGroupCount[""] = 0
 
-		// Modify PrometheusRule objects to include tenant label
-		for _, rule := range promRules.Items {
-			if rule.Labels == nil {
-				rule.Labels = make(map[string]string)
-			}
+	// Collect all rule files from PrometheusRules
+	allRuleFiles := make(map[string]string)
+
+	for _, rule := range promRules.Items {
+		r.metrics.PrometheusRuleGroupsFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), rule.Name).Set(float64(len(rule.Spec.Groups)))
+
+		groups := rule.Spec.Groups
+
+		// Apply tenant labels if configured
+		var tenantValue string
+		if ruler.Spec.RuleTenancyConfig != nil {
+			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
 			value, exists := rule.Labels[tenantValueLabel]
 			if !exists {
-				r.logger.Info("tenant value label key not found in PrometheusRule labels", "tenantValueLabel", tenantValueLabel, "ruler", ruler.Name)
-				tenantRuleGroupCount[""] += len(rule.Spec.Groups)
-				continue
-			}
-
-			if value == "" {
-				err := fmt.Errorf("tenant in labels of PrometheusRule %s is empty", rule.Name)
-				return nil, nil, err
-			}
-
-			if _, exists := tenantRuleGroupCount[value]; !exists {
-				tenantRuleGroupCount[value] = 0
-			}
-			tenantRuleGroupCount[value] += len(rule.Spec.Groups)
-
-			for i, group := range rule.Spec.Groups {
-				// Set the tenant label on each rule group
-				if group.Labels == nil {
-					group.Labels = make(map[string]string)
+				r.logger.Info("tenant value label key not found in PrometheusRule labels",
+					"tenantValueLabel", tenantValueLabel,
+					"prometheusRule", rule.Name)
+				tenantRuleGroupCount[""] += len(groups)
+			} else {
+				if value == "" {
+					err := fmt.Errorf("tenant in labels of PrometheusRule %s is empty", rule.Name)
+					return nil, nil, err
 				}
-				group.Labels[tenantLabel] = value
-				rule.Spec.Groups[i] = group
-				// Enforce tenant label in PromQL expressions
-				for j, ru := range group.Rules {
-					exprStr := ru.Expr.String()
-					expr, err := enforceTenantLabelInPromQL(exprStr, tenantLabel, value)
-					if err != nil {
-						r.logger.Error(err, "failed to enforce tenant label in PromQL", "expr", exprStr, "tenantLabel", tenantLabel, "tenantValue", value)
-						continue
-					}
-					ru.Expr = intstr.FromString(expr)
-					group.Rules[j] = ru
+				tenantValue = value
+
+				if _, exists := tenantRuleGroupCount[value]; !exists {
+					tenantRuleGroupCount[value] = 0
 				}
-				rule.Spec.Groups[i] = group
+				tenantRuleGroupCount[value] += len(groups)
 			}
 		}
 
+		// Process rule groups with tenancy
+		processedGroups := r.processRuleGroupsWithTenancy(
+			groups,
+			ruler.Spec.RuleTenancyConfig,
+			tenantValue,
+			rule.Name,
+		)
+
+		// Generate rule file content
+		ruleContent := manifestruler.GenerateRuleFileContent(processedGroups)
+		allRuleFiles[fmt.Sprintf("%s.yaml", rule.Name)] = ruleContent
+	}
+
+	// Record tenant metrics
+	if ruler.Spec.RuleTenancyConfig != nil {
 		for tenant, count := range tenantRuleGroupCount {
 			r.metrics.PrometheusRuleGroupsTenantCount.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), tenant).Set(float64(count))
 		}
 	}
 
-	r.metrics.PrometheusRulesFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(promRules.Items)))
-
-	// Collect all rule files first
-	allRuleFiles := make(map[string]string)
-	for _, rule := range promRules.Items {
-		r.metrics.PrometheusRuleGroupsFound.WithLabelValues(ruler.GetName(), ruler.GetNamespace(), rule.Name).Set(float64(len(rule.Spec.Groups)))
-
-		ruleContent := manifestruler.GenerateRuleFileContent(rule.Spec.Groups)
-		allRuleFiles[fmt.Sprintf("%s.yaml", rule.Name)] = ruleContent
+	if len(allRuleFiles) == 0 {
+		return []corev1.ConfigMapKeySelector{}, []string{}, nil
 	}
 
-	// Now create ConfigMaps from all rules together
-	configMaps, err := manifestruler.MakeRulesConfigMaps(allRuleFiles)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create config maps for rules: %w", err)
+	additionalLabels := map[string]string{
+		manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
 	}
-
-	var ruleFileCfgMaps []corev1.ConfigMapKeySelector
-	objs := []client.Object{}
-	expectedConfigMapNames := make([]string, 0, len(configMaps))
-
-	// Create ConfigMaps with proper names and metadata
-	for i, cm := range configMaps {
-		cmName := manifests.SanitizeName(fmt.Sprintf("%s-promrule-%d", ruler.Name, i))
-		expectedConfigMapNames = append(expectedConfigMapNames, cmName)
-
-		defaultCfgMapLabels := map[string]string{
-			manifests.DefaultPrometheusRuleLabel:    manifests.DefaultPrometheusRuleValue,
-			manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
-		}
-
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cmName,
-				Namespace: ruler.Namespace,
-				Labels:    manifests.MergeLabels(ruler.Spec.RuleConfigSelector.MatchLabels, defaultCfgMapLabels),
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: ruler.APIVersion,
-						Kind:       ruler.Kind,
-						Name:       ruler.Name,
-						UID:        ruler.UID,
-						Controller: ptr.To(true),
-					},
-				},
-			},
-			Data: cm.Data,
-		}
-
-		objs = append(objs, configMap)
-
-		// Add each file in the ConfigMap to the rule files list
-		for key := range cm.Data {
-			ruleFileCfgMaps = append(ruleFileCfgMaps, corev1.ConfigMapKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: cmName,
-				},
-				Key:      key,
-				Optional: ptr.To(true),
-			})
-		}
-	}
-
-	r.metrics.ConfigMapsCreated.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(len(configMaps)))
-
-	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
-		r.metrics.ConfigMapCreationFailures.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(errCount))
-		return nil, nil, fmt.Errorf("failed to create or update %d ConfigMaps from PrometheusRule", errCount)
-	}
-
-	return ruleFileCfgMaps, expectedConfigMapNames, nil
+	return r.createBucketedRuleConfigMaps(ctx, ruler, allRuleFiles, "promrule", additionalLabels)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -523,12 +545,11 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.Service{},
 			r.enqueueForService(),
 			builder.WithPredicates(svcPredicate),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Watches(
 			&corev1.ConfigMap{},
 			r.enqueueForConfigMap(),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}, configMapPredicate),
+			builder.WithPredicates(configMapPredicate),
 		)
 
 	if !r.handler.IsFeatureGated(&monitoringv1.PrometheusRule{}) {
@@ -677,6 +698,21 @@ func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler 
 	})
 }
 
+// parseRuleFileContent parses YAML rule file content and returns rule groups
+func parseRuleFileContent(content string) ([]monitoringv1.RuleGroup, error) {
+	type ruleFile struct {
+		Groups []monitoringv1.RuleGroup `yaml:"groups"`
+	}
+
+	var rf ruleFile
+	if err := manifestruler.UnmarshalYAML([]byte(content), &rf); err != nil {
+		return nil, fmt.Errorf("failed to parse rule file content: %w", err)
+	}
+
+	return rf.Groups, nil
+}
+
+// enforceTenantLabelInPromQL enforces a tenant label in a PromQL expression.
 func enforceTenantLabelInPromQL(expr string, tenantLabel string, tenantValue string) (string, error) {
 	matcher := promlabels.Matcher{
 		Type:  promlabels.MatchEqual,
@@ -691,7 +727,117 @@ func enforceTenantLabelInPromQL(expr string, tenantLabel string, tenantValue str
 	return expr, nil
 }
 
-func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosRuler, expectedResources []string, expectedPromRuleConfigMaps []string) int {
+// processRuleGroupsWithTenancy applies tenant labels to rule groups and enforces them in PromQL expressions.
+func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
+	groups []monitoringv1.RuleGroup,
+	tenancyConfig *monitoringthanosiov1alpha1.RuleTenancyConfig,
+	tenantValue string,
+	ruleName string,
+) []monitoringv1.RuleGroup {
+	if tenancyConfig == nil {
+		return groups
+	}
+
+	if tenantValue == "" {
+		r.logger.Info("tenant value is empty, skipping tenancy processing", "ruleName", ruleName)
+		return groups
+	}
+
+	tenantLabel := tenancyConfig.TenantLabel
+
+	for i, group := range groups {
+		// Set the tenant label on each rule group
+		if group.Labels == nil {
+			group.Labels = make(map[string]string)
+		}
+		group.Labels[tenantLabel] = tenantValue
+
+		// Enforce tenant label in PromQL expressions
+		for j, ru := range group.Rules {
+			exprStr := ru.Expr.String()
+			expr, err := enforceTenantLabelInPromQL(exprStr, tenantLabel, tenantValue)
+			if err != nil {
+				r.logger.Error(err, "failed to enforce tenant label in PromQL",
+					"expr", exprStr,
+					"tenantLabel", tenantLabel,
+					"tenantValue", tenantValue,
+					"ruleName", ruleName)
+				continue
+			}
+			ru.Expr = intstr.FromString(expr)
+			group.Rules[j] = ru
+		}
+		groups[i] = group
+	}
+
+	return groups
+}
+
+// createBucketedRuleConfigMaps creates bucketed ConfigMaps from rule files.
+func (r *ThanosRulerReconciler) createBucketedRuleConfigMaps(
+	ctx context.Context,
+	ruler monitoringthanosiov1alpha1.ThanosRuler,
+	allRuleFiles map[string]string,
+	namePrefix string,
+	additionalLabels map[string]string,
+) ([]corev1.ConfigMapKeySelector, []string, error) {
+	configMaps, err := manifestruler.MakeRulesConfigMaps(allRuleFiles)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create config maps for rules: %w", err)
+	}
+
+	var ruleFileCfgMaps []corev1.ConfigMapKeySelector
+	objs := []client.Object{}
+	expectedConfigMapNames := make([]string, 0, len(configMaps))
+
+	// Create ConfigMaps with proper names and metadata
+	for i, cm := range configMaps {
+		cmName := manifests.SanitizeName(fmt.Sprintf("%s-%s-%d", ruler.Name, namePrefix, i))
+		expectedConfigMapNames = append(expectedConfigMapNames, cmName)
+
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmName,
+				Namespace: ruler.Namespace,
+				Labels:    manifests.MergeLabels(manifests.MergeLabels(ruler.Spec.RuleConfigSelector.MatchLabels, defaultRuleLabels), additionalLabels),
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: ruler.APIVersion,
+						Kind:       ruler.Kind,
+						Name:       ruler.Name,
+						UID:        ruler.UID,
+						Controller: ptr.To(true),
+					},
+				},
+			},
+			Data: cm.Data,
+		}
+
+		objs = append(objs, configMap)
+
+		// Add each file in the ConfigMap to the rule files list
+		for key := range cm.Data {
+			ruleFileCfgMaps = append(ruleFileCfgMaps, corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: cmName,
+				},
+				Key:      key,
+				Optional: ptr.To(true),
+			})
+		}
+	}
+
+	r.metrics.ConfigMapsCreated.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(len(configMaps)))
+
+	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
+		r.metrics.ConfigMapCreationFailures.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Add(float64(errCount))
+		return nil, nil, fmt.Errorf("failed to create or update %d ConfigMaps", errCount)
+	}
+
+	return ruleFileCfgMaps, expectedConfigMapNames, nil
+}
+
+func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosRuler, expectedResources []string, expectedDerivedConfigMaps []string) int {
 	var cleanErrCount int
 	ns := resource.GetNamespace()
 	owner := resource.GetName()
@@ -706,22 +852,32 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 		cleanErrCount += r.handler.NewResourcePruner().WithPodDisruptionBudget().Prune(ctx, []string{}, listOpts...)
 	}
 
-	// Clean up orphaned PrometheusRule-derived ConfigMaps
-	cleanErrCount += r.pruneOrphanedPrometheusRuleConfigMaps(ctx, ns, expectedPromRuleConfigMaps)
+	cleanErrCount += r.pruneOrphanedDerivedConfigMaps(ctx, ns, expectedDerivedConfigMaps)
 
 	return cleanErrCount
 }
 
-func (r *ThanosRulerReconciler) pruneOrphanedPrometheusRuleConfigMaps(ctx context.Context, ns string, expectedPromRuleConfigMaps []string) int {
-	listOpts := []client.ListOption{
+// pruneOrphanedDerivedConfigMaps prunes orphaned derived ConfigMaps (both PrometheusRule and user ConfigMap sources).
+func (r *ThanosRulerReconciler) pruneOrphanedDerivedConfigMaps(ctx context.Context, ns string, expectedDerivedConfigMaps []string) int {
+	pruner := r.handler.NewResourcePruner().WithConfigMap()
+
+	listOptsPromRuleDerivedConfigMaps := []client.ListOption{
 		client.InNamespace(ns),
 		client.MatchingLabels{
 			manifests.PromRuleDerivedConfigMapLabel: manifests.PromRuleDerivedConfigMapValue,
 		},
 	}
+	prunedPrd := pruner.Prune(ctx, expectedDerivedConfigMaps, listOptsPromRuleDerivedConfigMaps...)
 
-	pruner := r.handler.NewResourcePruner().WithConfigMap()
-	return pruner.Prune(ctx, expectedPromRuleConfigMaps, listOpts...)
+	listOptsUserConfigMapSourceConfigMaps := []client.ListOption{
+		client.InNamespace(ns),
+		client.MatchingLabels{
+			manifests.UserConfigMapSourceLabel: manifests.UserConfigMapSourceValue,
+		},
+	}
+	prunedUCMD := pruner.Prune(ctx, expectedDerivedConfigMaps, listOptsUserConfigMapSourceConfigMaps...)
+
+	return prunedPrd + prunedUCMD
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {
