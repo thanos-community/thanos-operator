@@ -149,6 +149,10 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
 
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), svc)
+				})
+
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
 				EventuallyWithOffset(1, func() bool {
@@ -191,6 +195,10 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
 
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), cfgmap)
+				})
+
 				promRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-promrule",
@@ -219,6 +227,10 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
 
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), promRule)
+				})
+
 				promRule2 := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-promrule-2",
@@ -246,6 +258,10 @@ config:
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), promRule2)).Should(Succeed())
+
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), promRule2)
+				})
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRule.Name + ".yaml"
@@ -319,6 +335,10 @@ config:
 				}
 				Expect(k8sClient.Create(context.Background(), promRuleWithCustomLabel)).Should(Succeed())
 
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), promRuleWithCustomLabel)
+				})
+
 				// Verify the rule file with custom label is configured
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRuleWithCustomLabel.Name + ".yaml"
@@ -346,5 +366,481 @@ config:
 			})
 
 		})
+
+		It("should enforce tenancy for PrometheusRule", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas:     1,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
+						TenantLabel:      "tenant_id",
+						TenantValueLabel: "tenant",
+					},
+				},
+			}
+
+			svcName := "tenancy-pr-query"
+			By("creating ThanosRuler with tenancy config", func() {
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      svcName,
+						Namespace: ns,
+						Labels:    requiredQueryServiceLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt32(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), svc)).Should(Succeed())
+				})
+			})
+
+			By("creating PrometheusRule with tenant label", func() {
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tenant-a-rule",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"tenant":                             "team-a",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "tenant-a-alerts",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "HighCPU",
+										Expr:  intstr.FromString(`cpu_usage{job="app"} > 80`),
+										Labels: map[string]string{
+											"severity": "warning",
+										},
+									},
+									{
+										Record: "app:requests:rate5m",
+										Expr:   intstr.FromString(`rate(http_requests_total{job="app"}[5m])`),
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), promRule)).Should(Succeed())
+				})
+
+				// Verify the ConfigMap is created with tenant labels applied
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "tenant-a-rule.yaml",
+						`groups:
+- labels:
+    tenant_id: team-a
+  name: tenant-a-alerts
+  rules:
+  - alert: HighCPU
+    expr: cpu_usage{job="app",tenant_id="team-a"} > 80
+    labels:
+      severity: warning
+  - expr: rate(http_requests_total{job="app",tenant_id="team-a"}[5m])
+    record: app:requests:rate5m
+`)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+			})
+
+			By("creating PrometheusRule with different tenant", func() {
+				promRule2 := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tenant-b-rule",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"tenant":                             "team-b",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "tenant-b-alerts",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "LowMemory",
+										Expr:  intstr.FromString(`memory_available{job="database"} < 20`),
+										Labels: map[string]string{
+											"severity": "critical",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRule2)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), promRule2)).Should(Succeed())
+				})
+
+				// Verify both tenant ConfigMaps exist with correct tenancy
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "tenant-b-rule.yaml",
+						`groups:
+- labels:
+    tenant_id: team-b
+  name: tenant-b-alerts
+  rules:
+  - alert: LowMemory
+    expr: memory_available{job="database",tenant_id="team-b"} < 20
+    labels:
+      severity: critical
+`)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+			})
+		})
+
+		It("should enforce tenancy for user-provided ConfigMaps", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas:     1,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
+						TenantLabel:      "tenant_id",
+						TenantValueLabel: "app.tenant",
+					},
+				},
+			}
+
+			svcName := "tenancy-cm-query"
+			By("setting up ThanosRuler and query service", func() {
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      svcName,
+						Namespace: ns,
+						Labels:    requiredQueryServiceLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt32(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), svc)).Should(Succeed())
+				})
+			})
+
+			By("creating user ConfigMap with tenant label", func() {
+				cfgmap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "user-rules-tenant-x",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"app.tenant":                         "tenant-x",
+						},
+					},
+					Data: map[string]string{
+						"rules.yaml": `groups:
+- name: user-alerts
+  rules:
+  - alert: ServiceDown
+    expr: up == 0
+`,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), cfgmap)).Should(Succeed())
+				})
+
+				// Verify generated ConfigMap has tenant labels enforced
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
+					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "user-rules-tenant-x-rules.yaml",
+						`groups:
+- labels:
+    tenant_id: tenant-x
+  name: user-alerts
+  rules:
+  - alert: ServiceDown
+    expr: up{tenant_id="tenant-x"} == 0
+`)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("creating another user ConfigMap with different tenant", func() {
+				cfgmap2 := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "user-rules-tenant-y",
+						Namespace: ns,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"app.tenant":                         "tenant-y",
+						},
+					},
+					Data: map[string]string{
+						"rules.yaml": `groups:
+- name: database-alerts
+  rules:
+  - alert: DatabaseConnectionHigh
+    expr: db_connections > 100
+`,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), cfgmap2)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), cfgmap2)).Should(Succeed())
+				})
+
+				// Verify the second tenant's ConfigMap is also processed correctly
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
+					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "user-rules-tenant-y-rules.yaml",
+						`groups:
+- labels:
+    tenant_id: tenant-y
+  name: database-alerts
+  rules:
+  - alert: DatabaseConnectionHigh
+    expr: db_connections{tenant_id="tenant-y"} > 100
+`)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+		})
+
+		It("should cleanup generated ConfigMaps when user ConfigMap is deleted", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas:     1,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+				},
+			}
+
+			var userConfigMapName string
+			var promRuleName string
+			svcName := "cleanup-query"
+
+			By("setting up ThanosRuler and query service", func() {
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      svcName,
+						Namespace: ns,
+						Labels:    requiredQueryServiceLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt32(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+
+				DeferCleanup(func() {
+					Expect(k8sClient.Delete(context.Background(), svc)).Should(Succeed())
+				})
+			})
+
+			By("creating user ConfigMap with rules", func() {
+				userConfigMapName = "cleanup-test-rules"
+				cfgmap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      userConfigMapName,
+						Namespace: ns,
+						Labels:    defaultRuleLabels,
+					},
+					Data: map[string]string{
+						"test-rules.yaml": `groups:
+- name: cleanup-test
+  rules:
+  - alert: TestAlert
+    expr: up == 0
+`,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
+
+				// Verify generated ConfigMap exists and contains the rule
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
+					return utils.VerifyConfigMapExists(k8sClient, cfgmapName, ns)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				// Verify the rule file is referenced in StatefulSet args
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("creating PrometheusRule", func() {
+				promRuleName = "cleanup-test-promrule"
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      promRuleName,
+						Namespace: ns,
+						Labels:    defaultRuleLabels,
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "promrule-test",
+								Rules: []monitoringv1.Rule{
+									{
+										Alert: "PrometheusRuleAlert",
+										Expr:  intstr.FromString(`up == 0`),
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), promRule)).Should(Succeed())
+
+				// Verify PrometheusRule-derived ConfigMap exists
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					return utils.VerifyConfigMapExists(k8sClient, cfgmapName, ns)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+			})
+
+			By("deleting user ConfigMap", func() {
+				cfgmap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      userConfigMapName,
+						Namespace: ns,
+					},
+				}
+				Expect(k8sClient.Delete(context.Background(), cfgmap)).Should(Succeed())
+
+				// Verify that the generated ConfigMap no longer contains the deleted rule
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
+					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				// Verify PrometheusRule-derived ConfigMap still exists (not affected by user ConfigMap deletion)
+				EventuallyWithOffset(1, func() bool {
+					cfgmapName := fmt.Sprintf("%s-promrule-0", resourceName)
+					return utils.VerifyConfigMapExists(k8sClient, cfgmapName, ns)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				// Verify PrometheusRule is still referenced
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRuleName + ".yaml"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("deleting PrometheusRule", func() {
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      promRuleName,
+						Namespace: ns,
+					},
+				}
+				Expect(k8sClient.Delete(context.Background(), promRule)).Should(Succeed())
+
+				// Verify PrometheusRule is no longer referenced
+				EventuallyWithOffset(1, func() bool {
+					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRuleName + ".yaml"
+					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+		})
+
 	})
 })
