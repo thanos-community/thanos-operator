@@ -148,6 +148,16 @@ func (opts RouterOptions) Build() []client.Object {
 
 	if opts.ServiceMonitorConfig != nil {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+		
+		// Add separate ServiceMonitor for kube-resource-sync metrics when enabled
+		if opts.EnableKubeResourceSync {
+			kubeResourceSyncSMName := name + "-kube-resource-sync"
+			kubeResourceSyncSMOpts := manifests.ServiceMonitorOptions{
+				Port:     ptr.To("kube-resource-sync"),
+				Interval: opts.ServiceMonitorConfig.Interval,
+			}
+			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, kubeResourceSyncSMOpts))
+		}
 	}
 	return objs
 }
@@ -368,6 +378,18 @@ func NewRouterService(opts RouterOptions) *corev1.Service {
 
 func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations)
+	
+	// Add kube-resource-sync metrics port when enabled
+	if opts.EnableKubeResourceSync {
+		kubeResourceSyncPort := corev1.ServicePort{
+			Name:       "kube-resource-sync",
+			Port:       8080,
+			TargetPort: intstr.FromInt32(8080),
+			Protocol:   "TCP",
+		}
+		svc.Spec.Ports = append(svc.Spec.Ports, kubeResourceSyncPort)
+	}
+	
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
