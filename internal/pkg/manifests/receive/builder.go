@@ -439,6 +439,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 	name := opts.GetGeneratedResourceName()
 	volumes := buildRouterVolumes(opts, name)
 	containers := buildRouterContainers(opts)
+	initContainers := buildRouterInitContainers(opts)
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -465,6 +466,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 				Spec: corev1.PodSpec{
 					SecurityContext:              &corev1.PodSecurityContext{},
 					Volumes:                      volumes,
+					InitContainers:               initContainers,
 					Containers:                   containers,
 					ServiceAccountName:           name,
 					AutomountServiceAccountToken: ptr.To(true),
@@ -683,6 +685,17 @@ func buildRouterContainers(opts RouterOptions) []corev1.Container {
 	return containers
 }
 
+// buildRouterInitContainers builds the init containers for the router pod
+func buildRouterInitContainers(opts RouterOptions) []corev1.Container {
+	var initContainers []corev1.Container
+	
+	if opts.EnableKubeResourceSync {
+		initContainers = append(initContainers, buildKubeResourceSyncInitContainer(opts))
+	}
+	
+	return initContainers
+}
+
 // buildThanosRouterContainer builds the main Thanos router container
 func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 	return corev1.Container{
@@ -803,6 +816,18 @@ func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 	}
+}
+
+// buildKubeResourceSyncInitContainer builds the kube-resource-sync init container
+// to ensure ConfigMap data is available before the main container starts
+func buildKubeResourceSyncInitContainer(opts RouterOptions) corev1.Container {
+	container := buildKubeResourceSyncContainer(opts)
+	container.Name = kubeResourceSyncContainerName + "-init"
+	
+	// Add the --init-mode flag for init container behavior
+	container.Args = append(container.Args, "--init-mode")
+	
+	return container
 }
 
 // newRouterRole creates a Role for the router when KubeResourceSync is enabled
