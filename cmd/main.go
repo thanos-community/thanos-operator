@@ -17,13 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -32,6 +35,7 @@ import (
 	"github.com/prometheus/common/promslog"
 	psflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
+	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
@@ -70,6 +74,77 @@ func init() {
 	utilruntime.Must(monitoringthanosiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+}
+
+// registerClientGoMetrics registers client-go metrics adapters to expose
+// REST client metrics including request duration, size, and other metrics.
+func registerClientGoMetrics() {
+	requestLatency := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "rest_client_request_duration_seconds",
+			Help:    "Request latency in seconds. Broken down by verb, and host.",
+			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
+		},
+		[]string{"verb", "host"},
+	)
+	ctrlmetrics.Registry.MustRegister(requestLatency)
+
+	requestSize := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "rest_client_request_size_bytes",
+			Help:    "Request size in bytes. Broken down by verb and host.",
+			Buckets: prometheus.ExponentialBuckets(1024, 2, 10),
+		},
+		[]string{"verb", "host"},
+	)
+	ctrlmetrics.Registry.MustRegister(requestSize)
+
+	responseSize := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "rest_client_response_size_bytes",
+			Help:    "Response size in bytes. Broken down by verb and host.",
+			Buckets: prometheus.ExponentialBuckets(1024, 2, 10),
+		},
+		[]string{"verb", "host"},
+	)
+	ctrlmetrics.Registry.MustRegister(responseSize)
+
+	rateLimiterLatency := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "rest_client_rate_limiter_duration_seconds",
+			Help:    "Client side rate limiter latency in seconds. Broken down by verb, and host.",
+			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
+		},
+		[]string{"verb", "host"},
+	)
+	ctrlmetrics.Registry.MustRegister(rateLimiterLatency)
+
+	clientgometrics.Register(
+		clientgometrics.RegisterOpts{
+			RequestLatency:     &latencyAdapter{metric: requestLatency},
+			RequestSize:        &sizeAdapter{metric: requestSize},
+			ResponseSize:       &sizeAdapter{metric: responseSize},
+			RateLimiterLatency: &latencyAdapter{metric: rateLimiterLatency},
+		},
+	)
+}
+
+// latencyAdapter implements the clientgometrics.LatencyMetric interface
+type latencyAdapter struct {
+	metric *prometheus.HistogramVec
+}
+
+func (l *latencyAdapter) Observe(ctx context.Context, verb string, u url.URL, latency time.Duration) {
+	l.metric.WithLabelValues(verb, u.Host).Observe(latency.Seconds())
+}
+
+// sizeAdapter implements the clientgometrics.SizeMetric interface
+type sizeAdapter struct {
+	metric *prometheus.HistogramVec
+}
+
+func (s *sizeAdapter) Observe(ctx context.Context, verb string, host string, size float64) {
+	s.metric.WithLabelValues(verb, host).Observe(size)
 }
 
 func main() {
@@ -179,6 +254,10 @@ func main() {
 	ctrlmetrics.Registry.MustRegister(
 		versioncollector.NewCollector("thanos-operator"),
 	)
+
+	// Register client-go REST client metrics adapters
+	// This ensures all REST client metrics (duration, request size, response size) are exposed
+	registerClientGoMetrics()
 
 	setupLog.Info("starting thanos operator", "build_info", version.Info(), "build_context", version.BuildContext())
 
