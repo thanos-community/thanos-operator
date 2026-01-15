@@ -81,9 +81,12 @@ func init() {
 func registerClientGoMetrics() {
 	requestLatency := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "rest_client_request_duration_seconds",
-			Help:    "Request latency in seconds. Broken down by verb, and host.",
-			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
+			Name:                            "rest_client_request_duration_seconds",
+			Help:                            "Request latency in seconds. Broken down by verb, and host.",
+			Buckets:                         prometheus.ExponentialBuckets(0.001, 2, 10),
+			NativeHistogramBucketFactor:     1.1,
+			NativeHistogramMaxBucketNumber:  100,
+			NativeHistogramMinResetDuration: 1 * time.Hour,
 		},
 		[]string{"verb", "host"},
 	)
@@ -91,9 +94,12 @@ func registerClientGoMetrics() {
 
 	requestSize := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "rest_client_request_size_bytes",
-			Help:    "Request size in bytes. Broken down by verb and host.",
-			Buckets: prometheus.ExponentialBuckets(1024, 2, 10),
+			Name:                            "rest_client_request_size_bytes",
+			Help:                            "Request size in bytes. Broken down by verb and host.",
+			Buckets:                         prometheus.ExponentialBuckets(1024, 2, 10),
+			NativeHistogramBucketFactor:     1.1,
+			NativeHistogramMaxBucketNumber:  100,
+			NativeHistogramMinResetDuration: 1 * time.Hour,
 		},
 		[]string{"verb", "host"},
 	)
@@ -101,9 +107,12 @@ func registerClientGoMetrics() {
 
 	responseSize := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "rest_client_response_size_bytes",
-			Help:    "Response size in bytes. Broken down by verb and host.",
-			Buckets: prometheus.ExponentialBuckets(1024, 2, 10),
+			Name:                            "rest_client_response_size_bytes",
+			Help:                            "Response size in bytes. Broken down by verb and host.",
+			Buckets:                         prometheus.ExponentialBuckets(1024, 2, 10),
+			NativeHistogramBucketFactor:     1.1,
+			NativeHistogramMaxBucketNumber:  100,
+			NativeHistogramMinResetDuration: 1 * time.Hour,
 		},
 		[]string{"verb", "host"},
 	)
@@ -111,9 +120,12 @@ func registerClientGoMetrics() {
 
 	rateLimiterLatency := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "rest_client_rate_limiter_duration_seconds",
-			Help:    "Client side rate limiter latency in seconds. Broken down by verb, and host.",
-			Buckets: prometheus.ExponentialBuckets(0.001, 2, 10),
+			Name:                            "rest_client_rate_limiter_duration_seconds",
+			Help:                            "Client side rate limiter latency in seconds. Broken down by verb, and host.",
+			Buckets:                         prometheus.ExponentialBuckets(0.001, 2, 10),
+			NativeHistogramBucketFactor:     1.1,
+			NativeHistogramMaxBucketNumber:  100,
+			NativeHistogramMinResetDuration: 1 * time.Hour,
 		},
 		[]string{"verb", "host"},
 	)
