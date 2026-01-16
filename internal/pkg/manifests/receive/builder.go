@@ -833,11 +833,11 @@ func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
 			},
 		},
 		Args: []string{
-			"-resource-type=configmap",
-			"-resource-name=" + opts.GetGeneratedResourceName(),
-			"-namespace=" + opts.Namespace,
-			"-write-path=" + hashringMountPath + "/" + HashringConfigKey,
-			"-resource-key=" + HashringConfigKey,
+			"--resource-type=configmap",
+			"--resource-name=" + opts.GetGeneratedResourceName(),
+			"--namespace=" + opts.Namespace,
+			"--write-path=" + hashringMountPath + "/" + HashringConfigKey,
+			"--resource-key=" + HashringConfigKey,
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{

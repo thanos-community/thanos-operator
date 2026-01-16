@@ -9,6 +9,7 @@ func TestAllFeatures(t *testing.T) {
 	expected := []string{
 		"service-monitor",
 		"prometheus-rule",
+		"kube-resource-sync",
 	}
 
 	got := AllFeatures()

@@ -107,11 +107,11 @@ spec:
         - mountPath: /var/lib/thanos-receive
           name: hashring-config
       - args:
-        - -resource-type=configmap
-        - -resource-name=thanos-receive-router-test-receive
-        - -namespace=test-ns
-        - -write-path=/var/lib/thanos-receive/hashrings.json
-        - -resource-key=hashrings.json
+        - --resource-type=configmap
+        - --resource-name=thanos-receive-router-test-receive
+        - --namespace=test-ns
+        - --write-path=/var/lib/thanos-receive/hashrings.json
+        - --resource-key=hashrings.json
         image: quay.io/philipgough/kube-resource-sync:main
         imagePullPolicy: Always
         name: kube-resource-sync
@@ -129,11 +129,11 @@ spec:
           name: hashring-config
       initContainers:
       - args:
-        - -resource-type=configmap
-        - -resource-name=thanos-receive-router-test-receive
-        - -namespace=test-ns
-        - -write-path=/var/lib/thanos-receive/hashrings.json
-        - -resource-key=hashrings.json
+        - --resource-type=configmap
+        - --resource-name=thanos-receive-router-test-receive
+        - --namespace=test-ns
+        - --write-path=/var/lib/thanos-receive/hashrings.json
+        - --resource-key=hashrings.json
         - --init-mode
         image: quay.io/philipgough/kube-resource-sync:main
         imagePullPolicy: Always

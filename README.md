@@ -35,7 +35,7 @@ Thanos Operator binary CLI Options include,
 ```bash mdox-exec="./bin/manager --help"
 Usage of ./bin/manager:
   -enable-feature value
-    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule.
+    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule, kube-resource-sync.
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
   -health-probe-bind-address string
