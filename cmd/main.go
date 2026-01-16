@@ -185,9 +185,21 @@ func main() {
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
+	const (
+		defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
+	)
+
+	featureGateConfig := enabledFeatures.ToFeatureGate()
+	if featureGateConfig.KubeResourceSyncEnabled() {
+		featureGateConfig.KubeResourceSyncImage = defaultKubeResourceSyncImage
+		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
+			featureGateConfig.KubeResourceSyncImage = image
+		}
+	}
+
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: enabledFeatures.ToFeatureGate(),
+			FeatureGate: featureGateConfig,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
