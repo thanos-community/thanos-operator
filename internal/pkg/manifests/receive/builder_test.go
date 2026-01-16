@@ -272,7 +272,10 @@ func TestNewRouterDeployment(t *testing.T) {
 						"test": "annotation",
 					},
 				},
-				EnableKubeResourceSync: true,
+				FeatureGateConfig: &FeatureGateConfig{
+					KubeResourceSyncEnabled: true,
+					KubeResourceSyncImage:   "quay.io/philipgough/kube-resource-sync:main",
+				},
 			},
 		},
 		{
@@ -287,7 +290,9 @@ func TestNewRouterDeployment(t *testing.T) {
 						"test": "annotation",
 					},
 				},
-				EnableKubeResourceSync: false,
+				FeatureGateConfig: &FeatureGateConfig{
+					KubeResourceSyncEnabled: false,
+				},
 			},
 		},
 	} {
