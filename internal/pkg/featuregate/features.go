@@ -16,6 +16,7 @@ const (
 	PrometheusRule = "prometheus-rule"
 
 	// KubeResourceSync enables the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
+	// See https://github.com/philipgough/kube-resource-sync
 	KubeResourceSync = "kube-resource-sync"
 )
 
@@ -48,6 +49,8 @@ type Config struct {
 	EnablePrometheusRuleDiscovery bool
 	// EnableKubeResourceSync enables the kube-resource-sync sidecar container.
 	EnableKubeResourceSync bool
+	// KubeResourceSyncImage specifies the image to use for the kube-resource-sync sidecar.
+	KubeResourceSyncImage string
 }
 
 // ServiceMonitorEnabled returns true if ServiceMonitor management is enabled.
@@ -63,6 +66,11 @@ func (c Config) PrometheusRuleEnabled() bool {
 // KubeResourceSyncEnabled returns true if KubeResourceSync sidecar is enabled.
 func (c Config) KubeResourceSyncEnabled() bool {
 	return c.EnableKubeResourceSync
+}
+
+// GetKubeResourceSyncImage returns the image used for the kube-resource-sync sidecar.
+func (c Config) GetKubeResourceSyncImage() string {
+	return c.KubeResourceSyncImage
 }
 
 // ToFeatureGate converts a Flag to a Config struct for use by controllers.
