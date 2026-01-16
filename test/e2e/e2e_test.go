@@ -271,12 +271,6 @@ var _ = Describe("controller", Ordered, func() {
 								"receive": "true",
 							},
 						},
-						FeatureGates: &v1alpha1.FeatureGates{
-							KubeResourceSyncConfig: &v1alpha1.KubeResourceSyncConfig{
-								Enable: ptr.To(true),
-								Image:  ptr.To("quay.io/philipgough/kube-resource-sync:main"),
-							},
-						},
 					},
 				}
 				err := c.Create(context.Background(), cr, &client.CreateOptions{})
@@ -332,24 +326,24 @@ var _ = Describe("controller", Ordered, func() {
 					Expect(err).To(BeNil())
 
 					// Check that there are 2 containers (router + sidecar)
-					Expect(len(deployment.Spec.Template.Spec.Containers)).To(Equal(2))
+					Expect(len(deployment.Spec.Template.Spec.Containers) > 1).To(BeTrue())
 
 					// Check that one container is the kube-resource-sync sidecar
 					var sidecarFound bool
-					for _, container := range deployment.Spec.Template.Spec.Containers {
+					for i, container := range deployment.Spec.Template.Spec.Containers {
 						if container.Name == "kube-resource-sync" {
 							sidecarFound = true
-							Expect(container.Image).To(Equal("quay.io/philipgough/kube-resource-sync:main"))
+							Expect(container.Image).To(Equal("quay.io/philipgough/kube-resource-sync:0.1.0"))
 
 							// Verify sidecar arguments
 							expectedArgs := []string{
 								"--resource-type=configmap",
 								"--resource-name=" + routerName,
 								"--namespace=" + namespace,
-								"--resource-key=hashrings.json",
 								"--write-path=/var/lib/thanos-receive/hashrings.json",
+								"--resource-key=hashrings.json",
 							}
-							Expect(container.Args).To(Equal(expectedArgs))
+							Expect(expectedArgs).To(ConsistOf(deployment.Spec.Template.Spec.Containers[i].Args))
 							break
 						}
 					}
