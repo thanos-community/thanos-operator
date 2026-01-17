@@ -14,6 +14,10 @@ env:
   golang-version: '1.25'
   kind-version: 'v0.30.0'
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
