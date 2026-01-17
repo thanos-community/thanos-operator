@@ -320,6 +320,47 @@ var _ = Describe("controller", Ordered, func() {
 						return utils.VerifyConfigMapContents(c, routerName, namespace, receive.HashringConfigKey, expect)
 					}, time.Minute*5, time.Second*10).Should(BeTrue())
 				})
+				It("should have kube-resource-sync sidecar in router deployment", func() {
+					deployment := &appsv1.Deployment{}
+					err := c.Get(context.Background(), client.ObjectKey{Name: routerName, Namespace: namespace}, deployment)
+					Expect(err).To(BeNil())
+
+					// Check that there are 2 containers (router + sidecar)
+					Expect(len(deployment.Spec.Template.Spec.Containers) > 1).To(BeTrue())
+
+					// Check that one container is the kube-resource-sync sidecar
+					var sidecarFound bool
+					for i, container := range deployment.Spec.Template.Spec.Containers {
+						if container.Name == "kube-resource-sync" {
+							sidecarFound = true
+							Expect(container.Image).To(Equal("quay.io/philipgough/kube-resource-sync:0.1.0"))
+
+							// Verify sidecar arguments
+							expectedArgs := []string{
+								"--resource-type=configmap",
+								"--resource-name=" + routerName,
+								"--namespace=" + namespace,
+								"--write-path=/var/lib/thanos-receive/hashrings.json",
+								"--resource-key=hashrings.json",
+							}
+							Expect(expectedArgs).To(ConsistOf(deployment.Spec.Template.Spec.Containers[i].Args))
+							break
+						}
+					}
+					Expect(sidecarFound).To(BeTrue())
+
+					// Verify that the volume is an emptyDir (not ConfigMap)
+					var hashringVolumeFound bool
+					for _, volume := range deployment.Spec.Template.Spec.Volumes {
+						if volume.Name == "hashring-config" {
+							hashringVolumeFound = true
+							Expect(volume.EmptyDir).NotTo(BeNil())
+							Expect(volume.ConfigMap).To(BeNil())
+							break
+						}
+					}
+					Expect(hashringVolumeFound).To(BeTrue())
+				})
 			})
 
 		})
