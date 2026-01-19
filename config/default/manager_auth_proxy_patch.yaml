@@ -37,4 +37,5 @@ spec:
         - --log.format=logfmt
         - --log.level=debug
         - --enable-feature=prometheus-rule
+        - --enable-feature=service-monitor
         name: manager

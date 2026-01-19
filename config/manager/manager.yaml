@@ -47,6 +47,7 @@ spec:
       containers:
       - args:
         - --leader-elect
+        - --enable-feature=service-monitor
         - --enable-feature=prometheus-rule
         command:
         - /manager
