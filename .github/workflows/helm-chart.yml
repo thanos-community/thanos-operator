@@ -59,8 +59,8 @@ jobs:
       - name: Prepare thanos-operator
         run: |
           go mod tidy
-          make docker-build IMG=thanos-operator:v0.1.0
-          kind load docker-image thanos-operator:v0.1.0
+          make docker-build IMG=quay.io/thanos/thanos-operator:main
+          kind load docker-image quay.io/thanos/thanos-operator:main
 
       - name: Install Helm
         run: |
