@@ -56,6 +56,7 @@ func ManagerAuthProxyPatch() map[string]interface{} {
 								"--log.format=logfmt",
 								"--log.level=debug",
 								"--enable-feature=prometheus-rule",
+								"--enable-feature=service-monitor",
 							},
 						},
 					},
