@@ -6,12 +6,12 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
     paths:
       - 'bundle.yaml'
       - 'helm/chart/**'
+  pull_request:
+    branches:
+      - main
 
 env:
   golang-version: '1.25'
