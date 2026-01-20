@@ -233,6 +233,8 @@ metadata:
   name: prometheus-dev
 spec:
   serviceAccountName: prometheus
+  scrapeInterval: 1s
+  evaluationInterval: 1s
   serviceMonitorNamespaceSelector:
     matchLabels:
       kubernetes.io/metadata.name: thanos-operator-system
