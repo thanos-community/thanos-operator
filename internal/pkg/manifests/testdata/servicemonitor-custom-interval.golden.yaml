@@ -7,7 +7,8 @@ metadata:
   namespace: ns
 spec:
   endpoints:
-  - path: /metrics
+  - interval: 60s
+    path: /metrics
     port: http
   namespaceSelector:
     matchNames:
