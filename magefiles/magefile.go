@@ -63,6 +63,10 @@ func InteractiveDemo() error {
 	if err := KubeStateMetrics(); err != nil {
 		return err
 	}
+
+	if err := Grafana(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -508,5 +512,157 @@ spec:
     path: /metrics
 `
 	_, err := applyNamespacedKubeResources(content, "kube-system")
+	return err
+}
+
+// Grafana installs Grafana with Thanos Query as a data source
+func Grafana() error {
+	content := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: default
+  labels:
+    app.kubernetes.io/name: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Thanos Query
+      type: prometheus
+      access: proxy
+      url: http://thanos-query-example-query.thanos-operator-system.svc.cluster.local:9090
+      isDefault: true
+      editable: true
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-operated.default.svc.cluster.local:9090
+      isDefault: false
+      editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: default
+  labels:
+    app.kubernetes.io/name: grafana
+data:
+  grafana.ini: |
+    [analytics]
+    check_for_updates = false
+    [security]
+    admin_user = admin
+    admin_password = admin
+    [server]
+    root_url = http://localhost:3000/
+    [users]
+    allow_sign_up = false
+    auto_assign_org = true
+    auto_assign_org_role = Admin
+    [auth.anonymous]
+    enabled = false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app.kubernetes.io/name: grafana
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: grafana
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+  labels:
+    app.kubernetes.io/name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+        runAsGroup: 472
+        runAsNonRoot: true
+        runAsUser: 472
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.2.0
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: admin
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: admin
+        - name: GF_INSTALL_PLUGINS
+          value: ""
+        volumeMounts:
+        - name: config
+          mountPath: /etc/grafana
+          readOnly: true
+        - name: datasources
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - name: storage
+          mountPath: /var/lib/grafana
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 60
+          timeoutSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          timeoutSeconds: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+      volumes:
+      - name: config
+        configMap:
+          name: grafana-config
+      - name: datasources
+        configMap:
+          name: grafana-datasources
+      - name: storage
+        emptyDir: {}
+`
+	_, err := applyNamespacedKubeResources(content, "default")
 	return err
 }
