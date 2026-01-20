@@ -21,7 +21,7 @@ spec:
     - externalLabels:
         replica: $(POD_NAME)
       name: green
-      replicas: 1
+      replicas: 3
       storage:
         size: 100Mi
       tenancyConfig:
@@ -33,7 +33,7 @@ spec:
       receive: "true"
     imagePullPolicy: IfNotPresent
     logFormat: logfmt
-    replicas: 1
+    replicas: 3
     replicationFactor: 1
 status:
   routerStatus:

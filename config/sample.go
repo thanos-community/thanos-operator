@@ -137,7 +137,7 @@ func SampleCR(crd CRD) any {
 							TenancyConfig: &thanosv1alpha1.TenancyConfig{
 								TenantMatcherType: "exact",
 							},
-							Replicas: 1,
+							Replicas: 3,
 							ExternalLabels: map[string]string{
 								"replica": "$(POD_NAME)",
 							},
@@ -152,7 +152,7 @@ func SampleCR(crd CRD) any {
 					ExternalLabels: map[string]string{
 						"receive": "true",
 					},
-					Replicas:          1,
+					Replicas:          3,
 					ReplicationFactor: 1,
 				},
 			},
