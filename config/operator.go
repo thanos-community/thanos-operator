@@ -173,9 +173,13 @@ func ControllerManagerServiceMonitor() *monitoringv1.ServiceMonitor {
 					Port:            "https",
 					Scheme:          ptr.To(monitoringv1.SchemeHTTPS),
 					BearerTokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token",
-					TLSConfig: &monitoringv1.TLSConfig{
-						SafeTLSConfig: monitoringv1.SafeTLSConfig{
-							InsecureSkipVerify: ptr.To(true),
+					HTTPConfigWithProxyAndTLSFiles: monitoringv1.HTTPConfigWithProxyAndTLSFiles{
+						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
+							TLSConfig: &monitoringv1.TLSConfig{
+								SafeTLSConfig: monitoringv1.SafeTLSConfig{
+									InsecureSkipVerify: ptr.To(true),
+								},
+							},
 						},
 					},
 				},
