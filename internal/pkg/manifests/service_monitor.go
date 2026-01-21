@@ -18,7 +18,7 @@ type ServiceMonitorOptions struct {
 	// Defaults to "http" if not specified.
 	Port *string
 	// Interval at which metrics should be scraped.
-	// Defaults to 30s if not specified.
+	// If not specified, the global scrape interval configured in Prometheus will be used.
 	Interval *Duration
 	// Path is the path on the target service to scrape for metrics.
 	// Defaults to "/metrics" if not specified.
@@ -27,6 +27,15 @@ type ServiceMonitorOptions struct {
 
 func BuildServiceMonitor(name, namespace string, objectMetaLabels, selectorLabels map[string]string, opts ServiceMonitorOptions) *monitoringv1.ServiceMonitor {
 	opts = opts.applyDefaults()
+
+	endpoint := monitoringv1.Endpoint{
+		Port: *opts.Port,
+		Path: *opts.Path,
+	}
+	// Only set interval if explicitly provided
+	if opts.Interval != nil {
+		endpoint.Interval = monitoringv1.Duration(*opts.Interval)
+	}
 
 	return &monitoringv1.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
@@ -45,13 +54,7 @@ func BuildServiceMonitor(name, namespace string, objectMetaLabels, selectorLabel
 			NamespaceSelector: monitoringv1.NamespaceSelector{
 				MatchNames: []string{namespace},
 			},
-			Endpoints: []monitoringv1.Endpoint{
-				{
-					Interval: monitoringv1.Duration(*opts.Interval),
-					Port:     *opts.Port,
-					Path:     *opts.Path,
-				},
-			},
+			Endpoints: []monitoringv1.Endpoint{endpoint},
 		},
 	}
 }
@@ -60,9 +63,7 @@ func (opts ServiceMonitorOptions) applyDefaults() ServiceMonitorOptions {
 	if opts.Port == nil {
 		opts.Port = ptr.To("http")
 	}
-	if opts.Interval == nil {
-		opts.Interval = ptr.To(Duration("30s"))
-	}
+	// Interval is not set to a default value - it should be driven by global settings
 	if opts.Path == nil {
 		opts.Path = ptr.To("/metrics")
 	}

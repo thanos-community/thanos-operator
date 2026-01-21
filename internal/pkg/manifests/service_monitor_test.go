@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gotest.tools/v3/golden"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -29,6 +30,13 @@ func TestBuildServiceMonitor(t *testing.T) {
 			name:   "test service monitor correctness with defaults",
 			golden: "servicemonitor-basic.golden.yaml",
 			opts:   ServiceMonitorOptions{},
+		},
+		{
+			name:   "test service monitor with custom interval",
+			golden: "servicemonitor-custom-interval.golden.yaml",
+			opts: ServiceMonitorOptions{
+				Interval: ptr.To(Duration("60s")),
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
