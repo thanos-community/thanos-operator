@@ -129,15 +129,8 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 		metrics:     controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
 	}
-
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
-	featureGates := conf.FeatureGate.ToGVK()
-	if len(featureGates) > 0 {
-		handler.SetFeatureGates(featureGates)
-		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("compact").Set(float64(len(featureGates)))
-	}
-	reconciler.handler = handler
 
 	return reconciler
 }

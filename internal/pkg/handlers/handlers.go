@@ -55,8 +55,9 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 
 // SetFeatureGates sets the feature gates for the handler.
 // Handler will ignore actions on resources with the given GroupVersionKind.
-func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) {
+func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) *Handler {
 	h.gatedGVK = gvk
+	return h
 }
 
 // CreateOrUpdate creates or updates the given objects in the Kubernetes cluster.

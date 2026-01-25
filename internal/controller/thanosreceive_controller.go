@@ -79,15 +79,8 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 		metrics:     controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
 	}
-
-	h := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
-	featureGates := conf.FeatureGate.ToGVK()
-	if len(featureGates) > 0 {
-		h.SetFeatureGates(featureGates)
-		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("receive").Set(float64(len(featureGates)))
-	}
-	reconciler.handler = h
 
 	return reconciler
 }

@@ -80,15 +80,8 @@ func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:     controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
 	}
-
-	h := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
-	featureGates := conf.FeatureGate.ToGVK()
-	if len(featureGates) > 0 {
-		reconciler.metrics.FeatureGatesEnabled.WithLabelValues("ruler").Set(float64(len(featureGates)))
-		h.SetFeatureGates(featureGates)
-	}
-	reconciler.handler = h
 
 	return reconciler
 }
