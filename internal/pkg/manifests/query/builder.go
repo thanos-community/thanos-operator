@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -259,6 +260,9 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 }
 
 func queryArgs(opts Options) []string {
+	checker := version.NewChecker(opts.Logger, "query", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"query"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
@@ -266,27 +270,46 @@ func queryArgs(opts Options) []string {
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--query.timeout=%s", opts.Timeout),
 		fmt.Sprintf("--query.lookback-delta=%s", opts.LookbackDelta),
-		"--query.auto-downsampling",
-		"--query.promql-engine=thanos",
+	)
+
+	if checker.CheckFeature(version.FeatureQueryAutoDownsampling, "--query.auto-downsampling") {
+		args = append(args, "--query.auto-downsampling")
+	}
+
+	if checker.CheckFeature(version.FeatureQueryPromQLEngine, "--query.promql-engine") {
+		args = append(args, "--query.promql-engine=thanos")
+	}
+
+	args = append(args,
 		fmt.Sprintf("--query.max-concurrent=%d", opts.MaxConcurrent),
 		fmt.Sprintf("--web.route-prefix=%s", opts.WebOptions.RoutePrefix),
 		fmt.Sprintf("--web.external-prefix=%s", opts.WebOptions.ExternalPrefix),
 		fmt.Sprintf("--web.prefix-header=%s", opts.WebOptions.PrefixHeader),
-		fmt.Sprintf("--grpc.proxy-strategy=%s", opts.GRPCProxyStrategy),
 	)
 
-	for _, duration := range opts.TelemetryQuantiles.Duration {
-		args = append(args, fmt.Sprintf("--query.telemetry.request-duration-seconds-quantiles=%s", duration))
-	}
-	for _, samples := range opts.TelemetryQuantiles.Samples {
-		args = append(args, fmt.Sprintf("--query.telemetry.request-samples-quantiles=%s", samples))
-	}
-	for _, series := range opts.TelemetryQuantiles.Series {
-		args = append(args, fmt.Sprintf("--query.telemetry.request-series-seconds-quantiles=%s", series))
+	if opts.GRPCProxyStrategy != "" && checker.CheckFeature(version.FeatureGRPCProxyStrategy, "--grpc.proxy-strategy") {
+		args = append(args, fmt.Sprintf("--grpc.proxy-strategy=%s", opts.GRPCProxyStrategy))
 	}
 
+	if len(opts.TelemetryQuantiles.Duration) > 0 || len(opts.TelemetryQuantiles.Samples) > 0 || len(opts.TelemetryQuantiles.Series) > 0 {
+		if checker.CheckFeature(version.FeatureQueryTelemetryQuantiles, "--query.telemetry.*-quantiles") {
+			for _, duration := range opts.TelemetryQuantiles.Duration {
+				args = append(args, fmt.Sprintf("--query.telemetry.request-duration-seconds-quantiles=%s", duration))
+			}
+			for _, samples := range opts.TelemetryQuantiles.Samples {
+				args = append(args, fmt.Sprintf("--query.telemetry.request-samples-quantiles=%s", samples))
+			}
+			for _, series := range opts.TelemetryQuantiles.Series {
+				args = append(args, fmt.Sprintf("--query.telemetry.request-series-seconds-quantiles=%s", series))
+			}
+		}
+	}
+
+	// Check version for CORS disable
 	if opts.WebOptions.DisableCORS {
-		args = append(args, "--web.disable-cors")
+		if checker.CheckFeature(version.FeatureWebDisableCORS, "--web.disable-cors") {
+			args = append(args, "--web.disable-cors")
+		}
 	}
 
 	for _, label := range opts.ReplicaLabels {
@@ -301,9 +324,13 @@ func queryArgs(opts Options) []string {
 		case manifests.StrictLabel:
 			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
 		case manifests.GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
+			if checker.CheckFeature(version.FeatureEndpointGroup, "--endpoint-group") {
+				args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
+			}
 		case manifests.GroupStrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
+			if checker.CheckFeature(version.FeatureEndpointGroupStrict, "--endpoint-group-strict") {
+				args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
+			}
 		default:
 			panic("unknown endpoint type")
 		}

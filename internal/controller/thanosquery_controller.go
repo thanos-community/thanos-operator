@@ -185,7 +185,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return nil, err
 	}
 
-	opts := queryV1Alpha1ToOptions(query, r.featureGate)
+	opts := queryV1Alpha1ToOptions(query, r.featureGate, r.logger)
 	opts.Endpoints = endpoints
 
 	return opts, nil
@@ -246,7 +246,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(query, r.featureGate)
+	return queryV1Alpha1ToQueryFrontEndOptions(query, r.featureGate, r.logger)
 }
 
 // SetupWithManager sets up the controller with the Manager.

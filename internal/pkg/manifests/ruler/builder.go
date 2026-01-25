@@ -17,6 +17,7 @@ import (
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -370,6 +371,9 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 }
 
 func rulerArgs(opts Options) []string {
+	checker := version.NewChecker(opts.Logger, "ruler", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"rule"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
@@ -382,7 +386,9 @@ func rulerArgs(opts Options) []string {
 	)
 
 	if opts.EvaluationInterval != "" {
-		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))
+		if checker.CheckFeature(version.FeatureRulerEvalInterval, "--eval-interval") {
+			args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))
+		}
 	}
 
 	for key, val := range opts.ExternalLabels {
@@ -397,8 +403,12 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
 	}
 
-	for _, label := range opts.AlertLabelDrop {
-		args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
+	if len(opts.AlertLabelDrop) > 0 {
+		if checker.CheckFeature(version.FeatureAlertLabelDrop, "--alert.label-drop") {
+			for _, label := range opts.AlertLabelDrop {
+				args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
+			}
+		}
 	}
 
 	return args
