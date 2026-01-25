@@ -290,6 +290,21 @@ func (h *Handler) ExpandPVCsForStatefulSet(ctx context.Context, sts *appsv1.Stat
 		}
 	}
 
+	// Check a sample PVC first to avoid listing all PVCs if they're already at the desired size
+	// This prevents unnecessary API calls on every reconciliation when storage size hasn't changed
+	samplePVCName := fmt.Sprintf("%s-0", sts.GetName())
+	samplePVC := &corev1.PersistentVolumeClaim{}
+	if err := h.client.Get(ctx, client.ObjectKey{Name: samplePVCName, Namespace: sts.GetNamespace()}, samplePVC); err == nil {
+		currentSize := samplePVC.Spec.Resources.Requests[corev1.ResourceStorage]
+		if currentSize.Cmp(desiredStorageSize) == 0 {
+			logger.Info("skipping PVC expansion: sample PVC already at desired size, assuming all PVCs are expanded", "samplePVC", samplePVCName, "size", currentSize.String())
+			return 0
+		}
+		logger.Info("sample PVC needs expansion, proceeding to check all PVCs", "samplePVC", samplePVCName, "currentSize", currentSize.String(), "desiredSize", desiredStorageSize.String())
+	} else if !errors.IsNotFound(err) {
+		logger.Info("could not get sample PVC, proceeding with full PVC list", "samplePVC", samplePVCName, "error", err.Error())
+	}
+	// If sample PVC doesn't exist (NotFound), continue with listing all PVCs (might be a different naming scheme or no PVCs yet)
 	pvcList := &corev1.PersistentVolumeClaimList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(sts.GetNamespace()),

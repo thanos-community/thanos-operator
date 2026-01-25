@@ -227,6 +227,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	// Note: The CreateOrUpdate call above already updated the StatefulSet's VolumeClaimTemplates
 	// to reflect the new storage size from the CR. Now we need to expand the existing PVCs
 	// so that existing pods can use the new storage size.
+	// The handler will check if expansion is actually needed before doing expensive LIST operations.
 	for _, opt := range ingestOpts {
 		ingesterOpts, ok := opt.(manifestreceive.IngesterOptions)
 		if !ok {
@@ -243,20 +244,6 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 		desiredSize := corev1.ResourceList{
 			corev1.ResourceStorage: ingesterOpts.StorageConfig.StorageSize,
-		}
-
-		// Only attempt expansion if StatefulSet's VolumeClaimTemplate matches the desired size
-		// This means the StatefulSet was successfully updated and we can now expand existing PVCs
-		if len(sts.Spec.VolumeClaimTemplates) > 0 {
-			currentTemplateSize := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
-			desiredStorageSize := desiredSize[corev1.ResourceStorage]
-			if currentTemplateSize.Cmp(desiredStorageSize) != 0 {
-				r.logger.Info("skipping PVC expansion, StatefulSet VolumeClaimTemplate size doesn't match CR",
-					"statefulset", stsName,
-					"templateSize", (&currentTemplateSize).String(),
-					"desiredSize", (&desiredStorageSize).String())
-				continue
-			}
 		}
 
 		if expandErrCount := r.handler.ExpandPVCsForStatefulSet(ctx, sts, desiredSize); expandErrCount > 0 {
