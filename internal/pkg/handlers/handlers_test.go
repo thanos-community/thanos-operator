@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -297,4 +298,248 @@ func TestPrune(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandler_ExpandPVCsForStatefulSet(t *testing.T) {
+	ctx := context.Background()
+	const (
+		namespace = "test"
+		stsName   = "test-sts"
+		pvcName   = "data-test-sts-0"
+	)
+
+	for _, tc := range []struct {
+		name           string
+		setup          func() (*Handler, *appsv1.StatefulSet, corev1.ResourceList)
+		expectErrCount int
+		validate       func(t *testing.T, h *Handler)
+	}{
+		{
+			name: "expands PVC when desired size is larger",
+			setup: func() (*Handler, *appsv1.StatefulSet, corev1.ResourceList) {
+				currentSize := corev1.ResourceList{
+					corev1.ResourceStorage: parseQuantity(t, "10Gi"),
+				}
+				desiredSize := corev1.ResourceList{
+					corev1.ResourceStorage: parseQuantity(t, "20Gi"),
+				}
+
+				pvc := &corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pvcName,
+						Namespace: namespace,
+						Labels:    map[string]string{"app": "test"},
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: currentSize,
+						},
+					},
+				}
+
+				sts := &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      stsName,
+						Namespace: namespace,
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"app": "test"},
+						},
+						VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+							{
+								Spec: corev1.PersistentVolumeClaimSpec{
+									Resources: corev1.VolumeResourceRequirements{
+										Requests: desiredSize,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				h := &Handler{
+					handler: &handler{
+						client: fake.NewFakeClient(pvc, sts),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+				}
+
+				return h, sts, desiredSize
+			},
+			expectErrCount: 0,
+			validate: func(t *testing.T, h *Handler) {
+				pvc := &corev1.PersistentVolumeClaim{}
+				if err := h.client.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: namespace}, pvc); err != nil {
+					t.Fatalf("failed to get PVC: %v", err)
+				}
+
+				actualSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
+				expectedSize := parseQuantity(t, "20Gi")
+
+				if actualSize.Cmp(expectedSize) != 0 {
+					t.Errorf("expected PVC size %s, got %s", expectedSize.String(), actualSize.String())
+				}
+			},
+		},
+		{
+			name: "does not modify PVC when desired size is same",
+			setup: func() (*Handler, *appsv1.StatefulSet, corev1.ResourceList) {
+				currentSize := corev1.ResourceList{
+					corev1.ResourceStorage: parseQuantity(t, "10Gi"),
+				}
+
+				pvc := &corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pvcName,
+						Namespace: namespace,
+						Labels:    map[string]string{"app": "test"},
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: currentSize,
+						},
+					},
+				}
+
+				sts := &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      stsName,
+						Namespace: namespace,
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"app": "test"},
+						},
+						VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+							{
+								Spec: corev1.PersistentVolumeClaimSpec{
+									Resources: corev1.VolumeResourceRequirements{
+										Requests: currentSize,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				h := &Handler{
+					handler: &handler{
+						client: fake.NewFakeClient(pvc, sts),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+				}
+
+				return h, sts, currentSize
+			},
+			expectErrCount: 0,
+			validate: func(t *testing.T, h *Handler) {
+				pvc := &corev1.PersistentVolumeClaim{}
+				if err := h.client.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: namespace}, pvc); err != nil {
+					t.Fatalf("failed to get PVC: %v", err)
+				}
+
+				actualSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
+				expectedSize := parseQuantity(t, "10Gi")
+
+				if actualSize.Cmp(expectedSize) != 0 {
+					t.Errorf("expected PVC size %s, got %s", expectedSize.String(), actualSize.String())
+				}
+			},
+		},
+		{
+			name: "does not modify PVC when desired size is smaller",
+			setup: func() (*Handler, *appsv1.StatefulSet, corev1.ResourceList) {
+				currentSize := corev1.ResourceList{
+					corev1.ResourceStorage: parseQuantity(t, "20Gi"),
+				}
+				desiredSize := corev1.ResourceList{
+					corev1.ResourceStorage: parseQuantity(t, "10Gi"),
+				}
+
+				pvc := &corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pvcName,
+						Namespace: namespace,
+						Labels:    map[string]string{"app": "test"},
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: currentSize,
+						},
+					},
+				}
+
+				sts := &appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      stsName,
+						Namespace: namespace,
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"app": "test"},
+						},
+						VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+							{
+								Spec: corev1.PersistentVolumeClaimSpec{
+									Resources: corev1.VolumeResourceRequirements{
+										Requests: desiredSize,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				h := &Handler{
+					handler: &handler{
+						client: fake.NewFakeClient(pvc, sts),
+						scheme: scheme.Scheme,
+						logger: logr.New(log.NullLogSink{}),
+					},
+				}
+
+				return h, sts, desiredSize
+			},
+			expectErrCount: 0,
+			validate: func(t *testing.T, h *Handler) {
+				pvc := &corev1.PersistentVolumeClaim{}
+				if err := h.client.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: namespace}, pvc); err != nil {
+					t.Fatalf("failed to get PVC: %v", err)
+				}
+
+				// Should remain at original size
+				actualSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
+				expectedSize := parseQuantity(t, "20Gi")
+
+				if actualSize.Cmp(expectedSize) != 0 {
+					t.Errorf("expected PVC size %s (unchanged), got %s", expectedSize.String(), actualSize.String())
+				}
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, sts, desiredSize := tc.setup()
+			errCount := h.ExpandPVCsForStatefulSet(ctx, sts, desiredSize)
+
+			if errCount != tc.expectErrCount {
+				t.Errorf("expected %d errors, got %d", tc.expectErrCount, errCount)
+			}
+
+			if tc.validate != nil {
+				tc.validate(t, h)
+			}
+		})
+	}
+}
+
+func parseQuantity(t *testing.T, s string) resource.Quantity {
+	t.Helper()
+	q, err := resource.ParseQuantity(s)
+	if err != nil {
+		t.Fatalf("failed to parse quantity %s: %v", s, err)
+	}
+	return q
 }

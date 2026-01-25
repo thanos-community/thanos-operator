@@ -157,6 +157,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosreceives/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;update;patch
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
@@ -220,6 +221,48 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
+	}
+
+	// Expand existing PVCs for ingesters if storage size has increased in the CR spec
+	// Note: The CreateOrUpdate call above already updated the StatefulSet's VolumeClaimTemplates
+	// to reflect the new storage size from the CR. Now we need to expand the existing PVCs
+	// so that existing pods can use the new storage size.
+	for _, opt := range ingestOpts {
+		ingesterOpts, ok := opt.(manifestreceive.IngesterOptions)
+		if !ok {
+			continue
+		}
+
+		sts := &appsv1.StatefulSet{}
+		stsName := ingesterOpts.GetGeneratedResourceName()
+		if getErr := r.Get(ctx, client.ObjectKey{Name: stsName, Namespace: receiver.GetNamespace()}, sts); getErr != nil {
+			r.logger.Error(getErr, "failed to get StatefulSet for PVC expansion", "statefulset", stsName)
+			errCount++
+			continue
+		}
+
+		desiredSize := corev1.ResourceList{
+			corev1.ResourceStorage: ingesterOpts.StorageConfig.StorageSize,
+		}
+
+		// Only attempt expansion if StatefulSet's VolumeClaimTemplate matches the desired size
+		// This means the StatefulSet was successfully updated and we can now expand existing PVCs
+		if len(sts.Spec.VolumeClaimTemplates) > 0 {
+			currentTemplateSize := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+			desiredStorageSize := desiredSize[corev1.ResourceStorage]
+			if currentTemplateSize.Cmp(desiredStorageSize) != 0 {
+				r.logger.Info("skipping PVC expansion, StatefulSet VolumeClaimTemplate size doesn't match CR",
+					"statefulset", stsName,
+					"templateSize", (&currentTemplateSize).String(),
+					"desiredSize", (&desiredStorageSize).String())
+				continue
+			}
+		}
+
+		if expandErrCount := r.handler.ExpandPVCsForStatefulSet(ctx, sts, desiredSize); expandErrCount > 0 {
+			r.logger.Error(fmt.Errorf("failed to expand %d PVCs", expandErrCount), "error expanding PVCs for StatefulSet", "statefulset", stsName)
+			errCount += expandErrCount
+		}
 	}
 
 	// we go back and force a reconcile now on the original errors from the ingesters

@@ -37984,6 +37984,15 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
   - apps
   resources:
   - deployments

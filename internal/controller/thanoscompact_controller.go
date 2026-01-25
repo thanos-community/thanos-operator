@@ -29,6 +29,7 @@ import (
 	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,6 +60,10 @@ type ThanosCompactReconciler struct {
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanoscompacts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;update;patch
+//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -174,6 +179,52 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	if errCount > 0 {
 		r.metrics.ShardCreationUpdateFailures.WithLabelValues(compact.GetName(), compact.GetNamespace()).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
+	}
+
+	// Expand existing PVCs if storage size has increased in the CR spec
+	// Note: The CreateOrUpdate call above already updated the StatefulSet's VolumeClaimTemplates
+	// to reflect the new storage size from the CR. Now we need to expand the existing PVCs
+	// so that existing pods can use the new storage size.
+	for _, opt := range options {
+		compactOpts, ok := opt.(manifestcompact.Options)
+		if !ok {
+			continue
+		}
+
+		sts := &appsv1.StatefulSet{}
+		stsName := compactOpts.GetGeneratedResourceName()
+		if getErr := r.Get(ctx, client.ObjectKey{Name: stsName, Namespace: compact.GetNamespace()}, sts); getErr != nil {
+			r.logger.Error(getErr, "failed to get StatefulSet for PVC expansion", "statefulset", stsName)
+			errCount++
+			continue
+		}
+
+		desiredSize := corev1.ResourceList{
+			corev1.ResourceStorage: compactOpts.StorageConfig.StorageSize,
+		}
+
+		// Only attempt expansion if StatefulSet's VolumeClaimTemplate matches the desired size
+		// This means the StatefulSet was successfully updated and we can now expand existing PVCs
+		if len(sts.Spec.VolumeClaimTemplates) > 0 {
+			currentTemplateSize := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+			desiredStorageSize := desiredSize[corev1.ResourceStorage]
+			if currentTemplateSize.Cmp(desiredStorageSize) != 0 {
+				r.logger.Info("skipping PVC expansion, StatefulSet VolumeClaimTemplate size doesn't match CR",
+					"statefulset", stsName,
+					"templateSize", (&currentTemplateSize).String(),
+					"desiredSize", (&desiredStorageSize).String())
+				continue
+			}
+		}
+
+		if expandErrCount := r.handler.ExpandPVCsForStatefulSet(ctx, sts, desiredSize); expandErrCount > 0 {
+			r.logger.Error(fmt.Errorf("failed to expand %d PVCs", expandErrCount), "error expanding PVCs for StatefulSet", "statefulset", stsName)
+			errCount += expandErrCount
+		}
+	}
+
+	if errCount > 0 {
+		return fmt.Errorf("failed to expand PVCs for %d compact or compact shard(s)", errCount)
 	}
 
 	if errCount = r.handler.DeleteResource(ctx,

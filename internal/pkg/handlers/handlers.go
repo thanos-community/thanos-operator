@@ -268,6 +268,69 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 	return errCount
 }
 
+// ExpandPVCsForStatefulSet expands PVCs for a StatefulSet if the desired storage size is larger than the current size.
+// This function should be called AFTER the StatefulSet's VolumeClaimTemplates have been updated to the new size.
+// It lists all existing PVCs that belong to the StatefulSet and updates their storage request if needed.
+//
+// Returns the number of errors encountered.
+// Note: Volume expansion must be supported by the storage class (allowVolumeExpansion: true).
+func (h *Handler) ExpandPVCsForStatefulSet(ctx context.Context, sts *appsv1.StatefulSet, desiredSize corev1.ResourceList) int {
+	var errCount int
+	logger := h.logger.WithValues("statefulset", sts.GetName(), "namespace", sts.GetNamespace())
+
+	desiredStorageSize := desiredSize[corev1.ResourceStorage]
+
+	// Don't expand PVCs if the StatefulSet update failed
+	if len(sts.Spec.VolumeClaimTemplates) > 0 {
+		templateSize := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+		if templateSize.Cmp(desiredStorageSize) != 0 {
+			logger.Info("skipping PVC expansion: StatefulSet VolumeClaimTemplate size doesn't match desired size", "templateSize", templateSize.String(), "desiredSize", desiredStorageSize.String())
+			// Don't return error here as the StatefulSet might not have been updated yet
+			return 0
+		}
+	}
+
+	pvcList := &corev1.PersistentVolumeClaimList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(sts.GetNamespace()),
+		client.MatchingLabels(sts.Spec.Selector.MatchLabels),
+	}
+	if err := h.client.List(ctx, pvcList, listOpts...); err != nil {
+		logger.Error(err, "failed to list PVCs for StatefulSet")
+		return 1
+	}
+
+	for i := range pvcList.Items {
+		pvc := &pvcList.Items[i]
+		pvcLogger := logger.WithValues("pvc", pvc.GetName())
+
+		currentSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
+
+		// Only expand if desired size is larger than current size.
+		// Volume shrinking is not supported by Kubernetes.
+		if desiredStorageSize.Cmp(currentSize) > 0 {
+			pvcLogger.Info("expanding PVC storage", "currentSize", currentSize.String(), "desiredSize", desiredStorageSize.String())
+
+			pvcCopy := pvc.DeepCopy()
+			pvcCopy.Spec.Resources.Requests[corev1.ResourceStorage] = desiredStorageSize
+			if err := h.client.Update(ctx, pvcCopy); err != nil {
+				// Check if the error is due to immutable field (expansion not supported)
+				if errors.IsForbidden(err) || errors.IsInvalid(err) {
+					pvcLogger.Error(err, "PVC expansion not supported, ensure StorageClass has allowVolumeExpansion=true", "storageClass", pvc.Spec.StorageClassName, "currentSize", currentSize.String(), "desiredSize", desiredStorageSize.String())
+				} else {
+					pvcLogger.Error(err, "failed to update PVC storage request")
+				}
+				errCount++
+				continue
+			}
+
+			pvcLogger.Info("successfully updated PVC storage request, volume expansion will be performed by Kubernetes")
+		}
+	}
+
+	return errCount
+}
+
 func loggerForObj(logger logr.Logger, obj client.Object) logr.Logger {
 	return logger.WithValues("name", obj.GetName(), "namespace", obj.GetNamespace(), "kind", obj.GetObjectKind().GroupVersionKind().Kind)
 }
