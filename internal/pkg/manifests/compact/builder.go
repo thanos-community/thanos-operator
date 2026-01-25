@@ -407,6 +407,12 @@ type CompactionOptions struct {
 	// ConsistencyDelay is the minimum age of fresh (non-compacted) blocks before they are being processed.
 	// Malformed blocks older than the maximum of consistency-delay and 48h0m0s will be removed.
 	ConsistencyDelay *manifests.Duration `json:"blockConsistencyDelay,omitempty"`
+	// EnableVerticalCompaction enables vertical compaction, which compacts multiple overlapping blocks into one.
+	EnableVerticalCompaction *bool
+	// DeduplicationReplicaLabels is a list of labels to treat as replica labels for deduplication.
+	DeduplicationReplicaLabels []string
+	// DeduplicationFunc specifies the deduplication algorithm to use.
+	DeduplicationFunc *string
 }
 
 func (co *CompactionOptions) toArgs() []string {
@@ -426,6 +432,15 @@ func (co *CompactionOptions) toArgs() []string {
 	}
 	if co.ConsistencyDelay != nil {
 		args = append(args, fmt.Sprintf("--consistency-delay=%s", string(*co.ConsistencyDelay)))
+	}
+	if co.EnableVerticalCompaction != nil && *co.EnableVerticalCompaction {
+		args = append(args, "--compact.enable-vertical-compaction")
+	}
+	for _, label := range co.DeduplicationReplicaLabels {
+		args = append(args, fmt.Sprintf("--deduplication.replica-label=%s", label))
+	}
+	if co.DeduplicationFunc != nil && *co.DeduplicationFunc != "" {
+		args = append(args, fmt.Sprintf("--deduplication.func=%s", *co.DeduplicationFunc))
 	}
 	return args
 }

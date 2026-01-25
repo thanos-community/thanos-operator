@@ -293,6 +293,9 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) 
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
+			EnableVerticalCompaction:     in.Spec.CompactConfig.EnableVerticalCompaction,
+			DeduplicationReplicaLabels:   in.Spec.CompactConfig.DeduplicationReplicaLabels,
+			DeduplicationFunc:            in.Spec.CompactConfig.DeduplicationFunc,
 		}
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
