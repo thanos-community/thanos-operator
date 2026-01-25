@@ -5,6 +5,7 @@ import (
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -573,6 +574,9 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 }
 
 func ingestorArgsFrom(opts IngesterOptions) []string {
+	checker := version.NewChecker(opts.Logger, "receive-ingester", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
 
@@ -585,14 +589,37 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 		fmt.Sprintf("--objstore.config=$(%s)", ingestObjectStoreEnvVarName),
 		fmt.Sprintf("--receive.local-endpoint=$(POD_NAME).%s.$(POD_NAMESPACE).svc:%d",
 			opts.GetGeneratedResourceName(), GRPCPort),
-		fmt.Sprintf("--receive.forward.async-workers=%s", opts.AsyncForwardWorkerCount),
-		fmt.Sprintf("--tsdb.too-far-in-future.time-window=%s", opts.TooFarInFutureTimeWindow),
-		fmt.Sprintf("--receive.tenant-header=%s", opts.TenancyOpts.TenantHeader),
-		fmt.Sprintf("--receive.tenant-certificate-field=%s", opts.TenancyOpts.TenantCertificateField),
-		fmt.Sprintf("--receive.default-tenant-id=%s", opts.TenancyOpts.DefaultTenantID),
-		fmt.Sprintf("--receive.split-tenant-label-name=%s", opts.TenancyOpts.SplitTenantLabelName),
-		fmt.Sprintf("--receive.tenant-label-name=%s", opts.TenancyOpts.TenantLabelName),
 	)
+
+	if opts.AsyncForwardWorkerCount != "" {
+		if checker.CheckFeature(version.FeatureReceiveAsyncForwardWorkers, "--receive.forward.async-workers") {
+			args = append(args, fmt.Sprintf("--receive.forward.async-workers=%s", opts.AsyncForwardWorkerCount))
+		}
+	}
+
+	if opts.TooFarInFutureTimeWindow != "" {
+		if checker.CheckFeature(version.FeatureReceiveTooFarInFuture, "--tsdb.too-far-in-future.time-window") {
+			args = append(args, fmt.Sprintf("--tsdb.too-far-in-future.time-window=%s", opts.TooFarInFutureTimeWindow))
+		}
+	}
+
+	args = append(args, fmt.Sprintf("--receive.tenant-header=%s", opts.TenancyOpts.TenantHeader))
+
+	if opts.TenancyOpts.TenantCertificateField != "" {
+		if checker.CheckFeature(version.FeatureReceiveTenantCertificateField, "--receive.tenant-certificate-field") {
+			args = append(args, fmt.Sprintf("--receive.tenant-certificate-field=%s", opts.TenancyOpts.TenantCertificateField))
+		}
+	}
+
+	args = append(args, fmt.Sprintf("--receive.default-tenant-id=%s", opts.TenancyOpts.DefaultTenantID))
+
+	if opts.TenancyOpts.SplitTenantLabelName != "" {
+		if checker.CheckFeature(version.FeatureReceiveSplitTenantLabelName, "--receive.split-tenant-label-name") {
+			args = append(args, fmt.Sprintf("--receive.split-tenant-label-name=%s", opts.TenancyOpts.SplitTenantLabelName))
+		}
+	}
+
+	args = append(args, fmt.Sprintf("--receive.tenant-label-name=%s", opts.TenancyOpts.TenantLabelName))
 
 	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
 
@@ -601,12 +628,16 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 	}
 
 	if opts.ReplicationProtocol == "capnproto" {
-		args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
+		if checker.CheckFeature(version.FeatureReceiveCapnProto, "--receive.capnproto-address") {
+			args = append(args, fmt.Sprintf("--receive.capnproto-address=0.0.0.0:%d", CapnProtoPort))
+		}
 	}
 
 	// Snappy is the default compression algorithm set on Thanos.
 	if opts.GRPCCompression == "none" {
-		args = append(args, fmt.Sprintf("--receive.grpc-compression=%s", opts.GRPCCompression))
+		if checker.CheckFeature(version.FeatureReceiveGRPCCompression, "--receive.grpc-compression") {
+			args = append(args, fmt.Sprintf("--receive.grpc-compression=%s", opts.GRPCCompression))
+		}
 	}
 
 	// TODO(saswatamcode): Add some validation.
@@ -614,6 +645,9 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 }
 
 func routerArgsFrom(opts RouterOptions) []string {
+	checker := version.NewChecker(opts.Logger, "receive-router", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
 
@@ -643,7 +677,9 @@ func routerArgsFrom(opts RouterOptions) []string {
 	}
 
 	if opts.ReplicationProtocol == "capnproto" {
-		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
+		if checker.CheckFeature(version.FeatureReceiveReplicationProtocol, "--receive.replication-protocol") {
+			args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
+		}
 	}
 
 	return manifests.PruneEmptyArgs(args)

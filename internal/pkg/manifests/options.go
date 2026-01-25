@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/go-logr/logr"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -114,6 +116,9 @@ type Options struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext
+	// Logger is used for version validation warnings.
+	// If not set, version validation warnings will not be logged.
+	Logger logr.Logger
 }
 
 // Placement is a struct that holds the placement configuration for the component

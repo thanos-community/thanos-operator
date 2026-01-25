@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"github.com/go-logr/logr"
+
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -16,9 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestquery.Options {
+func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config, logger logr.Logger) manifestquery.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, nil, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, nil, featureGate, in.Spec.Additional, logger)
 	var webOptions manifestquery.WebOptions
 	if in.Spec.WebConfig != nil {
 		webOptions = manifestquery.WebOptions{
@@ -58,11 +60,11 @@ func QueryNameFromParent(resourceName string) string {
 }
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
-func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestqueryfrontend.Options {
+func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config, logger logr.Logger) manifestqueryfrontend.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
 
 	frontend := in.Spec.QueryFrontend
-	opts := commonToOpts(&in, frontend.Replicas, labels, in.GetAnnotations(), frontend.CommonFields, nil, featureGate, frontend.Additional)
+	opts := commonToOpts(&in, frontend.Replicas, labels, in.GetAnnotations(), frontend.CommonFields, nil, featureGate, frontend.Additional, logger)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -88,9 +90,9 @@ func QueryFrontendNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config) manifestruler.Options {
+func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config, logger logr.Logger) manifestruler.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional, logger)
 	return manifestruler.Options{
 		Options:         opts,
 		ObjStoreSecret:  in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -115,7 +117,7 @@ func RulerNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec, featureGate featuregate.Config) manifestreceive.IngesterOptions {
+func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec, featureGate featuregate.Config, logger logr.Logger) manifestreceive.IngesterOptions {
 	labels := manifests.MergeLabels(in.GetLabels(), spec.Labels)
 	common := spec.CommonFields
 	additional := in.Spec.Ingester.Additional
@@ -124,7 +126,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, &in.Spec.StatefulSetFields, featureGate, additional)
+	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, &in.Spec.StatefulSetFields, featureGate, additional, logger)
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -168,10 +170,10 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 	return ingestOpts
 }
 
-func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate featuregate.Config) manifestreceive.RouterOptions {
+func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate featuregate.Config, logger logr.Logger) manifestreceive.RouterOptions {
 	router := in.Spec.Router
 	labels := manifests.MergeLabels(in.GetLabels(), router.Labels)
-	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional)
+	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional, logger)
 
 	ropts := manifestreceive.RouterOptions{
 		Options:           opts,
@@ -204,9 +206,9 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Config) manifestsstore.Options {
+func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Config, logger logr.Logger) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional, logger)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
 	if in.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
@@ -251,9 +253,9 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Con
 	return sops
 }
 
-func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) manifestscompact.Options {
+func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config, logger logr.Logger) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.Labels)
-	opts := commonToOpts(&in, 1, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, fg, in.Spec.Additional)
+	opts := commonToOpts(&in, 1, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, fg, in.Spec.Additional, logger)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
 	opts.PodManagementPolicy = string(ptr.Deref(in.Spec.PodManagementPolicy, ""))
@@ -369,6 +371,7 @@ func commonToOpts(
 	statefulSet *v1alpha1.StatefulSetFields,
 	featureGate featuregate.Config,
 	additional v1alpha1.Additional,
+	logger logr.Logger,
 ) manifests.Options {
 
 	return manifests.Options{
@@ -392,6 +395,7 @@ func commonToOpts(
 		},
 		StatefulSet:     statefulSetToOpts(statefulSet),
 		SecurityContext: common.SecurityContext,
+		Logger:          logger,
 	}
 }
 

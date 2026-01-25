@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -205,17 +206,39 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 }
 
 func queryFrontendArgs(opts Options) []string {
+	checker := version.NewChecker(opts.Logger, "query-frontend", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{
 		"query-frontend",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:%d", opts.QueryService, opts.Namespace, opts.QueryPort),
 		fmt.Sprintf("--query-frontend.log-queries-longer-than=%s", opts.LogQueriesLongerThan),
 		fmt.Sprintf("--query-range.split-interval=%s", opts.RangeSplitInterval),
-		fmt.Sprintf("--labels.split-interval=%s", opts.LabelsSplitInterval),
-		fmt.Sprintf("--query-range.max-retries-per-request=%d", opts.RangeMaxRetries),
-		fmt.Sprintf("--labels.max-retries-per-request=%d", opts.LabelsMaxRetries),
-		fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange),
-		"--cache-compression-type=snappy",
+	}
+
+	if opts.LabelsSplitInterval != "" {
+		if checker.CheckFeature(version.FeatureQueryFrontendLabelsSplit, "--labels.split-interval") {
+			args = append(args, fmt.Sprintf("--labels.split-interval=%s", opts.LabelsSplitInterval))
+		}
+	}
+
+	args = append(args, fmt.Sprintf("--query-range.max-retries-per-request=%d", opts.RangeMaxRetries))
+
+	if opts.LabelsMaxRetries > 0 {
+		if checker.CheckFeature(version.FeatureQueryFrontendLabelsRetries, "--labels.max-retries-per-request") {
+			args = append(args, fmt.Sprintf("--labels.max-retries-per-request=%d", opts.LabelsMaxRetries))
+		}
+	}
+
+	if opts.LabelsDefaultTimeRange != "" {
+		if checker.CheckFeature(version.FeatureQueryFrontendLabelsTimeRange, "--labels.default-time-range") {
+			args = append(args, fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange))
+		}
+	}
+
+	if checker.CheckFeature(version.FeatureCacheCompressionType, "--cache-compression-type") {
+		args = append(args, "--cache-compression-type=snappy")
 	}
 
 	if opts.ResponseCacheConfig.FromSecret != nil {

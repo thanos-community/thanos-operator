@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -276,6 +277,9 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 }
 
 func compactorArgsFrom(opts Options) []string {
+	checker := version.NewChecker(opts.Logger, "compact", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"compact"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
@@ -297,9 +301,9 @@ func compactorArgsFrom(opts Options) []string {
 	}
 
 	args = append(args, opts.RetentionOptions.toArgs()...)
-	args = append(args, opts.BlockConfig.toArgs()...)
-	args = append(args, opts.Compaction.toArgs()...)
-	args = append(args, opts.Downsampling.toArgs()...)
+	args = append(args, opts.BlockConfig.toArgsWithChecker(checker)...)
+	args = append(args, opts.Compaction.toArgsWithChecker(checker)...)
+	args = append(args, opts.Downsampling.toArgsWithChecker(checker)...)
 	args = append(args, opts.DebugConfig.toArgs()...)
 
 	return manifests.PruneEmptyArgs(args)
@@ -373,14 +377,16 @@ type BlockConfigOptions struct {
 	BlockViewerGlobalSyncTimeout *manifests.Duration
 }
 
-func (bo *BlockConfigOptions) toArgs() []string {
+func (bo *BlockConfigOptions) toArgsWithChecker(checker *version.Checker) []string {
 	var args []string
 	if bo == nil {
 		return args
 	}
 
 	if bo.BlockDiscoveryStrategy != nil {
-		args = append(args, fmt.Sprintf("--block-discovery-strategy=%s", *bo.BlockDiscoveryStrategy))
+		if checker == nil || checker.CheckFeature(version.FeatureBlockDiscoveryStrategy, "--block-discovery-strategy") {
+			args = append(args, fmt.Sprintf("--block-discovery-strategy=%s", *bo.BlockDiscoveryStrategy))
+		}
 	}
 	if bo.BlockFilesConcurrency != nil {
 		args = append(args, fmt.Sprintf("--block-files-concurrency=%d", *bo.BlockFilesConcurrency))
@@ -389,10 +395,14 @@ func (bo *BlockConfigOptions) toArgs() []string {
 		args = append(args, fmt.Sprintf("--block-meta-fetch-concurrency=%d", *bo.BlockMetaFetchConcurrency))
 	}
 	if bo.BlockViewerGlobalSyncInterval != nil {
-		args = append(args, fmt.Sprintf("--block-viewer.global.sync-block-interval=%s", string(*bo.BlockViewerGlobalSyncInterval)))
+		if checker == nil || checker.CheckFeature(version.FeatureBlockViewerGlobalSync, "--block-viewer.global.sync-block-interval") {
+			args = append(args, fmt.Sprintf("--block-viewer.global.sync-block-interval=%s", string(*bo.BlockViewerGlobalSyncInterval)))
+		}
 	}
 	if bo.BlockViewerGlobalSyncTimeout != nil {
-		args = append(args, fmt.Sprintf("--block-viewer.global.sync-block-timeout=%s", string(*bo.BlockViewerGlobalSyncTimeout)))
+		if checker == nil || checker.CheckFeature(version.FeatureBlockViewerGlobalSync, "--block-viewer.global.sync-block-timeout") {
+			args = append(args, fmt.Sprintf("--block-viewer.global.sync-block-timeout=%s", string(*bo.BlockViewerGlobalSyncTimeout)))
+		}
 	}
 	return args
 }
@@ -409,7 +419,7 @@ type CompactionOptions struct {
 	ConsistencyDelay *manifests.Duration `json:"blockConsistencyDelay,omitempty"`
 }
 
-func (co *CompactionOptions) toArgs() []string {
+func (co *CompactionOptions) toArgsWithChecker(checker *version.Checker) []string {
 	var args []string
 	if co == nil {
 		return args
@@ -419,10 +429,14 @@ func (co *CompactionOptions) toArgs() []string {
 		args = append(args, fmt.Sprintf("--compact.concurrency=%d", *co.CompactConcurrency))
 	}
 	if co.CompactBlockFetchConcurrency != nil {
-		args = append(args, fmt.Sprintf("--compact.blocks-fetch-concurrency=%d", *co.CompactBlockFetchConcurrency))
+		if checker == nil || checker.CheckFeature(version.FeatureCompactBlockFetchConcurrency, "--compact.blocks-fetch-concurrency") {
+			args = append(args, fmt.Sprintf("--compact.blocks-fetch-concurrency=%d", *co.CompactBlockFetchConcurrency))
+		}
 	}
 	if co.CompactCleanupInterval != nil {
-		args = append(args, fmt.Sprintf("--compact.cleanup-interval=%s", string(*co.CompactCleanupInterval)))
+		if checker == nil || checker.CheckFeature(version.FeatureCompactCleanupInterval, "--compact.cleanup-interval") {
+			args = append(args, fmt.Sprintf("--compact.cleanup-interval=%s", string(*co.CompactCleanupInterval)))
+		}
 	}
 	if co.ConsistencyDelay != nil {
 		args = append(args, fmt.Sprintf("--consistency-delay=%s", string(*co.ConsistencyDelay)))
@@ -437,7 +451,7 @@ type DownsamplingOptions struct {
 	Concurrency *int32
 }
 
-func (do *DownsamplingOptions) toArgs() []string {
+func (do *DownsamplingOptions) toArgsWithChecker(checker *version.Checker) []string {
 	var args []string
 	if do == nil {
 		return args
@@ -447,7 +461,9 @@ func (do *DownsamplingOptions) toArgs() []string {
 		args = append(args, "--downsampling.disable")
 	}
 	if do.Concurrency != nil {
-		args = append(args, fmt.Sprintf("--downsample.concurrency=%d", *do.Concurrency))
+		if checker == nil || checker.CheckFeature(version.FeatureDownsampleConcurrency, "--downsample.concurrency") {
+			args = append(args, fmt.Sprintf("--downsample.concurrency=%d", *do.Concurrency))
+		}
 	}
 	return args
 }

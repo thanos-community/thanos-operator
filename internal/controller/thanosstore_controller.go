@@ -184,13 +184,13 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.featureGate)}
+		return []manifests.Buildable{storeV1Alpha1ToOptions(store, r.featureGate, r.logger)}
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		storeShardOpts := storeV1Alpha1ToOptions(store, r.featureGate)
+		storeShardOpts := storeV1Alpha1ToOptions(store, r.featureGate, r.logger)
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",

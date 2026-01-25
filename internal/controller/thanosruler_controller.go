@@ -232,7 +232,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate)
+	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate, r.logger)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

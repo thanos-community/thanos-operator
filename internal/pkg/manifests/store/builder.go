@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -326,6 +327,9 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 }
 
 func storeArgsFrom(opts Options) []string {
+	checker := version.NewChecker(opts.Logger, "store", opts.Owner, opts.GetContainerImage())
+	checker.WarnVersionUnknown()
+
 	args := []string{"store"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
@@ -338,17 +342,34 @@ func storeArgsFrom(opts Options) []string {
 		fmt.Sprintf("--max-time=%s", string(opts.Max)),
 	)
 
-	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
+	if opts.StoreLimitsOpts.StoreLimitsRequestSamples > 0 || opts.StoreLimitsOpts.StoreLimitsRequestSeries > 0 {
+		if checker.CheckFeature(version.FeatureStoreLimitsRequestSamples, "--store.limits.request-samples") {
+			args = append(args, opts.StoreLimitsOpts.ToFlags()...)
+		}
+	}
+
 	if opts.BlockConfigOptions != nil {
-		args = append(args, opts.BlockConfigOptions.toArgs()...)
+		if opts.BlockConfigOptions.BlockDiscoveryStrategy != nil {
+			if checker.CheckFeature(version.FeatureBlockDiscoveryStrategy, "--block-discovery-strategy") {
+				args = append(args, opts.BlockConfigOptions.toArgs()...)
+			}
+		} else {
+			args = append(args, opts.BlockConfigOptions.toArgs()...)
+		}
 	}
 
 	if opts.IndexHeaderOptions != nil {
 		if opts.IndexHeaderOptions.EnableLazyReader {
-			args = append(args, "--store.enable-index-header-lazy-reader")
+			if checker.CheckFeature(version.FeatureStoreEnableIndexHeaderLazyReader, "--store.enable-index-header-lazy-reader") {
+				args = append(args, "--store.enable-index-header-lazy-reader")
+			}
 		}
 		args = append(args, fmt.Sprintf("--store.index-header-lazy-reader-idle-timeout=%s", string(opts.IndexHeaderOptions.LazyReaderIdleTimeout)))
-		args = append(args, fmt.Sprintf("--store.index-header-lazy-download-strategy=%s", opts.IndexHeaderOptions.LazyDownloadStrategy))
+		if opts.IndexHeaderOptions.LazyDownloadStrategy != "" {
+			if checker.CheckFeature(version.FeatureStoreIndexHeaderLazyDownload, "--store.index-header-lazy-download-strategy") {
+				args = append(args, fmt.Sprintf("--store.index-header-lazy-download-strategy=%s", opts.IndexHeaderOptions.LazyDownloadStrategy))
+			}
+		}
 	}
 
 	if opts.IndexCacheConfig.FromSecret != nil {
