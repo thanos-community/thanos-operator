@@ -68,19 +68,12 @@ type ObjectStatusReconciler struct {
 
 // NewObjectStatusReconciler returns a reconciler for ThanosQuery resources.
 func NewObjectStatusReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ObjectStatusReconciler {
-	handler := handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger)
-	featureGates := conf.FeatureGate.ToGVK()
-	if len(featureGates) > 0 {
-		handler.SetFeatureGates(featureGates)
-	}
-
 	return &ObjectStatusReconciler{
-		Client: client,
-		Scheme: scheme,
-		logger: conf.InstrumentationConfig.Logger,
-		// metrics:  controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry),
+		Client:   client,
+		Scheme:   scheme,
+		logger:   conf.InstrumentationConfig.Logger,
 		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handler,
+		handler:  handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
 	}
 }
 

@@ -8,8 +8,8 @@ import (
 )
 
 type CommonMetrics struct {
-	FeatureGatesEnabled *prometheus.GaugeVec
-	Paused              *prometheus.GaugeVec
+	FeatureGatesInfo *prometheus.GaugeVec
+	Paused           *prometheus.GaugeVec
 }
 
 type ThanosQueryMetrics struct {
@@ -61,10 +61,10 @@ var (
 func NewCommonMetrics(reg prometheus.Registerer) *CommonMetrics {
 	commonMetricsOnce.Do(func() {
 		commonMetricsInstance = &CommonMetrics{
-			FeatureGatesEnabled: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
-				Name: "thanos_operator_feature_gates_enabled",
-				Help: "Feature gates enabled for ThanosOperator",
-			}, []string{"component"}),
+			FeatureGatesInfo: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
+				Name: "thanos_operator_feature_gate_enabled_info",
+				Help: "Info metric showing enabled feature gates",
+			}, []string{"feature"}),
 			Paused: promauto.With(reg).NewGaugeVec(prometheus.GaugeOpts{
 				Name: "thanos_operator_paused",
 				Help: "Paused state of ThanosOperator",

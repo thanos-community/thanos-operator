@@ -264,14 +264,23 @@ func main() {
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
+	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
+	featureGateConfig := enabledFeatures.ToFeatureGate()
+	if featureGateConfig.ServiceMonitorEnabled() {
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
+	}
+	if featureGateConfig.PrometheusRuleEnabled() {
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
+	}
+
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: enabledFeatures.ToFeatureGate(),
+			FeatureGate: featureGateConfig,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
 				MetricsRegistry: ctrlmetrics.Registry,
-				CommonMetrics:   metrics.NewCommonMetrics(ctrlmetrics.Registry),
+				CommonMetrics:   commonMetrics,
 			},
 		}
 	}
