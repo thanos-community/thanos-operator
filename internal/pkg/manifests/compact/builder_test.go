@@ -198,33 +198,18 @@ func TestCompactionOptions_toArgs(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			name: "vertical compaction enabled",
+			name: "no dedup labels means no vertical compaction",
 			opts: &CompactionOptions{
-				EnableVerticalCompaction: ptr.To(true),
+				CompactConcurrency: ptr.To(int32(2)),
 			},
-			expected: []string{"--compact.enable-vertical-compaction"},
+			expected: []string{"--compact.concurrency=2"},
 		},
 		{
-			name: "vertical compaction disabled",
-			opts: &CompactionOptions{
-				EnableVerticalCompaction: ptr.To(false),
-			},
-			expected: []string{},
-		},
-		{
-			name: "vertical compaction with other options",
-			opts: &CompactionOptions{
-				CompactConcurrency:       ptr.To(int32(2)),
-				EnableVerticalCompaction: ptr.To(true),
-			},
-			expected: []string{"--compact.concurrency=2", "--compact.enable-vertical-compaction"},
-		},
-		{
-			name: "deduplication replica labels",
+			name: "deduplication replica labels enables vertical compaction",
 			opts: &CompactionOptions{
 				DeduplicationReplicaLabels: []string{"replica", "prometheus_replica"},
 			},
-			expected: []string{"--deduplication.replica-label=replica", "--deduplication.replica-label=prometheus_replica"},
+			expected: []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica", "--deduplication.replica-label=prometheus_replica"},
 		},
 		{
 			name: "deduplication func penalty",
@@ -241,9 +226,8 @@ func TestCompactionOptions_toArgs(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			name: "vertical compaction with deduplication",
+			name: "deduplication with replica labels and func",
 			opts: &CompactionOptions{
-				EnableVerticalCompaction:   ptr.To(true),
 				DeduplicationReplicaLabels: []string{"replica"},
 				DeduplicationFunc:          ptr.To("penalty"),
 			},
