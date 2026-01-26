@@ -416,7 +416,7 @@ type CompactionOptions struct {
 }
 
 func (co *CompactionOptions) toArgs() []string {
-	var args []string
+	args := []string{}
 	if co == nil {
 		return args
 	}
