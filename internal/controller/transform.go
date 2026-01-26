@@ -324,7 +324,6 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
-			EnableVerticalCompaction:     in.CRD.Spec.CompactConfig.EnableVerticalCompaction,
 			DeduplicationReplicaLabels:   in.CRD.Spec.CompactConfig.DeduplicationReplicaLabels,
 			DeduplicationFunc:            in.CRD.Spec.CompactConfig.DeduplicationFunc,
 		}
