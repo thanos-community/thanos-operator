@@ -118,19 +118,14 @@ type CompactConfig struct {
 	// +kubebuilder:default="30m"
 	// +kubebuilder:validation:Optional
 	ConsistencyDelay *Duration `json:"blockConsistencyDelay,omitempty"`
-	// EnableVerticalCompaction enables vertical compaction, which compacts multiple overlapping blocks into one.
-	// This is useful for deduplicating samples when using Thanos Receive or Prometheus with high availability.
-	// +kubebuilder:default=false
-	// +kubebuilder:validation:Optional
-	EnableVerticalCompaction *bool `json:"enableVerticalCompaction,omitempty"`
 	// DeduplicationReplicaLabels is a list of labels to treat as replica labels for deduplication.
 	// These labels will be ignored when merging blocks during vertical compaction.
 	// Commonly set to "replica" for Prometheus HA setups.
+	// When set, vertical compaction will be automatically enabled.
 	// This is an experimental feature.
 	// +kubebuilder:validation:Optional
 	DeduplicationReplicaLabels []string `json:"deduplicationReplicaLabels,omitempty"`
 	// DeduplicationFunc specifies the deduplication algorithm to use.
-	// Valid values are "" (default, 1:1 deduplication) or "penalty" (more complex deduplication).
 	// This is an experimental feature.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum="";penalty

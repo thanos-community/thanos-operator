@@ -263,11 +263,6 @@ func (in *CompactConfig) DeepCopyInto(out *CompactConfig) {
 		*out = new(Duration)
 		**out = **in
 	}
-	if in.EnableVerticalCompaction != nil {
-		in, out := &in.EnableVerticalCompaction, &out.EnableVerticalCompaction
-		*out = new(bool)
-		**out = **in
-	}
 	if in.DeduplicationReplicaLabels != nil {
 		in, out := &in.DeduplicationReplicaLabels, &out.DeduplicationReplicaLabels
 		*out = make([]string, len(*in))
