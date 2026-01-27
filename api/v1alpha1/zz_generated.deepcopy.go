@@ -567,6 +567,20 @@ func (in *PodDisruptionBudgetConfig) DeepCopy() *PodDisruptionBudgetConfig {
 func (in *QueryFrontendSpec) DeepCopyInto(out *QueryFrontendSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Annotations != nil {
+		in, out := &in.Annotations, &out.Annotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.QueryLabelSelector != nil {
 		in, out := &in.QueryLabelSelector, &out.QueryLabelSelector
 		*out = new(v1.LabelSelector)

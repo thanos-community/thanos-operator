@@ -74,6 +74,16 @@ type QueryFrontendSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	Replicas int32 `json:"replicas,omitempty"`
+	// Labels are additional labels to add to the Query Frontend component.
+	// These labels will be merged with labels inherited from the parent ThanosQuery.
+	// In case of conflicts, these labels take precedence.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations are additional annotations to add to the Query Frontend component.
+	// These annotations will be merged with annotations inherited from the parent ThanosQuery.
+	// In case of conflicts, these annotations take precedence.
+	// +kubebuilder:validation:Optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// CompressResponses enables response compression
 	// +kubebuilder:default=true
 	CompressResponses bool `json:"compressResponses,omitempty"`
