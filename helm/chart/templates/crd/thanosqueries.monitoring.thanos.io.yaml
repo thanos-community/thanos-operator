@@ -9148,6 +9148,14 @@ spec:
                                                         x-kubernetes-list-type: atomic
                                                 type: object
                                         type: object
+                                    annotations:
+                                        additionalProperties:
+                                            type: string
+                                        description: |-
+                                            Annotations are additional annotations to add to the Query Frontend component.
+                                            These annotations will be merged with annotations inherited from the parent ThanosQuery.
+                                            In case of conflicts, these annotations take precedence.
+                                        type: object
                                     baseImage:
                                         description: Base container image (without tags) to use for the Thanos components deployed via operator.
                                         type: string
@@ -9187,6 +9195,14 @@ spec:
                                             type: object
                                             x-kubernetes-map-type: atomic
                                         type: array
+                                    labels:
+                                        additionalProperties:
+                                            type: string
+                                        description: |-
+                                            Labels are additional labels to add to the Query Frontend component.
+                                            These labels will be merged with labels inherited from the parent ThanosQuery.
+                                            In case of conflicts, these labels take precedence.
+                                        type: object
                                     labelsDefaultTimeRange:
                                         description: LabelsDefaultTimeRange sets the default time range for label queries
                                         pattern: ^(-?(0|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)|([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})))$
