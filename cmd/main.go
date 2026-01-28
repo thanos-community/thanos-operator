@@ -264,6 +264,10 @@ func main() {
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
+	const (
+		defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
+	)
+
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
 	featureGateConfig := enabledFeatures.ToFeatureGate()
 	if featureGateConfig.ServiceMonitorEnabled() {
@@ -271,6 +275,12 @@ func main() {
 	}
 	if featureGateConfig.PrometheusRuleEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
+	}
+	if featureGateConfig.KubeResourceSyncEnabled() {
+		featureGateConfig.KubeResourceSyncImage = defaultKubeResourceSyncImage
+		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
+			featureGateConfig.KubeResourceSyncImage = image
+		}
 	}
 
 	buildConfig := func(component string) controller.Config {
