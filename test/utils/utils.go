@@ -858,3 +858,51 @@ func ValidateIsNamedPodDisruptionBudget(t *testing.T, obj client.Object, b manif
 	ValidateNameAndNamespace(t, obj, b.GetGeneratedResourceName(), namespace)
 	ValidateLabelsMatch(t, obj, matching)
 }
+
+// VerifyPodAnnotation verifies that at least one pod for the given deployment has the specified annotation
+func VerifyPodAnnotation(c client.Client, deploymentName, namespace, annotationKey string) bool {
+	podList := &corev1.PodList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels(map[string]string{
+			manifests.InstanceLabel: deploymentName,
+		}),
+	}
+
+	if err := c.List(context.Background(), podList, listOpts...); err != nil {
+		return false
+	}
+
+	for _, pod := range podList.Items {
+		if pod.Annotations != nil {
+			if _, exists := pod.Annotations[annotationKey]; exists {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// GetPodAnnotationValue returns the value of the specified annotation from any pod in the deployment
+func GetPodAnnotationValue(c client.Client, deploymentName, namespace, annotationKey string) (string, bool) {
+	podList := &corev1.PodList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels(map[string]string{
+			manifests.InstanceLabel: deploymentName,
+		}),
+	}
+
+	if err := c.List(context.Background(), podList, listOpts...); err != nil {
+		return "", false
+	}
+
+	for _, pod := range podList.Items {
+		if pod.Annotations != nil {
+			if value, exists := pod.Annotations[annotationKey]; exists {
+				return value, true
+			}
+		}
+	}
+	return "", false
+}
