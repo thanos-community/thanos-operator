@@ -433,8 +433,6 @@ _Appears in:_
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
 
 
-
-
 #### ObjectStorageConfig
 
 _Underlying type:_ _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#secretkeyselector-v1-core)_
