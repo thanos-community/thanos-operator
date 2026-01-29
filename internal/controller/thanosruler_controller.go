@@ -356,7 +356,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			// Apply tenant labels if configured
 			var tenantValue string
 			if ruler.Spec.RuleTenancyConfig != nil {
-				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
+				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 				value, exists := cfgmap.Labels[tenantValueLabel]
 				if !exists {
 					r.logger.Info("tenant value label key not found in ConfigMap labels",
@@ -455,7 +455,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		// Apply tenant labels if configured
 		var tenantValue string
 		if ruler.Spec.RuleTenancyConfig != nil {
-			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantValueLabel
+			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 			value, exists := rule.Labels[tenantValueLabel]
 			if !exists {
 				r.logger.Info("tenant value label key not found in PrometheusRule labels",
@@ -736,7 +736,7 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 		return groups
 	}
 
-	tenantLabel := tenancyConfig.TenantLabel
+	tenantLabel := tenancyConfig.EnforcedTenantIdentifier
 
 	for i, group := range groups {
 		// Set the tenant label on each rule group
