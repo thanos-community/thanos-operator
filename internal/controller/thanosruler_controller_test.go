@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -115,8 +116,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						TenantLabel:      "tenant",
-						TenantValueLabel: "operator.thanos.io/tenant",
+						EnforcedTenantIdentifier: ptr.To("tenant"),
+						TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
 					},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
@@ -395,8 +396,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						TenantLabel:      "tenant_id",
-						TenantValueLabel: "tenant",
+						EnforcedTenantIdentifier: ptr.To("tenant_id"),
+						TenantSpecifierLabel:     ptr.To("tenant"),
 					},
 				},
 			}
@@ -562,8 +563,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						TenantLabel:      "tenant_id",
-						TenantValueLabel: "app.tenant",
+						EnforcedTenantIdentifier: ptr.To("tenant_id"),
+						TenantSpecifierLabel:     ptr.To("app.tenant"),
 					},
 				},
 			}

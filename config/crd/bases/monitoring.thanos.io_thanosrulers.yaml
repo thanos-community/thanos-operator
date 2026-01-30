@@ -5044,21 +5044,16 @@ spec:
               ruleTenancyConfig:
                 description: RuleTenancyConfig is the configuration for the rule tenancy.
                 properties:
-                  tenantLabel:
+                  enforcedTenantIdentifier:
                     description: |-
-                      TenantLabel is the label that will be used to identify the tenant.
-                      Setting this value will mean, that all rules configured on ThanosRuler will
-                      have this labelname (with value to set the tenant label value).
-                      effectively <tenantLabelName> = <value of tenantValueLabel key>
+                      EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy
+                      For example if enforcedTenantIdentifier: "tenant_id" then up{} becomes up{tenant_id={TenantSpecifierLabelValue}
                     type: string
-                  tenantValueLabel:
-                    description: |-
-                      TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label
-                      for particular rules configured on ThanosRuler.
+                  tenantSpecifierLabel:
+                    description: TenantSpecifierLabel is the key of the label of the
+                      ConfigMap or PrometheusRule that will be used to set the value
+                      of the EnforcedTenantIdentifier
                     type: string
-                required:
-                - tenantLabel
-                - tenantValueLabel
                 type: object
               securityContext:
                 description: |-
