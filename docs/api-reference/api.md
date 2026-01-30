@@ -626,8 +626,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `tenantLabel` _string_ | TenantLabel is the label that will be used to identify the tenant.<br />Setting this value will mean, that all rules configured on ThanosRuler will<br />have this labelname (with value to set the tenant label value).<br />effectively <tenantLabelName> = <value of tenantValueLabel key> |  | Required: \{\} <br /> |
-| `tenantValueLabel` _string_ | TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label<br />for particular rules configured on ThanosRuler. |  | Required: \{\} <br /> |
+| `enforcedTenantIdentifier` _string_ | EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy<br />For example if enforcedTenantIdentifier: "tenant_id" then up\{\} becomes up\{tenant_id=\{TenantSpecifierLabelValue\} |  | Optional: \{\} <br /> |
+| `tenantSpecifierLabel` _string_ | TenantSpecifierLabel is the key of the label of the ConfigMapPrometheusRule that will be used to set the value of the EnforcedTenantIdentifier |  | Optional: \{\} <br /> |
 
 
 #### ShardingConfig
