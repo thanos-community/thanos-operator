@@ -91,11 +91,12 @@ type ThanosRulerSpec struct {
 
 type RuleTenancyConfig struct {
 	// EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy
-	// For example if  enforcedTenantIdentifier: tenant_id  then up{} becomes up{tenant_id={valueUnderneathStillToBeNamedProperly}
-	// default "tenant_id"
-	EnforcedTenantIdentifier string `json:"EnforcedTenantIdentifier,omitempty"`
+	// For example if enforcedTenantIdentifier: "tenant_id" then up{} becomes up{tenant_id={TenantSpecifierLabelValue}
+	// +kubebuilder:default "tenant_id"
+	// +kubebuilder:validation:Optional
+	EnforcedTenantIdentifier *string `json:"enforcedTenantIdentifier,omitempty"`
 	// TenantSpecifierLabel is the key of the label of the ConfigMapPrometheusRule that will be used to set the value of the EnforcedTenantIdentifier
-	// default `operator.thanos.io/tenant`
+	// +kubebuilder:default `operator.thanos.io/tenant`
 	// +kubebuilder:validation:Optional
 	TenantSpecifierLabel string `json:"tenantSpecifierLabel,omitempty"`
 }

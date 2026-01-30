@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/smithy-go/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -115,7 +116,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: "tenant",
+						EnforcedTenantIdentifier: ptr.String("tenant"),
 						TenantSpecifierLabel:     "operator.thanos.io/tenant",
 					},
 					Additional: monitoringthanosiov1alpha1.Additional{
@@ -395,7 +396,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: "tenant_id",
+						EnforcedTenantIdentifier: ptr.String("tenant_id"),
 						TenantSpecifierLabel:     "tenant",
 					},
 				},
@@ -562,7 +563,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: "tenant_id",
+						EnforcedTenantIdentifier: ptr.String("tenant_id"),
 						TenantSpecifierLabel:     "app.tenant",
 					},
 				},

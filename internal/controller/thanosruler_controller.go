@@ -743,12 +743,12 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 		if group.Labels == nil {
 			group.Labels = make(map[string]string)
 		}
-		group.Labels[tenantLabel] = tenantValue
+		group.Labels[*tenantLabel] = tenantValue
 
 		// Enforce tenant label in PromQL expressions
 		for j, ru := range group.Rules {
 			exprStr := ru.Expr.String()
-			expr, err := enforceTenantLabelInPromQL(exprStr, tenantLabel, tenantValue)
+			expr, err := enforceTenantLabelInPromQL(exprStr, *tenantLabel, tenantValue)
 			if err != nil {
 				r.logger.Error(err, "failed to enforce tenant label in PromQL",
 					"expr", exprStr,
