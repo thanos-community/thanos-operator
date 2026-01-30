@@ -474,7 +474,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 			value, exists := rule.Labels[*tenantValueLabel]
 			if !exists {
 				r.logger.Info("tenant value label key not found in PrometheusRule labels",
-					"tenantValueLabel", tenantValueLabel,
+					"tenantValueLabel", *tenantValueLabel,
 					"prometheusRule", rule.Name)
 				tenantRuleGroupCount[""] += len(groups)
 			} else {
