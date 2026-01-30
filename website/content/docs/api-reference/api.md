@@ -637,7 +637,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enforcedTenantIdentifier` _string_ | EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy<br />For example if enforcedTenantIdentifier: "tenant_id" then up\{\} becomes up\{tenant_id=\{TenantSpecifierLabelValue\} |  | Optional: \{\} <br /> |
-| `tenantSpecifierLabel` _string_ | TenantSpecifierLabel is the key of the label of the ConfigMapPrometheusRule that will be used to set the value of the EnforcedTenantIdentifier |  | Optional: \{\} <br /> |
+| `tenantSpecifierLabel` _string_ | TenantSpecifierLabel is the key of the label of the ConfigMap or PrometheusRule that will be used to set the value of the EnforcedTenantIdentifier |  | Optional: \{\} <br /> |
 
 
 #### ShardingConfig

@@ -56,6 +56,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var requiredQueryServiceLabels = map[string]string{
+	manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
+}
+
+var defaultRuleLabels = map[string]string{
+	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+}
+
 // ThanosRulerReconciler reconciles a ThanosRuler object
 type ThanosRulerReconciler struct {
 	client.Client
@@ -357,10 +366,13 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			var tenantValue string
 			if ruler.Spec.RuleTenancyConfig != nil {
 				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
-				value, exists := cfgmap.Labels[tenantValueLabel]
+				if tenantValueLabel == nil {
+					tenantValueLabel = ptr.To("operator.thanos.io/tenant")
+				}
+				value, exists := cfgmap.Labels[*tenantValueLabel]
 				if !exists {
 					r.logger.Info("tenant value label key not found in ConfigMap labels",
-						"tenantValueLabel", tenantValueLabel,
+						"tenantValueLabel", *tenantValueLabel,
 						"configMap", cfgmap.Name)
 					tenantRuleGroupCount[""] += len(groups)
 				} else {
@@ -456,7 +468,10 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		var tenantValue string
 		if ruler.Spec.RuleTenancyConfig != nil {
 			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
-			value, exists := rule.Labels[tenantValueLabel]
+			if tenantValueLabel == nil {
+				tenantValueLabel = ptr.To("operator.thanos.io/tenant")
+			}
+			value, exists := rule.Labels[*tenantValueLabel]
 			if !exists {
 				r.logger.Info("tenant value label key not found in PrometheusRule labels",
 					"tenantValueLabel", tenantValueLabel,
@@ -649,15 +664,6 @@ func (r *ThanosRulerReconciler) isQueueableQueryService(obj client.Object) bool 
 	return isGRPCSvc
 }
 
-var requiredQueryServiceLabels = map[string]string{
-	manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
-	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
-}
-
-var defaultRuleLabels = map[string]string{
-	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
-}
-
 // Add this new function to handle PrometheusRule events
 func (r *ThanosRulerReconciler) enqueueForPrometheusRule() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -756,7 +762,7 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 			if err != nil {
 				r.logger.Error(err, "failed to enforce tenant label in PromQL",
 					"expr", exprStr,
-					"tenantLabel", tenantLabel,
+					"tenantLabel", *tenantLabel,
 					"tenantValue", tenantValue,
 					"ruleName", ruleName)
 				continue
