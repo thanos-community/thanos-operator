@@ -5051,8 +5051,8 @@ spec:
                     type: string
                   tenantSpecifierLabel:
                     description: TenantSpecifierLabel is the key of the label of the
-                      ConfigMapPrometheusRule that will be used to set the value of
-                      the EnforcedTenantIdentifier
+                      ConfigMap or PrometheusRule that will be used to set the value
+                      of the EnforcedTenantIdentifier
                     type: string
                 type: object
               securityContext:
