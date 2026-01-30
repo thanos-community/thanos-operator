@@ -737,12 +737,16 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 	}
 
 	tenantLabel := tenancyConfig.EnforcedTenantIdentifier
+	if tenantLabel == nil {
+		tenantLabel = ptr.To("tenant_id")
+	}
 
 	for i, group := range groups {
 		// Set the tenant label on each rule group
 		if group.Labels == nil {
 			group.Labels = make(map[string]string)
 		}
+
 		group.Labels[*tenantLabel] = tenantValue
 
 		// Enforce tenant label in PromQL expressions

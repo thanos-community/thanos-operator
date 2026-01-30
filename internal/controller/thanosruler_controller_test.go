@@ -22,7 +22,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/smithy-go/ptr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -36,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -116,7 +116,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.String("tenant"),
+						EnforcedTenantIdentifier: ptr.To("tenant"),
 						TenantSpecifierLabel:     "operator.thanos.io/tenant",
 					},
 					Additional: monitoringthanosiov1alpha1.Additional{
@@ -396,7 +396,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.String("tenant_id"),
+						EnforcedTenantIdentifier: ptr.To("tenant_id"),
 						TenantSpecifierLabel:     "tenant",
 					},
 				},
@@ -563,7 +563,7 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.String("tenant_id"),
+						EnforcedTenantIdentifier: ptr.To("tenant_id"),
 						TenantSpecifierLabel:     "app.tenant",
 					},
 				},

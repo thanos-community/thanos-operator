@@ -95,7 +95,7 @@ type RuleTenancyConfig struct {
 	// +kubebuilder:default "tenant_id"
 	// +kubebuilder:validation:Optional
 	EnforcedTenantIdentifier *string `json:"enforcedTenantIdentifier,omitempty"`
-	// TenantSpecifierLabel is the key of the label of the ConfigMapPrometheusRule that will be used to set the value of the EnforcedTenantIdentifier
+	// TenantSpecifierLabel is the key of the label of the ConfigMap or PrometheusRule that will be used to set the value of the EnforcedTenantIdentifier
 	// +kubebuilder:default `operator.thanos.io/tenant`
 	// +kubebuilder:validation:Optional
 	TenantSpecifierLabel string `json:"tenantSpecifierLabel,omitempty"`
