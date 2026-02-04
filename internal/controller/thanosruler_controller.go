@@ -65,6 +65,9 @@ var defaultRuleLabels = map[string]string{
 	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
+const defaultTenantSpecifier string = "operator.thanos.io/tenant"
+const defaultTenantIdentifier string = "tenant_id"
+
 // ThanosRulerReconciler reconciles a ThanosRuler object
 type ThanosRulerReconciler struct {
 	client.Client
@@ -367,7 +370,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			if ruler.Spec.RuleTenancyConfig != nil {
 				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 				if tenantValueLabel == nil {
-					tenantValueLabel = ptr.To("operator.thanos.io/tenant")
+					tenantValueLabel = ptr.To(defaultTenantSpecifier)
 				}
 				value, exists := cfgmap.Labels[*tenantValueLabel]
 				if !exists {
@@ -469,7 +472,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		if ruler.Spec.RuleTenancyConfig != nil {
 			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 			if tenantValueLabel == nil {
-				tenantValueLabel = ptr.To("operator.thanos.io/tenant")
+				tenantValueLabel = ptr.To(defaultTenantSpecifier)
 			}
 			value, exists := rule.Labels[*tenantValueLabel]
 			if !exists {
@@ -744,7 +747,7 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 
 	tenantLabel := tenancyConfig.EnforcedTenantIdentifier
 	if tenantLabel == nil {
-		tenantLabel = ptr.To("tenant_id")
+		tenantLabel = ptr.To(defaultTenantIdentifier)
 	}
 
 	for i, group := range groups {
