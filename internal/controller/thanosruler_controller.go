@@ -372,10 +372,11 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 				if tenantValueLabel == nil {
 					tenantValueLabel = ptr.To(defaultTenantSpecifier)
 				}
-				value, exists := cfgmap.Labels[*tenantValueLabel]
+				tvl := *tenantValueLabel
+				value, exists := cfgmap.Labels[tvl]
 				if !exists {
 					r.logger.Info("tenant value label key not found in ConfigMap labels",
-						"tenantValueLabel", *tenantValueLabel,
+						"tenantValueLabel", tvl,
 						"configMap", cfgmap.Name)
 					tenantRuleGroupCount[""] += len(groups)
 				} else {
@@ -474,10 +475,11 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 			if tenantValueLabel == nil {
 				tenantValueLabel = ptr.To(defaultTenantSpecifier)
 			}
-			value, exists := rule.Labels[*tenantValueLabel]
+			tvl := *tenantValueLabel
+			value, exists := rule.Labels[tvl]
 			if !exists {
 				r.logger.Info("tenant value label key not found in PrometheusRule labels",
-					"tenantValueLabel", *tenantValueLabel,
+					"tenantValueLabel", tvl,
 					"prometheusRule", rule.Name)
 				tenantRuleGroupCount[""] += len(groups)
 			} else {
