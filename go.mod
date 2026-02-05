@@ -6,7 +6,7 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/go-logr/logr v1.4.3
 	github.com/golang/snappy v1.0.0
-	github.com/onsi/ginkgo/v2 v2.28.0
+	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/prometheus-community/prom-label-proxy v0.12.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0
