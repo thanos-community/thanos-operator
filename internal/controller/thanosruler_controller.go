@@ -43,7 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -63,7 +63,7 @@ type ThanosRulerReconciler struct {
 
 	logger   logr.Logger
 	metrics  controllermetrics.ThanosRulerMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool

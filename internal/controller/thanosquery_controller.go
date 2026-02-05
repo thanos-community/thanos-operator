@@ -44,7 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,7 +62,7 @@ type ThanosQueryReconciler struct {
 
 	logger   logr.Logger
 	metrics  controllermetrics.ThanosQueryMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool

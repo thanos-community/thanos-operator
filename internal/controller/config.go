@@ -3,10 +3,9 @@ package controller
 import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
-	"k8s.io/client-go/tools/record"
-
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
+	"k8s.io/client-go/tools/events"
 )
 
 // Config holds the configuration for all controllers.
@@ -20,7 +19,7 @@ type Config struct {
 // InstrumentationConfig contains the common instrumentation configuration for all controllers.
 type InstrumentationConfig struct {
 	Logger        logr.Logger
-	EventRecorder record.EventRecorder
+	EventRecorder events.EventRecorder
 
 	MetricsRegistry prometheus.Registerer
 

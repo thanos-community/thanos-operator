@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/client-go/tools/events"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -40,7 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,7 +63,7 @@ type ThanosReceiveReconciler struct {
 
 	logger   logr.Logger
 	metrics  controllermetrics.ThanosReceiveMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool

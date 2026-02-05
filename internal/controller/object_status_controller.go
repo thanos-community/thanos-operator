@@ -25,7 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
@@ -61,7 +61,7 @@ type ObjectStatusReconciler struct {
 
 	logger logr.Logger
 	// metrics  controllermetrics.ThanosQueryMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler *handlers.Handler
 }
