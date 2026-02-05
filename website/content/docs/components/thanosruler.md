@@ -25,7 +25,7 @@ Thanos Ruler performs several key functions:
 
 #### Stateful Mode
 
-Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is default and takes precedence over any other mode if configured. Setting `objectStorageConfig` on the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) enables stateful mode. When running in this mode, the Thanos Rulers Service will make itself available for discovery as a Thanos Store API endpoint. It does this by setting the label `operator.thanos.io/store-api: "true"` on the Service.
+Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is default and takes precedence over any other mode if configured. Setting `objectStorageConfig` on the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) enables stateful mode. When running in this mode, the Thanos Ruler's Service will make itself available for discovery as a Thanos gRPC StoreAPI endpoint. It does this by setting the label `operator.thanos.io/store-api: "true"` on the Service.
 
 ### Rule Discovery
 
@@ -35,7 +35,9 @@ Once discovered, these resources are written to one or more `ConfigMaps` owned b
 
 ### Tenancy
 
-The controller can optionally enforce tenancy on the discovered rules. This allows end users to self-service and manage their own `PrometheusRule` objects without interfering with other tenants. The controller will inject the tenant into the discovered rules. Configuration is managed as configured via the [spec](https://thanos-operator.dev/docs/api-reference/api.md/#ruletenancyconfig). The `enforcedTenantIdentifier` field (default `tenant_id`) sets the identifier (a Prometheus label key) to inject into the rules. The `tenantSpecifierLabel` field (default `operator.thanos.io/tenant`) sets the label key on the objects to read the tenant value from.
+The controller can optionally enforce tenancy on the discovered rules. This allows end users to manage their own tenanted `PrometheusRule` objects without interfering with other tenants. The controller will inject the tenant into the discovered rules by enforcing the tenant label on each of the rule expressions and also adding a rulegroup label to the rule config, so that the new series retains tenancy information.
+
+Configuration is managed as configured via the [spec](https://thanos-operator.dev/docs/api-reference/api.md/#ruletenancyconfig). The `enforcedTenantIdentifier` field (default `tenant_id`) sets the identifier (a Prometheus label key) to inject into the rules. The `tenantSpecifierLabel` field (default `operator.thanos.io/tenant`) sets the label key on the objects to read the tenant value from.
 
 The rule expressions in the generated rules will be modified to include the tenant label. For example, `tenant_id="my-tenant"`.
 

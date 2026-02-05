@@ -27,7 +27,7 @@ Once discovered, these resources are written to one or more `ConfigMaps` owned b
 
 ### Tenancy
 
-The controller can optionally enforce tenancy on the discovered rules. This allows end users to manage their own tenanted `PrometheusRule` objects without interfering with other tenants. The controller will inject the tenant into the discovered rules by enforcing the tenant label on each of the rule expressions and also adding a rulegroup label to the rule config, so that the new series retains tenancy information. 
+The controller can optionally enforce tenancy on the discovered rules. This allows end users to manage their own tenanted `PrometheusRule` objects without interfering with other tenants. The controller will inject the tenant into the discovered rules by enforcing the tenant label on each of the rule expressions and also adding a rulegroup label to the rule config, so that the new series retains tenancy information.
 
 Configuration is managed as configured via the [spec](https://thanos-operator.dev/docs/api-reference/api.md/#ruletenancyconfig). The `enforcedTenantIdentifier` field (default `tenant_id`) sets the identifier (a Prometheus label key) to inject into the rules. The `tenantSpecifierLabel` field (default `operator.thanos.io/tenant`) sets the label key on the objects to read the tenant value from.
 
