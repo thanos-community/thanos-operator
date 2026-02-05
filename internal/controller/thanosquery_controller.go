@@ -107,14 +107,14 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosQuery")
-		r.recorder.Event(query, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosQuery resource")
+		r.recorder.Eventf(query, nil, corev1.EventTypeWarning, "GetFailed", "Reconcile", "Failed to get ThanosQuery resource")
 		return ctrl.Result{}, err
 	}
 
 	if query.Spec.Paused != nil && *query.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosQuery resource")
 		r.metrics.Paused.WithLabelValues("query", query.GetName(), query.GetNamespace()).Set(1)
-		r.recorder.Event(query, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosQuery resource")
+		r.recorder.Eventf(query, nil, corev1.EventTypeNormal, "Paused", "Reconcile", "Reconciliation is paused for ThanosQuery resource")
 		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
@@ -129,7 +129,7 @@ func (r *ThanosQueryReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.syncResources(ctx, *query)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", query.GetName(), "namespace", query.GetNamespace())
-		r.recorder.Event(query, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.recorder.Eventf(query, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, query, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -161,7 +161,7 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 	objs = append(objs, querier.Build()...)
 
 	if query.Spec.QueryFrontend != nil {
-		r.recorder.Event(&query, corev1.EventTypeNormal, "BuildingQueryFrontend", "Building Query Frontend resources")
+		r.recorder.Eventf(&query, nil, corev1.EventTypeNormal, "BuildingQueryFrontend", "Build", "Building Query Frontend resources")
 		frontend := r.buildQueryFrontend(query)
 
 		expectedResources = append(expectedResources, frontend.GetGeneratedResourceName())
@@ -207,7 +207,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	if len(services.Items) == 0 {
-		r.recorder.Event(&query, corev1.EventTypeWarning, "NoEndpointsFound", "No StoreAPI services found")
+		r.recorder.Eventf(&query, nil, corev1.EventTypeWarning, "NoEndpointsFound", "Discovery", "No StoreAPI services found")
 		return []manifestquery.Endpoint{}, nil
 	}
 
@@ -279,7 +279,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// if servicemonitor CRD exists in the cluster, watch for changes to ServiceMonitor resources
 	if err != nil {
-		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosQuery{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosQuery{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
 		return err
 	}
 

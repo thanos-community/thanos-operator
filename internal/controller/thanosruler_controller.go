@@ -108,14 +108,14 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosRuler")
-		r.recorder.Event(ruler, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosRuler resource")
+		r.recorder.Eventf(ruler, nil, corev1.EventTypeWarning, "GetFailed", "Reconcile", "Failed to get ThanosRuler resource")
 		return ctrl.Result{}, err
 	}
 
 	if ruler.Spec.Paused != nil && *ruler.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosRuler resource")
 		r.metrics.Paused.WithLabelValues("ruler", ruler.GetName(), ruler.GetNamespace()).Set(1)
-		r.recorder.Event(ruler, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosRuler resource")
+		r.recorder.Eventf(ruler, nil, corev1.EventTypeNormal, "Paused", "Reconcile", "Reconciliation is paused for ThanosRuler resource")
 		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
@@ -130,7 +130,7 @@ func (r *ThanosRulerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.syncResources(ctx, *ruler)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", ruler.GetName(), "namespace", ruler.GetNamespace())
-		r.recorder.Event(ruler, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.recorder.Eventf(ruler, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, ruler, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -255,7 +255,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 	}
 
 	if len(services.Items) == 0 {
-		r.recorder.Event(&ruler, corev1.EventTypeWarning, "NoEndpointsFound", "No QueryAPI services found")
+		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoEndpointsFound", "Discovery", "No QueryAPI services found")
 		return []manifestruler.Endpoint{}, nil
 	}
 
@@ -320,7 +320,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 	}
 
 	if len(cfgmaps.Items) == 0 {
-		r.recorder.Event(&ruler, corev1.EventTypeWarning, "NoRuleConfigsFound", "No rule ConfigMaps found")
+		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoRuleConfigsFound", "Discovery", "No rule ConfigMaps found")
 		return []corev1.ConfigMapKeySelector{}, []string{}, nil
 	}
 
@@ -554,7 +554,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	if err := bldr.Complete(r); err != nil {
-		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosRuler{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosRuler{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
 		return err
 	}
 

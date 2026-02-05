@@ -94,14 +94,14 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosStore")
-		r.recorder.Event(store, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosStore resource")
+		r.recorder.Eventf(store, nil, corev1.EventTypeWarning, "GetFailed", "Reconcile", "Failed to get ThanosStore resource")
 		return ctrl.Result{}, err
 	}
 
 	if store.Spec.Paused != nil && *store.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosStore")
 		r.metrics.Paused.WithLabelValues("store", store.GetName(), store.GetNamespace()).Set(1)
-		r.recorder.Event(store, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosStore resource")
+		r.recorder.Eventf(store, nil, corev1.EventTypeNormal, "Paused", "Reconcile", "Reconciliation is paused for ThanosStore resource")
 		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
@@ -116,7 +116,7 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.syncResources(ctx, *store)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", store.GetName(), "namespace", store.GetNamespace())
-		r.recorder.Event(store, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.recorder.Eventf(store, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, store, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -223,7 +223,7 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 
 	if err != nil {
-		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosStore{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosStore{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
 		return err
 	}
 
