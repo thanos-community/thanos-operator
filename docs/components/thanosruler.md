@@ -1,9 +1,6 @@
 # ThanosRuler
 
-The `ThanosRuler` CRD manages the [Thanos Ruler component](https://thanos.io/tip/components/rule.md/).
-Thanos Ruler evaluates Prometheus recording and alerting rules using data from Thanos Query.
-It provides distributed rule evaluation with high availability and multi-tenancy support.
-Alerts can be sent to an [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) instance.
+The `ThanosRuler` CRD manages the [Thanos Ruler component](https://thanos.io/tip/components/rule.md/). Thanos Ruler evaluates Prometheus recording and alerting rules using data from Thanos Query. It provides distributed rule evaluation with high availability and multi-tenancy support. Alerts can be sent to an [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) instance.
 
 ## Overview
 
@@ -20,21 +17,17 @@ Thanos Ruler performs several key functions:
 
 #### Stateful Mode
 
-### Discovery
+Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is default and takes precedence over any other mode if configured. Setting `objectStorageConfig` on the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) enables stateful mode. When running in this mode, the Thanos Rulers Service will make itself available for discovery as a Thanos Store API endpoint. It does this by setting the label `operator.thanos.io/store-api: "true"` on the Service.
 
-The controller discovers `ConfigMaps` and optionally [`PrometheusRule`](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule) objects.
-Discovery is based on label selectors and configured via the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) `ruleConfigSelector` field.
+### Rule Discovery
+
+The controller discovers `ConfigMaps` and optionally [`PrometheusRule`](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule) objects. Discovery is based on label selectors and configured via the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) `ruleConfigSelector` field.
 
 Once discovered, these resources are written to one or more `ConfigMaps` owned by the `ThanosRuler` instance.
 
 ### Tenancy
 
-The controller can optionally enforce tenancy on the discovered rules.
-This allows end users to self-service and manage their own `PrometheusRule` objects without interfering with other tenants.
-The controller will inject the tenant into the discovered rules.
-Configuration is managed as configured via the [spec](https://thanos-operator.dev/docs/api-reference/api.md/#ruletenancyconfig).
-The `enforcedTenantIdentifier` field (default `tenant_id`) sets the identifier (a Prometheus label key) to inject into the rules.
-The `tenantSpecifierLabel` field (default `operator.thanos.io/tenant`) sets the label key on the objects to read the tenant value from.
+The controller can optionally enforce tenancy on the discovered rules. This allows end users to self-service and manage their own `PrometheusRule` objects without interfering with other tenants. The controller will inject the tenant into the discovered rules. Configuration is managed as configured via the [spec](https://thanos-operator.dev/docs/api-reference/api.md/#ruletenancyconfig). The `enforcedTenantIdentifier` field (default `tenant_id`) sets the identifier (a Prometheus label key) to inject into the rules. The `tenantSpecifierLabel` field (default `operator.thanos.io/tenant`) sets the label key on the objects to read the tenant value from.
 
 The rule expressions in the generated rules will be modified to include the tenant label. For example, `tenant_id="my-tenant"`.
 
@@ -44,9 +37,7 @@ There are a number of strategies to implement sharding of rules across if sharde
 
 #### Manual Sharding
 
-An operator can create multiple `ThanosRuler` instances, each with its own `ruleConfigSelector` to select a subset of the rules.
-Those rules will be managed and evaluated by that specific `ThanosRuler` instance.
-
+An operator can create multiple `ThanosRuler` instances, each with its own `ruleConfigSelector` to select a subset of the rules. Those rules will be managed and evaluated by that specific `ThanosRuler` instance.
 
 ## Architecture
 
