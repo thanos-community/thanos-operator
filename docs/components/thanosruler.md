@@ -17,7 +17,7 @@ Thanos Ruler performs several key functions:
 
 #### Stateful Mode
 
-Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is default and takes precedence over any other mode if configured. Setting `objectStorageConfig` on the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) enables stateful mode. When running in this mode, the Thanos Rulers Service will make itself available for discovery as a Thanos Store API endpoint. It does this by setting the label `operator.thanos.io/store-api: "true"` on the Service.
+Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is default and takes precedence over any other mode if configured. Setting `objectStorageConfig` on the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) enables stateful mode. When running in this mode, the Thanos Ruler's Service will make itself available for discovery as a Thanos gRPC StoreAPI endpoint. It does this by setting the label `operator.thanos.io/store-api: "true"` on the Service.
 
 ### Rule Discovery
 
