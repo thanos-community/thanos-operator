@@ -4,14 +4,14 @@ metadata:
   name: example-ruler
 spec:
   alertmanagerURL: http://alertmanager.example.com:9093
-  defaultObjectStorageConfig:
-    key: thanos.yaml
-    name: thanos-object-storage
   evaluationInterval: 1m
   externalLabels:
     rule_replica: $(NAME)
   imagePullPolicy: IfNotPresent
   logFormat: logfmt
+  objectStorageConfig:
+    key: thanos.yaml
+    name: thanos-object-storage
   queryLabelSelector:
     matchLabels:
       app.kubernetes.io/part-of: thanos
