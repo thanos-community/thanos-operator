@@ -278,7 +278,7 @@ func main() {
 			FeatureGate: featureGateConfig,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
-				EventRecorder:   mgr.GetEventRecorderFor(fmt.Sprintf("%s-controller", component)),
+				EventRecorder:   mgr.GetEventRecorder(fmt.Sprintf("%s-controller", component)),
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   commonMetrics,
 			},

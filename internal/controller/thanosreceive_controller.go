@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/client-go/tools/events"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -40,7 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,7 +63,7 @@ type ThanosReceiveReconciler struct {
 
 	logger   logr.Logger
 	metrics  controllermetrics.ThanosReceiveMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
@@ -98,13 +98,13 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosReceive")
-		r.recorder.Event(receiver, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosReceive resource")
+		r.recorder.Eventf(receiver, nil, corev1.EventTypeWarning, "GetFailed", "Reconcile", "Failed to get ThanosReceive resource")
 		return ctrl.Result{}, err
 	}
 
 	if receiver.Spec.Paused != nil && *receiver.Spec.Paused {
 		r.logger.Info("receiver is paused")
-		r.recorder.Event(receiver, corev1.EventTypeNormal, "Paused",
+		r.recorder.Eventf(receiver, nil, corev1.EventTypeNormal, "Paused", "Reconcile",
 			"Reconciliation is paused for ThanosReceive resource")
 		r.metrics.Paused.WithLabelValues("receive", receiver.GetName(), receiver.GetNamespace()).Set(1)
 		r.updateCondition(ctx, receiver, metav1.Condition{
@@ -125,7 +125,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err = r.syncResources(ctx, *receiver)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", receiver.GetName(), "namespace", receiver.GetNamespace())
-		r.recorder.Event(receiver, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.recorder.Eventf(receiver, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, receiver, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
@@ -158,7 +158,7 @@ func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	bld := ctrl.NewControllerManagedBy(mgr)
 	err := r.buildController(*bld)
 	if err != nil {
-		r.recorder.Event(&monitoringthanosiov1alpha1.ThanosReceive{}, corev1.EventTypeWarning, "SetupFailed", fmt.Sprintf("Failed to set up controller: %v", err))
+		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosReceive{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
 		return err
 	}
 
@@ -323,7 +323,7 @@ func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monit
 	if controllerutil.ContainsFinalizer(receiveHashring, receiveFinalizer) {
 		r.logger.Info("performing Finalizer Operations for ThanosReceiveHashring before delete CR")
 
-		r.recorder.Event(receiveHashring, "Warning", "Deleting",
+		r.recorder.Eventf(receiveHashring, nil, "Warning", "Deleting", "Cleanup",
 			fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
 				receiveHashring.Name,
 				receiveHashring.Namespace))

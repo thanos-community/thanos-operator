@@ -32,7 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -48,7 +48,7 @@ type ThanosCompactReconciler struct {
 
 	logger   logr.Logger
 	metrics  controllermetrics.ThanosCompactMetrics
-	recorder record.EventRecorder
+	recorder events.EventRecorder
 
 	handler                *handlers.Handler
 	disableConditionUpdate bool
@@ -78,14 +78,14 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get ThanosCompact")
-		r.recorder.Event(compact, corev1.EventTypeWarning, "GetFailed", "Failed to get ThanosCompact resource")
+		r.recorder.Eventf(compact, nil, corev1.EventTypeWarning, "GetFailed", "Reconcile", "Failed to get ThanosCompact resource")
 		return ctrl.Result{}, err
 	}
 
 	if compact.Spec.Paused != nil && *compact.Spec.Paused {
 		r.logger.Info("reconciliation is paused for ThanosCompact resource")
 		r.metrics.Paused.WithLabelValues("compact", compact.GetName(), compact.GetNamespace()).Set(1)
-		r.recorder.Event(compact, corev1.EventTypeNormal, "Paused", "Reconciliation is paused for ThanosCompact resource")
+		r.recorder.Eventf(compact, nil, corev1.EventTypeNormal, "Paused", "Reconcile", "Reconciliation is paused for ThanosCompact resource")
 		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionPaused,
 			Status:  metav1.ConditionTrue,
@@ -100,7 +100,7 @@ func (r *ThanosCompactReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	err = r.syncResources(ctx, *compact)
 	if err != nil {
 		r.logger.Error(err, "failed to sync resources", "resource", compact.GetName(), "namespace", compact.GetNamespace())
-		r.recorder.Event(compact, corev1.EventTypeWarning, "SyncFailed", fmt.Sprintf("Failed to sync resources: %v", err))
+		r.recorder.Eventf(compact, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, compact, metav1.Condition{
 			Type:    ConditionReconcileFailed,
 			Status:  metav1.ConditionTrue,
