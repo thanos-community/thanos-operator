@@ -116,8 +116,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.To("tenant"),
-						TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
+						EnforcedTenantIdentifier: ptr.To(defaultTenantIdentifier),
+						TenantSpecifierLabel:     ptr.To(defaultTenantSpecifier),
 					},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
@@ -396,8 +396,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.To("tenant_id"),
-						TenantSpecifierLabel:     ptr.To("tenant"),
+						EnforcedTenantIdentifier: ptr.To(defaultTenantIdentifier),
+						TenantSpecifierLabel:     ptr.To(defaultTenantSpecifier),
 					},
 				},
 			}
@@ -563,8 +563,8 @@ config:
 					},
 					AlertmanagerURL: "http://alertmanager.com:9093",
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						EnforcedTenantIdentifier: ptr.To("tenant_id"),
-						TenantSpecifierLabel:     ptr.To("app.tenant"),
+						EnforcedTenantIdentifier: ptr.To(defaultTenantIdentifier),
+						TenantSpecifierLabel:     ptr.To(defaultTenantSpecifier),
 					},
 				},
 			}
