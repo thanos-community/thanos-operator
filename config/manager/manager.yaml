@@ -49,6 +49,7 @@ spec:
         - --leader-elect
         - --enable-feature=service-monitor
         - --enable-feature=prometheus-rule
+        - --enable-feature=kube-resource-sync
         command:
         - /manager
         image: controller:latest
