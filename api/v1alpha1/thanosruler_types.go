@@ -90,16 +90,15 @@ type ThanosRulerSpec struct {
 }
 
 type RuleTenancyConfig struct {
-	// TenantLabel is the label that will be used to identify the tenant.
-	// Setting this value will mean, that all rules configured on ThanosRuler will
-	// have this labelname (with value to set the tenant label value).
-	// effectively <tenantLabelName> = <value of tenantValueLabel key>
-	// +kubebuilder:validation:Required
-	TenantLabel string `json:"tenantLabel,omitempty"`
-	// TenantValueLabel is the key of the PrometheusRule label that will be used to set the value of the tenant label
-	// for particular rules configured on ThanosRuler.
-	// +kubebuilder:validation:Required
-	TenantValueLabel string `json:"tenantValueLabel,omitempty"`
+	// EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy
+	// For example if enforcedTenantIdentifier: "tenant_id" then up{} becomes up{tenant_id={TenantSpecifierLabelValue}
+	// +kubebuilder:default "tenant_id"
+	// +kubebuilder:validation:Optional
+	EnforcedTenantIdentifier *string `json:"enforcedTenantIdentifier,omitempty"`
+	// TenantSpecifierLabel is the key of the label of the ConfigMap or PrometheusRule that will be used to set the value of the EnforcedTenantIdentifier
+	// +kubebuilder:default "operator.thanos.io/tenant"
+	// +kubebuilder:validation:Optional
+	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
 }
 
 // TODO(saswatamcode): Add stateless mode
