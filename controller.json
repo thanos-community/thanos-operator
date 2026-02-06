@@ -1,0 +1,3711 @@
+{
+   "annotations": {
+     "list": [
+       {
+         "builtIn": 1,
+         "datasource": {
+           "type": "grafana",
+           "uid": "-- Grafana --"
+         },
+         "enable": true,
+         "hide": true,
+         "iconColor": "rgba(0, 211, 255, 1)",
+         "name": "Annotations & Alerts",
+         "type": "dashboard"
+       }
+     ]
+   },
+   "editable": true,
+   "fiscalYearStartMonth": 0,
+   "graphTooltip": 0,
+   "id": 1100055,
+   "links": [
+     {
+       "asDropdown": true,
+       "includeVars": true,
+       "keepTime": true,
+       "tags": [
+         "thanos-operator"
+       ],
+       "targetBlank": false,
+       "title": "Thanos Operator",
+       "type": "dashboards"
+     }
+   ],
+   "panels": [
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 0
+       },
+       "id": 100,
+       "panels": [],
+       "title": "Health Status",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "red"
+               },
+               {
+                 "color": "green",
+                 "value": 1
+               }
+             ]
+           },
+           "unit": "none"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 0,
+         "y": 1
+       },
+       "id": 1,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(up{job=\"thanos-operator-controller-manager-metrics-service\"})",
+           "instant": true,
+           "refId": "A"
+         }
+       ],
+       "title": "Operator",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 4,
+         "y": 1
+       },
+       "id": 101,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "count(thanos_operator_paused{job=\"thanos-operator-controller-manager-metrics-service\"} > 0) or vector(0)",
+           "instant": true,
+           "refId": "A"
+         }
+       ],
+       "title": "Paused Resources",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "yellow",
+                 "value": 100
+               },
+               {
+                 "color": "red",
+                 "value": 1000
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 8,
+         "y": 1
+       },
+       "id": 104,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(workqueue_depth{job=\"thanos-operator-controller-manager-metrics-service\"})",
+           "refId": "A"
+         }
+       ],
+       "title": "Work Queue Depth",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "decimals": 2,
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 0.01
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 12,
+         "y": 1
+       },
+       "id": 102,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(controller_runtime_reconcile_errors_total{job=\"thanos-operator-controller-manager-metrics-service\"}[5m]))",
+           "refId": "A"
+         }
+       ],
+       "title": "Reconcile Errors",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "decimals": 2,
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "yellow",
+                 "value": 1
+               },
+               {
+                 "color": "red",
+                 "value": 5
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 16,
+         "y": 1
+       },
+       "id": 103,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(rest_client_requests_total{job=\"thanos-operator-controller-manager-metrics-service\",code=~\"(4..|5..)\"}[5m]))",
+           "refId": "A"
+         }
+       ],
+       "title": "API Client Errors",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "yellow",
+                 "value": 300
+               },
+               {
+                 "color": "red",
+                 "value": 600
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 5,
+         "w": 4,
+         "x": 20,
+         "y": 1
+       },
+       "id": 105,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "max"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "value_and_name",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "max(workqueue_longest_running_processor_seconds{job=\"thanos-operator-controller-manager-metrics-service\"})",
+           "refId": "A"
+         }
+       ],
+       "title": "Stuck Reconciliation",
+       "type": "stat"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 6
+       },
+       "id": 106,
+       "panels": [],
+       "title": "Error Details",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 7
+       },
+       "id": 107,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(controller_runtime_reconcile_errors_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (controller)",
+           "legendFormat": "{{controller}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Reconcile Errors by Controller",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 7
+       },
+       "id": 108,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(rest_client_requests_total{job=\"thanos-operator-controller-manager-metrics-service\",code=~\"(4..|5..)\"}[$__rate_interval])) by (verb, code)",
+           "legendFormat": "{{verb}} {{code}}",
+           "refId": "A"
+         }
+       ],
+       "title": "API Client Errors by Verb",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 14
+       },
+       "id": 109,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "workqueue_depth{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Work Queue Depth by Controller",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 14
+       },
+       "id": 110,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "workqueue_longest_running_processor_seconds{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Longest Running Processor by Controller",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 21
+       },
+       "id": 120,
+       "panels": [],
+       "title": "Controller Performance",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 22
+       },
+       "id": 121,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "mean"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(controller_runtime_reconcile_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (controller, result)",
+           "legendFormat": "{{controller}} {{result}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Reconcile Rate",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 22
+       },
+       "id": 122,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "histogram_quantile(0.99, sum(rate(controller_runtime_reconcile_time_seconds_bucket{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (controller, le))",
+           "legendFormat": "p99 {{controller}}",
+           "refId": "A"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "histogram_quantile(0.50, sum(rate(controller_runtime_reconcile_time_seconds_bucket{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (controller, le))",
+           "legendFormat": "p50 {{controller}}",
+           "refId": "B"
+         }
+       ],
+       "title": "Reconcile Duration",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 8,
+         "x": 0,
+         "y": 29
+       },
+       "id": 123,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(workqueue_adds_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (name)",
+           "legendFormat": "{{name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Work Queue Add Rate",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 8,
+         "x": 8,
+         "y": 29
+       },
+       "id": 124,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(workqueue_retries_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (name)",
+           "legendFormat": "{{name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Work Queue Retries",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 8,
+         "x": 16,
+         "y": 29
+       },
+       "id": 125,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (name, le))",
+           "legendFormat": "{{name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Work Queue Latency p99",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 36
+       },
+       "id": 130,
+       "panels": [],
+       "title": "ThanosQuery",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 8,
+         "x": 0,
+         "y": 37
+       },
+       "id": 131,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_query_endpoints_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}} {{type}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Endpoints Configured",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 16,
+         "x": 8,
+         "y": 37
+       },
+       "id": 132,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_query_service_event_reconciliations_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Service Event Reconciliations",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 43
+       },
+       "id": 140,
+       "panels": [],
+       "title": "ThanosReceive",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 0,
+         "y": 44
+       },
+       "id": 141,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_receive_hashrings_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Hashrings",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 6,
+         "y": 44
+       },
+       "id": 142,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_receive_hashring_tenants_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}/{{hashring}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Tenants per Hashring",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 12,
+         "y": 44
+       },
+       "id": 143,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_receive_hashring_endpoints_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}/{{hashring}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Endpoints per Hashring",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "yellow",
+                 "value": 1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 18,
+         "y": 44
+       },
+       "id": 144,
+       "interval": "1m",
+       "options": {
+         "colorMode": "background",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "changes(thanos_operator_receive_hashring_hash{job=\"thanos-operator-controller-manager-metrics-service\"}[$__range])",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Hashring Hash Changes",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 24,
+         "x": 0,
+         "y": 50
+       },
+       "id": 145,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_receive_endpoint_event_reconciliations_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Endpoint Event Reconciliations",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 56
+       },
+       "id": 150,
+       "panels": [],
+       "title": "ThanosRuler",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 0,
+         "y": 57
+       },
+       "id": 151,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_ruler_query_endpoints_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Query Endpoints",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 6,
+         "y": 57
+       },
+       "id": 152,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_ruler_rulefiles_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Rulefiles",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 12,
+         "y": 57
+       },
+       "id": 153,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_ruler_promrules_found{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "PrometheusRules",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 6,
+         "x": 18,
+         "y": 57
+       },
+       "id": 154,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_ruler_promrule_groups_found{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}/{{rule_name}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Rule Groups",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 0.1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 0,
+         "y": 63
+       },
+       "id": 155,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_ruler_cfgmaps_creation_failures_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "ConfigMap Creation Failures",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 12,
+         "y": 63
+       },
+       "id": 156,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_ruler_tenant_promrule_groups{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}/{{tenant}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Rule Groups by Tenant",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 8,
+         "x": 0,
+         "y": 69
+       },
+       "id": 157,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_ruler_service_event_reconciliations_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Service Events",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 8,
+         "x": 8,
+         "y": 69
+       },
+       "id": 158,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_ruler_cfgmap_event_reconciliations_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "ConfigMap Events",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 8,
+         "x": 16,
+         "y": 69
+       },
+       "id": 159,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_ruler_promrule_event_reconciliations_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "PrometheusRule Events",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 75
+       },
+       "id": 160,
+       "panels": [],
+       "title": "ThanosStore",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 0,
+         "y": 76
+       },
+       "id": 161,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_store_shards_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Shards Configured",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 0.1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 12,
+         "y": 76
+       },
+       "id": 162,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_store_shards_creation_update_failures_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Shard Failures",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 82
+       },
+       "id": 170,
+       "panels": [],
+       "title": "ThanosCompact",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 0,
+         "y": 83
+       },
+       "id": 171,
+       "interval": "1m",
+       "options": {
+         "colorMode": "value",
+         "graphMode": "area",
+         "justifyMode": "auto",
+         "orientation": "auto",
+         "percentChangeColorMode": "standard",
+         "reduceOptions": {
+           "calcs": [
+             "lastNotNull"
+           ],
+           "fields": "",
+           "values": false
+         },
+         "showPercentChange": false,
+         "textMode": "auto",
+         "wideLayout": true
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "thanos_operator_compact_shards_configured{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Shards Configured",
+       "type": "stat"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 0.1
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 6,
+         "w": 12,
+         "x": 12,
+         "y": 83
+       },
+       "id": 172,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(thanos_operator_compact_shards_creation_update_failures_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (namespace, resource)",
+           "legendFormat": "{{namespace}}/{{resource}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Shard Failures",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 89
+       },
+       "id": 180,
+       "panels": [],
+       "title": "Kubernetes API",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "ops"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 90
+       },
+       "id": 181,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "sum(rate(rest_client_requests_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (verb, code)",
+           "legendFormat": "{{verb}} {{code}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Request Rate",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 90
+       },
+       "id": 182,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "histogram_quantile(0.99, sum(rate(rest_client_request_duration_seconds_bucket{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (verb, le))",
+           "legendFormat": "p99 {{verb}}",
+           "refId": "A"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "histogram_quantile(0.50, sum(rate(rest_client_request_duration_seconds_bucket{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])) by (verb, le))",
+           "legendFormat": "p50 {{verb}}",
+           "refId": "B"
+         }
+       ],
+       "title": "Request Duration",
+       "type": "timeseries"
+     },
+     {
+       "collapsed": false,
+       "gridPos": {
+         "h": 1,
+         "w": 24,
+         "x": 0,
+         "y": 97
+       },
+       "id": 190,
+       "panels": [],
+       "title": "Resources",
+       "type": "row"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "bytes"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 98
+       },
+       "id": 191,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "single",
+           "sort": "none"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_memstats_alloc_bytes{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "Alloc All {{pod}}",
+           "refId": "A"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_memstats_heap_alloc_bytes{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "Alloc Heap {{pod}}",
+           "refId": "B"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "rate(go_memstats_alloc_bytes_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])",
+           "legendFormat": "Alloc Rate All {{pod}}",
+           "refId": "C"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_memstats_stack_inuse_bytes{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "Inuse Stack {{pod}}",
+           "refId": "D"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_memstats_heap_inuse_bytes{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "Inuse Heap {{pod}}",
+           "refId": "E"
+         },
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "process_resident_memory_bytes{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "Resident Memory {{pod}}",
+           "refId": "F"
+         }
+       ],
+       "title": "Memory",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 98
+       },
+       "id": 192,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "single",
+           "sort": "none"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "rate(process_cpu_seconds_total{job=\"thanos-operator-controller-manager-metrics-service\"}[$__rate_interval])",
+           "legendFormat": "{{pod}}",
+           "refId": "A"
+         }
+       ],
+       "title": "CPU",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "s"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 0,
+         "y": 105
+       },
+       "id": 194,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull",
+             "max"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "multi",
+           "sort": "desc"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_gc_duration_seconds{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{quantile}} - {{pod}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Go GC Duration",
+       "type": "timeseries"
+     },
+     {
+       "datasource": {
+         "type": "datasource",
+         "uid": "-- Mixed --"
+       },
+       "fieldConfig": {
+         "defaults": {
+           "color": {
+             "mode": "palette-classic"
+           },
+           "custom": {
+             "axisBorderShow": false,
+             "axisCenteredZero": false,
+             "axisColorMode": "text",
+             "axisLabel": "",
+             "axisPlacement": "auto",
+             "barAlignment": 0,
+             "barWidthFactor": 0.6,
+             "drawStyle": "line",
+             "fillOpacity": 20,
+             "gradientMode": "opacity",
+             "hideFrom": {
+               "legend": false,
+               "tooltip": false,
+               "viz": false
+             },
+             "insertNulls": false,
+             "lineInterpolation": "linear",
+             "lineWidth": 2,
+             "pointSize": 5,
+             "scaleDistribution": {
+               "type": "linear"
+             },
+             "showPoints": "never",
+             "spanNulls": true,
+             "stacking": {
+               "group": "A",
+               "mode": "none"
+             },
+             "thresholdsStyle": {
+               "mode": "off"
+             }
+           },
+           "mappings": [],
+           "thresholds": {
+             "mode": "absolute",
+             "steps": [
+               {
+                 "color": "green"
+               },
+               {
+                 "color": "red",
+                 "value": 80
+               }
+             ]
+           },
+           "unit": "short"
+         },
+         "overrides": []
+       },
+       "gridPos": {
+         "h": 7,
+         "w": 12,
+         "x": 12,
+         "y": 105
+       },
+       "id": 193,
+       "interval": "1m",
+       "options": {
+         "legend": {
+           "asTable": true,
+           "calcs": [
+             "lastNotNull"
+           ],
+           "displayMode": "table",
+           "placement": "right",
+           "showLegend": true
+         },
+         "tooltip": {
+           "hideZeros": false,
+           "mode": "single",
+           "sort": "none"
+         }
+       },
+       "pluginVersion": "11.6.3",
+       "targets": [
+         {
+           "datasource": {
+             "type": "prometheus",
+             "uid": "${datasource}"
+           },
+           "expr": "go_goroutines{job=\"thanos-operator-controller-manager-metrics-service\"}",
+           "legendFormat": "{{pod}}",
+           "refId": "A"
+         }
+       ],
+       "title": "Goroutines",
+       "type": "timeseries"
+     }
+   ],
+   "preload": false,
+   "refresh": "30s",
+   "schemaVersion": 41,
+   "tags": [
+     "thanos-operator"
+   ],
+   "templating": {
+     "list": [
+       {
+         "current": {
+           "text": "rhobss01ue1-prometheus",
+           "value": "P07440DA24FFF3999"
+         },
+         "label": "Data source",
+         "name": "datasource",
+         "options": [],
+         "query": "prometheus",
+         "refresh": 1,
+         "regex": "",
+         "type": "datasource"
+       }
+     ]
+   },
+   "time": {
+     "from": "now-1h",
+     "to": "now"
+   },
+   "timepicker": {},
+   "timezone": "UTC",
+   "title": "Thanos Operator / Controller Manager",
+   "uid": "72e0e05bef5099e5f049b05fdc429ed4",
+   "version": 2
+ }
