@@ -65,8 +65,8 @@ var defaultRuleLabels = map[string]string{
 	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
-const defaultTenantSpecifier string = "operator.thanos.io/tenant"
 const defaultTenantIdentifier string = "tenant_id"
+const defaultTenantSpecifier string = "operator.thanos.io/tenant"
 
 // ThanosRulerReconciler reconciles a ThanosRuler object
 type ThanosRulerReconciler struct {
