@@ -124,6 +124,10 @@ type CommonFields struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={enable: true}
 	PodDisruptionBudgetConfig *PodDisruptionBudgetConfig `json:"podDisruptionBudgetConfig,omitempty"`
+	// Labels are additional labels to add to components.
+	// If labels are nested, the innermost nested label will take preference.
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // StatefulSetFields are the options available to all Thanos components.

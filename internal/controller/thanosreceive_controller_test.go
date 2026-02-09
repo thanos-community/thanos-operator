@@ -116,8 +116,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
-						Labels:            map[string]string{"test": "my-router-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-router-test"},
+						},
 						ReplicationFactor: 3,
 					},
 					Ingester: monitoringthanosiov1alpha1.IngesterSpec{
@@ -127,8 +128,10 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:   hashringName,
-								Labels: map[string]string{"test": "my-ingester-test"},
+								CommonFields: monitoringthanosiov1alpha1.CommonFields{
+									Labels: map[string]string{"test": "my-ingester-test"},
+								},
+								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 									Size: "100Mi",
 								},
@@ -154,8 +157,10 @@ config:
 				resource.Spec.Ingester.Hashrings = append(
 					resource.Spec.Ingester.Hashrings,
 					monitoringthanosiov1alpha1.IngesterHashringSpec{
-						Name:   hashringName,
-						Labels: map[string]string{"test": "my-ingester-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-ingester-test"},
+						},
+						Name: hashringName,
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 							Size: "100Mi",
 						},
@@ -179,8 +184,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
-						Labels:            map[string]string{"test": "my-router-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-router-test"},
+						},
 						ReplicationFactor: 3,
 						Additional: monitoringthanosiov1alpha1.Additional{
 							Containers: []corev1.Container{
@@ -199,8 +205,10 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:   hashringName,
-								Labels: map[string]string{"test": "my-ingester-test"},
+								CommonFields: monitoringthanosiov1alpha1.CommonFields{
+									Labels: map[string]string{"test": "my-ingester-test"},
+								},
+								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 									Size: "100Mi",
 								},
@@ -371,8 +379,10 @@ config:
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.Ingester.Hashrings = []monitoringthanosiov1alpha1.IngesterHashringSpec{
 					{
-						Name:   updatedHashringName,
-						Labels: map[string]string{"test": "my-ingester-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-ingester-test"},
+						},
+						Name: updatedHashringName,
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 							Size: "100Mi",
 						},
@@ -426,8 +436,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonFields:        monitoringthanosiov1alpha1.CommonFields{},
-						Labels:              map[string]string{"test": "my-router-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-router-test"},
+						},
 						ReplicationFactor:   3,
 						ReplicationProtocol: ptr.To(monitoringthanosiov1alpha1.ReplicationProtocolCapnProto),
 					},
@@ -438,8 +449,10 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:   hashringName,
-								Labels: map[string]string{"test": "my-ingester-test"},
+								CommonFields: monitoringthanosiov1alpha1.CommonFields{
+									Labels: map[string]string{"test": "my-ingester-test"},
+								},
+								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 									Size: "100Mi",
 								},

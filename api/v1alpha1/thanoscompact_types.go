@@ -27,9 +27,6 @@ type ThanosCompactSpec struct {
 	// StatefulSetFields are the options available to all Thanos stateful
 	// components.
 	StatefulSetFields `json:",inline"`
-	// Labels are additional labels to add to the Compact component.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// ObjectStorageConfig is the object storage configuration for the compact component.
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig"`

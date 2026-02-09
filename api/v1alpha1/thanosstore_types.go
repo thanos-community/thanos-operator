@@ -31,9 +31,6 @@ type ThanosStoreSpec struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Required
 	Replicas int32 `json:"replicas,omitempty"`
-	// Labels are additional labels to add to the Store component.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways.
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
