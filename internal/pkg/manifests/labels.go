@@ -22,11 +22,11 @@ const (
 	DefaultPartOfLabel    = "thanos"
 	DefaultManagedByLabel = "thanos-operator"
 
-	// The following label is used to identify StoreAPIs and will be set on the resources created by the operator.
+	// DefaultStoreAPILabel is used to identify StoreAPIs and will be set on the resources created by the operator.
 	DefaultStoreAPILabel = "operator.thanos.io/store-api"
 	DefaultStoreAPIValue = "true"
 
-	// The following label is used to identify Query APIs and will be set on the resources created by the operator.
+	// DefaultQueryAPILabel is used to identify Query APIs and will be set on the resources created by the operator.
 	DefaultQueryAPILabel = "operator.thanos.io/query-api"
 	DefaultQueryAPIValue = "true"
 
