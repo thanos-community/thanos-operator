@@ -92,10 +92,11 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
-					CommonFields:  monitoringthanosiov1alpha1.CommonFields{},
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Labels: map[string]string{"some-label": "xyz"},
+					},
 					Replicas:      3,
 					ReplicaLabels: []string{"replica"},
-					Labels:        map[string]string{"some-label": "xyz"},
 					Additional: monitoringthanosiov1alpha1.Additional{
 						Containers: []corev1.Container{
 							{

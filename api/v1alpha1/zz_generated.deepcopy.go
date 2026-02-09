@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -227,6 +227,13 @@ func (in *CommonFields) DeepCopyInto(out *CommonFields) {
 		in, out := &in.PodDisruptionBudgetConfig, &out.PodDisruptionBudgetConfig
 		*out = new(PodDisruptionBudgetConfig)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 
@@ -440,13 +447,6 @@ func (in *IndexHeaderConfig) DeepCopy() *IndexHeaderConfig {
 func (in *IngesterHashringSpec) DeepCopyInto(out *IngesterHashringSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.ExternalLabels != nil {
 		in, out := &in.ExternalLabels, &out.ExternalLabels
 		*out = make(ExternalLabels, len(*in))
@@ -567,13 +567,6 @@ func (in *PodDisruptionBudgetConfig) DeepCopy() *PodDisruptionBudgetConfig {
 func (in *QueryFrontendSpec) DeepCopyInto(out *QueryFrontendSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
@@ -643,13 +636,6 @@ func (in *RetentionResolutionConfig) DeepCopy() *RetentionResolutionConfig {
 func (in *RouterSpec) DeepCopyInto(out *RouterSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.ReplicationProtocol != nil {
 		in, out := &in.ReplicationProtocol, &out.ReplicationProtocol
 		*out = new(ReplicationProtocol)
@@ -949,13 +935,6 @@ func (in *ThanosCompactSpec) DeepCopyInto(out *ThanosCompactSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
 	in.StatefulSetFields.DeepCopyInto(&out.StatefulSetFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
 	in.StorageConfiguration.DeepCopyInto(&out.StorageConfiguration)
 	out.RetentionConfig = in.RetentionConfig
@@ -1111,13 +1090,6 @@ func (in *ThanosQueryList) DeepCopyObject() runtime.Object {
 func (in *ThanosQuerySpec) DeepCopyInto(out *ThanosQuerySpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.ReplicaLabels != nil {
 		in, out := &in.ReplicaLabels, &out.ReplicaLabels
 		*out = make([]string, len(*in))
@@ -1371,13 +1343,6 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
 	in.StatefulSetFields.DeepCopyInto(&out.StatefulSetFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.QueryLabelSelector != nil {
 		in, out := &in.QueryLabelSelector, &out.QueryLabelSelector
 		*out = new(v1.LabelSelector)
@@ -1513,13 +1478,6 @@ func (in *ThanosStoreSpec) DeepCopyInto(out *ThanosStoreSpec) {
 	*out = *in
 	in.CommonFields.DeepCopyInto(&out.CommonFields)
 	in.StatefulSetFields.DeepCopyInto(&out.StatefulSetFields)
-	if in.Labels != nil {
-		in, out := &in.Labels, &out.Labels
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
 	in.StorageConfiguration.DeepCopyInto(&out.StorageConfiguration)
 	if in.IndexCacheConfig != nil {

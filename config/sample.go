@@ -24,9 +24,9 @@ func SampleCR(crd CRD) any {
 				CommonFields: thanosv1alpha1.CommonFields{
 					ImagePullPolicy: ptr.To(corev1.PullIfNotPresent),
 					LogFormat:       ptr.To("logfmt"),
-				},
-				Labels: map[string]string{
-					"some-label": "xyz",
+					Labels: map[string]string{
+						"some-label": "xyz",
+					},
 				},
 				Replicas: 1,
 				ReplicaLabels: []string{
@@ -71,9 +71,7 @@ func SampleCR(crd CRD) any {
 				CommonFields: thanosv1alpha1.CommonFields{
 					ImagePullPolicy: ptr.To(corev1.PullIfNotPresent),
 					LogFormat:       ptr.To("logfmt"),
-				},
-				Labels: map[string]string{
-					"some-label": "xyz",
+					Labels:          map[string]string{"some-label": "xyz"},
 				},
 				ObjectStorageConfig: thanosv1alpha1.ObjectStorageConfig{
 					LocalObjectReference: corev1.LocalObjectReference{
