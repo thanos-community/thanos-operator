@@ -4890,7 +4890,9 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: Labels are additional labels to add to the Compact component.
+                description: |-
+                  Labels are additional labels to add to components.
+                  If labels are nested, the innermost nested label will take preference.
                 type: object
               logFormat:
                 default: logfmt
@@ -10339,7 +10341,9 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: Labels are additional labels to add to the Querier component.
+                description: |-
+                  Labels are additional labels to add to components.
+                  If labels are nested, the innermost nested label will take preference.
                 type: object
               logFormat:
                 default: logfmt
@@ -15146,9 +15150,8 @@ spec:
                     additionalProperties:
                       type: string
                     description: |-
-                      Labels are additional labels to add to the Query Frontend component.
-                      These labels will be merged with labels inherited from the parent ThanosQuery.
-                      In case of conflicts, these labels take precedence.
+                      Labels are additional labels to add to components.
+                      If labels are nested, the innermost nested label will take preference.
                     type: object
                   labelsDefaultTimeRange:
                     description: LabelsDefaultTimeRange sets the default time range
@@ -21066,8 +21069,8 @@ spec:
                           additionalProperties:
                             type: string
                           description: |-
-                            Labels are additional labels to add to the ingester components.
-                            Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
+                            Labels are additional labels to add to components.
+                            If labels are nested, the innermost nested label will take preference.
                           type: object
                         logFormat:
                           default: logfmt
@@ -26388,8 +26391,8 @@ spec:
                     additionalProperties:
                       type: string
                     description: |-
-                      Labels are additional labels to add to the router components.
-                      Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
+                      Labels are additional labels to add to components.
+                      If labels are nested, the innermost nested label will take preference.
                     type: object
                   logFormat:
                     default: logfmt
@@ -31731,7 +31734,9 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: Labels are additional labels to add to the Ruler component.
+                description: |-
+                  Labels are additional labels to add to components.
+                  If labels are nested, the innermost nested label will take preference.
                 type: object
               logFormat:
                 default: logfmt
@@ -37317,7 +37322,9 @@ spec:
               labels:
                 additionalProperties:
                   type: string
-                description: Labels are additional labels to add to the Store component.
+                description: |-
+                  Labels are additional labels to add to components.
+                  If labels are nested, the innermost nested label will take preference.
                 type: object
               logFormat:
                 default: logfmt

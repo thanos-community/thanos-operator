@@ -495,11 +495,11 @@ var _ = Describe("controller", Ordered, func() {
 					Spec: v1alpha1.ThanosQuerySpec{
 						CommonFields: v1alpha1.CommonFields{
 							Version: getThanosVersion(),
+							Labels: map[string]string{
+								"some-label": "xyz",
+							},
 						},
 						Replicas: 1,
-						Labels: map[string]string{
-							"some-label": "xyz",
-						},
 						ReplicaLabels: []string{
 							"prometheus_replica",
 							"replica",
@@ -752,8 +752,8 @@ var _ = Describe("controller", Ordered, func() {
 						Replicas: 2,
 						CommonFields: v1alpha1.CommonFields{
 							Version: getThanosVersion(),
+							Labels:  map[string]string{"some-label": "xyz"},
 						},
-						Labels: map[string]string{"some-label": "xyz"},
 						ShardingStrategy: v1alpha1.ShardingStrategy{
 							Type:   v1alpha1.Block,
 							Shards: 2,
