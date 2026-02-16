@@ -61,6 +61,7 @@ spec:
                     - --log.level=debug
                     - --enable-feature=prometheus-rule
                     - --enable-feature=service-monitor
+                    - --enable-feature=kube-resource-sync
                   command:
                     - /manager
                   image: quay.io/thanos/thanos-operator:main

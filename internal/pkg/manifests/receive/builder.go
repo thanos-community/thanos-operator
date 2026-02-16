@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -76,6 +77,11 @@ type TenancyOpts struct {
 	TenantLabelName        string
 }
 
+type FeatureGateConfig struct {
+	KubeResourceSyncEnabled bool
+	KubeResourceSyncImage   string
+}
+
 // RouterOptions for Thanos Receive router
 type RouterOptions struct {
 	manifests.Options
@@ -84,6 +90,7 @@ type RouterOptions struct {
 	HashringConfig      string
 	HashringAlgorithm   string
 	ReplicationProtocol string
+	FeatureGateConfig   *FeatureGateConfig
 }
 
 // Build builds the ingester for Thanos Receive
@@ -135,12 +142,27 @@ func (opts RouterOptions) Build() []client.Object {
 	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
 
+	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		objs = append(objs, newRouterRole(name, opts.Namespace, objectMetaLabels))
+		objs = append(objs, newRouterRoleBinding(name, opts.Namespace, objectMetaLabels))
+	}
+
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
 	if opts.ServiceMonitorConfig != nil {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+
+		// Add separate ServiceMonitor for kube-resource-sync metrics when enabled
+		if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+			kubeResourceSyncSMName := name + "-kube-resource-sync"
+			kubeResourceSyncSMOpts := manifests.ServiceMonitorOptions{
+				Port:     ptr.To("kube-resource-sync"),
+				Interval: opts.ServiceMonitorConfig.Interval,
+			}
+			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, kubeResourceSyncSMOpts))
+		}
 	}
 	return objs
 }
@@ -361,6 +383,18 @@ func NewRouterService(opts RouterOptions) *corev1.Service {
 
 func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
 	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations)
+
+	// Add kube-resource-sync metrics port when enabled
+	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		kubeResourceSyncPort := corev1.ServicePort{
+			Name:       "kube-resource-sync",
+			Port:       8080,
+			TargetPort: intstr.FromInt32(8080),
+			Protocol:   "TCP",
+		}
+		svc.Spec.Ports = append(svc.Spec.Ports, kubeResourceSyncPort)
+	}
+
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
 	}
@@ -416,8 +450,9 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 }
 
 const (
-	hashringVolumeName = "hashring-config"
-	hashringMountPath  = "/var/lib/thanos-receive"
+	hashringVolumeName            = "hashring-config"
+	hashringMountPath             = "/var/lib/thanos-receive"
+	kubeResourceSyncContainerName = "kube-resource-sync"
 )
 
 // NewRouterDeployment creates a new Deployment for the Thanos Receive router.
@@ -429,6 +464,10 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 
 func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	volumes := buildRouterVolumes(opts, name)
+	containers := buildRouterContainers(opts)
+	initContainers := buildRouterInitContainers(opts)
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -452,108 +491,10 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 					Labels:    objectMetaLabels,
 				},
 				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{
-						{
-							Name: hashringVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: name,
-									},
-									DefaultMode: ptr.To(int32(420)),
-								},
-							},
-						},
-					},
-					Containers: []corev1.Container{
-						{
-							Image:           opts.GetContainerImage(),
-							Name:            RouterComponentName,
-							ImagePullPolicy: corev1.PullAlways,
-							// Ensure restrictive context for the container
-							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
-							SecurityContext: &corev1.SecurityContext{
-								RunAsNonRoot:             ptr.To(true),
-								AllowPrivilegeEscalation: ptr.To(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{
-										"ALL",
-									},
-								},
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
-									},
-								},
-								InitialDelaySeconds: 5,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    8,
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/healthy",
-										Port: intstr.FromInt32(HTTPPort),
-									},
-								},
-								InitialDelaySeconds: 5,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    8,
-							},
-							Env: []corev1.EnvVar{
-								{
-									Name: "POD_NAME",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name: "POD_NAMESPACE",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "metadata.namespace",
-										},
-									},
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      hashringVolumeName,
-									MountPath: hashringMountPath,
-								},
-							},
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: GRPCPort,
-									Name:          GRPCPortName,
-								},
-								{
-									ContainerPort: CapnProtoPort,
-									Name:          CapnProtoPortName,
-								},
-								{
-									ContainerPort: HTTPPort,
-									Name:          HTTPPortName,
-								},
-								{
-									ContainerPort: RemoteWritePort,
-									Name:          RemoteWritePortName,
-								},
-							},
-							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-							TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-							Args:                     routerArgsFrom(opts),
-						},
-					},
+					SecurityContext:              &corev1.PodSecurityContext{},
+					Volumes:                      volumes,
+					InitContainers:               initContainers,
+					Containers:                   containers,
 					ServiceAccountName:           name,
 					AutomountServiceAccountToken: ptr.To(true),
 				},
@@ -727,5 +668,245 @@ func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceM
 	return manifests.ServiceMonitorOptions{
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,
+	}
+}
+
+// buildRouterVolumes builds the volumes for the router pod
+func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
+	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		// When KubeResourceSync is enabled, use EmptyDir and let the sidecar sync from ConfigMap
+		return []corev1.Volume{
+			{
+				Name: hashringVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+		}
+	}
+
+	// Default behavior: mount ConfigMap directly
+	return []corev1.Volume{
+		{
+			Name: hashringVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: name,
+					},
+					DefaultMode: ptr.To(int32(420)),
+				},
+			},
+		},
+	}
+}
+
+// buildRouterContainers builds the containers for the router pod
+func buildRouterContainers(opts RouterOptions) []corev1.Container {
+	containers := []corev1.Container{buildThanosRouterContainer(opts)}
+
+	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		containers = append(containers, buildKubeResourceSyncContainer(opts))
+	}
+
+	return containers
+}
+
+// buildRouterInitContainers builds the init containers for the router pod
+func buildRouterInitContainers(opts RouterOptions) []corev1.Container {
+	var initContainers []corev1.Container
+
+	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		initContainers = append(initContainers, buildKubeResourceSyncInitContainer(opts))
+	}
+
+	return initContainers
+}
+
+// buildThanosRouterContainer builds the main Thanos router container
+func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
+	return corev1.Container{
+		Image:           opts.GetContainerImage(),
+		Name:            RouterComponentName,
+		ImagePullPolicy: corev1.PullAlways,
+		// Ensure restrictive context for the container
+		// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot:             ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{
+					"ALL",
+				},
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/-/ready",
+					Port: intstr.FromInt32(HTTPPort),
+				},
+			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      1,
+			PeriodSeconds:       30,
+			SuccessThreshold:    1,
+			FailureThreshold:    8,
+		},
+		LivenessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/-/healthy",
+					Port: intstr.FromInt32(HTTPPort),
+				},
+			},
+			InitialDelaySeconds: 5,
+			TimeoutSeconds:      1,
+			PeriodSeconds:       30,
+			SuccessThreshold:    1,
+			FailureThreshold:    8,
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      hashringVolumeName,
+				MountPath: hashringMountPath,
+			},
+		},
+		Ports: []corev1.ContainerPort{
+			{
+				ContainerPort: GRPCPort,
+				Name:          GRPCPortName,
+			},
+			{
+				ContainerPort: CapnProtoPort,
+				Name:          CapnProtoPortName,
+			},
+			{
+				ContainerPort: HTTPPort,
+				Name:          HTTPPortName,
+			},
+			{
+				ContainerPort: RemoteWritePort,
+				Name:          RemoteWritePortName,
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		Args:                     routerArgsFrom(opts),
+	}
+}
+
+// buildKubeResourceSyncContainer builds the kube-resource-sync sidecar container
+func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
+	var image string
+	if opts.FeatureGateConfig != nil {
+		image = opts.FeatureGateConfig.KubeResourceSyncImage
+	}
+
+	return corev1.Container{
+		Name:            kubeResourceSyncContainerName,
+		Image:           image,
+		ImagePullPolicy: corev1.PullAlways,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot:             ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
+		Args: []string{
+			"--resource-type=configmap",
+			"--resource-name=" + opts.GetGeneratedResourceName(),
+			"--namespace=" + opts.Namespace,
+			"--write-path=" + hashringMountPath + "/" + HashringConfigKey,
+			"--resource-key=" + HashringConfigKey,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      hashringVolumeName,
+				MountPath: hashringMountPath,
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+	}
+}
+
+// buildKubeResourceSyncInitContainer builds the kube-resource-sync init container
+// to ensure ConfigMap data is available before the main container starts
+func buildKubeResourceSyncInitContainer(opts RouterOptions) corev1.Container {
+	container := buildKubeResourceSyncContainer(opts)
+	container.Name = kubeResourceSyncContainerName + "-init"
+
+	// Add the --init-mode flag for init container behavior
+	container.Args = append(container.Args, "--init-mode")
+
+	return container
+}
+
+// newRouterRole creates a Role for the router when KubeResourceSync is enabled
+func newRouterRole(name, namespace string, objectMetaLabels map[string]string) *rbacv1.Role {
+	return &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Role",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    objectMetaLabels,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+	}
+}
+
+// newRouterRoleBinding creates a RoleBinding for the router when KubeResourceSync is enabled
+func newRouterRoleBinding(name, namespace string, objectMetaLabels map[string]string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    objectMetaLabels,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     name,
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+		},
 	}
 }

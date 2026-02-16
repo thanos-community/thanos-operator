@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,6 +27,9 @@ import (
 //   - Deployment
 //   - StatefulSet
 //   - ServiceMonitor
+//   - PodDisruptionBudget
+//   - Role
+//   - RoleBinding
 func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 	return func() error {
 		existingAnnotations := existing.GetAnnotations()
@@ -86,6 +90,16 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 			pdb := existing.(*policyv1.PodDisruptionBudget)
 			wantPdb := desired.(*policyv1.PodDisruptionBudget)
 			mutatePodDisruptionBudget(pdb, wantPdb)
+
+		case *rbacv1.Role:
+			role := existing.(*rbacv1.Role)
+			wantRole := desired.(*rbacv1.Role)
+			mutateRole(role, wantRole)
+
+		case *rbacv1.RoleBinding:
+			rb := existing.(*rbacv1.RoleBinding)
+			wantRb := desired.(*rbacv1.RoleBinding)
+			mutateRoleBinding(rb, wantRb)
 		default:
 			t := reflect.TypeOf(existing).String()
 			return fmt.Errorf("missing mutate implementation for resource type %v", t)
@@ -177,4 +191,17 @@ func mutatePodDisruptionBudget(existing, desired *policyv1.PodDisruptionBudget) 
 	existing.Annotations = desired.Annotations
 	existing.Labels = desired.Labels
 	existing.Spec = desired.Spec
+}
+
+func mutateRole(existing, desired *rbacv1.Role) {
+	existing.Annotations = desired.Annotations
+	existing.Labels = desired.Labels
+	existing.Rules = desired.Rules
+}
+
+func mutateRoleBinding(existing, desired *rbacv1.RoleBinding) {
+	existing.Annotations = desired.Annotations
+	existing.Labels = desired.Labels
+	existing.Subjects = desired.Subjects
+	existing.RoleRef = desired.RoleRef
 }

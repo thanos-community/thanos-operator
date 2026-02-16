@@ -35,7 +35,7 @@ Thanos Operator binary CLI Options include,
 ```bash mdox-exec="./bin/manager --help"
 Usage of ./bin/manager:
   -enable-feature value
-    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule.
+    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule, kube-resource-sync.
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
   -health-probe-bind-address string
@@ -101,6 +101,8 @@ Feature flags can be enabled using the `--enable-feature` flag. The following fe
 `service-monitor` - Enables ServiceMonitor management by the operator for Thanos components it deploys. This requires Prometheus Operator to be installed in the cluster.
 
 `prometheus-rule` - Enables PrometheusRule discovery for Thanos Ruler. This requires Prometheus Operator to be installed in the cluster. This allows ThanosRuler to discover PrometheusRule objects in the cluster and apply them to itself.
+
+`kube-resource-sync` - Enables [kube-resource-sync](https://github.com/philipgough/kube-resource-sync) sidecar for Thanos Receive router deployments. This provides immediate synchronization of ConfigMap changes without requiring pod restarts.
 
 ## Contributing and development
 

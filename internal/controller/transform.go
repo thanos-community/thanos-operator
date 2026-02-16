@@ -185,6 +185,13 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate feat
 		ExternalLabels:    router.ExternalLabels,
 	}
 
+	if featureGate.KubeResourceSyncEnabled() {
+		ropts.FeatureGateConfig = &manifestreceive.FeatureGateConfig{
+			KubeResourceSyncEnabled: featureGate.KubeResourceSyncEnabled(),
+			KubeResourceSyncImage:   featureGate.GetKubeResourceSyncImage(),
+		}
+	}
+
 	if router.ReplicationProtocol != nil {
 		ropts.ReplicationProtocol = string(*router.ReplicationProtocol)
 	}

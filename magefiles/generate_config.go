@@ -31,6 +31,7 @@ func (c Config) Generate() error {
 			config.ControllerManagerDeployment(
 				config.WithServiceMonitor(),
 				config.WithPrometheusRule(),
+				config.WithSync(),
 			),
 		),
 	)

@@ -57,6 +57,7 @@ func ManagerAuthProxyPatch() map[string]interface{} {
 								"--log.level=debug",
 								"--enable-feature=prometheus-rule",
 								"--enable-feature=service-monitor",
+								"--enable-feature=kube-resource-sync",
 							},
 						},
 					},

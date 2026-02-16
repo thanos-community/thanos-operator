@@ -260,6 +260,41 @@ func TestNewRouterDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "test with kube-resource-sync enabled",
+			golden: "router-deployment-with-kube-resource-sync.golden.yaml",
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:latest"),
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+				},
+				FeatureGateConfig: &FeatureGateConfig{
+					KubeResourceSyncEnabled: true,
+					KubeResourceSyncImage:   "quay.io/philipgough/kube-resource-sync:main",
+				},
+			},
+		},
+		{
+			name:   "test with kube-resource-sync disabled",
+			golden: "router-deployment-without-kube-resource-sync.golden.yaml",
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Owner:     "test-receive",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:latest"),
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+				},
+				FeatureGateConfig: &FeatureGateConfig{
+					KubeResourceSyncEnabled: false,
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			router := NewRouterDeployment(tc.opts)
