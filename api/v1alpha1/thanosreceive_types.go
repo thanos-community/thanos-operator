@@ -58,10 +58,6 @@ type RouterSpec struct {
 	// CommonFields are the options available to all Thanos components.
 	// +kubebuilder:validation:Optional
 	CommonFields `json:",inline"`
-	// Labels are additional labels to add to the router components.
-	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// Replicas is the number of router replicas.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
@@ -124,10 +120,6 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Name string `json:"name"`
-	// Labels are additional labels to add to the ingester components.
-	// Labels set here will overwrite the labels inherited from the ThanosReceive object if they have the same key.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// ExternalLabels to add to the ingesters tsdb blocks.
 	// +kubebuilder:default={replica: "$(POD_NAME)"}
 	// +kubebuilder:validation:Required

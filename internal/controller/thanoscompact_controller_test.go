@@ -104,8 +104,9 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
-					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-					Labels:       map[string]string{"some-label": "xyz"},
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Labels: map[string]string{"some-label": "xyz"},
+					},
 					ShardingConfig: []monitoringthanosiov1alpha1.ShardingConfig{
 						{
 							ShardName: "someone",
