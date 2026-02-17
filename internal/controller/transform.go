@@ -59,10 +59,8 @@ func QueryNameFromParent(resourceName string) string {
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
 func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestqueryfrontend.Options {
-	// Parent labels + query spec labels + query-frontend specific labels
-	// Query-frontend labels take precedence in case of conflicts
 	frontend := in.Spec.QueryFrontend
-	labels := manifests.MergeLabels(manifests.MergeLabels(in.GetLabels(), in.Spec.CommonFields.Labels), frontend.CommonFields.Labels)
+	labels := manifests.MergeLabels(in.GetLabels(), frontend.CommonFields.Labels)
 
 	// Parent annotations + query-frontend specific annotations
 	// Query-frontend annotations take precedence in case of conflicts
