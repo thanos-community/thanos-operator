@@ -325,10 +325,10 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
 		}
-		if in.CRD.Spec.CompactConfig.VerticalCompaction != nil {
+		if in.CRD.Spec.VerticalCompactionConfig != nil {
 			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
-				ReplicaLabels:     in.CRD.Spec.CompactConfig.VerticalCompaction.ReplicaLabels,
-				DeduplicationFunc: in.CRD.Spec.CompactConfig.VerticalCompaction.DeduplicationFunc,
+				ReplicaLabels:     in.CRD.Spec.VerticalCompactionConfig.ReplicaLabels,
+				DeduplicationFunc: in.CRD.Spec.VerticalCompactionConfig.DeduplicationFunc,
 			}
 		}
 		return opts
