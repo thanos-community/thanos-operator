@@ -294,10 +294,10 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) 
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
 		}
-		if in.Spec.CompactConfig.VerticalCompaction != nil {
+		if in.Spec.VerticalCompactionConfig != nil {
 			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
-				ReplicaLabels:     in.Spec.CompactConfig.VerticalCompaction.ReplicaLabels,
-				DeduplicationFunc: in.Spec.CompactConfig.VerticalCompaction.DeduplicationFunc,
+				ReplicaLabels:     in.Spec.VerticalCompactionConfig.ReplicaLabels,
+				DeduplicationFunc: in.Spec.VerticalCompactionConfig.DeduplicationFunc,
 			}
 		}
 		return opts
