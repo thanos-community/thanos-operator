@@ -4817,24 +4817,28 @@ spec:
                       use when compacting blocks.
                     format: int32
                     type: integer
-                  deduplicationFunc:
+                  verticalCompaction:
                     description: |-
-                      DeduplicationFunc specifies the deduplication algorithm to use.
+                      VerticalCompaction configures vertical compaction for deduplicating samples across replica labels.
                       This is an experimental feature.
-                    enum:
-                    - ""
-                    - penalty
-                    type: string
-                  deduplicationReplicaLabels:
-                    description: |-
-                      DeduplicationReplicaLabels is a list of labels to treat as replica labels for deduplication.
-                      These labels will be ignored when merging blocks during vertical compaction.
-                      Commonly set to "replica" for Prometheus HA setups.
-                      When set, vertical compaction will be automatically enabled.
-                      This is an experimental feature.
-                    items:
-                      type: string
-                    type: array
+                    properties:
+                      deduplicationFunc:
+                        description: DeduplicationFunc specifies the deduplication
+                          algorithm to use.
+                        enum:
+                        - ""
+                        - penalty
+                        type: string
+                      replicaLabels:
+                        description: |-
+                          ReplicaLabels is a list of labels to treat as replica labels for deduplication.
+                          These labels will be ignored when merging blocks during vertical compaction.
+                          Commonly set to "replica" for Prometheus HA setups.
+                          When set, vertical compaction will be automatically enabled.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               debugConfig:
                 description: DebugConfig is the debug configuration for the compact

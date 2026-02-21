@@ -288,14 +288,19 @@ func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) 
 		if in.Spec.CompactConfig == nil {
 			return nil
 		}
-		return &manifestscompact.CompactionOptions{
+		opts := &manifestscompact.CompactionOptions{
 			CompactConcurrency:           in.Spec.CompactConfig.CompactConcurrency,
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
-			DeduplicationReplicaLabels:   in.Spec.CompactConfig.DeduplicationReplicaLabels,
-			DeduplicationFunc:            in.Spec.CompactConfig.DeduplicationFunc,
 		}
+		if in.Spec.CompactConfig.VerticalCompaction != nil {
+			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
+				ReplicaLabels:     in.Spec.CompactConfig.VerticalCompaction.ReplicaLabels,
+				DeduplicationFunc: in.Spec.CompactConfig.VerticalCompaction.DeduplicationFunc,
+			}
+		}
+		return opts
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
 		if in.Spec.BlockConfig == nil && in.Spec.BlockViewerGlobalSync == nil {

@@ -118,15 +118,21 @@ type CompactConfig struct {
 	// +kubebuilder:default="30m"
 	// +kubebuilder:validation:Optional
 	ConsistencyDelay *Duration `json:"blockConsistencyDelay,omitempty"`
-	// DeduplicationReplicaLabels is a list of labels to treat as replica labels for deduplication.
+	// VerticalCompaction configures vertical compaction for deduplicating samples across replica labels.
+	// This is an experimental feature.
+	// +kubebuilder:validation:Optional
+	VerticalCompaction *VerticalCompactionConfig `json:"verticalCompaction,omitempty"`
+}
+
+// VerticalCompactionConfig defines the configuration for vertical compaction.
+type VerticalCompactionConfig struct {
+	// ReplicaLabels is a list of labels to treat as replica labels for deduplication.
 	// These labels will be ignored when merging blocks during vertical compaction.
 	// Commonly set to "replica" for Prometheus HA setups.
 	// When set, vertical compaction will be automatically enabled.
-	// This is an experimental feature.
 	// +kubebuilder:validation:Optional
-	DeduplicationReplicaLabels []string `json:"deduplicationReplicaLabels,omitempty"`
+	ReplicaLabels []string `json:"replicaLabels,omitempty"`
 	// DeduplicationFunc specifies the deduplication algorithm to use.
-	// This is an experimental feature.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Enum="";penalty
 	DeduplicationFunc *string `json:"deduplicationFunc,omitempty"`

@@ -207,29 +207,37 @@ func TestCompactionOptions_toArgs(t *testing.T) {
 		{
 			name: "deduplication replica labels enables vertical compaction",
 			opts: &CompactionOptions{
-				DeduplicationReplicaLabels: []string{"replica", "prometheus_replica"},
+				VerticalCompaction: &VerticalCompactionOptions{
+					ReplicaLabels: []string{"replica", "prometheus_replica"},
+				},
 			},
 			expected: []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica", "--deduplication.replica-label=prometheus_replica"},
 		},
 		{
 			name: "deduplication func penalty",
 			opts: &CompactionOptions{
-				DeduplicationFunc: ptr.To("penalty"),
+				VerticalCompaction: &VerticalCompactionOptions{
+					DeduplicationFunc: ptr.To("penalty"),
+				},
 			},
 			expected: []string{"--deduplication.func=penalty"},
 		},
 		{
 			name: "deduplication func empty string ignored",
 			opts: &CompactionOptions{
-				DeduplicationFunc: ptr.To(""),
+				VerticalCompaction: &VerticalCompactionOptions{
+					DeduplicationFunc: ptr.To(""),
+				},
 			},
 			expected: []string{},
 		},
 		{
 			name: "deduplication with replica labels and func",
 			opts: &CompactionOptions{
-				DeduplicationReplicaLabels: []string{"replica"},
-				DeduplicationFunc:          ptr.To("penalty"),
+				VerticalCompaction: &VerticalCompactionOptions{
+					ReplicaLabels:     []string{"replica"},
+					DeduplicationFunc: ptr.To("penalty"),
+				},
 			},
 			expected: []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica", "--deduplication.func=penalty"},
 		},
