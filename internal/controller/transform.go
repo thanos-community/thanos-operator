@@ -319,14 +319,19 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 		if in.CRD.Spec.CompactConfig == nil {
 			return nil
 		}
-		return &manifestscompact.CompactionOptions{
+		opts := &manifestscompact.CompactionOptions{
 			CompactConcurrency:           in.CRD.Spec.CompactConfig.CompactConcurrency,
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
-			DeduplicationReplicaLabels:   in.CRD.Spec.CompactConfig.DeduplicationReplicaLabels,
-			DeduplicationFunc:            in.CRD.Spec.CompactConfig.DeduplicationFunc,
 		}
+		if in.CRD.Spec.CompactConfig.VerticalCompaction != nil {
+			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
+				ReplicaLabels:     in.CRD.Spec.CompactConfig.VerticalCompaction.ReplicaLabels,
+				DeduplicationFunc: in.CRD.Spec.CompactConfig.VerticalCompaction.DeduplicationFunc,
+			}
+		}
+		return opts
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
 		if in.CRD.Spec.BlockConfig == nil && in.CRD.Spec.BlockViewerGlobalSync == nil {
