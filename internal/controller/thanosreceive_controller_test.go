@@ -418,6 +418,13 @@ config:
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
+			By("verifying router pods are annotated with hashring config hash", func() {
+				Eventually(func() bool {
+					return utils.VerifyPodAnnotation(
+						k8sClient, routerName, ns, "thanos.io/hashring-config-hash")
+				}, time.Minute*3, time.Second*2).Should(BeTrue())
+			})
+
 			By("checking paused state", func() {
 				resource.Spec.Paused = ptr.To(true)
 				resource.Spec.Router.CommonFields.LogLevel = ptr.To("debug")

@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	policyv1 "k8s.io/api/policy/v1"
@@ -162,6 +164,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -215,14 +218,19 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 	// we won't error out here yet as we don't want to delay updating the router configmap
 
-	hashringConfig, err := r.buildHashringConfig(ctx, receiver)
+	hashringResult, err := r.buildHashringConfig(ctx, receiver)
 	if err != nil {
 		return fmt.Errorf("failed to build hashring config: %w", err)
 	}
-	routerOpts := r.specToRouterOptions(receiver, string(hashringConfig))
+	routerOpts := r.specToRouterOptions(receiver, hashringResult.Config)
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
+	}
+
+	// Annotate router pods with hashring config hash
+	if errCount := r.annotateRouterPods(ctx, receiver, hashringResult.Hash, routerOpts); errCount > 0 {
+		return fmt.Errorf("failed to annotate %d router pods", errCount)
 	}
 
 	// we go back and force a reconcile now on the original errors from the ingesters
@@ -255,8 +263,14 @@ func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosi
 	return opts
 }
 
+// hashringConfigResult contains the hashring configuration and its hash value
+type hashringConfigResult struct {
+	Config string  // The hashring configuration as a string
+	Hash   float64 // The hash value of the configuration
+}
+
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.
-func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) ([]byte, error) {
+func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) (*hashringConfigResult, error) {
 	cm := &corev1.ConfigMap{}
 	name := ReceiveRouterNameFromParent(receiver.GetName())
 	err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: name}, cm)
@@ -311,7 +325,7 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 	}
 
 	if len(out) == 0 {
-		return []byte(""), nil
+		return &hashringConfigResult{Config: "", Hash: 0}, nil
 	}
 
 	for _, hashring := range out {
@@ -324,9 +338,14 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		return nil, fmt.Errorf("failed to marshal hashring config: %w", err)
 	}
 
-	r.metrics.HashringHash.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(receive.HashAsMetricValue(b))
+	hashValue := receive.HashAsMetricValue(b)
+	r.metrics.HashringHash.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(hashValue)
 	r.metrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(len(out)))
-	return b, nil
+
+	return &hashringConfigResult{
+		Config: string(b),
+		Hash:   hashValue,
+	}, nil
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {
@@ -422,4 +441,67 @@ func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver 
 	if err := r.Status().Update(ctx, receiver); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosReceive", "name", receiver.Name)
 	}
+}
+
+// annotateRouterPods annotates router pods with the hashring configuration hash
+// returns the number of errors encountered during annotation process
+func (r *ThanosReceiveReconciler) annotateRouterPods(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive, hashValue float64, routerOpts manifests.Buildable) int {
+	configHash := fmt.Sprintf("%.0f", hashValue)
+
+	podList := &corev1.PodList{}
+	listOpts := []client.ListOption{
+		manifests.GetLabelSelectorForOwner(routerOpts),
+		client.InNamespace(receiver.GetNamespace()),
+	}
+
+	if err := r.Client.List(ctx, podList, listOpts...); err != nil {
+		r.logger.Error(err, "failed to list router pods for annotation")
+		return 1
+	}
+
+	var podsToAnnotate []corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp.IsZero() {
+			podsToAnnotate = append(podsToAnnotate, pod)
+		}
+	}
+
+	if len(podsToAnnotate) == 0 {
+		return 0
+	}
+
+	var wg sync.WaitGroup
+	var errorCount int32
+	annotationKey := "thanos.io/hashring-config-hash"
+
+	for _, pod := range podsToAnnotate {
+		wg.Add(1)
+		go func(p corev1.Pod) {
+			defer wg.Done()
+
+			podPatch := &corev1.Pod{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Pod",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      p.Name,
+					Namespace: p.Namespace,
+					Annotations: map[string]string{
+						annotationKey: configHash,
+					},
+				},
+			}
+
+			if err := r.Patch(ctx, podPatch, client.Apply, client.FieldOwner("thanos-operator"), client.ForceOwnership); err != nil {
+				r.logger.Error(err, "failed to annotate pod", "pod", p.Name, "hash", configHash)
+				atomic.AddInt32(&errorCount, 1)
+			} else {
+				r.logger.Info("annotated router pod with hashring config hash", "pod", p.Name, "hash", configHash)
+			}
+		}(pod)
+	}
+
+	wg.Wait()
+	return int(errorCount)
 }
