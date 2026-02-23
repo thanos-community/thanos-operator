@@ -161,6 +161,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosreceives/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;update;patch
 // +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // SetupWithManager sets up the controller with the Manager.
@@ -223,6 +224,35 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
+	}
+
+	// Expand existing PVCs for ingesters if storage size has increased in the CR spec
+	// Note: The CreateOrUpdate call above already updated the StatefulSet's VolumeClaimTemplates
+	// to reflect the new storage size from the CR. Now we need to expand the existing PVCs
+	// so that existing pods can use the new storage size.
+	// The handler will check if expansion is actually needed before doing expensive LIST operations.
+	for _, opt := range ingestOpts {
+		ingesterOpts, ok := opt.(manifestreceive.IngesterOptions)
+		if !ok {
+			continue
+		}
+
+		sts := &appsv1.StatefulSet{}
+		stsName := ingesterOpts.GetGeneratedResourceName()
+		if getErr := r.Get(ctx, client.ObjectKey{Name: stsName, Namespace: receiver.GetNamespace()}, sts); getErr != nil {
+			r.logger.Error(getErr, "failed to get StatefulSet for PVC expansion", "statefulset", stsName)
+			errCount++
+			continue
+		}
+
+		desiredSize := corev1.ResourceList{
+			corev1.ResourceStorage: ingesterOpts.StorageConfig.StorageSize,
+		}
+
+		if expandErrCount := r.handler.ExpandPVCsForStatefulSet(ctx, sts, desiredSize); expandErrCount > 0 {
+			r.logger.Error(fmt.Errorf("failed to expand %d PVCs", expandErrCount), "error expanding PVCs for StatefulSet", "statefulset", stsName)
+			errCount += expandErrCount
+		}
 	}
 
 	// we go back and force a reconcile now on the original errors from the ingesters
