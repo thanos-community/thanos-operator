@@ -185,3 +185,76 @@ func TestOptions_GetName(t *testing.T) {
 		})
 	}
 }
+
+func TestCompactionOptions_toArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		opts     *CompactionOptions
+		expected []string
+	}{
+		{
+			name:     "nil options",
+			opts:     nil,
+			expected: []string{},
+		},
+		{
+			name: "no dedup labels means no vertical compaction",
+			opts: &CompactionOptions{
+				CompactConcurrency: ptr.To(int32(2)),
+			},
+			expected: []string{"--compact.concurrency=2"},
+		},
+		{
+			name: "deduplication replica labels enables vertical compaction",
+			opts: &CompactionOptions{
+				VerticalCompaction: &VerticalCompactionOptions{
+					ReplicaLabels: []string{"replica", "prometheus_replica"},
+				},
+			},
+			expected: []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica", "--deduplication.replica-label=prometheus_replica"},
+		},
+		{
+			name: "deduplication func penalty",
+			opts: &CompactionOptions{
+				VerticalCompaction: &VerticalCompactionOptions{
+					DeduplicationFunc: ptr.To("penalty"),
+				},
+			},
+			expected: []string{"--deduplication.func=penalty"},
+		},
+		{
+			name: "deduplication func empty string ignored",
+			opts: &CompactionOptions{
+				VerticalCompaction: &VerticalCompactionOptions{
+					DeduplicationFunc: ptr.To(""),
+				},
+			},
+			expected: []string{},
+		},
+		{
+			name: "deduplication with replica labels and func",
+			opts: &CompactionOptions{
+				VerticalCompaction: &VerticalCompactionOptions{
+					ReplicaLabels:     []string{"replica"},
+					DeduplicationFunc: ptr.To("penalty"),
+				},
+			},
+			expected: []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica", "--deduplication.func=penalty"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.opts.toArgs()
+			if len(result) != len(tt.expected) {
+				t.Errorf("expected %d args, got %d: %v", len(tt.expected), len(result), result)
+				return
+			}
+			for i, arg := range result {
+				if arg != tt.expected[i] {
+					t.Errorf("expected arg[%d] to be %s, got %s", i, tt.expected[i], arg)
+				}
+			}
+		})
+	}
+}

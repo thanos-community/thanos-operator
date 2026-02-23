@@ -915,6 +915,7 @@ _Appears in:_
 | `downsamplingConfig` _[DownsamplingConfig](#downsamplingconfig)_ | DownsamplingConfig is the downsampling configuration for the compact component. |  | Optional: \{\} <br /> |
 | `debugConfig` _[DebugConfig](#debugconfig)_ | DebugConfig is the debug configuration for the compact component. |  | Optional: \{\} <br /> |
 | `timeRangeConfig` _[TimeRangeConfig](#timerangeconfig)_ | TimeRangeConfig configures the time range of data to serve for the compact component.. |  | Optional: \{\} <br /> |
+| `verticalCompactionConfig` _[VerticalCompactionConfig](#verticalcompactionconfig)_ | VerticalCompaction configures vertical compaction for deduplicating samples across replica labels.<br />This is an experimental feature. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |
@@ -1364,6 +1365,23 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `minTime` _[Duration](#duration)_ | Minimum time range to serve. Any data earlier than this lower time range will be ignored.<br />If not set, will be set as zero value, so most recent blocks will be served. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `maxTime` _[Duration](#duration)_ | Maximum time range to serve. Any data after this upper time range will be ignored.<br />If not set, will be set as max value, so all blocks will be served. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+
+
+#### VerticalCompactionConfig
+
+
+
+VerticalCompactionConfig defines the configuration for vertical compaction.
+
+
+
+_Appears in:_
+- [ThanosCompactSpec](#thanoscompactspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `replicaLabels` _string array_ | ReplicaLabels is a list of labels to treat as replica labels for deduplication.<br />These labels will be ignored when merging blocks during vertical compaction.<br />Commonly set to "replica" for Prometheus HA setups.<br />When set, vertical compaction will be automatically enabled. |  | Optional: \{\} <br /> |
+| `deduplicationFunc` _string_ | DeduplicationFunc specifies the deduplication algorithm to use. |  | Enum: [ penalty] <br />Optional: \{\} <br /> |
 
 
 #### WebConfig
