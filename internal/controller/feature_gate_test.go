@@ -79,8 +79,9 @@ config:
 					Namespace: ns,
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
-					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-					Labels:       map[string]string{"some-label": "xyz"},
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Labels: map[string]string{"some-label": "xyz"},
+					},
 					ShardingConfig: []monitoringthanosiov1alpha1.ShardingConfig{
 						{
 							ShardName: shardName,
@@ -178,8 +179,9 @@ config:
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
-						CommonFields:      monitoringthanosiov1alpha1.CommonFields{},
-						Labels:            map[string]string{"test": "my-router-test"},
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"test": "my-router-test"},
+						},
 						ReplicationFactor: 1,
 						Replicas:          2,
 					},
@@ -190,8 +192,10 @@ config:
 						},
 						Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
 							{
-								Name:   hashringName,
-								Labels: map[string]string{"test": "my-ingester-test"},
+								CommonFields: monitoringthanosiov1alpha1.CommonFields{
+									Labels: map[string]string{"test": "my-ingester-test"},
+								},
+								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 									Size: "100Mi",
 								},
@@ -308,9 +312,10 @@ config:
 						Namespace: ns,
 					},
 					Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
-						Replicas:     2,
-						CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-						Labels:       map[string]string{"some-label": "xyz"},
+						Replicas: 2,
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{
+							Labels: map[string]string{"some-label": "xyz"},
+						},
 						ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
 							Type:   monitoringthanosiov1alpha1.Block,
 							Shards: 3,

@@ -4699,7 +4699,9 @@ spec:
                             labels:
                                 additionalProperties:
                                     type: string
-                                description: Labels are additional labels to add to the Store component.
+                                description: |-
+                                    Labels are additional labels to add to components.
+                                    If labels are nested, the innermost nested label will take preference.
                                 type: object
                             logFormat:
                                 default: logfmt

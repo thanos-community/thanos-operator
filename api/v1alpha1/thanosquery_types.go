@@ -28,9 +28,6 @@ type ThanosQuerySpec struct {
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Required
 	Replicas int32 `json:"replicas,omitempty"`
-	// Labels are additional labels to add to the Querier component.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// ReplicaLabels are labels to treat as a replica indicator along which data is deduplicated.
 	// Data can still be queried without deduplication using 'dedup=false' parameter.
 	// Data includes time series, recording rules, and alerting rules.
@@ -74,11 +71,6 @@ type QueryFrontendSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=1
 	Replicas int32 `json:"replicas,omitempty"`
-	// Labels are additional labels to add to the Query Frontend component.
-	// These labels will be merged with labels inherited from the parent ThanosQuery.
-	// In case of conflicts, these labels take precedence.
-	// +kubebuilder:validation:Optional
-	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations are additional annotations to add to the Query Frontend component.
 	// These annotations will be merged with annotations inherited from the parent ThanosQuery.
 	// In case of conflicts, these annotations take precedence.
