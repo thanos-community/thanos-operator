@@ -1,5 +1,7 @@
 kind: Service
 metadata:
+  annotations:
+    test: annotation
   labels:
     app.kubernetes.io/component: object-storage-gateway
     app.kubernetes.io/instance: thanos-store

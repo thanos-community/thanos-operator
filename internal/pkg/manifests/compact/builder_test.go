@@ -3,6 +3,8 @@ package compact
 import (
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -32,6 +34,10 @@ func TestNewService(t *testing.T) {
 				Options: manifests.Options{
 					Namespace: "any",
 					Owner:     "standalone",
+					Annotations: map[string]string{
+						"test":    "annotation",
+						"another": "annotation",
+					},
 				},
 			},
 		},
@@ -42,6 +48,10 @@ func TestNewService(t *testing.T) {
 				Options: manifests.Options{
 					Namespace: "any",
 					Owner:     "shard",
+					Annotations: map[string]string{
+						"test":    "annotation",
+						"another": "annotation",
+					},
 				},
 			},
 		},
@@ -80,7 +90,8 @@ func TestNewStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 				},
 			},
@@ -99,7 +110,8 @@ func TestNewStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 				},
 			},
@@ -129,6 +141,9 @@ func TestBuild(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"test": "annotation",
+			},
 			// should ignore this setting
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
@@ -137,6 +152,10 @@ func TestBuild(t *testing.T) {
 	objs := opts.Build()
 	if len(objs) != 3 {
 		t.Fatalf("expected 3 objects, got %d", len(objs))
+	}
+
+	for _, obj := range objs {
+		assert.Assert(t, obj.GetAnnotations()["test"] == "annotation")
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)

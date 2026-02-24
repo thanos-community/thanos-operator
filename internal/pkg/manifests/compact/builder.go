@@ -56,7 +56,7 @@ type Options struct {
 func (opts Options) Build() []client.Object {
 	var objs []client.Object
 	selectorLabels := opts.GetSelectorLabels()
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	objectMetaLabels := manifests.MergeMaps(opts.Labels, selectorLabels)
 	name := opts.GetGeneratedResourceName()
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
@@ -95,7 +95,7 @@ func (opts Options) getOwner() string {
 // NewStatefulSet creates a new StatefulSet for the Thanos Compact shard.
 func NewStatefulSet(opts Options) *appsv1.StatefulSet {
 	selectorLabels := opts.GetSelectorLabels()
-	return newShardStatefulSet(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	return newShardStatefulSet(opts, selectorLabels, manifests.MergeMaps(opts.Labels, selectorLabels))
 }
 
 func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLabels map[string]string) *appsv1.StatefulSet {
@@ -238,7 +238,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 // The Service name will be the same as the Options.Name if Shard name is not provided.
 func NewService(opts Options) *corev1.Service {
 	selectorLabels := opts.GetSelectorLabels()
-	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
+	objectMetaLabels := manifests.MergeMaps(opts.Labels, selectorLabels)
 	svc := newService(opts, selectorLabels, objectMetaLabels)
 	if opts.Additional.ServicePorts != nil {
 		svc.Spec.Ports = append(svc.Spec.Ports, opts.Additional.ServicePorts...)
@@ -328,7 +328,7 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 // GetLabels returns the ObjectMeta labels for Thanos Compact.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	return manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
 }
 
 // RetentionOptions for Thanos Compact

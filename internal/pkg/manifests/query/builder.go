@@ -218,7 +218,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 
 func NewQueryService(opts Options) *corev1.Service {
 	selectorLabels := opts.GetSelectorLabels()
-	return newQueryService(opts, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels))
+	return newQueryService(opts, selectorLabels, manifests.MergeMaps(opts.Labels, selectorLabels))
 }
 
 func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
@@ -334,7 +334,7 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 // GetLabels returns a map of labels that can be used to look up query resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
+	return manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {

@@ -808,7 +808,7 @@ func (r *ThanosRulerReconciler) createBucketedRuleConfigMaps(
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,
 				Namespace: ruler.Namespace,
-				Labels:    manifests.MergeLabels(manifests.MergeLabels(ruler.Spec.RuleConfigSelector.MatchLabels, defaultRuleLabels), additionalLabels),
+				Labels:    manifests.MergeMaps(manifests.MergeMaps(ruler.Spec.RuleConfigSelector.MatchLabels, defaultRuleLabels), additionalLabels),
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						APIVersion: ruler.APIVersion,
