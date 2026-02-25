@@ -4737,6 +4737,13 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              annotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Annotations are additional annotations to add to components.
+                  In case of conflicts, these annotations take precedence.
+                type: object
               baseImage:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
@@ -4892,7 +4899,7 @@ spec:
                   type: string
                 description: |-
                   Labels are additional labels to add to components.
-                  If labels are nested, the innermost nested label will take preference.
+                  In case of conflicts, these labels take precedence.
                 type: object
               logFormat:
                 default: logfmt
@@ -10245,6 +10252,13 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              annotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Annotations are additional annotations to add to components.
+                  In case of conflicts, these annotations take precedence.
+                type: object
               baseImage:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
@@ -10343,7 +10357,7 @@ spec:
                   type: string
                 description: |-
                   Labels are additional labels to add to components.
-                  If labels are nested, the innermost nested label will take preference.
+                  In case of conflicts, these labels take precedence.
                 type: object
               logFormat:
                 default: logfmt
@@ -15102,8 +15116,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: |-
-                      Annotations are additional annotations to add to the Query Frontend component.
-                      These annotations will be merged with annotations inherited from the parent ThanosQuery.
+                      Annotations are additional annotations to add to components.
                       In case of conflicts, these annotations take precedence.
                     type: object
                   baseImage:
@@ -15151,7 +15164,7 @@ spec:
                       type: string
                     description: |-
                       Labels are additional labels to add to components.
-                      If labels are nested, the innermost nested label will take preference.
+                      In case of conflicts, these labels take precedence.
                     type: object
                   labelsDefaultTimeRange:
                     description: LabelsDefaultTimeRange sets the default time range
@@ -21006,6 +21019,13 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                           type: object
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Annotations are additional annotations to add to components.
+                            In case of conflicts, these annotations take precedence.
+                          type: object
                         asyncForwardWorkerCount:
                           default: 5
                           description: AsyncForwardWorkerCount is the number of concurrent
@@ -21070,7 +21090,7 @@ spec:
                             type: string
                           description: |-
                             Labels are additional labels to add to components.
-                            If labels are nested, the innermost nested label will take preference.
+                            In case of conflicts, these labels take precedence.
                           type: object
                         logFormat:
                           default: logfmt
@@ -26334,6 +26354,13 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                     type: object
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Annotations are additional annotations to add to components.
+                      In case of conflicts, these annotations take precedence.
+                    type: object
                   baseImage:
                     description: Base container image (without tags) to use for the
                       Thanos components deployed via operator.
@@ -26392,7 +26419,7 @@ spec:
                       type: string
                     description: |-
                       Labels are additional labels to add to components.
-                      If labels are nested, the innermost nested label will take preference.
+                      In case of conflicts, these labels take precedence.
                     type: object
                   logFormat:
                     default: logfmt
@@ -31681,6 +31708,13 @@ spec:
                   'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups.
                 pattern: ^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$
                 type: string
+              annotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Annotations are additional annotations to add to components.
+                  In case of conflicts, these annotations take precedence.
+                type: object
               baseImage:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
@@ -31736,7 +31770,7 @@ spec:
                   type: string
                 description: |-
                   Labels are additional labels to add to components.
-                  If labels are nested, the innermost nested label will take preference.
+                  In case of conflicts, these labels take precedence.
                 type: object
               logFormat:
                 default: logfmt
@@ -37129,6 +37163,13 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              annotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Annotations are additional annotations to add to components.
+                  In case of conflicts, these annotations take precedence.
+                type: object
               baseImage:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
@@ -37324,7 +37365,7 @@ spec:
                   type: string
                 description: |-
                   Labels are additional labels to add to components.
-                  If labels are nested, the innermost nested label will take preference.
+                  In case of conflicts, these labels take precedence.
                 type: object
               logFormat:
                 default: logfmt

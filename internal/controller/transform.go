@@ -61,10 +61,6 @@ func QueryNameFromParent(resourceName string) string {
 func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestqueryfrontend.Options {
 	frontend := in.Spec.QueryFrontend
 	labels := manifests.MergeMaps(in.GetLabels(), frontend.CommonFields.Labels)
-	// Parent annotations + query-frontend specific annotations
-	// Query-frontend annotations take precedence in case of conflicts
-	//annotations := manifests.MergeMaps(in.GetAnnotations(), frontend.CommonFields.Annotations)
-
 	opts := commonToOpts(&in, frontend.Replicas, labels, in.GetAnnotations(), frontend.CommonFields, nil, featureGate, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
