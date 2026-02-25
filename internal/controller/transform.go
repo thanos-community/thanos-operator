@@ -18,7 +18,7 @@ import (
 
 func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestquery.Options {
 	labels := manifests.MergeMaps(in.GetLabels(), in.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, nil, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonFields, nil, featureGate, in.Spec.Additional)
 	var webOptions manifestquery.WebOptions
 	if in.Spec.WebConfig != nil {
 		webOptions = manifestquery.WebOptions{
@@ -61,7 +61,7 @@ func QueryNameFromParent(resourceName string) string {
 func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestqueryfrontend.Options {
 	frontend := in.Spec.QueryFrontend
 	labels := manifests.MergeMaps(in.GetLabels(), frontend.CommonFields.Labels)
-	opts := commonToOpts(&in, frontend.Replicas, labels, in.GetAnnotations(), frontend.CommonFields, nil, featureGate, frontend.Additional)
+	opts := commonToOpts(&in, frontend.Replicas, labels, frontend.CommonFields, nil, featureGate, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -89,7 +89,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 
 func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config) manifestruler.Options {
 	labels := manifests.MergeMaps(in.GetLabels(), in.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
 	return manifestruler.Options{
 		Options:         opts,
 		ObjStoreSecret:  in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -123,7 +123,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(&in, spec.Replicas, labels, in.GetAnnotations(), common, &in.Spec.StatefulSetFields, featureGate, additional)
+	opts := commonToOpts(&in, spec.Replicas, labels, common, &in.Spec.StatefulSetFields, featureGate, additional)
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -170,7 +170,7 @@ func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.
 func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate featuregate.Config) manifestreceive.RouterOptions {
 	router := in.Spec.Router
 	labels := manifests.MergeMaps(in.GetLabels(), router.CommonFields.Labels)
-	opts := commonToOpts(&in, router.Replicas, labels, in.GetAnnotations(), router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional)
+	opts := commonToOpts(&in, router.Replicas, labels, router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional)
 
 	ropts := manifestreceive.RouterOptions{
 		Options:           opts,
@@ -212,7 +212,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 
 func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Config) manifestsstore.Options {
 	labels := manifests.MergeMaps(in.GetLabels(), in.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
 	if in.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
@@ -259,7 +259,7 @@ func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Con
 
 func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) manifestscompact.Options {
 	labels := manifests.MergeMaps(in.GetLabels(), in.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in, 1, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, fg, in.Spec.Additional)
+	opts := commonToOpts(&in, 1, labels, in.Spec.CommonFields, &in.Spec.StatefulSetFields, fg, in.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
 	opts.PodManagementPolicy = string(ptr.Deref(in.Spec.PodManagementPolicy, ""))
@@ -370,7 +370,6 @@ func commonToOpts(
 	owner client.Object,
 	replicas int32,
 	labels map[string]string,
-	annotations map[string]string,
 	common v1alpha1.CommonFields,
 	statefulSet *v1alpha1.StatefulSetFields,
 	featureGate featuregate.Config,
@@ -382,7 +381,7 @@ func commonToOpts(
 		Namespace:            owner.GetNamespace(),
 		Replicas:             replicas,
 		Labels:               labels,
-		Annotations:          manifests.MergeMaps(annotations, common.Annotations),
+		Annotations:          manifests.MergeMaps(owner.GetAnnotations(), common.Annotations),
 		Image:                common.Image,
 		Version:              common.Version,
 		ResourceRequirements: common.ResourceRequirements,
