@@ -197,7 +197,6 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				oneh := monitoringthanosiov1alpha1.Duration("1h")
 				thirtym := monitoringthanosiov1alpha1.Duration("30m")
 				resource.Spec.QueryFrontend = &monitoringthanosiov1alpha1.QueryFrontendSpec{
-
 					Replicas:          2,
 					CompressResponses: true,
 					QueryRangeResponseCacheConfig: &monitoringthanosiov1alpha1.CacheConfig{
