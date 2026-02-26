@@ -858,3 +858,21 @@ func ValidateIsNamedPodDisruptionBudget(t *testing.T, obj client.Object, b manif
 	ValidateNameAndNamespace(t, obj, b.GetGeneratedResourceName(), namespace)
 	ValidateLabelsMatch(t, obj, matching)
 }
+
+func VerifyDeploymentAnnotations(c client.Client, name, namespace string, annotations map[string]string) bool {
+	deployment := &appsv1.Deployment{}
+	err := c.Get(context.Background(), client.ObjectKey{
+		Name:      name,
+		Namespace: namespace,
+	}, deployment)
+	if err != nil {
+		return false
+	}
+
+	for k, v := range annotations {
+		if deployment.Annotations[k] != v {
+			return false
+		}
+	}
+	return true
+}

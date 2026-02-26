@@ -90,6 +90,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"query":    "annotation",
+						"conflict": "discarded",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{
@@ -197,6 +201,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				oneh := monitoringthanosiov1alpha1.Duration("1h")
 				thirtym := monitoringthanosiov1alpha1.Duration("30m")
 				resource.Spec.QueryFrontend = &monitoringthanosiov1alpha1.QueryFrontendSpec{
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Annotations: map[string]string{
+							"frontend": "annotation",
+							"conflict": "overwritten",
+						},
+					},
 					Replicas:          2,
 					CompressResponses: true,
 					QueryRangeResponseCacheConfig: &monitoringthanosiov1alpha1.CacheConfig{
@@ -240,6 +250,22 @@ config:
 						if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 							return fmt.Errorf("expected arg %q not found", expectedArg)
 						}
+					}
+
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
+			})
+
+			By("verifying query frontend deployments annotations are merged correctly", func() {
+				EventuallyWithOffset(1, func() error {
+					expectedAnnotations := map[string]string{
+						"query":    "annotation",
+						"frontend": "annotation",
+						"conflict": "overwritten",
+					}
+
+					if !utils.VerifyDeploymentAnnotations(k8sClient, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 
 					return nil
