@@ -147,6 +147,7 @@ var _ = BeforeSuite(func() {
 
 	err = NewThanosRulerReconciler(
 		buildConfig("ruler"),
+		"quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
 		k8sManager.GetClient(),
 		k8sManager.GetScheme(),
 	).DisableConditionUpdate().SetupWithManager(k8sManager)

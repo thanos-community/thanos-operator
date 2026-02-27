@@ -33,20 +33,25 @@ const (
 
 	HTTPPort     = 9090
 	HTTPPortName = "http"
+
+	configReloaderContainerName = "config-reloader"
+	configReloaderPort          = 8080
+	defaultConfigReloaderImage  = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 )
 
 // Options for Thanos Ruler
 type Options struct {
 	manifests.Options
-	Endpoints          []Endpoint
-	RuleFiles          []corev1.ConfigMapKeySelector
-	ObjStoreSecret     corev1.SecretKeySelector
-	Retention          manifests.Duration
-	AlertmanagerURL    string
-	ExternalLabels     map[string]string
-	AlertLabelDrop     []string
-	StorageConfig      manifests.StorageConfig
-	EvaluationInterval manifests.Duration
+	Endpoints           []Endpoint
+	RuleFiles           []corev1.ConfigMapKeySelector
+	ObjStoreSecret      corev1.SecretKeySelector
+	Retention           manifests.Duration
+	AlertmanagerURL     string
+	ExternalLabels      map[string]string
+	AlertLabelDrop      []string
+	StorageConfig       manifests.StorageConfig
+	EvaluationInterval  manifests.Duration
+	ConfigReloaderImage string
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -256,6 +261,14 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		})
 	}
 
+	// Build containers list
+	containers := []corev1.Container{rulerContainer}
+
+	// Add config-reloader sidecar when there are rule files to watch
+	if len(opts.RuleFiles) > 0 {
+		containers = append(containers, buildConfigReloaderContainer(opts))
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
@@ -280,7 +293,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
-					Containers:         []corev1.Container{rulerContainer},
+					Containers:         containers,
 					ServiceAccountName: name,
 					Volumes:            volumes,
 				},
@@ -521,6 +534,70 @@ func bucketSize(bucket map[string]string) int {
 	}
 
 	return totalSize
+}
+
+// buildConfigReloaderContainer builds the prometheus-config-reloader sidecar container
+// that watches rule ConfigMaps and triggers Thanos Ruler reloads on changes.
+func buildConfigReloaderContainer(opts Options) corev1.Container {
+	image := opts.ConfigReloaderImage
+	if image == "" {
+		image = defaultConfigReloaderImage
+	}
+
+	// Build volume mounts for all rule ConfigMaps, deduplicated by ConfigMap name
+	// since a single ConfigMap can have multiple keys
+	volumeMounts := []corev1.VolumeMount{}
+	watchedDirs := []string{}
+	seenConfigMaps := make(map[string]bool)
+
+	for _, ruleFile := range opts.RuleFiles {
+		if seenConfigMaps[ruleFile.Name] {
+			continue
+		}
+		seenConfigMaps[ruleFile.Name] = true
+
+		// Mount the entire ConfigMap directory (not SubPath) to watch for any changes
+		mountPath := fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Name)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      ruleFile.Name,
+			MountPath: mountPath,
+			ReadOnly:  true,
+		})
+		watchedDirs = append(watchedDirs, mountPath)
+	}
+
+	args := []string{
+		fmt.Sprintf("--listen-address=:%d", configReloaderPort),
+		fmt.Sprintf("--reload-url=http://localhost:%d/-/reload", HTTPPort),
+	}
+
+	for _, dir := range watchedDirs {
+		args = append(args, fmt.Sprintf("--watched-dir=%s", dir))
+	}
+
+	return corev1.Container{
+		Name:            configReloaderContainerName,
+		Image:           image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot:             ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
+		Args:         args,
+		VolumeMounts: volumeMounts,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "reloader-web",
+				ContainerPort: configReloaderPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+	}
 }
 
 // UnmarshalYAML unmarshals YAML data into the provided interface.
