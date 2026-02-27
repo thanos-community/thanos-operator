@@ -177,7 +177,7 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(StoreV1Alpha1TransformInput{
+		return []manifests.Buildable{storeV1Alpha1ToOptions(storeV1Alpha1TransformInput{
 			CRD:         store,
 			FeatureGate: r.featureGate,
 		})}
@@ -186,7 +186,7 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
 	buildables := make([]manifests.Buildable, shardCount)
 	for i := range store.Spec.ShardingStrategy.Shards {
-		storeShardOpts := storeV1Alpha1ToOptions(StoreV1Alpha1TransformInput{
+		storeShardOpts := storeV1Alpha1ToOptions(storeV1Alpha1TransformInput{
 			CRD:         store,
 			FeatureGate: r.featureGate,
 		})

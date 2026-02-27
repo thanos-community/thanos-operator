@@ -17,50 +17,50 @@ import (
 )
 
 // QueryV1Alpha1TransformInput holds input for queryV1Alpha1ToOptions.
-type QueryV1Alpha1TransformInput struct {
+type queryV1Alpha1TransformInput struct {
 	CRD         v1alpha1.ThanosQuery
 	FeatureGate featuregate.Config
 }
 
 // QueryV1Alpha1ToQueryFrontEndTransformInput holds input for queryV1Alpha1ToQueryFrontEndOptions.
-type QueryV1Alpha1ToQueryFrontEndTransformInput struct {
+type queryV1Alpha1ToQueryFrontEndTransformInput struct {
 	CRD         v1alpha1.ThanosQuery
 	FeatureGate featuregate.Config
 }
 
 // RulerV1Alpha1TransformInput holds input for rulerV1Alpha1ToOptions.
-type RulerV1Alpha1TransformInput struct {
+type rulerV1Alpha1TransformInput struct {
 	CRD                 v1alpha1.ThanosRuler
 	FeatureGate         featuregate.Config
 	ConfigReloaderImage string
 }
 
 // ReceiverV1Alpha1ToIngesterTransformInput holds input for receiverV1Alpha1ToIngesterOptions.
-type ReceiverV1Alpha1ToIngesterTransformInput struct {
+type receiverV1Alpha1ToIngesterTransformInput struct {
 	CRD         v1alpha1.ThanosReceive
 	Spec        v1alpha1.IngesterHashringSpec
 	FeatureGate featuregate.Config
 }
 
 // ReceiverV1Alpha1ToRouterTransformInput holds input for receiverV1Alpha1ToRouterOptions.
-type ReceiverV1Alpha1ToRouterTransformInput struct {
+type receiverV1Alpha1ToRouterTransformInput struct {
 	CRD         v1alpha1.ThanosReceive
 	FeatureGate featuregate.Config
 }
 
 // StoreV1Alpha1TransformInput holds input for storeV1Alpha1ToOptions.
-type StoreV1Alpha1TransformInput struct {
+type storeV1Alpha1TransformInput struct {
 	CRD         v1alpha1.ThanosStore
 	FeatureGate featuregate.Config
 }
 
 // CompactV1Alpha1TransformInput holds input for compactV1Alpha1ToOptions.
-type CompactV1Alpha1TransformInput struct {
+type compactV1Alpha1TransformInput struct {
 	CRD         v1alpha1.ThanosCompact
 	FeatureGate featuregate.Config
 }
 
-func queryV1Alpha1ToOptions(in QueryV1Alpha1TransformInput) manifestquery.Options {
+func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Options {
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, nil, in.FeatureGate, in.CRD.Spec.Additional)
 	var webOptions manifestquery.WebOptions
@@ -102,7 +102,7 @@ func QueryNameFromParent(resourceName string) string {
 }
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
-func queryV1Alpha1ToQueryFrontEndOptions(in QueryV1Alpha1ToQueryFrontEndTransformInput) manifestqueryfrontend.Options {
+func queryV1Alpha1ToQueryFrontEndOptions(in queryV1Alpha1ToQueryFrontEndTransformInput) manifestqueryfrontend.Options {
 	frontend := in.CRD.Spec.QueryFrontend
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), frontend.CommonFields.Labels)
 
@@ -136,7 +136,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func rulerV1Alpha1ToOptions(in RulerV1Alpha1TransformInput) manifestruler.Options {
+func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	return manifestruler.Options{
@@ -164,7 +164,7 @@ func RulerNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func receiverV1Alpha1ToIngesterOptions(in ReceiverV1Alpha1ToIngesterTransformInput) manifestreceive.IngesterOptions {
+func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInput) manifestreceive.IngesterOptions {
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.Spec.CommonFields.Labels)
 	common := in.Spec.CommonFields
 	additional := in.CRD.Spec.Ingester.Additional
@@ -217,7 +217,7 @@ func receiverV1Alpha1ToIngesterOptions(in ReceiverV1Alpha1ToIngesterTransformInp
 	return ingestOpts
 }
 
-func receiverV1Alpha1ToRouterOptions(in ReceiverV1Alpha1ToRouterTransformInput) manifestreceive.RouterOptions {
+func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) manifestreceive.RouterOptions {
 	router := in.CRD.Spec.Router
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), router.CommonFields.Labels)
 	opts := commonToOpts(&in.CRD, router.Replicas, labels, in.CRD.GetAnnotations(), router.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, router.Additional)
@@ -260,7 +260,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func storeV1Alpha1ToOptions(in StoreV1Alpha1TransformInput) manifestsstore.Options {
+func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Options {
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
@@ -307,7 +307,7 @@ func storeV1Alpha1ToOptions(in StoreV1Alpha1TransformInput) manifestsstore.Optio
 	return sops
 }
 
-func compactV1Alpha1ToOptions(in CompactV1Alpha1TransformInput) manifestscompact.Options {
+func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact.Options {
 	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
 	opts := commonToOpts(&in.CRD, 1, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod

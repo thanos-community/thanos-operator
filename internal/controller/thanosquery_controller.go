@@ -185,7 +185,7 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		return nil, err
 	}
 
-	opts := queryV1Alpha1ToOptions(QueryV1Alpha1TransformInput{
+	opts := queryV1Alpha1ToOptions(queryV1Alpha1TransformInput{
 		CRD:         query,
 		FeatureGate: r.featureGate,
 	})
@@ -249,7 +249,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(QueryV1Alpha1ToQueryFrontEndTransformInput{
+	return queryV1Alpha1ToQueryFrontEndOptions(queryV1Alpha1ToQueryFrontEndTransformInput{
 		CRD:         query,
 		FeatureGate: r.featureGate,
 	})

@@ -241,7 +241,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(RulerV1Alpha1TransformInput{
+	opts := rulerV1Alpha1ToOptions(rulerV1Alpha1TransformInput{
 		CRD:                 ruler,
 		FeatureGate:         r.featureGate,
 		ConfigReloaderImage: r.configReloaderImage,

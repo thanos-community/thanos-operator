@@ -187,7 +187,7 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
 	if len(compact.Spec.ShardingConfig) == 0 {
-		return []manifests.Buildable{compactV1Alpha1ToOptions(CompactV1Alpha1TransformInput{
+		return []manifests.Buildable{compactV1Alpha1ToOptions(compactV1Alpha1TransformInput{
 			CRD:         compact,
 			FeatureGate: r.featureGate,
 		})}
@@ -203,7 +203,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 				Regex:       v.Value,
 			})
 		}
-		opts := compactV1Alpha1ToOptions(CompactV1Alpha1TransformInput{
+		opts := compactV1Alpha1ToOptions(compactV1Alpha1TransformInput{
 			CRD:         compact,
 			FeatureGate: r.featureGate,
 		})

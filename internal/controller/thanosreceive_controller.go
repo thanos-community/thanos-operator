@@ -242,7 +242,7 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
 	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
-		opt := receiverV1Alpha1ToIngesterOptions(ReceiverV1Alpha1ToIngesterTransformInput{
+		opt := receiverV1Alpha1ToIngesterOptions(receiverV1Alpha1ToIngesterTransformInput{
 			CRD:         receiver,
 			Spec:        v,
 			FeatureGate: r.featureGate,
@@ -254,7 +254,7 @@ func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosi
 }
 
 func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) manifests.Buildable {
-	opts := receiverV1Alpha1ToRouterOptions(ReceiverV1Alpha1ToRouterTransformInput{
+	opts := receiverV1Alpha1ToRouterOptions(receiverV1Alpha1ToRouterTransformInput{
 		CRD:         receiver,
 		FeatureGate: r.featureGate,
 	})
