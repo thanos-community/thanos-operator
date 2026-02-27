@@ -106,7 +106,8 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Con
 			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
 			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
 		},
-		EvaluationInterval: manifests.Duration(in.Spec.EvaluationInterval),
+		EvaluationInterval:  manifests.Duration(in.Spec.EvaluationInterval),
+		ConfigReloaderImage: in.Spec.ConfigReloaderImage,
 	}
 }
 

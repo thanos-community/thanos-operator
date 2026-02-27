@@ -281,6 +281,7 @@ func main() {
 		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
 			featureGateConfig.KubeResourceSyncImage = image
 		}
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
 
 	buildConfig := func(component string) controller.Config {

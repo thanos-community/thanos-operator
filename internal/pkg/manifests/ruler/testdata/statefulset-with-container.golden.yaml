@@ -121,6 +121,30 @@ spec:
           name: test-rules
           subPath: rules.yaml
       - args:
+        - --listen-address=:8080
+        - --reload-url=http://localhost:9090/-/reload
+        - --watched-dir=/etc/thanos/rules/test-rules
+        image: quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2
+        imagePullPolicy: IfNotPresent
+        name: config-reloader
+        ports:
+        - containerPort: 8080
+          name: reloader-web
+          protocol: TCP
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /etc/thanos/rules/test-rules
+          name: test-rules
+          readOnly: true
+      - args:
         - --test-arg
         env:
         - name: TEST_ENV
