@@ -507,7 +507,7 @@ func TestBuildConfigReloaderContainer(t *testing.T) {
 						Key:                  "rule1.yaml",
 					},
 				},
-				ConfigReloaderImage: ptr.To("test-image:v1.0.0"),
+				ConfigReloaderImage: "test-image:v1.0.0",
 			},
 			wantContainerName: "config-reloader",
 			wantImage:         "test-image:v1.0.0",
@@ -528,7 +528,7 @@ func TestBuildConfigReloaderContainer(t *testing.T) {
 						Key:                  "rule2.yaml",
 					},
 				},
-				ConfigReloaderImage: ptr.To("test-image:v1.0.0"),
+				ConfigReloaderImage: "test-image:v1.0.0",
 			},
 			wantContainerName: "config-reloader",
 			wantImage:         "test-image:v1.0.0",
@@ -553,7 +553,7 @@ func TestBuildConfigReloaderContainer(t *testing.T) {
 						Key:                  "rule3.yaml",
 					},
 				},
-				ConfigReloaderImage: ptr.To("test-image:v1.0.0"),
+				ConfigReloaderImage: "test-image:v1.0.0",
 			},
 			wantContainerName: "config-reloader",
 			wantImage:         "test-image:v1.0.0",
@@ -610,7 +610,7 @@ func TestConfigReloaderDeduplication(t *testing.T) {
 			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-2"}, Key: "rule3.yaml"},
 			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"}, Key: "rule4.yaml"},
 		},
-		ConfigReloaderImage: ptr.To("test-image:v1.0.0"),
+		ConfigReloaderImage: "test-image:v1.0.0",
 	}
 
 	container := buildConfigReloaderContainer(opts)
@@ -667,7 +667,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
-				ConfigReloaderImage: ptr.To("quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"),
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2",
 			},
 			expectReloader: true,
 			containerCount: 2,
@@ -685,7 +685,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
-				ConfigReloaderImage: ptr.To("quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"),
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2",
 			},
 			expectReloader: false, // Should not add config-reloader when there are no rule files
 			containerCount: 1,

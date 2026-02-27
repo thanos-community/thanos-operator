@@ -92,7 +92,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config) manifestruler.Options {
+func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config, configReloaderImage string) manifestruler.Options {
 	labels := manifests.MergeLabels(in.GetLabels(), in.Spec.CommonFields.Labels)
 	opts := commonToOpts(&in, in.Spec.Replicas, labels, in.GetAnnotations(), in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
 	return manifestruler.Options{
@@ -107,7 +107,7 @@ func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Con
 			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
 		},
 		EvaluationInterval:  manifests.Duration(in.Spec.EvaluationInterval),
-		ConfigReloaderImage: in.Spec.ConfigReloaderImage,
+		ConfigReloaderImage: configReloaderImage,
 	}
 }
 

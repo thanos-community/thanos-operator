@@ -72,10 +72,6 @@ type ThanosRulerSpec struct {
 	// StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets.
 	// +kubebuilder:validation:Required
 	StorageConfiguration StorageConfiguration `json:"storage"`
-	// ConfigReloaderImage is the image of the ConfigReloader to be used by the Thanos Ruler StatefulSet.
-	// +kubebuilder:default="quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"
-	// +kubebuilder:validation:Optional
-	ConfigReloaderImage *string `json:"configReloaderImage,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

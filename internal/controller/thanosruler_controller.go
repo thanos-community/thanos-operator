@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -65,8 +66,11 @@ var defaultRuleLabels = map[string]string{
 	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
-const defaultTenantIdentifier string = "tenant_id"
-const defaultTenantSpecifier string = "operator.thanos.io/tenant"
+const (
+	defaultTenantIdentifier    string = "tenant_id"
+	defaultTenantSpecifier     string = "operator.thanos.io/tenant"
+	defaultConfigReloaderImage string = "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"
+)
 
 // ThanosRulerReconciler reconciles a ThanosRuler object
 type ThanosRulerReconciler struct {
@@ -80,19 +84,26 @@ type ThanosRulerReconciler struct {
 	handler                *handlers.Handler
 	disableConditionUpdate bool
 
-	featureGate featuregate.Config
+	featureGate         featuregate.Config
+	configReloaderImage string
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
 func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
+	configReloaderImage := defaultConfigReloaderImage
+	if image, ok := os.LookupEnv("CONFIG_RELOADER_IMAGE"); ok {
+		configReloaderImage = image
+	}
+
 	reconciler := &ThanosRulerReconciler{
-		Client:      client,
-		Scheme:      scheme,
-		logger:      conf.InstrumentationConfig.Logger,
-		metrics:     controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
-		recorder:    conf.InstrumentationConfig.EventRecorder,
-		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
+		Client:              client,
+		Scheme:              scheme,
+		logger:              conf.InstrumentationConfig.Logger,
+		metrics:             controllermetrics.NewThanosRulerMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
+		recorder:            conf.InstrumentationConfig.EventRecorder,
+		featureGate:         conf.FeatureGate,
+		configReloaderImage: configReloaderImage,
+		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
 	}
 
 	return reconciler
@@ -237,7 +248,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate)
+	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate, r.configReloaderImage)
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 

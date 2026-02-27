@@ -1363,11 +1363,6 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		copy(*out, *in)
 	}
 	in.StorageConfiguration.DeepCopyInto(&out.StorageConfiguration)
-	if in.ConfigReloaderImage != nil {
-		in, out := &in.ConfigReloaderImage, &out.ConfigReloaderImage
-		*out = new(string)
-		**out = **in
-	}
 	if in.Paused != nil {
 		in, out := &in.Paused, &out.Paused
 		*out = new(bool)

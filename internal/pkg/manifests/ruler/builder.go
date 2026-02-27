@@ -51,7 +51,7 @@ type Options struct {
 	AlertLabelDrop      []string
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
-	ConfigReloaderImage *string
+	ConfigReloaderImage string
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -539,9 +539,9 @@ func bucketSize(bucket map[string]string) int {
 // buildConfigReloaderContainer builds the prometheus-config-reloader sidecar container
 // that watches rule ConfigMaps and triggers Thanos Ruler reloads on changes.
 func buildConfigReloaderContainer(opts Options) corev1.Container {
-	image := defaultConfigReloaderImage
-	if opts.ConfigReloaderImage != nil && *opts.ConfigReloaderImage != "" {
-		image = *opts.ConfigReloaderImage
+	image := opts.ConfigReloaderImage
+	if image == "" {
+		image = defaultConfigReloaderImage
 	}
 
 	// Build volume mounts for all rule ConfigMaps, deduplicated by ConfigMap name

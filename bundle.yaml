@@ -31685,11 +31685,6 @@ spec:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
                 type: string
-              configReloaderImage:
-                default: quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2
-                description: ConfigReloaderImage is the image of the ConfigReloader
-                  to be used by the Thanos Ruler StatefulSet.
-                type: string
               evaluationInterval:
                 default: 1m
                 description: EvaluationInterval is the default interval at which rules
