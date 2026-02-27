@@ -126,7 +126,7 @@ spec:
         - --listen-address=:8080
         - --reload-url=http://localhost:9090/-/reload
         - --watched-dir=/etc/thanos/rules/test-rules
-        image: quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2
+        image: quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0
         imagePullPolicy: IfNotPresent
         name: config-reloader
         ports:

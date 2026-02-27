@@ -667,7 +667,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
-				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2",
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
 			},
 			expectReloader: true,
 			containerCount: 2,
@@ -685,7 +685,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
-				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2",
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
 			},
 			expectReloader: false, // Should not add config-reloader when there are no rule files
 			containerCount: 1,

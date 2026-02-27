@@ -69,7 +69,7 @@ var defaultRuleLabels = map[string]string{
 const (
 	defaultTenantIdentifier    string = "tenant_id"
 	defaultTenantSpecifier     string = "operator.thanos.io/tenant"
-	defaultConfigReloaderImage string = "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"
+	defaultConfigReloaderImage string = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 )
 
 // ThanosRulerReconciler reconciles a ThanosRuler object

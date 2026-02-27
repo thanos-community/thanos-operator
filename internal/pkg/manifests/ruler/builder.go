@@ -36,7 +36,7 @@ const (
 
 	configReloaderContainerName = "config-reloader"
 	configReloaderPort          = 8080
-	defaultConfigReloaderImage  = "quay.io/prometheus-operator/prometheus-config-reloader:v0.82.2"
+	defaultConfigReloaderImage  = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 )
 
 // Options for Thanos Ruler
