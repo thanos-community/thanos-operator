@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -67,9 +66,8 @@ var defaultRuleLabels = map[string]string{
 }
 
 const (
-	defaultTenantIdentifier    string = "tenant_id"
-	defaultTenantSpecifier     string = "operator.thanos.io/tenant"
-	defaultConfigReloaderImage string = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
+	defaultTenantIdentifier string = "tenant_id"
+	defaultTenantSpecifier  string = "operator.thanos.io/tenant"
 )
 
 // ThanosRulerReconciler reconciles a ThanosRuler object
@@ -89,12 +87,7 @@ type ThanosRulerReconciler struct {
 }
 
 // NewThanosRulerReconciler returns a reconciler for ThanosRuler resources.
-func NewThanosRulerReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
-	configReloaderImage := defaultConfigReloaderImage
-	if image, ok := os.LookupEnv("CONFIG_RELOADER_IMAGE"); ok {
-		configReloaderImage = image
-	}
-
+func NewThanosRulerReconciler(conf Config, configReloaderImage string, client client.Client, scheme *runtime.Scheme) *ThanosRulerReconciler {
 	reconciler := &ThanosRulerReconciler{
 		Client:              client,
 		Scheme:              scheme,
@@ -248,7 +241,11 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	r.logger.Info("total rule files to configure", "count", len(ruleFiles), "ruler", ruler.Name)
 	r.metrics.RuleFilesConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(ruleFiles)))
 
-	opts := rulerV1Alpha1ToOptions(ruler, r.featureGate, r.configReloaderImage)
+	opts := rulerV1Alpha1ToOptions(RulerV1Alpha1TransformInput{
+		CRD:                 ruler,
+		FeatureGate:         r.featureGate,
+		ConfigReloaderImage: r.configReloaderImage,
+	})
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
