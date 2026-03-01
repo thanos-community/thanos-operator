@@ -864,13 +864,11 @@ func VerifyAnnotations(c client.Client, obj client.Object, name, namespace strin
 		Name:      name,
 		Namespace: namespace,
 	}, obj)
-	fmt.Println(err)
 	if err != nil {
 		return false
 	}
 
 	objAnnotations := obj.GetAnnotations()
-	fmt.Println(obj.GetName(), objAnnotations)
 
 	for k, v := range annotations {
 		if objAnnotations[k] != v {

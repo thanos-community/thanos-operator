@@ -77,7 +77,7 @@ func (opts Options) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorConfig != nil {
-		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
+		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
@@ -436,8 +436,8 @@ func (opts Options) GetSelectorLabels() map[string]string {
 }
 
 func GetLabels(opts Options) map[string]string {
-	lbls := manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
-	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeLabels(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
+	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {

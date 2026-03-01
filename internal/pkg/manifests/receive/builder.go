@@ -109,7 +109,7 @@ func (opts IngesterOptions) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorConfig != nil {
-		smLabels := manifests.MergeLabels(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
+		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
 	return objs
@@ -353,7 +353,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 // NewIngestorService creates a new Service for the Thanos Receive ingester.
 func NewIngestorService(opts IngesterOptions) *corev1.Service {
 	selectorLabels := opts.GetSelectorLabels()
-	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, manifests.MergeLabels(opts.Labels, selectorLabels), opts.Annotations)
+	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, manifests.MergeMaps(opts.Labels, selectorLabels), opts.Annotations)
 	svc.Spec.ClusterIP = corev1.ClusterIPNone
 
 	if opts.Additional.ServicePorts != nil {
@@ -626,7 +626,7 @@ func GetRequiredLabels() map[string]string {
 func GetRequiredIngesterLabels() map[string]string {
 	l := GetRequiredLabels()
 	l[manifests.ComponentLabel] = IngestComponentName
-	return manifests.MergeLabels(l, manifestsstore.GetRequiredStoreServiceLabel())
+	return manifests.MergeMaps(l, manifestsstore.GetRequiredStoreServiceLabel())
 }
 
 func (opts IngesterOptions) GetSelectorLabels() map[string]string {
@@ -641,7 +641,7 @@ func (opts IngesterOptions) GetSelectorLabels() map[string]string {
 
 func GetIngesterLabels(opts IngesterOptions) map[string]string {
 	l := opts.GetSelectorLabels()
-	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeLabels(opts.Labels, l))
+	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(opts.Labels, l))
 }
 
 // GetRequiredRouterLabels returns a map of labels that can be used to look up thanos receive router resources.
@@ -661,7 +661,7 @@ func (opts RouterOptions) GetSelectorLabels() map[string]string {
 
 func GetRouterLabels(opts RouterOptions) map[string]string {
 	l := opts.GetSelectorLabels()
-	return manifests.MergeLabels(opts.Labels, l)
+	return manifests.MergeMaps(opts.Labels, l)
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {

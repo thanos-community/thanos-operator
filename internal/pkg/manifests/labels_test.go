@@ -32,7 +32,7 @@ func TestMergeMaps(t *testing.T) {
 			}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := MergeLabels(tc.labels, tc.mergeWith)
+			result := MergeMaps(tc.labels, tc.mergeWith)
 			if len(result) != len(tc.expect) {
 				t.Fatalf("expected %d labels, got %d", len(tc.expect), len(result))
 			}
