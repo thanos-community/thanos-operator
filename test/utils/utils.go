@@ -859,18 +859,21 @@ func ValidateIsNamedPodDisruptionBudget(t *testing.T, obj client.Object, b manif
 	ValidateLabelsMatch(t, obj, matching)
 }
 
-func VerifyDeploymentAnnotations(c client.Client, name, namespace string, annotations map[string]string) bool {
-	deployment := &appsv1.Deployment{}
+func VerifyAnnotations(c client.Client, obj client.Object, name, namespace string, annotations map[string]string) bool {
 	err := c.Get(context.Background(), client.ObjectKey{
 		Name:      name,
 		Namespace: namespace,
-	}, deployment)
+	}, obj)
+	fmt.Println(err)
 	if err != nil {
 		return false
 	}
 
+	objAnnotations := obj.GetAnnotations()
+	fmt.Println(obj.GetName(), objAnnotations)
+
 	for k, v := range annotations {
-		if deployment.Annotations[k] != v {
+		if objAnnotations[k] != v {
 			return false
 		}
 	}

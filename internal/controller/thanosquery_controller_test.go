@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	policyv1 "k8s.io/api/policy/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -137,6 +138,37 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
+			By("verifying query annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					expectedAnnotations := map[string]string{
+						"query":    "annotation",
+						"conflict": "discarded",
+					}
+
+					serviceAccount := &corev1.ServiceAccount{}
+					if !utils.VerifyAnnotations(k8sClient, serviceAccount, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					deployment := &appsv1.Deployment{}
+					if !utils.VerifyAnnotations(k8sClient, deployment, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					service := &corev1.Service{}
+					if !utils.VerifyAnnotations(k8sClient, service, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					podDisruptionBudget := &policyv1.PodDisruptionBudget{}
+					if !utils.VerifyAnnotations(k8sClient, podDisruptionBudget, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
@@ -256,7 +288,7 @@ config:
 				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
-			By("verifying query frontend deployments annotations are merged correctly", func() {
+			By("verifying query frontend annotations", func() {
 				EventuallyWithOffset(1, func() error {
 					expectedAnnotations := map[string]string{
 						"query":    "annotation",
@@ -264,7 +296,18 @@ config:
 						"conflict": "overwritten",
 					}
 
-					if !utils.VerifyDeploymentAnnotations(k8sClient, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+					serviceAccount := &corev1.ServiceAccount{}
+					if !utils.VerifyAnnotations(k8sClient, serviceAccount, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					deployment := &appsv1.Deployment{}
+					if !utils.VerifyAnnotations(k8sClient, deployment, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					service := &corev1.Service{}
+					if !utils.VerifyAnnotations(k8sClient, service, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 

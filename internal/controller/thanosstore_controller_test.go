@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -95,11 +96,17 @@ config:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"store-meta": "annotation",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
 					Replicas: 2,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{
 						Labels: map[string]string{"some-label": "xyz"},
+						Annotations: map[string]string{
+							"store-spec": "annotation",
+						},
 					},
 					ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
 						Type:   monitoringthanosiov1alpha1.Block,
@@ -139,6 +146,34 @@ config:
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, secondShard, ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
+			})
+
+			By("verifying store annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					expectedAnnotations := map[string]string{
+						"store-meta": "annotation",
+						"store-spec": "annotation",
+					}
+
+					for _, shard := range []string{firstShard, secondShard, thirdShard} {
+						serviceAccount := &corev1.ServiceAccount{}
+						if !utils.VerifyAnnotations(k8sClient, serviceAccount, shard, ns, expectedAnnotations) {
+							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+						}
+
+						service := &corev1.Service{}
+						if !utils.VerifyAnnotations(k8sClient, service, shard, ns, expectedAnnotations) {
+							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+						}
+
+						statefulSet := &appsv1.StatefulSet{}
+						if !utils.VerifyAnnotations(k8sClient, statefulSet, shard, ns, expectedAnnotations) {
+							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+						}
+					}
+
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos store", func() {
