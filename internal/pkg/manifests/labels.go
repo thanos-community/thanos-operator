@@ -53,9 +53,9 @@ const (
 	ShardLabel    = "operator.thanos.io/shard"
 )
 
-// MergeLabels merges the provided labels with the default labels for a component.
+// MergeMaps merges the provided labels with the default labels for a component.
 // Returns a new map with the merged labels leaving the original maps unchanged.
-func MergeLabels(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {
+func MergeMaps(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {
 	if baseLabels == nil {
 		labelCopy := make(map[string]string, len(mergeWithPriority))
 		maps.Copy(labelCopy, mergeWithPriority)

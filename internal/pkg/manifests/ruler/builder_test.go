@@ -34,6 +34,10 @@ func TestBuildRuler(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"some-annotation":    someOtherLabelValue,
+				"another-annotation": someOtherLabelValue,
+			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		Endpoints: []Endpoint{
@@ -81,7 +85,7 @@ func TestBuildRuler(t *testing.T) {
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-	wantLabels = manifests.MergeLabels(wantLabels, manifestsstore.GetRequiredStoreServiceLabel())
+	wantLabels = manifests.MergeMaps(wantLabels, manifestsstore.GetRequiredStoreServiceLabel())
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
@@ -105,7 +109,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 				},
 				Endpoints: []Endpoint{
@@ -149,7 +154,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -201,7 +207,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -269,6 +276,10 @@ func TestNewRulerService(t *testing.T) {
 				"some-custom-label":      someCustomLabelValue,
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test-annotation": "qwer",
+				"another-one":     "asdf",
 			},
 		},
 		Endpoints: []Endpoint{

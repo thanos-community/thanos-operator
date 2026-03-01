@@ -61,8 +61,7 @@ type compactV1Alpha1TransformInput struct {
 }
 
 func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Options {
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, nil, in.FeatureGate, in.CRD.Spec.Additional)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, nil, in.FeatureGate, in.CRD.Spec.Additional)
 	var webOptions manifestquery.WebOptions
 	if in.CRD.Spec.WebConfig != nil {
 		webOptions = manifestquery.WebOptions{
@@ -104,13 +103,7 @@ func QueryNameFromParent(resourceName string) string {
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
 func queryV1Alpha1ToQueryFrontEndOptions(in queryV1Alpha1ToQueryFrontEndTransformInput) manifestqueryfrontend.Options {
 	frontend := in.CRD.Spec.QueryFrontend
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), frontend.CommonFields.Labels)
-
-	// Parent annotations + query-frontend specific annotations
-	// Query-frontend annotations take precedence in case of conflicts
-	annotations := manifests.MergeLabels(in.CRD.GetAnnotations(), frontend.Annotations)
-
-	opts := commonToOpts(&in.CRD, frontend.Replicas, labels, annotations, frontend.CommonFields, nil, in.FeatureGate, frontend.Additional)
+	opts := commonToOpts(&in.CRD, frontend.Replicas, frontend.CommonFields, nil, in.FeatureGate, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
@@ -137,8 +130,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 }
 
 func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	return manifestruler.Options{
 		Options:         opts,
 		ObjStoreSecret:  in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -165,7 +157,6 @@ func RulerNameFromParent(resourceName string) string {
 }
 
 func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInput) manifestreceive.IngesterOptions {
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.Spec.CommonFields.Labels)
 	common := in.Spec.CommonFields
 	additional := in.CRD.Spec.Ingester.Additional
 	secret := in.CRD.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
@@ -173,7 +164,7 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 		secret = in.Spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(&in.CRD, in.Spec.Replicas, labels, in.CRD.GetAnnotations(), common, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, additional)
+	opts := commonToOpts(&in.CRD, in.Spec.Replicas, common, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, additional)
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -219,8 +210,7 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 
 func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) manifestreceive.RouterOptions {
 	router := in.CRD.Spec.Router
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), router.CommonFields.Labels)
-	opts := commonToOpts(&in.CRD, router.Replicas, labels, in.CRD.GetAnnotations(), router.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, router.Additional)
+	opts := commonToOpts(&in.CRD, router.Replicas, router.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, router.Additional)
 
 	ropts := manifestreceive.RouterOptions{
 		Options:           opts,
@@ -261,8 +251,7 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 }
 
 func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Options {
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
 	if in.CRD.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
@@ -308,8 +297,7 @@ func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Optio
 }
 
 func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact.Options {
-	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
-	opts := commonToOpts(&in.CRD, 1, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
+	opts := commonToOpts(&in.CRD, 1, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
 	opts.PodManagementPolicy = string(ptr.Deref(in.CRD.Spec.PodManagementPolicy, ""))
@@ -419,20 +407,19 @@ func StoreNameFromParent(resourceName string, index *int32) string {
 func commonToOpts(
 	owner client.Object,
 	replicas int32,
-	labels map[string]string,
-	annotations map[string]string,
 	common v1alpha1.CommonFields,
 	statefulSet *v1alpha1.StatefulSetFields,
 	featureGate featuregate.Config,
 	additional v1alpha1.Additional,
 ) manifests.Options {
+	labels := manifests.MergeMaps(owner.GetLabels(), common.Labels)
 
 	return manifests.Options{
 		Owner:                owner.GetName(),
 		Namespace:            owner.GetNamespace(),
 		Replicas:             replicas,
 		Labels:               labels,
-		Annotations:          annotations,
+		Annotations:          manifests.MergeMaps(owner.GetAnnotations(), common.Annotations),
 		Image:                common.Image,
 		Version:              common.Version,
 		ResourceRequirements: common.ResourceRequirements,
