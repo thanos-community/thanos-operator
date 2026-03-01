@@ -266,6 +266,7 @@ func main() {
 
 	const (
 		defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
+		defaultConfigReloaderImage   = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 	)
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
@@ -281,6 +282,12 @@ func main() {
 		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
 			featureGateConfig.KubeResourceSyncImage = image
 		}
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
+	}
+
+	configReloaderImage := defaultConfigReloaderImage
+	if image, ok := os.LookupEnv("CONFIG_RELOADER_IMAGE"); ok {
+		configReloaderImage = image
 	}
 
 	buildConfig := func(component string) controller.Config {
@@ -333,6 +340,7 @@ func main() {
 
 	if err = controller.NewThanosRulerReconciler(
 		buildConfig(manifestruler.Name),
+		configReloaderImage,
 		mgr.GetClient(),
 		mgr.GetScheme(),
 	).SetupWithManager(mgr); err != nil {

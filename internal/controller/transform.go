@@ -16,34 +16,79 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestquery.Options {
-	opts := commonToOpts(&in, in.Spec.Replicas, in.Spec.CommonFields, nil, featureGate, in.Spec.Additional)
+// QueryV1Alpha1TransformInput holds input for queryV1Alpha1ToOptions.
+type queryV1Alpha1TransformInput struct {
+	CRD         v1alpha1.ThanosQuery
+	FeatureGate featuregate.Config
+}
+
+// QueryV1Alpha1ToQueryFrontEndTransformInput holds input for queryV1Alpha1ToQueryFrontEndOptions.
+type queryV1Alpha1ToQueryFrontEndTransformInput struct {
+	CRD         v1alpha1.ThanosQuery
+	FeatureGate featuregate.Config
+}
+
+// RulerV1Alpha1TransformInput holds input for rulerV1Alpha1ToOptions.
+type rulerV1Alpha1TransformInput struct {
+	CRD                 v1alpha1.ThanosRuler
+	FeatureGate         featuregate.Config
+	ConfigReloaderImage string
+}
+
+// ReceiverV1Alpha1ToIngesterTransformInput holds input for receiverV1Alpha1ToIngesterOptions.
+type receiverV1Alpha1ToIngesterTransformInput struct {
+	CRD         v1alpha1.ThanosReceive
+	Spec        v1alpha1.IngesterHashringSpec
+	FeatureGate featuregate.Config
+}
+
+// ReceiverV1Alpha1ToRouterTransformInput holds input for receiverV1Alpha1ToRouterOptions.
+type receiverV1Alpha1ToRouterTransformInput struct {
+	CRD         v1alpha1.ThanosReceive
+	FeatureGate featuregate.Config
+}
+
+// StoreV1Alpha1TransformInput holds input for storeV1Alpha1ToOptions.
+type storeV1Alpha1TransformInput struct {
+	CRD         v1alpha1.ThanosStore
+	FeatureGate featuregate.Config
+}
+
+// CompactV1Alpha1TransformInput holds input for compactV1Alpha1ToOptions.
+type compactV1Alpha1TransformInput struct {
+	CRD         v1alpha1.ThanosCompact
+	FeatureGate featuregate.Config
+}
+
+func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Options {
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, nil, in.FeatureGate, in.CRD.Spec.Additional)
 	var webOptions manifestquery.WebOptions
-	if in.Spec.WebConfig != nil {
+	if in.CRD.Spec.WebConfig != nil {
 		webOptions = manifestquery.WebOptions{
-			RoutePrefix:    manifests.OptionalToString(in.Spec.WebConfig.RoutePrefix),
-			ExternalPrefix: manifests.OptionalToString(in.Spec.WebConfig.ExternalPrefix),
-			PrefixHeader:   manifests.OptionalToString(in.Spec.WebConfig.PrefixHeader),
-			DisableCORS:    in.Spec.WebConfig.DisableCORS != nil && *in.Spec.WebConfig.DisableCORS,
+			RoutePrefix:    manifests.OptionalToString(in.CRD.Spec.WebConfig.RoutePrefix),
+			ExternalPrefix: manifests.OptionalToString(in.CRD.Spec.WebConfig.ExternalPrefix),
+			PrefixHeader:   manifests.OptionalToString(in.CRD.Spec.WebConfig.PrefixHeader),
+			DisableCORS:    in.CRD.Spec.WebConfig.DisableCORS != nil && *in.CRD.Spec.WebConfig.DisableCORS,
 		}
 	}
 	var telemetryQuantiles manifestquery.TelemetryQuantiles
-	if in.Spec.TelemetryQuantiles != nil {
+	if in.CRD.Spec.TelemetryQuantiles != nil {
 		telemetryQuantiles = manifestquery.TelemetryQuantiles{
-			Duration: in.Spec.TelemetryQuantiles.Duration,
-			Samples:  in.Spec.TelemetryQuantiles.Samples,
-			Series:   in.Spec.TelemetryQuantiles.Series,
+			Duration: in.CRD.Spec.TelemetryQuantiles.Duration,
+			Samples:  in.CRD.Spec.TelemetryQuantiles.Samples,
+			Series:   in.CRD.Spec.TelemetryQuantiles.Series,
 		}
 	}
 	return manifestquery.Options{
 		Options:            opts,
-		ReplicaLabels:      in.Spec.ReplicaLabels,
+		ReplicaLabels:      in.CRD.Spec.ReplicaLabels,
 		Timeout:            "15m",
 		LookbackDelta:      "5m",
 		MaxConcurrent:      20,
 		WebOptions:         webOptions,
 		TelemetryQuantiles: telemetryQuantiles,
-		GRPCProxyStrategy:  in.Spec.GRPCProxyStrategy,
+		GRPCProxyStrategy:  in.CRD.Spec.GRPCProxyStrategy,
 	}
 }
 
@@ -57,13 +102,19 @@ func QueryNameFromParent(resourceName string) string {
 }
 
 // queryV1Alpha1ToQueryFrontEndOptions transforms a v1alpha1.ThanosQuery to a build Options
-func queryV1Alpha1ToQueryFrontEndOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Config) manifestqueryfrontend.Options {
-	frontend := in.Spec.QueryFrontend
-	opts := commonToOpts(&in, frontend.Replicas, frontend.CommonFields, nil, featureGate, frontend.Additional)
+func queryV1Alpha1ToQueryFrontEndOptions(in queryV1Alpha1ToQueryFrontEndTransformInput) manifestqueryfrontend.Options {
+	frontend := in.CRD.Spec.QueryFrontend
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), frontend.CommonFields.Labels)
+
+	// Parent annotations + query-frontend specific annotations
+	// Query-frontend annotations take precedence in case of conflicts
+	annotations := manifests.MergeLabels(in.CRD.GetAnnotations(), frontend.Annotations)
+
+	opts := commonToOpts(&in.CRD, frontend.Replicas, labels, annotations, frontend.CommonFields, nil, in.FeatureGate, frontend.Additional)
 
 	return manifestqueryfrontend.Options{
 		Options:                opts,
-		QueryService:           QueryNameFromParent(in.GetName()),
+		QueryService:           QueryNameFromParent(in.CRD.GetName()),
 		QueryPort:              manifestquery.HTTPPort,
 		LogQueriesLongerThan:   manifests.Duration(manifests.OptionalToString(frontend.LogQueriesLongerThan)),
 		CompressResponses:      frontend.CompressResponses,
@@ -85,20 +136,22 @@ func QueryFrontendNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func rulerV1Alpha1ToOptions(in v1alpha1.ThanosRuler, featureGate featuregate.Config) manifestruler.Options {
-	opts := commonToOpts(&in, in.Spec.Replicas, in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	return manifestruler.Options{
 		Options:         opts,
-		ObjStoreSecret:  in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:       manifests.Duration(in.Spec.Retention),
-		AlertmanagerURL: in.Spec.AlertmanagerURL,
-		ExternalLabels:  in.Spec.ExternalLabels,
-		AlertLabelDrop:  in.Spec.AlertLabelDrop,
+		ObjStoreSecret:  in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		Retention:       manifests.Duration(in.CRD.Spec.Retention),
+		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
+		ExternalLabels:  in.CRD.Spec.ExternalLabels,
+		AlertLabelDrop:  in.CRD.Spec.AlertLabelDrop,
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
-			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
-		EvaluationInterval: manifests.Duration(in.Spec.EvaluationInterval),
+		EvaluationInterval:  manifests.Duration(in.CRD.Spec.EvaluationInterval),
+		ConfigReloaderImage: in.ConfigReloaderImage,
 	}
 }
 
@@ -111,61 +164,63 @@ func RulerNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func receiverV1Alpha1ToIngesterOptions(in v1alpha1.ThanosReceive, spec v1alpha1.IngesterHashringSpec, featureGate featuregate.Config) manifestreceive.IngesterOptions {
-	common := spec.CommonFields
-	additional := in.Spec.Ingester.Additional
-	secret := in.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
-	if spec.ObjectStorageConfig != nil {
-		secret = spec.ObjectStorageConfig.ToSecretKeySelector()
+func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInput) manifestreceive.IngesterOptions {
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.Spec.CommonFields.Labels)
+	common := in.Spec.CommonFields
+	additional := in.CRD.Spec.Ingester.Additional
+	secret := in.CRD.Spec.Ingester.DefaultObjectStorageConfig.ToSecretKeySelector()
+	if in.Spec.ObjectStorageConfig != nil {
+		secret = in.Spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
-	opts := commonToOpts(&in, spec.Replicas, common, &in.Spec.StatefulSetFields, featureGate, additional)
+	opts := commonToOpts(&in.CRD, in.Spec.Replicas, labels, in.CRD.GetAnnotations(), common, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, additional)
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
 		TSDBOpts: manifestreceive.TSDBOpts{
-			Retention: string(spec.TSDBConfig.Retention),
+			Retention: string(in.Spec.TSDBConfig.Retention),
 		},
-		AsyncForwardWorkerCount:  manifests.OptionalToString(spec.AsyncForwardWorkerCount),
-		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(spec.TooFarInFutureTimeWindow)),
+		AsyncForwardWorkerCount:  manifests.OptionalToString(in.Spec.AsyncForwardWorkerCount),
+		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(in.Spec.TooFarInFutureTimeWindow)),
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      spec.StorageConfiguration.Size.ToResourceQuantity(),
-			StorageClassName: spec.StorageConfiguration.StorageClass,
+			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
 		},
-		ExternalLabels: spec.ExternalLabels,
+		ExternalLabels: in.Spec.ExternalLabels,
 	}
 
-	if in.Spec.Router.ReplicationProtocol != nil {
-		ingestOpts.ReplicationProtocol = string(*in.Spec.Router.ReplicationProtocol)
+	if in.CRD.Spec.Router.ReplicationProtocol != nil {
+		ingestOpts.ReplicationProtocol = string(*in.CRD.Spec.Router.ReplicationProtocol)
 	}
 
-	if spec.GRPCCompression != nil {
-		ingestOpts.GRPCCompression = string(*spec.GRPCCompression)
+	if in.Spec.GRPCCompression != nil {
+		ingestOpts.GRPCCompression = string(*in.Spec.GRPCCompression)
 	}
 
-	if spec.TenancyConfig != nil {
+	if in.Spec.TenancyConfig != nil {
 		ingestOpts.TenancyOpts = manifestreceive.TenancyOpts{
-			TenantHeader:           spec.TenancyConfig.TenantHeader,
-			TenantCertificateField: manifests.OptionalToString(spec.TenancyConfig.TenantCertificateField),
-			DefaultTenantID:        spec.TenancyConfig.DefaultTenantID,
-			SplitTenantLabelName:   manifests.OptionalToString(spec.TenancyConfig.SplitTenantLabelName),
-			TenantLabelName:        spec.TenancyConfig.TenantLabelName,
+			TenantHeader:           in.Spec.TenancyConfig.TenantHeader,
+			TenantCertificateField: manifests.OptionalToString(in.Spec.TenancyConfig.TenantCertificateField),
+			DefaultTenantID:        in.Spec.TenancyConfig.DefaultTenantID,
+			SplitTenantLabelName:   manifests.OptionalToString(in.Spec.TenancyConfig.SplitTenantLabelName),
+			TenantLabelName:        in.Spec.TenancyConfig.TenantLabelName,
 		}
 	}
 
-	if spec.StoreLimitsOptions != nil {
+	if in.Spec.StoreLimitsOptions != nil {
 		ingestOpts.StoreLimitsOpts = manifests.StoreLimitsOpts{
-			StoreLimitsRequestSamples: spec.StoreLimitsOptions.StoreLimitsRequestSamples,
-			StoreLimitsRequestSeries:  spec.StoreLimitsOptions.StoreLimitsRequestSeries,
+			StoreLimitsRequestSamples: in.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
+			StoreLimitsRequestSeries:  in.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
 		}
 	}
 
 	return ingestOpts
 }
 
-func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate featuregate.Config) manifestreceive.RouterOptions {
-	router := in.Spec.Router
-	opts := commonToOpts(&in, router.Replicas, router.CommonFields, &in.Spec.StatefulSetFields, featureGate, router.Additional)
+func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) manifestreceive.RouterOptions {
+	router := in.CRD.Spec.Router
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), router.CommonFields.Labels)
+	opts := commonToOpts(&in.CRD, router.Replicas, labels, in.CRD.GetAnnotations(), router.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, router.Additional)
 
 	ropts := manifestreceive.RouterOptions{
 		Options:           opts,
@@ -173,10 +228,10 @@ func receiverV1Alpha1ToRouterOptions(in v1alpha1.ThanosReceive, featureGate feat
 		ExternalLabels:    router.ExternalLabels,
 	}
 
-	if featureGate.KubeResourceSyncEnabled() {
+	if in.FeatureGate.KubeResourceSyncEnabled() {
 		ropts.FeatureGateConfig = &manifestreceive.FeatureGateConfig{
-			KubeResourceSyncEnabled: featureGate.KubeResourceSyncEnabled(),
-			KubeResourceSyncImage:   featureGate.GetKubeResourceSyncImage(),
+			KubeResourceSyncEnabled: in.FeatureGate.KubeResourceSyncEnabled(),
+			KubeResourceSyncImage:   in.FeatureGate.GetKubeResourceSyncImage(),
 		}
 	}
 
@@ -205,137 +260,139 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 	return opts.GetGeneratedResourceName()
 }
 
-func storeV1Alpha1ToOptions(in v1alpha1.ThanosStore, featureGate featuregate.Config) manifestsstore.Options {
-	opts := commonToOpts(&in, in.Spec.Replicas, in.Spec.CommonFields, &in.Spec.StatefulSetFields, featureGate, in.Spec.Additional)
+func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Options {
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
+	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
-	if in.Spec.IndexHeaderConfig != nil {
+	if in.CRD.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
-			EnableLazyReader:      in.Spec.IndexHeaderConfig.EnableLazyReader != nil && *in.Spec.IndexHeaderConfig.EnableLazyReader,
-			LazyReaderIdleTimeout: manifests.Duration(manifests.OptionalToString(in.Spec.IndexHeaderConfig.LazyReaderIdleTimeout)),
-			LazyDownloadStrategy:  manifests.OptionalToString(in.Spec.IndexHeaderConfig.LazyDownloadStrategy),
+			EnableLazyReader:      in.CRD.Spec.IndexHeaderConfig.EnableLazyReader != nil && *in.CRD.Spec.IndexHeaderConfig.EnableLazyReader,
+			LazyReaderIdleTimeout: manifests.Duration(manifests.OptionalToString(in.CRD.Spec.IndexHeaderConfig.LazyReaderIdleTimeout)),
+			LazyDownloadStrategy:  manifests.OptionalToString(in.CRD.Spec.IndexHeaderConfig.LazyDownloadStrategy),
 		}
 	}
 	var blockConfigOpts *manifestsstore.BlockConfigOptions
-	if in.Spec.BlockConfig != nil {
+	if in.CRD.Spec.BlockConfig != nil {
 		blockConfigOpts = &manifestsstore.BlockConfigOptions{
-			BlockDiscoveryStrategy:    ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy)),
-			BlockMetaFetchConcurrency: in.Spec.BlockConfig.BlockMetaFetchConcurrency,
+			BlockDiscoveryStrategy:    ptr.To(string(in.CRD.Spec.BlockConfig.BlockDiscoveryStrategy)),
+			BlockMetaFetchConcurrency: in.CRD.Spec.BlockConfig.BlockMetaFetchConcurrency,
 		}
 	}
 	sops := manifestsstore.Options{
-		ObjStoreSecret:           in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		IndexCacheConfig:         toManifestCacheConfig(in.Spec.IndexCacheConfig),
-		CachingBucketConfig:      toManifestCacheConfig(in.Spec.CachingBucketConfig),
-		IgnoreDeletionMarksDelay: manifests.Duration(in.Spec.IgnoreDeletionMarksDelay),
+		ObjStoreSecret:           in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		IndexCacheConfig:         toManifestCacheConfig(in.CRD.Spec.IndexCacheConfig),
+		CachingBucketConfig:      toManifestCacheConfig(in.CRD.Spec.CachingBucketConfig),
+		IgnoreDeletionMarksDelay: manifests.Duration(in.CRD.Spec.IgnoreDeletionMarksDelay),
 		IndexHeaderOptions:       indexHeaderOpts,
 		BlockConfigOptions:       blockConfigOpts,
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
-			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
 		Options: opts,
 	}
 
-	if in.Spec.StoreLimitsOptions != nil {
+	if in.CRD.Spec.StoreLimitsOptions != nil {
 		sops.StoreLimitsOpts = manifests.StoreLimitsOpts{
-			StoreLimitsRequestSamples: in.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
-			StoreLimitsRequestSeries:  in.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
+			StoreLimitsRequestSamples: in.CRD.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
+			StoreLimitsRequestSeries:  in.CRD.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
 		}
 	}
 
-	if in.Spec.TimeRangeConfig != nil {
-		sops.Min = manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MinTime))
-		sops.Max = manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MaxTime))
+	if in.CRD.Spec.TimeRangeConfig != nil {
+		sops.Min = manifests.Duration(manifests.OptionalToString(in.CRD.Spec.TimeRangeConfig.MinTime))
+		sops.Max = manifests.Duration(manifests.OptionalToString(in.CRD.Spec.TimeRangeConfig.MaxTime))
 	}
 
 	return sops
 }
 
-func compactV1Alpha1ToOptions(in v1alpha1.ThanosCompact, fg featuregate.Config) manifestscompact.Options {
-	opts := commonToOpts(&in, 1, in.Spec.CommonFields, &in.Spec.StatefulSetFields, fg, in.Spec.Additional)
+func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact.Options {
+	labels := manifests.MergeLabels(in.CRD.GetLabels(), in.CRD.Spec.CommonFields.Labels)
+	opts := commonToOpts(&in.CRD, 1, labels, in.CRD.GetAnnotations(), in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
-	opts.PodManagementPolicy = string(ptr.Deref(in.Spec.PodManagementPolicy, ""))
+	opts.PodManagementPolicy = string(ptr.Deref(in.CRD.Spec.PodManagementPolicy, ""))
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
-		if in.Spec.DownsamplingConfig == nil {
+		if in.CRD.Spec.DownsamplingConfig == nil {
 			return nil
 		}
 
-		disable := in.Spec.DownsamplingConfig.Disable != nil && *in.Spec.DownsamplingConfig.Disable
+		disable := in.CRD.Spec.DownsamplingConfig.Disable != nil && *in.CRD.Spec.DownsamplingConfig.Disable
 
 		return &manifestscompact.DownsamplingOptions{
 			Disable:     disable,
-			Concurrency: in.Spec.DownsamplingConfig.Concurrency,
+			Concurrency: in.CRD.Spec.DownsamplingConfig.Concurrency,
 		}
 	}
 
 	compaction := func() *manifestscompact.CompactionOptions {
-		if in.Spec.CompactConfig == nil {
+		if in.CRD.Spec.CompactConfig == nil {
 			return nil
 		}
 		return &manifestscompact.CompactionOptions{
-			CompactConcurrency:           in.Spec.CompactConfig.CompactConcurrency,
-			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.Spec.CompactConfig.CleanupInterval)),
-			ConsistencyDelay:             ptr.To(manifests.Duration(*in.Spec.CompactConfig.ConsistencyDelay)),
-			CompactBlockFetchConcurrency: in.Spec.CompactConfig.BlockFetchConcurrency,
+			CompactConcurrency:           in.CRD.Spec.CompactConfig.CompactConcurrency,
+			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval)),
+			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
+			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
 		}
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
-		if in.Spec.BlockConfig == nil && in.Spec.BlockViewerGlobalSync == nil {
+		if in.CRD.Spec.BlockConfig == nil && in.CRD.Spec.BlockViewerGlobalSync == nil {
 			return nil
 		}
 		opts := &manifestscompact.BlockConfigOptions{}
 
-		if in.Spec.BlockConfig != nil {
-			opts.BlockDiscoveryStrategy = ptr.To(string(in.Spec.BlockConfig.BlockDiscoveryStrategy))
-			opts.BlockFilesConcurrency = in.Spec.BlockConfig.BlockFilesConcurrency
-			opts.BlockMetaFetchConcurrency = in.Spec.BlockConfig.BlockMetaFetchConcurrency
+		if in.CRD.Spec.BlockConfig != nil {
+			opts.BlockDiscoveryStrategy = ptr.To(string(in.CRD.Spec.BlockConfig.BlockDiscoveryStrategy))
+			opts.BlockFilesConcurrency = in.CRD.Spec.BlockConfig.BlockFilesConcurrency
+			opts.BlockMetaFetchConcurrency = in.CRD.Spec.BlockConfig.BlockMetaFetchConcurrency
 		}
 
-		if in.Spec.BlockViewerGlobalSync != nil {
-			opts.BlockViewerGlobalSyncInterval = ptr.To(manifests.Duration(*in.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncInterval))
-			opts.BlockViewerGlobalSyncTimeout = ptr.To(manifests.Duration(*in.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncTimeout))
+		if in.CRD.Spec.BlockViewerGlobalSync != nil {
+			opts.BlockViewerGlobalSyncInterval = ptr.To(manifests.Duration(*in.CRD.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncInterval))
+			opts.BlockViewerGlobalSyncTimeout = ptr.To(manifests.Duration(*in.CRD.Spec.BlockViewerGlobalSync.BlockViewerGlobalSyncTimeout))
 		}
 		return opts
 	}
 	debugConfig := func() *manifestscompact.DebugConfigOptions {
-		if in.Spec.DebugConfig == nil {
+		if in.CRD.Spec.DebugConfig == nil {
 			return nil
 		}
 
 		var mcl int32
-		if in.Spec.DebugConfig.MaxCompactionLevel != nil {
-			mcl = *in.Spec.DebugConfig.MaxCompactionLevel
+		if in.CRD.Spec.DebugConfig.MaxCompactionLevel != nil {
+			mcl = *in.CRD.Spec.DebugConfig.MaxCompactionLevel
 		}
 		return &manifestscompact.DebugConfigOptions{
-			AcceptMalformedIndex: in.Spec.DebugConfig.AcceptMalformedIndex != nil && *in.Spec.DebugConfig.AcceptMalformedIndex,
+			AcceptMalformedIndex: in.CRD.Spec.DebugConfig.AcceptMalformedIndex != nil && *in.CRD.Spec.DebugConfig.AcceptMalformedIndex,
 			MaxCompactionLevel:   mcl,
-			HaltOnError:          in.Spec.DebugConfig.HaltOnError != nil && *in.Spec.DebugConfig.HaltOnError,
+			HaltOnError:          in.CRD.Spec.DebugConfig.HaltOnError != nil && *in.CRD.Spec.DebugConfig.HaltOnError,
 		}
 	}
 
 	cops := manifestscompact.Options{
 		Options: opts,
 		RetentionOptions: &manifestscompact.RetentionOptions{
-			Raw:         ptr.To(manifests.Duration(in.Spec.RetentionConfig.Raw)),
-			FiveMinutes: ptr.To(manifests.Duration(in.Spec.RetentionConfig.FiveMinutes)),
-			OneHour:     ptr.To(manifests.Duration(in.Spec.RetentionConfig.OneHour)),
+			Raw:         ptr.To(manifests.Duration(in.CRD.Spec.RetentionConfig.Raw)),
+			FiveMinutes: ptr.To(manifests.Duration(in.CRD.Spec.RetentionConfig.FiveMinutes)),
+			OneHour:     ptr.To(manifests.Duration(in.CRD.Spec.RetentionConfig.OneHour)),
 		},
 		BlockConfig:  blockDiscovery(),
 		Compaction:   compaction(),
 		Downsampling: downsamplingConfig(),
 		DebugConfig:  debugConfig(),
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
-			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
-		ObjStoreSecret: in.Spec.ObjectStorageConfig.ToSecretKeySelector(),
+		ObjStoreSecret: in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 	}
 
-	if in.Spec.TimeRangeConfig != nil {
-		cops.Min = ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MinTime)))
-		cops.Max = ptr.To(manifests.Duration(manifests.OptionalToString(in.Spec.TimeRangeConfig.MaxTime)))
+	if in.CRD.Spec.TimeRangeConfig != nil {
+		cops.Min = ptr.To(manifests.Duration(manifests.OptionalToString(in.CRD.Spec.TimeRangeConfig.MinTime)))
+		cops.Max = ptr.To(manifests.Duration(manifests.OptionalToString(in.CRD.Spec.TimeRangeConfig.MaxTime)))
 	}
 
 	return cops

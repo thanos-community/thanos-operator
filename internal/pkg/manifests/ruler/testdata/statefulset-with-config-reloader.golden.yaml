@@ -1,9 +1,6 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  annotations:
-    another: annotation
-    test: annotation
   labels:
     app.kubernetes.io/component: rule-evaluation-engine
     app.kubernetes.io/instance: thanos-ruler
@@ -12,8 +9,6 @@ metadata:
     app.kubernetes.io/part-of: thanos
     operator.thanos.io/owner: ""
     operator.thanos.io/store-api: "true"
-    some-custom-label: xyz
-    some-other-label: abc
   name: thanos-ruler
   namespace: ns
 spec:
@@ -37,8 +32,6 @@ spec:
         app.kubernetes.io/part-of: thanos
         operator.thanos.io/owner: ""
         operator.thanos.io/store-api: "true"
-        some-custom-label: xyz
-        some-other-label: abc
     spec:
       affinity:
         podAntiAffinity:
@@ -65,7 +58,6 @@ spec:
         - --data-dir=/var/thanos/rule
         - --objstore.config=$(OBJSTORE_CONFIG)
         - --alertmanagers.url=http://test-alertmanager.com:9093
-        - --label=rule_replica="0"
         - --rule-file=/etc/thanos/rules/test-rules/rules.yaml
         - --query=dnssrv+_http._tcp.test-query.ns.svc
         env:
@@ -79,7 +71,7 @@ spec:
               key: thanos.yaml
               name: test-secret
               optional: false
-        image: some-custom-image:v0.39.0
+        image: thanos:v0.30.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 4
@@ -163,8 +155,6 @@ spec:
         app.kubernetes.io/part-of: thanos
         operator.thanos.io/owner: ""
         operator.thanos.io/store-api: "true"
-        some-custom-label: xyz
-        some-other-label: abc
       name: data
       namespace: ns
     spec:
