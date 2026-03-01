@@ -255,5 +255,5 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 // GetLabels returns a map of labels that can be used to look up qfe resources.
 func GetLabels(opts Options) map[string]string {
-	return manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
+	return manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
 }

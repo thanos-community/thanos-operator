@@ -105,7 +105,7 @@ const (
 // NewStoreStatefulSet creates a new StatefulSet for the Thanos Store.
 func NewStoreStatefulSet(opts Options) *appsv1.StatefulSet {
 	selectorLabels := opts.GetSelectorLabels()
-	objectMetaLabels := manifests.MergeMaps(opts.Labels, selectorLabels)
+	objectMetaLabels := manifests.MergeLabels(opts.Labels, selectorLabels)
 	return newStoreShardStatefulSet(opts, selectorLabels, objectMetaLabels)
 }
 
@@ -412,7 +412,7 @@ func GetRequiredLabels() map[string]string {
 		manifests.ComponentLabel: ComponentName,
 		manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
 	}
-	return manifests.MergeMaps(labels, GetRequiredStoreServiceLabel())
+	return manifests.MergeLabels(labels, GetRequiredStoreServiceLabel())
 }
 
 // GetSelectorLabels returns a map of labels that can be used to select store resources.
@@ -428,7 +428,7 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 // GetLabels returns the labels that will be set as ObjectMeta labels for store resources.
 func GetLabels(opts Options) map[string]string {
-	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
+	lbls := manifests.MergeLabels(opts.Labels, opts.GetSelectorLabels())
 	if opts.Replicas > 1 {
 		lbls[string(manifests.GroupLabel)] = "true"
 	}

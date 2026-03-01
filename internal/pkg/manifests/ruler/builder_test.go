@@ -85,7 +85,7 @@ func TestBuildRuler(t *testing.T) {
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-	wantLabels = manifests.MergeMaps(wantLabels, manifestsstore.GetRequiredStoreServiceLabel())
+	wantLabels = manifests.MergeLabels(wantLabels, manifestsstore.GetRequiredStoreServiceLabel())
 	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
 }
 
@@ -495,6 +495,239 @@ func TestBucketSize(t *testing.T) {
 			if got := bucketSize(tt.bucket); got != tt.want {
 				t.Errorf("bucketSize() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestBuildConfigReloaderContainer(t *testing.T) {
+	tests := []struct {
+		name              string
+		opts              Options
+		wantContainerName string
+		wantImage         string
+		wantArgsCount     int
+		wantVolumeMounts  int
+		wantPorts         int
+	}{
+		{
+			name: "single rule file",
+			opts: Options{
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"},
+						Key:                  "rule1.yaml",
+					},
+				},
+				ConfigReloaderImage: "test-image:v1.0.0",
+			},
+			wantContainerName: "config-reloader",
+			wantImage:         "test-image:v1.0.0",
+			wantArgsCount:     3, // --listen-address, --reload-url, --watched-dir
+			wantVolumeMounts:  1,
+			wantPorts:         1,
+		},
+		{
+			name: "multiple rule files from same ConfigMap",
+			opts: Options{
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"},
+						Key:                  "rule1.yaml",
+					},
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"},
+						Key:                  "rule2.yaml",
+					},
+				},
+				ConfigReloaderImage: "test-image:v1.0.0",
+			},
+			wantContainerName: "config-reloader",
+			wantImage:         "test-image:v1.0.0",
+			wantArgsCount:     3, // Should deduplicate ConfigMap
+			wantVolumeMounts:  1, // Only one mount for the single ConfigMap
+			wantPorts:         1,
+		},
+		{
+			name: "multiple rule files from different ConfigMaps",
+			opts: Options{
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"},
+						Key:                  "rule1.yaml",
+					},
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-2"},
+						Key:                  "rule2.yaml",
+					},
+					{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "rules-3"},
+						Key:                  "rule3.yaml",
+					},
+				},
+				ConfigReloaderImage: "test-image:v1.0.0",
+			},
+			wantContainerName: "config-reloader",
+			wantImage:         "test-image:v1.0.0",
+			wantArgsCount:     5, // --listen-address, --reload-url, --watched-dir (x3)
+			wantVolumeMounts:  3,
+			wantPorts:         1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := buildConfigReloaderContainer(tt.opts)
+
+			if container.Name != tt.wantContainerName {
+				t.Errorf("container.Name = %v, want %v", container.Name, tt.wantContainerName)
+			}
+
+			if container.Image != tt.wantImage {
+				t.Errorf("container.Image = %v, want %v", container.Image, tt.wantImage)
+			}
+
+			if len(container.Args) != tt.wantArgsCount {
+				t.Errorf("len(container.Args) = %v, want %v, args: %v", len(container.Args), tt.wantArgsCount, container.Args)
+			}
+
+			if len(container.VolumeMounts) != tt.wantVolumeMounts {
+				t.Errorf("len(container.VolumeMounts) = %v, want %v", len(container.VolumeMounts), tt.wantVolumeMounts)
+			}
+
+			if len(container.Ports) != tt.wantPorts {
+				t.Errorf("len(container.Ports) = %v, want %v", len(container.Ports), tt.wantPorts)
+			}
+
+			// Verify reload URL is correctly set
+			hasReloadURL := false
+			for _, arg := range container.Args {
+				if arg == "--reload-url=http://localhost:9090/-/reload" {
+					hasReloadURL = true
+					break
+				}
+			}
+			if !hasReloadURL {
+				t.Error("Missing --reload-url argument")
+			}
+		})
+	}
+}
+
+func TestConfigReloaderDeduplication(t *testing.T) {
+	opts := Options{
+		RuleFiles: []corev1.ConfigMapKeySelector{
+			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"}, Key: "rule1.yaml"},
+			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"}, Key: "rule2.yaml"},
+			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-2"}, Key: "rule3.yaml"},
+			{LocalObjectReference: corev1.LocalObjectReference{Name: "rules-1"}, Key: "rule4.yaml"},
+		},
+		ConfigReloaderImage: "test-image:v1.0.0",
+	}
+
+	container := buildConfigReloaderContainer(opts)
+
+	// Should only mount 2 unique ConfigMaps (rules-1 and rules-2)
+	if len(container.VolumeMounts) != 2 {
+		t.Errorf("Expected 2 volume mounts, got %d", len(container.VolumeMounts))
+	}
+
+	// Verify the correct ConfigMaps are mounted
+	mountedConfigMaps := make(map[string]bool)
+	for _, vm := range container.VolumeMounts {
+		mountedConfigMaps[vm.Name] = true
+	}
+
+	if !mountedConfigMaps["rules-1"] || !mountedConfigMaps["rules-2"] {
+		t.Errorf("Expected rules-1 and rules-2 to be mounted, got: %v", mountedConfigMaps)
+	}
+
+	// Verify watched directories
+	watchedDirCount := 0
+	for _, arg := range container.Args {
+		if len(arg) > len("--watched-dir=") && arg[:14] == "--watched-dir=" {
+			watchedDirCount++
+		}
+	}
+	if watchedDirCount != 2 {
+		t.Errorf("Expected 2 --watched-dir arguments, got %d", watchedDirCount)
+	}
+}
+
+func TestStatefulSetWithConfigReloader(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		golden         string
+		opts           Options
+		expectReloader bool
+		containerCount int
+	}{
+		{
+			name:   "config-reloader enabled with rule files",
+			golden: "statefulset-with-config-reloader.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("thanos:v0.30.0"),
+				},
+				Endpoints: []Endpoint{
+					{ServiceName: "test-query", Namespace: "ns", Port: 19101},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{LocalObjectReference: corev1.LocalObjectReference{Name: "test-rules"}, Key: "rules.yaml"},
+				},
+				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				Retention:           "15d",
+				AlertmanagerURL:     "http://test-alertmanager.com:9093",
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
+			},
+			expectReloader: true,
+			containerCount: 2,
+		},
+		{
+			name:   "no config-reloader when no rule files",
+			golden: "statefulset-without-rules.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("thanos:v0.30.0"),
+				},
+				Endpoints:           []Endpoint{{ServiceName: "test-query", Namespace: "ns", Port: 19101}},
+				RuleFiles:           []corev1.ConfigMapKeySelector{}, // Empty rule files
+				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				Retention:           "15d",
+				AlertmanagerURL:     "http://test-alertmanager.com:9093",
+				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
+			},
+			expectReloader: false, // Should not add config-reloader when there are no rule files
+			containerCount: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sts := NewRulerStatefulSet(tc.opts)
+
+			containers := sts.Spec.Template.Spec.Containers
+			if len(containers) != tc.containerCount {
+				t.Fatalf("Expected %d containers, got %d", tc.containerCount, len(containers))
+			}
+
+			hasReloader := false
+			for _, container := range containers {
+				if container.Name == configReloaderContainerName {
+					hasReloader = true
+					break
+				}
+			}
+
+			if hasReloader != tc.expectReloader {
+				t.Errorf("Expected config-reloader presence = %v, got %v", tc.expectReloader, hasReloader)
+			}
+
+			// Test against golden file
+			yamlBytes, err := yaml.Marshal(sts)
+			if err != nil {
+				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
 }

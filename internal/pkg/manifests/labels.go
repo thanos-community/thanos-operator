@@ -55,7 +55,7 @@ const (
 
 // MergeMaps merges the provided labels with the default labels for a component.
 // Returns a new map with the merged labels leaving the original maps unchanged.
-func MergeMaps(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {
+func MergeLabels(baseLabels map[string]string, mergeWithPriority map[string]string) map[string]string {
 	if baseLabels == nil {
 		labelCopy := make(map[string]string, len(mergeWithPriority))
 		maps.Copy(labelCopy, mergeWithPriority)
