@@ -78,6 +78,7 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosstores/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;update;patch
 //+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -150,6 +151,39 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	if errCount > 0 {
 		r.metrics.ShardCreationUpdateFailures.WithLabelValues(store.GetName(), store.GetNamespace()).Add(float64(errCount))
 		return fmt.Errorf("failed to create or update %d resources for store or store shard(s)", errCount)
+	}
+
+	// Expand existing PVCs if storage size has increased in the CR spec
+	// Note: The CreateOrUpdate call above already updated the StatefulSet's VolumeClaimTemplates
+	// to reflect the new storage size from the CR. Now we need to expand the existing PVCs
+	// so that existing pods can use the new storage size.
+	// The handler will check if expansion is actually needed before doing expensive LIST operations.
+	for _, opt := range opts {
+		storeOpts, ok := opt.(manifestsstore.Options)
+		if !ok {
+			continue
+		}
+
+		sts := &appsv1.StatefulSet{}
+		stsName := storeOpts.GetGeneratedResourceName()
+		if err := r.Get(ctx, client.ObjectKey{Name: stsName, Namespace: store.GetNamespace()}, sts); err != nil {
+			r.logger.Error(err, "failed to get StatefulSet for PVC expansion", "statefulset", stsName)
+			errCount++
+			continue
+		}
+
+		desiredSize := corev1.ResourceList{
+			corev1.ResourceStorage: storeOpts.StorageConfig.StorageSize,
+		}
+
+		if expandErrCount := r.handler.ExpandPVCsForStatefulSet(ctx, sts, desiredSize); expandErrCount > 0 {
+			r.logger.Error(fmt.Errorf("failed to expand %d PVCs", expandErrCount), "error expanding PVCs for StatefulSet", "statefulset", stsName)
+			errCount += expandErrCount
+		}
+	}
+
+	if errCount > 0 {
+		return fmt.Errorf("failed to expand PVCs for %d store or store shard(s)", errCount)
 	}
 
 	if cleanErrCount := r.cleanup(ctx, store, expectShards); cleanErrCount > 0 {
