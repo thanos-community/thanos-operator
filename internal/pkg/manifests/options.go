@@ -309,7 +309,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 			}
 			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
-			
+
 			// Add tracing configuration for OpenTelemetry sidecar
 			tracingConfig := `type: OTLP
 config:
@@ -386,7 +386,7 @@ config:
 				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 			}
 			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
-			
+
 			// Add tracing configuration for OpenTelemetry sidecar
 			tracingConfig := `type: OTLP
 config:

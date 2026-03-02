@@ -421,7 +421,7 @@ spec:
 	if err != nil {
 		return fmt.Errorf("failed to create Jaeger v2 collector: %w", err)
 	}
-	
+
 	log.Println("Successfully created Jaeger v2 collector")
 	return nil
 }
@@ -474,7 +474,7 @@ spec:
 	if err != nil {
 		return fmt.Errorf("failed to create sidecar collector: %w", err)
 	}
-	
+
 	log.Println("Successfully created default sidecar collector")
 	return nil
 }

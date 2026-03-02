@@ -257,4 +257,3 @@ func (opts Options) GetSelectorLabels() map[string]string {
 func GetLabels(opts Options) map[string]string {
 	return manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
 }
-

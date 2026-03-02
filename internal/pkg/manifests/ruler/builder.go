@@ -306,7 +306,6 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 	return sts
 }
 
-
 func NewRulerService(opts Options) *corev1.Service {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)

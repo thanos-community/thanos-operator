@@ -49,8 +49,8 @@ spec:
         - --leader-elect
         - --enable-feature=service-monitor
         - --enable-feature=prometheus-rule
-        - --enable-feature=otel-sidecar
         - --enable-feature=kube-resource-sync
+        - --enable-feature=otel-sidecar
         command:
         - /manager
         image: controller:latest
