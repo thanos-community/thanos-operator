@@ -2,21 +2,24 @@ package featuregate
 
 import (
 	"reflect"
+	"slices"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
 
 func TestAllFeatures(t *testing.T) {
 	expected := []string{
-		"service-monitor",
-		"prometheus-rule",
-		"otel-sidecar",
-		"kube-resource-sync",
+		ServiceMonitor,
+		PrometheusRule,
+		OtelSidecar,
+		KubeResourceSync,
 	}
-
 	got := AllFeatures()
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("AllFeatures() = %v, want %v", got, expected)
-	}
+	slices.Sort(expected)
+	slices.Sort(got)
+
+	assert.DeepEqual(t, expected, got)
 }
 
 func TestIsValidFeature(t *testing.T) {
