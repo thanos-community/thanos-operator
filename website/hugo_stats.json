@@ -55,14 +55,12 @@
       "tbody",
       "td",
       "template",
-      "tenantlabelname",
       "th",
       "thead",
       "time",
       "title",
       "tr",
-      "ul",
-      "value"
+      "ul"
     ],
     "classes": [
       "DocSearch-Label",

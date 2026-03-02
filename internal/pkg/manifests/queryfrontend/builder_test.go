@@ -214,6 +214,36 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "deployment-with-otel-sidecar.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Owner:     "test-qf",
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+					Replicas: 2,
+					Features: manifests.Features{
+						EnableOtelSidecar: true,
+					},
+				},
+				QueryService:         "thanos-query",
+				LogQueriesLongerThan: "5s",
+				CompressResponses:    true,
+				RangeSplitInterval:   "1h",
+				LabelsSplitInterval:  "30m",
+				RangeMaxRetries:      5,
+				LabelsMaxRetries:     3,
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := NewQueryFrontendDeployment(tc.opts)

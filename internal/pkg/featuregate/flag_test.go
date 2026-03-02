@@ -22,6 +22,11 @@ func TestFlag_Set(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid otel-sidecar",
+			feature: OtelSidecar,
+			wantErr: false,
+		},
+		{
 			name:        "invalid feature",
 			feature:     "invalid-feature",
 			wantErr:     true,
@@ -81,6 +86,11 @@ func TestFlag_EnablesServiceMonitor(t *testing.T) {
 			features: []string{ServiceMonitor, PrometheusRule},
 			want:     true,
 		},
+		{
+			name:     "otel-sidecar does not enable service monitor",
+			features: []string{OtelSidecar},
+			want:     false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -123,6 +133,11 @@ func TestFlag_EnablesPrometheusRule(t *testing.T) {
 			features: []string{ServiceMonitor, PrometheusRule},
 			want:     true,
 		},
+		{
+			name:     "otel-sidecar does not enable prometheus rule",
+			features: []string{OtelSidecar},
+			want:     false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -139,13 +154,61 @@ func TestFlag_EnablesPrometheusRule(t *testing.T) {
 	}
 }
 
+func TestFlag_EnablesOtelSidecar(t *testing.T) {
+	tests := []struct {
+		name     string
+		features []string
+		want     bool
+	}{
+		{
+			name:     "no features",
+			features: []string{},
+			want:     false,
+		},
+		{
+			name:     "otel-sidecar enables otel sidecar",
+			features: []string{OtelSidecar},
+			want:     true,
+		},
+		{
+			name:     "service-monitor does not enable otel sidecar",
+			features: []string{ServiceMonitor},
+			want:     false,
+		},
+		{
+			name:     "prometheus-rule does not enable otel sidecar",
+			features: []string{PrometheusRule},
+			want:     false,
+		},
+		{
+			name:     "multiple features including otel-sidecar",
+			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar},
+			want:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &Flag{}
+			for _, feature := range tt.features {
+				_ = f.Set(feature)
+			}
+
+			if got := f.EnablesOtelSidecar(); got != tt.want {
+				t.Errorf("Flag.EnablesOtelSidecar() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFlag_String(t *testing.T) {
 	f := &Flag{}
 	_ = f.Set(ServiceMonitor)
 	_ = f.Set(PrometheusRule)
+	_ = f.Set(OtelSidecar)
 
 	got := f.String()
-	expected := "service-monitor,prometheus-rule"
+	expected := "service-monitor,prometheus-rule,otel-sidecar"
 
 	if got != expected {
 		t.Errorf("Flag.String() = %q, want %q", got, expected)

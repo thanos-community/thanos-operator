@@ -252,6 +252,53 @@ func TestNewRulerStatefulSet(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "statefulset-with-otel-sidecar.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+					Features: manifests.Features{
+						EnableOtelSidecar: true,
+					},
+				},
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
+				ObjStoreSecret: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "test-secret",
+					},
+					Key: "thanos.yaml",
+				},
+				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ruler := NewRulerStatefulSet(tc.opts)
