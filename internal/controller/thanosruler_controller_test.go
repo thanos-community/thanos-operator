@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -182,26 +183,17 @@ config:
 
 			By("verifying ruler annotations", func() {
 				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.StatefulSet{}, &corev1.Service{})
+
 					expectedAnnotations := map[string]string{
 						"ruler-meta": "annotation",
 						"ruler-spec": "annotation",
 					}
 
-					serviceAccount := &corev1.ServiceAccount{}
-					if !utils.VerifyAnnotations(k8sClient, serviceAccount, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
-
-					statefulSet := &appsv1.StatefulSet{}
-					if !utils.VerifyAnnotations(k8sClient, statefulSet, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
-						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
-					}
-
-					service := &corev1.Service{}
-					if !utils.VerifyAnnotations(k8sClient, service, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
-						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
-					}
-
 					return nil
 				}, time.Minute, time.Second*10).Should(Succeed())
 			})

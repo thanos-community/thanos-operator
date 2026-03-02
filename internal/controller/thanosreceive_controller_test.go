@@ -37,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosReceive Controller", Ordered, func() {
@@ -255,14 +256,16 @@ config:
 
 			By("verifying thanos receive ingestor annotations are merged correctly", func() {
 				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.StatefulSet{})
+
 					expectedAnnotations := map[string]string{
 						"receive":  "annotation",
 						"ingestor": "annotation",
 						"conflict": "ingestor-override",
 					}
 
-					statefulSet := &appsv1.StatefulSet{}
-					if !utils.VerifyAnnotations(k8sClient, statefulSet, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
@@ -442,14 +445,16 @@ config:
 
 			By("verifying thanos receive router annotations are merged correctly", func() {
 				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.Deployment{})
+
 					expectedAnnotations := map[string]string{
 						"receive":  "annotation",
 						"router":   "annotation",
 						"conflict": "router-override",
 					}
 
-					deployment := &appsv1.Deployment{}
-					if !utils.VerifyAnnotations(k8sClient, deployment, ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil

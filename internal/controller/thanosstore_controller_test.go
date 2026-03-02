@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosStore Controller", Ordered, func() {
@@ -150,24 +151,16 @@ config:
 
 			By("verifying store annotations", func() {
 				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &corev1.Service{}, &appsv1.StatefulSet{})
+
 					expectedAnnotations := map[string]string{
 						"store-meta": "annotation",
 						"store-spec": "annotation",
 					}
 
 					for _, shard := range []string{firstShard, secondShard, thirdShard} {
-						serviceAccount := &corev1.ServiceAccount{}
-						if !utils.VerifyAnnotations(k8sClient, serviceAccount, shard, ns, expectedAnnotations) {
-							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
-						}
-
-						service := &corev1.Service{}
-						if !utils.VerifyAnnotations(k8sClient, service, shard, ns, expectedAnnotations) {
-							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
-						}
-
-						statefulSet := &appsv1.StatefulSet{}
-						if !utils.VerifyAnnotations(k8sClient, statefulSet, shard, ns, expectedAnnotations) {
+						if !utils.VerifyAnnotations(k8sClient, objs, shard, ns, expectedAnnotations) {
 							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 						}
 					}
