@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -36,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosReceive Controller", Ordered, func() {
@@ -181,11 +183,19 @@ config:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"receive":  "annotation",
+						"conflict": "discarded",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
 					Router: monitoringthanosiov1alpha1.RouterSpec{
 						CommonFields: monitoringthanosiov1alpha1.CommonFields{
 							Labels: map[string]string{"test": "my-router-test"},
+							Annotations: map[string]string{
+								"router":   "annotation",
+								"conflict": "router-override",
+							},
 						},
 						ReplicationFactor: 3,
 						Additional: monitoringthanosiov1alpha1.Additional{
@@ -207,6 +217,10 @@ config:
 							{
 								CommonFields: monitoringthanosiov1alpha1.CommonFields{
 									Labels: map[string]string{"test": "my-ingester-test"},
+									Annotations: map[string]string{
+										"ingestor": "annotation",
+										"conflict": "ingestor-override",
+									},
 								},
 								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
@@ -238,6 +252,24 @@ config:
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
+			})
+
+			By("verifying thanos receive ingestor annotations are merged correctly", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.StatefulSet{})
+
+					expectedAnnotations := map[string]string{
+						"receive":  "annotation",
+						"ingestor": "annotation",
+						"conflict": "ingestor-override",
+					}
+
+					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -409,6 +441,24 @@ config:
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, routerName, ns)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
+			})
+
+			By("verifying thanos receive router annotations are merged correctly", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.Deployment{})
+
+					expectedAnnotations := map[string]string{
+						"receive":  "annotation",
+						"router":   "annotation",
+						"conflict": "router-override",
+					}
+
+					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("creating the additional container for router", func() {

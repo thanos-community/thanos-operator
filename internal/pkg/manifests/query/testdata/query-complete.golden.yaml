@@ -3,6 +3,7 @@
   kind: ServiceAccount
   metadata:
     annotations:
+      another: annotation
       test-annotation: test-value
     labels:
       app.kubernetes.io/component: query-layer
@@ -18,6 +19,7 @@
   kind: Deployment
   metadata:
     annotations:
+      another: annotation
       test-annotation: test-value
     labels:
       app.kubernetes.io/component: query-layer
@@ -136,6 +138,7 @@
   kind: Service
   metadata:
     annotations:
+      another: annotation
       test-annotation: test-value
     labels:
       app.kubernetes.io/component: query-layer
@@ -172,6 +175,7 @@
   kind: PodDisruptionBudget
   metadata:
     annotations:
+      another: annotation
       test-annotation: test-value
     labels:
       app.kubernetes.io/component: query-layer

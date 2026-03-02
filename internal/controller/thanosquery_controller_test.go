@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	policyv1 "k8s.io/api/policy/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -37,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosQuery Controller", Ordered, func() {
@@ -90,6 +92,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"query":    "annotation",
+						"conflict": "discarded",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{
@@ -133,6 +139,23 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
 				}, time.Minute*1, time.Second*10).Should(BeTrue())
+			})
+
+			By("verifying query annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.Deployment{}, &corev1.Service{}, &policyv1.PodDisruptionBudget{})
+
+					expectedAnnotations := map[string]string{
+						"query":    "annotation",
+						"conflict": "discarded",
+					}
+
+					if !utils.VerifyAnnotations(k8sClient, objs, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
@@ -197,7 +220,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				oneh := monitoringthanosiov1alpha1.Duration("1h")
 				thirtym := monitoringthanosiov1alpha1.Duration("30m")
 				resource.Spec.QueryFrontend = &monitoringthanosiov1alpha1.QueryFrontendSpec{
-
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Annotations: map[string]string{
+							"frontend": "annotation",
+							"conflict": "overwritten",
+						},
+					},
 					Replicas:          2,
 					CompressResponses: true,
 					QueryRangeResponseCacheConfig: &monitoringthanosiov1alpha1.CacheConfig{
@@ -243,6 +271,24 @@ config:
 						}
 					}
 
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
+			})
+
+			By("verifying query frontend annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.Deployment{}, &corev1.Service{})
+
+					expectedAnnotations := map[string]string{
+						"query":    "annotation",
+						"frontend": "annotation",
+						"conflict": "overwritten",
+					}
+
+					if !utils.VerifyAnnotations(k8sClient, objs, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
 					return nil
 				}, time.Minute, time.Second*10).Should(Succeed())
 			})

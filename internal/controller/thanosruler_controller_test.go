@@ -24,8 +24,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	appsv1 "k8s.io/api/apps/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosRuler Controller", Ordered, func() {
@@ -96,10 +97,15 @@ config:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"ruler-meta": "annotation",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
-					Replicas:     2,
-					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					Replicas: 2,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Annotations: map[string]string{"ruler-spec": "annotation"},
+					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
@@ -173,6 +179,24 @@ config:
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("verifying ruler annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.StatefulSet{}, &corev1.Service{})
+
+					expectedAnnotations := map[string]string{
+						"ruler-meta": "annotation",
+						"ruler-spec": "annotation",
+					}
+
+					if !utils.VerifyAnnotations(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
+						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+					}
+
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("updating with new rule file", func() {

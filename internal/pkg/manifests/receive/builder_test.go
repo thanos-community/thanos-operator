@@ -3,11 +3,12 @@ package receive
 import (
 	"testing"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	"github.com/thanos-community/thanos-operator/test/utils"
-
+	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/utils"
 
 	"gotest.tools/v3/golden"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,9 @@ func TestBuildIngesters(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"test": "annotation",
+			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		HashringName: "test-hashring",
@@ -38,6 +42,10 @@ func TestBuildIngesters(t *testing.T) {
 	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
+	}
+
+	for _, obj := range objs {
+		assert.Assert(t, obj.GetAnnotations()["test"] == "annotation")
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
@@ -61,6 +69,9 @@ func TestBuildRouter(t *testing.T) {
 				"some-custom-label":      someCustomLabelValue,
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test": "annotation",
 			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
@@ -319,6 +330,9 @@ func TestNewIngestorService(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"test": "annotation",
+			},
 		},
 	}
 
@@ -355,6 +369,9 @@ func TestNewRouterService(t *testing.T) {
 				"some-custom-label":      someCustomLabelValue,
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test": "annotation",
 			},
 		},
 	}
@@ -394,6 +411,9 @@ func TestBuildRouterGolden(t *testing.T) {
 			Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
 			Labels: map[string]string{
 				"app.kubernetes.io/version": "v0.40.1",
+			},
+			Annotations: map[string]string{
+				"test": "annotation",
 			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},

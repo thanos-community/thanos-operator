@@ -3,6 +3,8 @@ package query
 import (
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -31,6 +33,9 @@ func TestBuildQuery(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"test": "annotation",
+			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		Timeout:       "15m",
@@ -41,6 +46,10 @@ func TestBuildQuery(t *testing.T) {
 	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
+	}
+
+	for _, obj := range objs {
+		assert.Assert(t, obj.GetAnnotations()["test"] == "annotation")
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
@@ -75,7 +84,8 @@ func TestNewQueryDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 				},
 				Timeout:       "15m",
@@ -97,7 +107,8 @@ func TestNewQueryDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Additional: manifests.Additional{
 						VolumeMounts: []corev1.VolumeMount{
@@ -127,7 +138,8 @@ func TestNewQueryDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Additional: manifests.Additional{
 						Containers: []corev1.Container{
@@ -172,6 +184,10 @@ func TestNewQueryService(t *testing.T) {
 				"some-custom-label":      someCustomLabelValue,
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test":    "annotation",
+				"another": "annotation",
 			},
 		},
 		Timeout:       "15m",
@@ -219,6 +235,10 @@ func TestBuildQueryGolden(t *testing.T) {
 					Labels: map[string]string{
 						"app.kubernetes.io/version": "v0.40.1",
 					},
+					Annotations: map[string]string{
+						"test":    "annotation",
+						"another": "annotation",
+					},
 					PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 				},
 				Timeout:       "15m",
@@ -239,6 +259,7 @@ func TestBuildQueryGolden(t *testing.T) {
 					},
 					Annotations: map[string]string{
 						"test-annotation": "test-value",
+						"another":         "annotation",
 					},
 					Additional: manifests.Additional{
 						Args: []string{"--query.timeout=30m"},

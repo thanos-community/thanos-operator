@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ThanosCompact Controller", Ordered, func() {
@@ -51,10 +53,14 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 		}
 
 		shardOne := compact.Options{
-			Options:   manifests.Options{Owner: resourceName},
+			Options: manifests.Options{
+				Owner: resourceName,
+			},
 			ShardName: ptr.To("someone")}.GetGeneratedResourceName()
 		shardTwo := compact.Options{
-			Options:   manifests.Options{Owner: resourceName},
+			Options: manifests.Options{
+				Owner: resourceName,
+			},
 			ShardName: ptr.To("anyone-else")}.GetGeneratedResourceName()
 
 		BeforeAll(func() {
@@ -102,10 +108,16 @@ config:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
+					Annotations: map[string]string{
+						"compact-meta": "annotation",
+					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosCompactSpec{
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{
 						Labels: map[string]string{"some-label": "xyz"},
+						Annotations: map[string]string{
+							"compact-spec": "annotation",
+						},
 					},
 					ShardingConfig: []monitoringthanosiov1alpha1.ShardingConfig{
 						{
@@ -165,6 +177,25 @@ config:
 							k8sClient, 1, shard, ns)
 					}, time.Second*10, time.Second*2).Should(BeTrue())
 				}
+			})
+
+			By("verifying compact annotations", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.StatefulSet{}, &corev1.Service{})
+
+					expectedAnnotations := map[string]string{
+						"compact-meta": "annotation",
+						"compact-spec": "annotation",
+					}
+
+					for _, shard := range []string{shardOne, shardTwo} {
+						if !utils.VerifyAnnotations(k8sClient, objs, shard, ns, expectedAnnotations) {
+							return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
+						}
+					}
+					return nil
+				}, time.Minute, time.Second*10).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos compact", func() {

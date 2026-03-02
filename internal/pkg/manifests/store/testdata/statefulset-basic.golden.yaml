@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   annotations:
+    another: annotation
     test: annotation
   labels:
     app.kubernetes.io/component: object-storage-gateway

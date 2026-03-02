@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func TestMergeLabels(t *testing.T) {
+func TestMergeMaps(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		labels    map[string]string
@@ -32,7 +32,7 @@ func TestMergeLabels(t *testing.T) {
 			}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := MergeLabels(tc.labels, tc.mergeWith)
+			result := MergeMaps(tc.labels, tc.mergeWith)
 			if len(result) != len(tc.expect) {
 				t.Fatalf("expected %d labels, got %d", len(tc.expect), len(result))
 			}

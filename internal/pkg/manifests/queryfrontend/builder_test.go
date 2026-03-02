@@ -3,6 +3,8 @@ package queryfrontend
 import (
 	"testing"
 
+	"gotest.tools/v3/assert"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -31,6 +33,9 @@ func TestBuildQueryFrontend(t *testing.T) {
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
 			},
+			Annotations: map[string]string{
+				"test": "annotation",
+			},
 			PodDisruptionConfig: &manifests.PodDisruptionBudgetOptions{},
 		},
 		QueryService:         "thanos-query",
@@ -45,6 +50,10 @@ func TestBuildQueryFrontend(t *testing.T) {
 	objs := opts.Build()
 	if len(objs) != 4 {
 		t.Fatalf("expected 4 objects, got %d", len(objs))
+	}
+
+	for _, obj := range objs {
+		assert.Assert(t, obj.GetAnnotations()["test"] == "annotation")
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
@@ -82,7 +91,8 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Replicas: 2,
 				},
@@ -109,7 +119,8 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Replicas: 2,
 					Additional: manifests.Additional{
@@ -144,7 +155,8 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Replicas: 2,
 					Additional: manifests.Additional{
@@ -184,7 +196,8 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"app.kubernetes.io/name": "expect-to-be-discarded",
 					},
 					Annotations: map[string]string{
-						"test": "annotation",
+						"test":    "annotation",
+						"another": "annotation",
 					},
 					Replicas: 2,
 				},
@@ -225,6 +238,9 @@ func TestNewQueryFrontendService(t *testing.T) {
 				"some-custom-label":      someCustomLabelValue,
 				"some-other-label":       someOtherLabelValue,
 				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test": "annotation",
 			},
 		},
 	}
