@@ -36,15 +36,36 @@ func queryV1Alpha1ToOptions(in v1alpha1.ThanosQuery, featureGate featuregate.Con
 			Series:   in.Spec.TelemetryQuantiles.Series,
 		}
 	}
+	var queryMode string
+	var selectorRelabelConfigs manifests.RelabelConfigs
+	if in.Spec.QueryFederation != nil {
+		if in.Spec.QueryFederation.QueryMode != nil {
+			queryMode = *in.Spec.QueryFederation.QueryMode
+		}
+		if in.Spec.QueryFederation.TSDBSelector != nil {
+			selectorRelabelConfigs = make(manifests.RelabelConfigs, 0, len(*in.Spec.QueryFederation.TSDBSelector))
+			for _, c := range *in.Spec.QueryFederation.TSDBSelector {
+				selectorRelabelConfigs = append(selectorRelabelConfigs, manifests.RelabelConfig{
+					Action:      c.Action,
+					SourceLabel: c.SourceLabel,
+					TargetLabel: c.TargetLabel,
+					Modulus:     c.Modulus,
+					Regex:       c.Regex,
+				})
+			}
+		}
+	}
 	return manifestquery.Options{
-		Options:            opts,
-		ReplicaLabels:      in.Spec.ReplicaLabels,
-		Timeout:            "15m",
-		LookbackDelta:      "5m",
-		MaxConcurrent:      20,
-		WebOptions:         webOptions,
-		TelemetryQuantiles: telemetryQuantiles,
-		GRPCProxyStrategy:  in.Spec.GRPCProxyStrategy,
+		Options:                opts,
+		ReplicaLabels:          in.Spec.ReplicaLabels,
+		Timeout:                "15m",
+		LookbackDelta:          "5m",
+		MaxConcurrent:          20,
+		WebOptions:             webOptions,
+		TelemetryQuantiles:     telemetryQuantiles,
+		GRPCProxyStrategy:      in.Spec.GRPCProxyStrategy,
+		QueryMode:              queryMode,
+		SelectorRelabelConfigs: selectorRelabelConfigs,
 	}
 }
 

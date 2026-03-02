@@ -180,13 +180,24 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 }
 
 func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) (manifests.Buildable, error) {
-	endpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
+	storeEndpoints, err := r.getStoreAPIServiceEndpoints(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
+	var queryEndpoints []manifestquery.Endpoint
+	if query.Spec.QueryFederation != nil && query.Spec.QueryFederation.QueryAsStoreAPILabelSelector != nil {
+		queryEndpoints, err = r.getQueryStoreAPIServiceEndpoints(ctx, query)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Merge endpoints from both sources
+	allEndpoints := append(storeEndpoints, queryEndpoints...)
+
 	opts := queryV1Alpha1ToOptions(query, r.featureGate)
-	opts.Endpoints = endpoints
+	opts.Endpoints = allEndpoints
 
 	return opts, nil
 }
@@ -212,8 +223,8 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	endpointCountByType := make(map[manifests.EndpointType]int)
-	endpoints := make([]manifestquery.Endpoint, len(services.Items))
-	for i, svc := range services.Items {
+	endpoints := make([]manifestquery.Endpoint, 0, len(services.Items))
+	for _, svc := range services.Items {
 
 		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredStoreServiceLabels)
 		if !ok {
@@ -226,12 +237,26 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 
 		etype := r.getServiceTypeFromLabel(svc.ObjectMeta)
 
-		endpoints[i] = manifestquery.Endpoint{
-			ServiceName: svc.GetName(),
-			Port:        port,
-			Namespace:   svc.GetNamespace(),
-			Type:        etype,
+		// Check if this is an ExternalName service for multi-cluster discovery
+		var serviceName, namespace string
+		if svc.Spec.Type == corev1.ServiceTypeExternalName && svc.Spec.ExternalName != "" {
+			serviceName = svc.Spec.ExternalName
+			namespace = "" // External services don't use namespace in DNS
+			r.logger.Info("discovered external StoreAPI endpoint",
+				"service", svc.GetName(),
+				"externalName", svc.Spec.ExternalName,
+				"type", string(etype))
+		} else {
+			serviceName = svc.GetName()
+			namespace = svc.GetNamespace()
 		}
+
+		endpoints = append(endpoints, manifestquery.Endpoint{
+			ServiceName: serviceName,
+			Port:        port,
+			Namespace:   namespace,
+			Type:        etype,
+		})
 		endpointCountByType[etype]++
 	}
 
@@ -245,22 +270,93 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	return endpoints, nil
 }
 
+// getQueryStoreAPIServiceEndpoints returns endpoints for Query services that match
+// the QueryAsStoreAPILabelSelector and should be treated as StoreAPIs.
+func (r *ThanosQueryReconciler) getQueryStoreAPIServiceEndpoints(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) ([]manifestquery.Endpoint, error) {
+	labelSelector, err := manifests.BuildLabelSelectorFrom(query.Spec.QueryFederation.QueryAsStoreAPILabelSelector, requiredQueryServiceLabels)
+	if err != nil {
+		return []manifestquery.Endpoint{}, err
+	}
+
+	services := &corev1.ServiceList{}
+	listOpts := []client.ListOption{
+		client.MatchingLabelsSelector{Selector: labelSelector},
+		client.InNamespace(query.Namespace),
+	}
+	if err := r.List(ctx, services, listOpts...); err != nil {
+		return []manifestquery.Endpoint{}, err
+	}
+
+	if len(services.Items) == 0 {
+		r.recorder.Eventf(&query, nil, corev1.EventTypeWarning, "NoQueryEndpointsFound", "Discovery", "No Query services found for hierarchical querying")
+		return []manifestquery.Endpoint{}, nil
+	}
+
+	endpoints := make([]manifestquery.Endpoint, 0, len(services.Items))
+	for _, svc := range services.Items {
+		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredQueryServiceLabels)
+		if !ok {
+			r.logger.Error(fmt.Errorf("service %s/%s is missing required gRPC port", svc.GetNamespace(), svc.GetName()),
+				"failed to get gRPC port for query service")
+			continue
+		}
+
+		// Check if this is an ExternalName service for multi-cluster discovery
+		var serviceName, namespace string
+		if svc.Spec.Type == corev1.ServiceTypeExternalName && svc.Spec.ExternalName != "" {
+			serviceName = svc.Spec.ExternalName
+			namespace = "" // External services don't use namespace in DNS
+			r.logger.Info("discovered external Query endpoint for federation",
+				"service", svc.GetName(),
+				"externalName", svc.Spec.ExternalName)
+		} else {
+			serviceName = svc.GetName()
+			namespace = svc.GetNamespace()
+		}
+
+		// Use Regular endpoint type for querier-to-querier connections
+		endpoints = append(endpoints, manifestquery.Endpoint{
+			ServiceName: serviceName,
+			Port:        port,
+			Namespace:   namespace,
+			Type:        manifests.RegularLabel,
+		})
+	}
+
+	r.metrics.EndpointsConfigured.WithLabelValues("query-storeapi", query.GetName(), query.GetNamespace()).Set(float64(len(endpoints)))
+
+	sort.Slice(endpoints, func(i, j int) bool {
+		return endpoints[i].ServiceName < endpoints[j].ServiceName
+	})
+	return endpoints, nil
+}
+
 func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
 	return queryV1Alpha1ToQueryFrontEndOptions(query, r.featureGate)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	servicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+	storeServicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: requiredStoreServiceLabels,
 	})
 	if err != nil {
 		return err
 	}
 
-	withLabelChangedPredicate := predicate.And(servicePredicate, predicate.LabelChangedPredicate{})
-	withGenerationChangePredicate := predicate.And(servicePredicate, predicate.GenerationChangedPredicate{}, servicePredicate)
-	withPredicate := predicate.Or(withLabelChangedPredicate, withGenerationChangePredicate)
+	queryServicePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: requiredQueryServiceLabels,
+	})
+	if err != nil {
+		return err
+	}
+
+	combinedPredicate := predicate.Or(
+		predicate.And(storeServicePredicate, predicate.LabelChangedPredicate{}),
+		predicate.And(storeServicePredicate, predicate.GenerationChangedPredicate{}),
+		predicate.And(queryServicePredicate, predicate.LabelChangedPredicate{}),
+		predicate.And(queryServicePredicate, predicate.GenerationChangedPredicate{}),
+	)
 
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosQuery{}).
@@ -273,7 +369,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&corev1.Service{},
 			r.enqueueForService(),
-			builder.WithPredicates(withPredicate),
+			builder.WithPredicates(combinedPredicate),
 		).
 		Complete(r)
 
@@ -290,35 +386,40 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // that matches the Service.
 func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if !r.isQueueableStoreService(obj) {
+		isStoreService := r.isQueueableStoreService(obj)
+		isQueryService := r.isQueueableQueryService(obj)
+
+		if !isStoreService && !isQueryService {
 			return []reconcile.Request{}
 		}
 
-		listOpts := []client.ListOption{
-			client.InNamespace(obj.GetNamespace()),
-		}
-
 		queriers := &monitoringthanosiov1alpha1.ThanosQueryList{}
-		err := r.List(ctx, queriers, listOpts...)
-		if err != nil {
+		if err := r.List(ctx, queriers, client.InNamespace(obj.GetNamespace())); err != nil {
 			return []reconcile.Request{}
 		}
 
 		requests := []reconcile.Request{}
 		for _, query := range queriers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(query.Spec.StoreLabelSelector, requiredStoreServiceLabels)
-			if err != nil {
-				r.logger.Error(err, "failed to build label selector from store label selector", "query", query.GetName())
-				continue
+			shouldEnqueue := false
+
+			if isStoreService {
+				selector, err := manifests.BuildLabelSelectorFrom(query.Spec.StoreLabelSelector, requiredStoreServiceLabels)
+				if err == nil && selector.Matches(labels.Set(obj.GetLabels())) {
+					shouldEnqueue = true
+				}
 			}
 
-			if selector.Matches(labels.Set(obj.GetLabels())) {
+			if isQueryService && query.Spec.QueryFederation != nil && query.Spec.QueryFederation.QueryAsStoreAPILabelSelector != nil {
+				selector, err := manifests.BuildLabelSelectorFrom(query.Spec.QueryFederation.QueryAsStoreAPILabelSelector, requiredQueryServiceLabels)
+				if err == nil && selector.Matches(labels.Set(obj.GetLabels())) {
+					shouldEnqueue = true
+				}
+			}
+
+			if shouldEnqueue {
 				r.metrics.ServiceWatchesReconciliationsTotal.WithLabelValues(query.GetName(), query.GetNamespace()).Inc()
 				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      query.GetName(),
-						Namespace: query.GetNamespace(),
-					},
+					NamespacedName: types.NamespacedName{Name: query.GetName(), Namespace: query.GetNamespace()},
 				})
 			}
 		}
@@ -330,6 +431,12 @@ func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
 // isQueueableStoreService returns true if the Service is a StoreAPI service that is part of a 'thanos' and has a gRPC port.
 func (r *ThanosQueryReconciler) isQueueableStoreService(obj client.Object) bool {
 	_, ok := manifests.IsGrpcServiceWithLabels(obj, requiredStoreServiceLabels)
+	return ok
+}
+
+// isQueueableQueryService returns true if the Service is a Query service with gRPC port.
+func (r *ThanosQueryReconciler) isQueueableQueryService(obj client.Object) bool {
+	_, ok := manifests.IsGrpcServiceWithLabels(obj, requiredQueryServiceLabels)
 	return ok
 }
 

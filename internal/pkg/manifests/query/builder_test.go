@@ -1,6 +1,7 @@
 package query
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -199,6 +200,107 @@ func TestNewQueryService(t *testing.T) {
 				t.Fatalf("failed to marshal service to YAML: %v", err)
 			}
 			golden.Assert(t, string(yamlBytes), tc.golden)
+		})
+	}
+}
+
+// TestQueryServiceDefaultLabels tests that a query service has default labels.
+func TestQueryServiceDefaultLabels(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Owner:     "hierarchical-query",
+			Namespace: "monitoring",
+			Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
+		},
+	}
+	svc := NewQueryService(opts)
+	requiredLabels := map[string]string{
+		manifests.NameLabel:            Name,
+		manifests.ComponentLabel:       ComponentName,
+		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
+		manifests.ManagedByLabel:       manifests.DefaultManagedByLabel,
+		manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+	}
+	for key, want := range requiredLabels {
+		if got := svc.Labels[key]; got != want {
+			t.Errorf("required label %q = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestQueryArgsWithExternalEndpoints tests that external endpoints are formatted correctly
+func TestQueryArgsWithExternalEndpoints(t *testing.T) {
+	tests := []struct {
+		name      string
+		endpoints []Endpoint
+		wantArgs  []string
+	}{
+		{
+			name: "in-cluster endpoints",
+			endpoints: []Endpoint{
+				{ServiceName: "store-gateway", Namespace: "monitoring", Port: 10901, Type: manifests.RegularLabel},
+				{ServiceName: "sidecar", Namespace: "monitoring", Port: 10901, Type: manifests.StrictLabel},
+			},
+			wantArgs: []string{
+				"--endpoint=dnssrv+_grpc._tcp.store-gateway.monitoring.svc",
+				"--endpoint-strict=dnssrv+_grpc._tcp.sidecar.monitoring.svc",
+			},
+		},
+		{
+			name: "external endpoints",
+			endpoints: []Endpoint{
+				{ServiceName: "remote-store.example.com", Namespace: "", Port: 10901, Type: manifests.GroupLabel},
+				{ServiceName: "remote-query.example.com", Namespace: "", Port: 10901, Type: manifests.GroupStrictLabel},
+			},
+			wantArgs: []string{
+				"--endpoint-group=remote-store.example.com:10901",
+				"--endpoint-group-strict=remote-query.example.com:10901",
+			},
+		},
+		{
+			name: "mixed in-cluster and external endpoints",
+			endpoints: []Endpoint{
+				{ServiceName: "store-gateway", Namespace: "monitoring", Port: 10901, Type: manifests.RegularLabel},
+				{ServiceName: "remote-store.example.com", Namespace: "", Port: 10901, Type: manifests.GroupLabel},
+			},
+			wantArgs: []string{
+				"--endpoint=dnssrv+_grpc._tcp.store-gateway.monitoring.svc",
+				"--endpoint-group=remote-store.example.com:10901",
+			},
+		},
+		{
+			name: "external endpoint with dns srv",
+			endpoints: []Endpoint{
+				{ServiceName: "remote-store.example.com", Namespace: "", Port: 10901, Type: manifests.RegularLabel},
+			},
+			wantArgs: []string{
+				"--endpoint=dnssrv+_grpc._tcp.remote-store.example.com",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := Options{
+				Options: manifests.Options{
+					Owner:     "test",
+					Namespace: "test-ns",
+					Image:     ptr.To("quay.io/thanos/thanos:v0.40.1"),
+				},
+				Endpoints:     tt.endpoints,
+				Timeout:       "15m",
+				LookbackDelta: "5m",
+				MaxConcurrent: 20,
+			}
+
+			args := queryArgs(opts)
+
+			// Check that all expected endpoint args are present
+			for _, wantArg := range tt.wantArgs {
+				if !slices.Contains(args, wantArg) {
+					t.Errorf("expected arg %q not found in args: %v", wantArg, args)
+				}
+			}
 		})
 	}
 }

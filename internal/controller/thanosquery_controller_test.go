@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -75,10 +76,10 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 		AfterEach(func() {
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosQuery")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			if err == nil {
+				By("Cleanup the specific resource instance ThanosQuery")
+				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			}
 		})
 
 		It("should reconcile correctly", func() {
@@ -293,6 +294,297 @@ config:
 
 					return nil
 				}, time.Second*10, time.Second*10).Should(Succeed())
+			})
+		})
+
+		Context("API Validation", func() {
+			It("should accept ThanosQuery with only QueryAsStoreAPILabelSelector set", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				validQuery := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "valid-parent-query",
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+						QueryFederation: &monitoringthanosiov1alpha1.QueryFederationConfig{
+							QueryAsStoreAPILabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"tier": "leaf",
+								},
+							},
+						},
+					},
+				}
+
+				Expect(k8sClient.Create(ctx, validQuery)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, validQuery)).Should(Succeed())
+			})
+		})
+
+		Context("Query Federation options", func() {
+			const queryFederationResourceName = "query-federation-test"
+
+			It("should set --query.mode=distributed when queryFederation.queryMode is distributed", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				query := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      queryFederationResourceName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+						QueryFederation: &monitoringthanosiov1alpha1.QueryFederationConfig{
+							QueryMode: ptr.To("distributed"),
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, query)).Should(Succeed())
+
+				deploymentName := manifestquery.Options{Options: manifests.Options{Owner: queryFederationResourceName}}.GetGeneratedResourceName()
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyDeploymentArgs(k8sClient, deploymentName, ns, 0, "--query.mode=distributed")
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				Expect(k8sClient.Delete(ctx, query)).Should(Succeed())
+			})
+
+			It("should set --selector.relabel-config when queryFederation.tsdbSelector is set", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				query := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      queryFederationResourceName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+						QueryFederation: &monitoringthanosiov1alpha1.QueryFederationConfig{
+							TSDBSelector: ptr.To([]monitoringthanosiov1alpha1.SelectorRelabelConfig{
+								{
+									Action:      "keep",
+									SourceLabel: "tenant_id",
+									Regex:       "tenant-1",
+								},
+							}),
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, query)).Should(Succeed())
+
+				deploymentName := manifestquery.Options{Options: manifests.Options{Owner: queryFederationResourceName}}.GetGeneratedResourceName()
+				EventuallyWithOffset(1, func() bool {
+					deployment := &appsv1.Deployment{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: ns}, deployment); err != nil {
+						return false
+					}
+					args := deployment.Spec.Template.Spec.Containers[0].Args
+					for _, arg := range args {
+						if strings.Contains(arg, "--selector.relabel-config=") &&
+							strings.Contains(arg, "action: keep") &&
+							strings.Contains(arg, "tenant_id") &&
+							strings.Contains(arg, "tenant-1") {
+							return true
+						}
+					}
+					return false
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				Expect(k8sClient.Delete(ctx, query)).Should(Succeed())
+			})
+		})
+
+		Context("Hierarchical Querying", func() {
+			const (
+				leafQueryName   = "leaf-query"
+				parentQueryName = "parent-query"
+			)
+
+			AfterEach(func() {
+				By("cleaning up leaf query")
+				leafQuery := &monitoringthanosiov1alpha1.ThanosQuery{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: leafQueryName, Namespace: ns}, leafQuery); err == nil {
+					Expect(k8sClient.Delete(ctx, leafQuery)).To(Succeed())
+					// Wait for deletion to complete
+					EventuallyWithOffset(1, func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: leafQueryName, Namespace: ns}, leafQuery)
+						return err != nil
+					}, time.Second*30, time.Second).Should(BeTrue())
+				}
+
+				By("cleaning up parent query")
+				parentQuery := &monitoringthanosiov1alpha1.ThanosQuery{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: parentQueryName, Namespace: ns}, parentQuery); err == nil {
+					Expect(k8sClient.Delete(ctx, parentQuery)).To(Succeed())
+					// Wait for deletion to complete
+					EventuallyWithOffset(1, func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: parentQueryName, Namespace: ns}, parentQuery)
+						return err != nil
+					}, time.Second*30, time.Second).Should(BeTrue())
+				}
+			})
+
+			It("should create query service with default labels", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				By("creating a normal querier (no QueryFederation)")
+				leafQuery := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      leafQueryName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 2,
+					},
+				}
+				Expect(k8sClient.Create(ctx, leafQuery)).Should(Succeed())
+
+				By("verifying the service has default query-api label")
+				leafServiceName := manifestquery.Options{Options: manifests.Options{Owner: leafQueryName}}.GetGeneratedResourceName()
+				EventuallyWithOffset(1, func() bool {
+					svc := &corev1.Service{}
+					err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      leafServiceName,
+						Namespace: ns,
+					}, svc)
+					if err != nil {
+						return false
+					}
+					return svc.Labels[manifests.DefaultQueryAPILabel] == manifests.DefaultQueryAPIValue
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			It("should discover leaf queries as StoreAPIs", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				By("creating a leaf query (normal querier, no QueryFederation)")
+				leafQuery := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      leafQueryName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 2,
+					},
+				}
+				Expect(k8sClient.Create(ctx, leafQuery)).Should(Succeed())
+
+				By("waiting for leaf service to be created")
+				leafServiceName := manifestquery.Options{Options: manifests.Options{Owner: leafQueryName}}.GetGeneratedResourceName()
+				EventuallyWithOffset(1, func() error {
+					svc := &corev1.Service{}
+					return k8sClient.Get(ctx, types.NamespacedName{
+						Name:      leafServiceName,
+						Namespace: ns,
+					}, svc)
+				}, time.Minute, time.Second*2).Should(Succeed())
+
+				By("creating a parent query that discovers query services by default labels")
+				parentQuery := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      parentQueryName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+						QueryFederation: &monitoringthanosiov1alpha1.QueryFederationConfig{
+							QueryAsStoreAPILabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, parentQuery)).Should(Succeed())
+
+				By("verifying parent deployment has endpoint to leaf query")
+				parentDeploymentName := manifestquery.Options{Options: manifests.Options{Owner: parentQueryName}}.GetGeneratedResourceName()
+				expectedEndpoint := fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", leafServiceName, ns)
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyDeploymentArgs(k8sClient, parentDeploymentName, ns, 0, expectedEndpoint)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			It("should discover multiple leaf queries", func() {
+				if os.Getenv("EXCLUDE_QUERY") == skipValue {
+					Skip("Skipping ThanosQuery controller tests")
+				}
+
+				By("creating two leaf queries (normal queriers, no QueryFederation)")
+				leafQuery1 := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "leaf-query-1",
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+					},
+				}
+				Expect(k8sClient.Create(ctx, leafQuery1)).Should(Succeed())
+
+				leafQuery2 := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "leaf-query-2",
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+					},
+				}
+				Expect(k8sClient.Create(ctx, leafQuery2)).Should(Succeed())
+
+				By("creating a parent query that discovers query services by default labels")
+				parentQuery := &monitoringthanosiov1alpha1.ThanosQuery{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      parentQueryName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosQuerySpec{
+						Replicas: 1,
+						QueryFederation: &monitoringthanosiov1alpha1.QueryFederationConfig{
+							QueryAsStoreAPILabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, parentQuery)).Should(Succeed())
+
+				By("verifying parent has endpoints to both leaf queries")
+				parentDeploymentName := manifestquery.Options{Options: manifests.Options{Owner: parentQueryName}}.GetGeneratedResourceName()
+				leaf1ServiceName := manifestquery.Options{Options: manifests.Options{Owner: "leaf-query-1"}}.GetGeneratedResourceName()
+				leaf2ServiceName := manifestquery.Options{Options: manifests.Options{Owner: "leaf-query-2"}}.GetGeneratedResourceName()
+
+				endpoint1 := fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", leaf1ServiceName, ns)
+				endpoint2 := fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", leaf2ServiceName, ns)
+
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyDeploymentArgs(k8sClient, parentDeploymentName, ns, 0, endpoint1) &&
+						utils.VerifyDeploymentArgs(k8sClient, parentDeploymentName, ns, 0, endpoint2)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+				By("cleaning up additional leaf queries")
+				Expect(k8sClient.Delete(ctx, leafQuery1)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, leafQuery2)).To(Succeed())
+
+				// Wait for deletions to complete
+				EventuallyWithOffset(1, func() bool {
+					err1 := k8sClient.Get(ctx, types.NamespacedName{Name: "leaf-query-1", Namespace: ns}, leafQuery1)
+					err2 := k8sClient.Get(ctx, types.NamespacedName{Name: "leaf-query-2", Namespace: ns}, leafQuery2)
+					return err1 != nil && err2 != nil
+				}, time.Second*30, time.Second).Should(BeTrue())
 			})
 		})
 	})
