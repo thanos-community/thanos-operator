@@ -59,6 +59,10 @@ type ThanosCompactSpec struct {
 	// TimeRangeConfig configures the time range of data to serve for the compact component..
 	// +kubebuilder:validation:Optional
 	TimeRangeConfig *TimeRangeConfig `json:"timeRangeConfig,omitempty"`
+	// VerticalCompaction configures vertical compaction for deduplicating samples across replica labels.
+	// This is an experimental feature.
+	// +kubebuilder:validation:Optional
+	VerticalCompactionConfig *VerticalCompactionConfig `json:"verticalCompactionConfig,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional
@@ -115,6 +119,20 @@ type CompactConfig struct {
 	// +kubebuilder:default="30m"
 	// +kubebuilder:validation:Optional
 	ConsistencyDelay *Duration `json:"blockConsistencyDelay,omitempty"`
+}
+
+// VerticalCompactionConfig defines the configuration for vertical compaction.
+type VerticalCompactionConfig struct {
+	// ReplicaLabels is a list of labels to treat as replica labels for deduplication.
+	// These labels will be ignored when merging blocks during vertical compaction.
+	// Commonly set to "replica" for Prometheus HA setups.
+	// When set, vertical compaction will be automatically enabled.
+	// +kubebuilder:validation:Optional
+	ReplicaLabels []string `json:"replicaLabels,omitempty"`
+	// DeduplicationFunc specifies the deduplication algorithm to use.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum="";penalty
+	DeduplicationFunc *string `json:"deduplicationFunc,omitempty"`
 }
 
 type DebugConfig struct {
