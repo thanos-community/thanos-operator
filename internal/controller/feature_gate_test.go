@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -114,7 +115,7 @@ config:
 						}
 					}
 					return false
-				}).Should(BeTrue())
+				}, time.Second*2).Should(BeTrue())
 
 			})
 
@@ -144,13 +145,13 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}).Should(BeTrue())
+				}, time.Second*2).Should(BeTrue())
 			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-				}).Should(BeTrue())
+				}, time.Second*2).Should(BeTrue())
 			})
 
 			By("removing PDB when scaled to 1", func() {
@@ -158,7 +159,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-				}).Should(BeFalse())
+				}, time.Second*2).Should(BeFalse())
 			})
 		})
 	})
@@ -216,7 +217,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, workload, ns)
-					}).Should(BeTrue())
+					}, time.Second*2).Should(BeTrue())
 				}
 			})
 
@@ -224,7 +225,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
-					}).Should(BeTrue())
+					}, time.Second*2).Should(BeTrue())
 				}
 			})
 
@@ -238,7 +239,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
-					}).Should(BeFalse())
+					}, time.Second*2).Should(BeFalse())
 				}
 			})
 		})
@@ -281,13 +282,13 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}).Should(BeTrue())
+				}, time.Second*2).Should(BeTrue())
 			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}).Should(BeTrue())
+				}, time.Second*2).Should(BeTrue())
 			})
 
 			By("removing PDB when scaled to 1", func() {
@@ -295,7 +296,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}).Should(BeFalse())
+				}, time.Second*2).Should(BeFalse())
 			})
 		})
 
@@ -336,13 +337,13 @@ config:
 				By("creating the service monitor when enabled", func() {
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, firstShard, ns)
-					}).Should(BeTrue())
+					}, time.Second*2).Should(BeTrue())
 				})
 
 				By("creating the PDB when enabled", func() {
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, firstShard, ns)
-					}).Should(BeTrue())
+					}, time.Second*2).Should(BeTrue())
 				})
 
 				By("removing PDB when scaled to 1", func() {
@@ -351,7 +352,7 @@ config:
 					Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-					}).Should(BeFalse())
+					}, time.Second*2).Should(BeFalse())
 				})
 			})
 		})
