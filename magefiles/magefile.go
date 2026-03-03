@@ -18,7 +18,7 @@ const (
 	projectImage      = "quay.io/thanos/thanos-operator"
 )
 
-var Aliases = map[string]interface{}{
+var Aliases = map[string]any{
 	"interactive-demo": InteractiveDemo,
 }
 
@@ -80,27 +80,30 @@ func InteractiveDemo() error {
 		return err
 	}
 
-	log.Println("🎉 Interactive demo setup complete!")
-	log.Println("")
-	log.Println("📊 Access the UIs:")
-	log.Println("  Thanos Query Frontend: kubectl -n thanos-operator-system port-forward svc/thanos-query-frontend-example-query 9090")
-	log.Println("  Then visit: http://localhost:9090")
-	log.Println("")
-	log.Println("  Prometheus UI: kubectl -n default port-forward svc/prometheus-operated 9090")
-	log.Println("  Then visit: http://localhost:9090")
-	log.Println("")
-	log.Println("🔍 Jaeger v2 Tracing UI: kubectl -n thanos-operator-system port-forward svc/jaeger-v2-ui 16686")
-	log.Println("  Then visit: http://localhost:16686")
-	log.Println("")
-	log.Println("📈 Check metrics and tracing correlation:")
-	log.Println("  - View traces in Jaeger to see request flow")
-	log.Println("  - Query metrics in Thanos to see performance data")
-	log.Println("  - OpenTelemetry collector handles both metrics and tracing")
-	log.Println("")
-	log.Println("🔧 Tracing Setup:")
-	log.Println("  - OTLP endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:4318")
-	log.Println("  - Jaeger endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:14250")
-	log.Println("  - Send traces to collector using OTLP or Jaeger protocols")
+	fmt.Fprintln(os.Stdout, "🎉 Interactive demo setup complete!")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "📊 Access the UIs:")
+	fmt.Fprintln(os.Stdout, "  Thanos Query Frontend: kubectl -n thanos-operator-system port-forward svc/thanos-query-frontend-example-query 9090")
+	fmt.Fprintln(os.Stdout, "  Then visit: http://localhost:9090")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "  Prometheus UI: kubectl -n default port-forward svc/prometheus-operated 9090")
+	fmt.Fprintln(os.Stdout, "  Then visit: http://localhost:9090")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "🔍 Jaeger v2 Tracing UI: kubectl -n thanos-operator-system port-forward svc/jaeger-v2-ui 16686")
+	fmt.Fprintln(os.Stdout, "  Then visit: http://localhost:16686")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "  Grafana: kubectl -n default port-forward svc/grafana 3000")
+	fmt.Fprintln(os.Stdout, "  Then visit: http://localhost:3000")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "📈 Check metrics and tracing correlation:")
+	fmt.Fprintln(os.Stdout, "  - View traces in Jaeger to see request flow")
+	fmt.Fprintln(os.Stdout, "  - Query metrics in Thanos to see performance data")
+	fmt.Fprintln(os.Stdout, "  - OpenTelemetry collector handles both metrics and tracing")
+	fmt.Fprintln(os.Stdout, "")
+	fmt.Fprintln(os.Stdout, "🔧 Tracing Setup:")
+	fmt.Fprintln(os.Stdout, "  - OTLP endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:4318")
+	fmt.Fprintln(os.Stdout, "  - Jaeger endpoint: otel-collector-collector.thanos-operator-system.svc.cluster.local:14250")
+	fmt.Fprintln(os.Stdout, "  - Send traces to collector using OTLP or Jaeger protocols")
 
 	if err := KubeStateMetrics(); err != nil {
 		return err
@@ -762,6 +765,12 @@ data:
       type: prometheus
       access: proxy
       url: http://prometheus-operated.default.svc.cluster.local:9090
+      isDefault: false
+      editable: true
+    - name: Jaeger
+      type: jaeger
+      access: proxy
+      url: http://jaeger-v2-ui.thanos-operator-system.svc.cluster.local:16686
       isDefault: false
       editable: true
 ---
