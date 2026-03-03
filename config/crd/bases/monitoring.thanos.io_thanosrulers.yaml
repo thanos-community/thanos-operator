@@ -4921,6 +4921,15 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              remoteWriteSpec:
+                description: RemoteWriteSpec description
+                properties:
+                  url:
+                    description: URL description
+                    type: string
+                required:
+                - url
+                type: object
               replicas:
                 default: 1
                 description: Replicas is the number of Ruler replicas.

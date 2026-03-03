@@ -84,6 +84,9 @@ type ThanosRulerSpec struct {
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
+	// RemoteWriteSpec description
+	// +kubebuilder:validation:Optional
+	RemoteWriteSpec *RemoteWriteSpec `json:"remoteWriteSpec,omitempty"`
 }
 
 type RuleTenancyConfig struct {
@@ -98,7 +101,17 @@ type RuleTenancyConfig struct {
 	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
 }
 
-// TODO(saswatamcode): Add stateless mode
+type RemoteWriteSpec struct {
+	// URL description
+	// +kubebuilder:validation:Required
+	URL string `json:"url"`
+	// Name description
+	// +kubebuilder:validation:Optional
+	Name *string `json:"name,omitempty"`
+	// RemoteTimeout description
+	// +kubebuilder:validation:Optional
+	RemoteTimeout Duration `json:"remoteTimeout,omitempty"`
+}
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {

@@ -134,6 +134,9 @@ config:
 							},
 						},
 					},
+					RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
+						URL: "http://remote-write",
+					},
 				},
 			}
 
@@ -179,6 +182,15 @@ config:
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+
+			By("testing remote write field", func() {
+				ruler := monitoringthanosiov1alpha1.ThanosRuler{}
+				err := k8sClient.Get(ctx, typeNamespacedName, &ruler)
+				if err != nil {
+					return
+				}
+				Expect(ruler.Spec.RemoteWriteSpec.URL).To(Equal("http://remote-write"))
 			})
 
 			By("verifying ruler annotations", func() {

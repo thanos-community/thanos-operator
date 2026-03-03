@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/thanos/thanos-operator
-  newTag: main
+  newTag: stateless-2026-03-03-039f2a4
