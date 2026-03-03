@@ -134,6 +134,9 @@ config:
 							},
 						},
 					},
+					RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
+						URL: "http://remote-write",
+					},
 				},
 			}
 
@@ -867,5 +870,40 @@ config:
 			})
 		})
 
+		It("should set stateless mode", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					Replicas:     1,
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
+						URL: "test",
+					},
+				},
+			}
+
+			print(resource)
+		})
 	})
 })

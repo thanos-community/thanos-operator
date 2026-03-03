@@ -289,3 +289,10 @@ type DeploymentStatus struct {
 	// ReadyReplicas is the number of pods created for this Deployment with a Ready Condition.
 	ReadyReplicas int32 `json:"readyReplicas"`
 }
+
+type RemoteWriteMessageVersion string
+
+const (
+	RemoteWriteMessageVersion1_0 = RemoteWriteMessageVersion("V1.0")
+	RemoteWriteMessageVersion2_0 = RemoteWriteMessageVersion("V2.0")
+)
