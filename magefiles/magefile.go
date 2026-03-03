@@ -68,8 +68,12 @@ func InteractiveDemo() error {
 		return fmt.Errorf("failed to configure sidecar collector: %w", err)
 	}
 
-	if err := configureJaegerV2(); err != nil {
-		return fmt.Errorf("failed to configure Jaeger v2: %w", err)
+	// if err := configureJaegerV2(); err != nil {
+	// 	return fmt.Errorf("failed to configure Jaeger v2: %w", err)
+	// }
+
+	if err := configureArtemis(); err != nil {
+		return fmt.Errorf("failed to configure Artemis: %w", err)
 	}
 
 	if err := installSamples(); err != nil {
@@ -186,6 +190,12 @@ func getImageName() string {
 	if err != nil {
 		panic(err)
 	}
+
+	// HACK for this branch
+	if x != "main" {
+		x = "main"
+	}
+
 	y, err := sh.Output("date", "+%Y-%m-%d")
 	if err != nil {
 		panic(err)
@@ -353,76 +363,197 @@ func openTelemetryOperator() error {
 	return nil
 }
 
-// configureJaegerV2 creates a Jaeger v2 instance using OpenTelemetry collector
-func configureJaegerV2() error {
-	log.Println("Configuring Jaeger v2 with OpenTelemetry...")
-	log.Println("Creating Jaeger v2 collector deployment...")
+// // configureJaegerV2 creates a Jaeger v2 instance using OpenTelemetry collector
+// func configureJaegerV2() error {
+// 	log.Println("Configuring Jaeger v2 with OpenTelemetry...")
+// 	log.Println("Creating Jaeger v2 collector deployment...")
+// 	content := `
+// apiVersion: opentelemetry.io/v1beta1
+// kind: OpenTelemetryCollector
+// metadata:
+//   name: jaeger-v2-instance
+//   namespace: thanos-operator-system
+// spec:
+//   image: jaegertracing/jaeger:latest
+//   ports:
+//   - name: jaeger-ui
+//     port: 16686
+//     targetPort: 16686
+//   - name: jaeger-grpc
+//     port: 14250
+//     targetPort: 14250
+//   config:
+//     service:
+//       extensions: [jaeger_storage, jaeger_query]
+//       pipelines:
+//         traces:
+//           receivers: [otlp]
+//           exporters: [jaeger_storage_exporter]
+//     extensions:
+//       jaeger_query:
+//         storage:
+//           traces: memstore
+//       jaeger_storage:
+//         backends:
+//           memstore:
+//             memory:
+//               max_traces: 100000
+//     receivers:
+//       otlp:
+//         protocols:
+//           grpc:
+//             endpoint: 0.0.0.0:4317
+//           http:
+//             endpoint: 0.0.0.0:4318
+//     exporters:
+//       jaeger_storage_exporter:
+//         trace_storage: memstore
+// ---
+// apiVersion: v1
+// kind: Service
+// metadata:
+//   name: jaeger-v2-ui
+//   namespace: thanos-operator-system
+//   labels:
+//     app.kubernetes.io/name: jaeger-v2
+//     app.kubernetes.io/component: query
+// spec:
+//   type: NodePort
+//   ports:
+//   - port: 16686
+//     targetPort: 16686
+//     nodePort: 30686
+//     name: jaeger-ui
+//   selector:
+//     app.kubernetes.io/name: jaeger-v2-instance-collector
+// `
+// 	_, err := applyNamespacedKubeResources(content, operatorNamespace)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to create Jaeger v2 collector: %w", err)
+// 	}
+
+// 	log.Println("Successfully created Jaeger v2 collector")
+// 	return nil
+// }
+
+func configureArtemis() error {
+	log.Println("Configuring Artemis...")
 	content := `
-apiVersion: opentelemetry.io/v1beta1
-kind: OpenTelemetryCollector
+apiVersion: v1
+kind: Service
 metadata:
-  name: jaeger-v2-instance
+  name: artemis
   namespace: thanos-operator-system
+  labels:
+    app: artemis
 spec:
-  image: jaegertracing/jaeger:latest
   ports:
-  - name: jaeger-ui
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+  - name: jaeger-http
     port: 16686
     targetPort: 16686
-  - name: jaeger-grpc
-    port: 14250
-    targetPort: 14250
-  config:
-    service:
-      extensions: [jaeger_storage, jaeger_query]
-      pipelines:
-        traces:
-          receivers: [otlp]
-          exporters: [jaeger_storage_exporter]
-    extensions:
-      jaeger_query:
-        storage:
-          traces: memstore
-      jaeger_storage:
-        backends:
-          memstore:
-            memory:
-              max_traces: 100000
-    receivers:
-      otlp:
-        protocols:
-          grpc:
-            endpoint: 0.0.0.0:4317
-          http:
-            endpoint: 0.0.0.0:4318
-    exporters:
-      jaeger_storage_exporter:
-        trace_storage: memstore
+  - name: tempo-http
+    port: 3200
+    targetPort: 3200
+  - name: sql-api
+    port: 5433
+    targetPort: 5433
+  selector:
+    app: artemis
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jaeger-v2-ui
+  name: artemis-headless
   namespace: thanos-operator-system
   labels:
-    app.kubernetes.io/name: jaeger-v2
-    app.kubernetes.io/component: query
+    app: artemis
 spec:
-  type: NodePort
   ports:
-  - port: 16686
-    targetPort: 16686
-    nodePort: 30686
-    name: jaeger-ui
+  - name: otlp-grpc
+    port: 4317
+  - name: jaeger-http
+    port: 16686
+  - name: tempo-http
+    port: 3200
+  - name: sql-api
+    port: 5433
   selector:
-    app.kubernetes.io/name: jaeger-v2-instance-collector
+    app: artemis
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: artemis
+  namespace: thanos-operator-system
+spec:
+  serviceName: artemis-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: artemis
+  template:
+    metadata:
+      labels:
+        app: artemis
+    spec:
+      containers:
+      - name: artemis
+        image: quay.io/samukher/artemis:latest
+        imagePullPolicy: IfNotPresent
+        args:
+        - --wal-dir=/data/wal
+        - --blocks-dir=/data/blocks
+        - --log.level=info
+        ports:
+        - name: otlp-grpc
+          containerPort: 4317
+        - name: jaeger-http
+          containerPort: 16686
+        - name: tempo-http
+          containerPort: 3200
+        - name: sql-api
+          containerPort: 5433
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: jaeger-http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: jaeger-http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: artemis-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: artemis-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
 `
 	_, err := applyNamespacedKubeResources(content, operatorNamespace)
 	if err != nil {
-		return fmt.Errorf("failed to create Jaeger v2 collector: %w", err)
+		return fmt.Errorf("failed to create Artemis: %w", err)
 	}
 
-	log.Println("Successfully created Jaeger v2 collector")
+	log.Println("Successfully created Artemis")
 	return nil
 }
 
@@ -459,7 +590,7 @@ spec:
 
     exporters:
       otlp/jaeger:
-        endpoint: jaeger-v2-instance-collector.thanos-operator-system.svc.cluster.local:4317
+        endpoint: artemis.thanos-operator-system.svc.cluster.local:4317
         tls:
           insecure: true
 
@@ -764,6 +895,19 @@ data:
       url: http://prometheus-operated.default.svc.cluster.local:9090
       isDefault: false
       editable: true
+    - name: Artemis (Tempo)
+      type: tempo
+      access: proxy
+      url: http://artemis.thanos-operator-system.svc.cluster.local:3200
+      isDefault: false
+      editable: false
+      jsonData:
+        nodeGraph:
+          enabled: true
+        serviceMap:
+          datasourceUid: 'prometheus'
+        search:
+          hide: false
 ---
 apiVersion: v1
 kind: ConfigMap
