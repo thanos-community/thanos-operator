@@ -3,14 +3,15 @@ package receive
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
-
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	"gotest.tools/v3/assert"
 	"gotest.tools/v3/golden"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -175,6 +176,27 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "ingester-statefulset-with-otel-sidecar.golden.yaml",
+			opts: IngesterOptions{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+					Features: manifests.Features{
+						EnableOtelSidecar: true,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ingester := NewIngestorStatefulSet(tc.opts)
@@ -267,6 +289,27 @@ func TestNewRouterDeployment(t *testing.T) {
 								}},
 							},
 						},
+					},
+				},
+			},
+		},
+		{
+			name:   "test with otel sidecar enabled",
+			golden: "router-deployment-with-otel-sidecar.golden.yaml",
+			opts: RouterOptions{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test": "annotation",
+					},
+					Features: manifests.Features{
+						EnableOtelSidecar: true,
 					},
 				},
 			},

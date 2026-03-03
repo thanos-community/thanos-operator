@@ -271,6 +271,18 @@ func WithSync() DeploymentOption {
 	}
 }
 
+// WithOtelSidecar enables the OpenTelemetry sidecar injection feature.
+// When enabled, the controller will automatically inject the
+// 'sidecar.opentelemetry.io/inject: "true"' annotation to Thanos component
+// pods, allowing the OpenTelemetry Operator to inject collector sidecars
+// for distributed tracing. This requires the OpenTelemetry Operator to be
+// installed in the cluster.
+func WithOtelSidecar() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.featureGate.EnableOtelSidecar = true
+	}
+}
+
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
 //
@@ -278,10 +290,11 @@ func WithSync() DeploymentOption {
 //   - "service-monitor": Enables ServiceMonitor management
 //   - "prometheus-rule": Enables PrometheusRule discovery
 //   - "kube-resource-sync": Enables kube-resource-sync sidecar
+//   - "otel-sidecar": Enables OpenTelemetry sidecar injection
 //
 // Example:
 //
-//	WithFeatures("service-monitor", "prometheus-rule", "kube-resource-sync")
+//	WithFeatures("service-monitor", "prometheus-rule", "kube-resource-sync", "otel-sidecar")
 func WithFeatures(features ...string) DeploymentOption {
 	return func(c *deploymentConfig) {
 		for _, feature := range features {
@@ -290,6 +303,8 @@ func WithFeatures(features ...string) DeploymentOption {
 				c.featureGate.EnableServiceMonitor = true
 			case featuregate.PrometheusRule:
 				c.featureGate.EnablePrometheusRuleDiscovery = true
+			case featuregate.OtelSidecar:
+				c.featureGate.EnableOtelSidecar = true
 			case featuregate.KubeResourceSync:
 				c.featureGate.EnableKubeResourceSync = true
 			}
@@ -459,6 +474,9 @@ func buildManagerArgs(featureGate featuregate.Config) []string {
 	}
 	if featureGate.EnableKubeResourceSync {
 		args = append(args, "--enable-feature="+featuregate.KubeResourceSync)
+	}
+	if featureGate.EnableOtelSidecar {
+		args = append(args, "--enable-feature="+featuregate.OtelSidecar)
 	}
 
 	return args

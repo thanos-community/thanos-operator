@@ -580,6 +580,7 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
+			RunAsUser:                ptr.To[int64](65534), // nobody (image uses non-numeric user; required for runAsNonRoot)
 			RunAsNonRoot:             ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{

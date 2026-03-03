@@ -319,12 +319,19 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 		if in.CRD.Spec.CompactConfig == nil {
 			return nil
 		}
-		return &manifestscompact.CompactionOptions{
+		opts := &manifestscompact.CompactionOptions{
 			CompactConcurrency:           in.CRD.Spec.CompactConfig.CompactConcurrency,
 			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval)),
 			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
 			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
 		}
+		if in.CRD.Spec.VerticalCompactionConfig != nil {
+			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
+				ReplicaLabels:     in.CRD.Spec.VerticalCompactionConfig.ReplicaLabels,
+				DeduplicationFunc: in.CRD.Spec.VerticalCompactionConfig.DeduplicationFunc,
+			}
+		}
+		return opts
 	}
 	blockDiscovery := func() *manifestscompact.BlockConfigOptions {
 		if in.CRD.Spec.BlockConfig == nil && in.CRD.Spec.BlockViewerGlobalSync == nil {
@@ -435,6 +442,9 @@ func commonToOpts(
 		},
 		StatefulSet:     statefulSetToOpts(statefulSet),
 		SecurityContext: common.SecurityContext,
+		Features: manifests.Features{
+			EnableOtelSidecar: featureGate.OtelSidecarEnabled(),
+		},
 	}
 }
 

@@ -114,6 +114,8 @@ type Options struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext
+	// Features holds feature flags for the component
+	Features Features
 }
 
 // Placement is a struct that holds the placement configuration for the component
@@ -121,6 +123,10 @@ type Placement struct {
 	NodeSelector map[string]string
 	Affinity     *corev1.Affinity
 	Tolerations  []corev1.Toleration
+}
+
+type Features struct {
+	EnableOtelSidecar bool
 }
 
 // ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.
@@ -298,6 +304,25 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}
 
+		if opts.Features.EnableOtelSidecar {
+			if o.Spec.Template.ObjectMeta.Annotations == nil {
+				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+			}
+			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
+
+			// Add tracing configuration for OpenTelemetry sidecar
+			tracingConfig := `type: OTLP
+config:
+  client_type: http
+  endpoint: localhost:4318
+  insecure: true`
+			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				tracingArg,
+			)
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -354,6 +379,25 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		}
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
+		}
+
+		if opts.Features.EnableOtelSidecar {
+			if o.Spec.Template.ObjectMeta.Annotations == nil {
+				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+			}
+			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
+
+			// Add tracing configuration for OpenTelemetry sidecar
+			tracingConfig := `type: OTLP
+config:
+  client_type: http
+  endpoint: localhost:4318
+  insecure: true`
+			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
+			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
+				o.Spec.Template.Spec.Containers[0].Args,
+				tracingArg,
+			)
 		}
 
 	default:

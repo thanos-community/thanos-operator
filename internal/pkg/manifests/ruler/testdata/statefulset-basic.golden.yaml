@@ -139,6 +139,7 @@ spec:
             drop:
             - ALL
           runAsNonRoot: true
+          runAsUser: 65534
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
