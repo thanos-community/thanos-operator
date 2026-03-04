@@ -579,13 +579,15 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 		Name:            configReloaderContainerName,
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
+		// Don't enable runAsNonRoot for config-reloader, as it uses non-numeric user nobody.
 		SecurityContext: &corev1.SecurityContext{
-			RunAsUser:                ptr.To[int64](65534), // nobody (image uses non-numeric user; required for runAsNonRoot)
-			RunAsNonRoot:             ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"ALL"},
+				Drop: []corev1.Capability{
+					"ALL",
+				},
 			},
+			ReadOnlyRootFilesystem: ptr.To(true),
 		},
 		Args:         args,
 		VolumeMounts: volumeMounts,
