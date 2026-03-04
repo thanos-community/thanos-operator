@@ -16,6 +16,8 @@ spec:
     matchLabels:
       app.kubernetes.io/part-of: thanos
       operator.thanos.io/query-api: "true"
+  remoteWriteSpec:
+    url: ""
   replicas: 1
   retention: 2h
   ruleConfigSelector:
