@@ -184,6 +184,15 @@ config:
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
+			By("testing remote write field", func() {
+				ruler := monitoringthanosiov1alpha1.ThanosRuler{}
+				err := k8sClient.Get(ctx, typeNamespacedName, &ruler)
+				if err != nil {
+					return
+				}
+				Expect(ruler.Spec.RemoteWriteSpec.URL).To(Equal("http://remote-write"))
+			})
+
 			By("verifying ruler annotations", func() {
 				EventuallyWithOffset(1, func() error {
 					var objs []client.Object
