@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	RemoteWrite         string
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -419,6 +420,11 @@ func rulerArgs(opts Options) []string {
 
 	for _, label := range opts.AlertLabelDrop {
 		args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
+	}
+
+	foo := "s"
+	if opts.RemoteWrite != "" {
+		args = append(args, fmt.Sprintf("--remote-write.config=%s", foo))
 	}
 
 	return args

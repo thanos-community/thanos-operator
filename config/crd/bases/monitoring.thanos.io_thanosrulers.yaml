@@ -4957,7 +4957,8 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               remoteWriteSpec:
-                description: RemoteWriteSpec description
+                description: RemoteWriteSpec defines the configuration to write samples
+                  from Prometheus to a remote endpoint
                 properties:
                   url:
                     description: URL description

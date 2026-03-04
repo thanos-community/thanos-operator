@@ -883,36 +883,47 @@ config:
 			if os.Getenv("EXCLUDE_RULER") == skipValue {
 				Skip("Skipping ThanosRuler controller tests")
 			}
-			resource := &monitoringthanosiov1alpha1.ThanosRuler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      resourceName,
-					Namespace: ns,
-				},
-				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
-					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
-					Replicas:     1,
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-objstore",
-						},
-						Key: "thanos.yaml",
-					},
-					RuleConfigSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
-						},
-					},
-					AlertmanagerURL: "http://alertmanager.com:9093",
-					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
-					},
-					RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
-						URL: "test",
-					},
-				},
-			}
 
-			print(resource)
+			By("creating thanos ruler with remote write enabled", func() {
+				resource := &monitoringthanosiov1alpha1.ThanosRuler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+						CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+						Replicas:     1,
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
+						},
+						RuleConfigSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							},
+						},
+						AlertmanagerURL: "http://alertmanager.com:9093",
+						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+							Size: "1Gi",
+						},
+						RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
+							URL: "test",
+						},
+					},
+				}
+
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+			})
+
+			By("verifying remote-write flag was set", func() {
+				EventuallyWithOffset(1, func() bool {
+					arg := "test"
+					flag := fmt.Sprintf("--remote-write.config=%s", arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, flag)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+			})
 		})
 	})
 })

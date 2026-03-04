@@ -86,7 +86,7 @@ type ThanosRulerSpec struct {
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
-	// RemoteWriteSpec description
+	// RemoteWriteSpec defines the configuration to write samples from Prometheus to a remote endpoint
 	// +kubebuilder:validation:Optional
 	RemoteWriteSpec *RemoteWriteSpec `json:"remoteWriteSpec,omitempty"`
 }

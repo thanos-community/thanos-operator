@@ -144,6 +144,7 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		},
 		EvaluationInterval:  manifests.Duration(in.CRD.Spec.EvaluationInterval),
 		ConfigReloaderImage: in.ConfigReloaderImage,
+		RemoteWrite:         in.CRD.Spec.RemoteWriteSpec.URL,
 	}
 }
 
