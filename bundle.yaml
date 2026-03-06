@@ -4951,6 +4951,35 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              persistentVolumeClaimRetentionPolicy:
+                default:
+                  whenDeleted: Delete
+                  whenScaled: Delete
+                description: PersistentVolumeClaimRetentionPolicy specifies the policy
+                  for retaining PVCs created from StatefulSet VolumeClaimTemplates.
+                properties:
+                  whenDeleted:
+                    description: |-
+                      WhenDeleted specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is deleted.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  whenScaled:
+                    description: |-
+                      WhenScaled specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is scaled down.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above
+                      the replica count to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                type: object
               podDisruptionBudgetConfig:
                 default:
                   enable: true
@@ -21657,6 +21686,35 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              persistentVolumeClaimRetentionPolicy:
+                default:
+                  whenDeleted: Delete
+                  whenScaled: Delete
+                description: PersistentVolumeClaimRetentionPolicy specifies the policy
+                  for retaining PVCs created from StatefulSet VolumeClaimTemplates.
+                properties:
+                  whenDeleted:
+                    description: |-
+                      WhenDeleted specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is deleted.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  whenScaled:
+                    description: |-
+                      WhenScaled specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is scaled down.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above
+                      the replica count to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                type: object
               podManagementPolicy:
                 default: OrderedReady
                 description: PodManagementPolicyType defines the policy for creating
@@ -31844,6 +31902,35 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              persistentVolumeClaimRetentionPolicy:
+                default:
+                  whenDeleted: Delete
+                  whenScaled: Delete
+                description: PersistentVolumeClaimRetentionPolicy specifies the policy
+                  for retaining PVCs created from StatefulSet VolumeClaimTemplates.
+                properties:
+                  whenDeleted:
+                    description: |-
+                      WhenDeleted specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is deleted.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  whenScaled:
+                    description: |-
+                      WhenScaled specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is scaled down.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above
+                      the replica count to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                type: object
               podDisruptionBudgetConfig:
                 default:
                   enable: true
@@ -37439,6 +37526,35 @@ spec:
                   When a resource is paused, no actions except for deletion
                   will be performed on the underlying objects.
                 type: boolean
+              persistentVolumeClaimRetentionPolicy:
+                default:
+                  whenDeleted: Delete
+                  whenScaled: Delete
+                description: PersistentVolumeClaimRetentionPolicy specifies the policy
+                  for retaining PVCs created from StatefulSet VolumeClaimTemplates.
+                properties:
+                  whenDeleted:
+                    description: |-
+                      WhenDeleted specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is deleted.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  whenScaled:
+                    description: |-
+                      WhenScaled specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is scaled down.
+                      The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+                      The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above
+                      the replica count to be deleted.
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                type: object
               podDisruptionBudgetConfig:
                 default:
                   enable: true

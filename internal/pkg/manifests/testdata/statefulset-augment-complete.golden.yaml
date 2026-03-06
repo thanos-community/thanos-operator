@@ -4,6 +4,9 @@ metadata:
   name: thanos-store
   namespace: monitoring
 spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Retain
   podManagementPolicy: Parallel
   selector:
     matchLabels:

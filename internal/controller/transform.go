@@ -300,7 +300,6 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 	opts := commonToOpts(&in.CRD, 1, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
-	opts.PodManagementPolicy = string(ptr.Deref(in.CRD.Spec.PodManagementPolicy, ""))
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.CRD.Spec.DownsamplingConfig == nil {
@@ -453,9 +452,17 @@ func statefulSetToOpts(in *v1alpha1.StatefulSetFields) manifests.StatefulSet {
 		return manifests.StatefulSet{}
 	}
 
-	return manifests.StatefulSet{
+	stsConfig := manifests.StatefulSet{
 		PodManagementPolicy: string(ptr.Deref(in.PodManagementPolicy, "")),
 	}
+
+	if in.PersistentVolumeClaimRetentionPolicy != nil {
+		stsConfig.PVCRetentionPolicy = manifests.PVCRetentionPolicy{
+			OnScale:  string(in.PersistentVolumeClaimRetentionPolicy.WhenScaled),
+			OnDelete: string(in.PersistentVolumeClaimRetentionPolicy.WhenDeleted),
+		}
+	}
+	return stsConfig
 }
 
 func additionalToOpts(in v1alpha1.Additional) manifests.Additional {

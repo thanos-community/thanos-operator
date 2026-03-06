@@ -374,6 +374,13 @@ config:
 		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
+		if opts.StatefulSet.PVCRetentionPolicy.OnScale != "" || opts.StatefulSet.PVCRetentionPolicy.OnDelete != "" {
+			o.Spec.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenScaled:  appsv1.PersistentVolumeClaimRetentionPolicyType(opts.StatefulSet.PVCRetentionPolicy.OnScale),
+				WhenDeleted: appsv1.PersistentVolumeClaimRetentionPolicyType(opts.StatefulSet.PVCRetentionPolicy.OnDelete),
+			}
+		}
+
 		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: ptr.To(DefaultFSGroup),
 		}
@@ -428,6 +435,13 @@ type Additional struct {
 type StatefulSet struct {
 	// Pod management policy of the statefulset.
 	PodManagementPolicy string
+	PVCRetentionPolicy  PVCRetentionPolicy
+}
+
+// PVCRetentionPolicy defines the retention policy for PVCs created by the operator.
+type PVCRetentionPolicy struct {
+	OnScale  string
+	OnDelete string
 }
 
 // RelabelConfig is a struct that holds the relabel configuration
