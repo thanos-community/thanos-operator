@@ -374,6 +374,13 @@ config:
 		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
+		if opts.StatefulSet.PVCRetentionPolicy.OnScale != "" || opts.StatefulSet.PVCRetentionPolicy.OnDelete != "" {
+			o.Spec.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenScaled:  appsv1.PersistentVolumeClaimRetentionPolicyType(opts.StatefulSet.PVCRetentionPolicy.OnScale),
+				WhenDeleted: appsv1.PersistentVolumeClaimRetentionPolicyType(opts.StatefulSet.PVCRetentionPolicy.OnDelete),
+			}
+		}
+
 		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: ptr.To(DefaultFSGroup),
 		}
