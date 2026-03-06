@@ -428,6 +428,13 @@ type Additional struct {
 type StatefulSet struct {
 	// Pod management policy of the statefulset.
 	PodManagementPolicy string
+	PVCRetentionPolicy  PVCRetentionPolicy
+}
+
+// PVCRetentionPolicy defines the retention policy for PVCs created by the operator.
+type PVCRetentionPolicy struct {
+	OnScale  string
+	OnDelete string
 }
 
 // RelabelConfig is a struct that holds the relabel configuration
