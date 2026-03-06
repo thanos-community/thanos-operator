@@ -141,6 +141,43 @@ type StatefulSetFields struct {
 	// +kubebuilder:default:=OrderedReady
 	// +kubebuilder:validation:Optional
 	PodManagementPolicy *PodManagementPolicyType `json:"podManagementPolicy,omitempty"`
+	// PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default={whenDeleted: Delete, whenScaled: Delete}
+	PersistentVolumeClaimRetentionPolicy *PersistentVolumeClaimRetentionPolicy `json:"persistentVolumeClaimRetentionPolicy,omitempty"`
+}
+
+// PersistentVolumeClaimRetentionPolicyType is a string enumeration of the policies that will determine
+// when volumes from the VolumeClaimTemplates will be deleted when the controlling StatefulSet is
+// deleted or scaled down.
+// +kubebuilder:validation:Enum=Retain;Delete
+type PersistentVolumeClaimRetentionPolicyType string
+
+const (
+	// RetainPersistentVolumeClaimRetentionPolicyType is the default
+	// PersistentVolumeClaimRetentionPolicy and specifies that
+	// PersistentVolumeClaims associated with StatefulSet VolumeClaimTemplates
+	// will not be deleted.
+	RetainPersistentVolumeClaimRetentionPolicyType PersistentVolumeClaimRetentionPolicyType = "Retain"
+	// DeletePersistentVolumeClaimRetentionPolicyType specifies that
+	// PersistentVolumeClaims associated with StatefulSet VolumeClaimTemplates
+	// will be deleted in the scenario specified in
+	// StatefulSetPersistentVolumeClaimRetentionPolicy.
+	DeletePersistentVolumeClaimRetentionPolicyType PersistentVolumeClaimRetentionPolicyType = "Delete"
+)
+
+type PersistentVolumeClaimRetentionPolicy struct {
+	// WhenDeleted specifies what happens to PVCs created from StatefulSet
+	// VolumeClaimTemplates when the StatefulSet is deleted.
+	// The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+	// The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted.
+	WhenDeleted PersistentVolumeClaimRetentionPolicyType `json:"whenDeleted,omitempty"`
+	// WhenScaled specifies what happens to PVCs created from StatefulSet
+	// VolumeClaimTemplates when the StatefulSet is scaled down.
+	// The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.
+	// The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above
+	// the replica count to be deleted.
+	WhenScaled PersistentVolumeClaimRetentionPolicyType `json:"whenScaled,omitempty"`
 }
 
 // PodManagementPolicyType defines the policy for creating pods under a stateful set.
