@@ -460,6 +460,47 @@ _Appears in:_
 | `optional` _boolean_ | Specify whether the Secret or its key must be defined |  |  |
 
 
+#### PersistentVolumeClaimRetentionPolicy
+
+
+
+
+
+
+
+_Appears in:_
+- [StatefulSetFields](#statefulsetfields)
+- [ThanosCompactSpec](#thanoscompactspec)
+- [ThanosReceiveSpec](#thanosreceivespec)
+- [ThanosRulerSpec](#thanosrulerspec)
+- [ThanosStoreSpec](#thanosstorespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `whenDeleted` _[PersistentVolumeClaimRetentionPolicyType](#persistentvolumeclaimretentionpolicytype)_ | WhenDeleted specifies what happens to PVCs created from StatefulSet<br />VolumeClaimTemplates when the StatefulSet is deleted.<br />The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.<br />The DeletePersistentVolumeClaimRetentionPolicyType policy causes those PVCs to be deleted. |  | Enum: [Retain Delete] <br /> |
+| `whenScaled` _[PersistentVolumeClaimRetentionPolicyType](#persistentvolumeclaimretentionpolicytype)_ | WhenScaled specifies what happens to PVCs created from StatefulSet<br />VolumeClaimTemplates when the StatefulSet is scaled down.<br />The RetainPersistentVolumeClaimRetentionPolicyType policy causes PVCs to not be affected by StatefulSet deletion.<br />The DeletePersistentVolumeClaimRetentionPolicyType policy causes the associated PVCs for any excess pods above<br />the replica count to be deleted. |  | Enum: [Retain Delete] <br /> |
+
+
+#### PersistentVolumeClaimRetentionPolicyType
+
+_Underlying type:_ _string_
+
+PersistentVolumeClaimRetentionPolicyType is a string enumeration of the policies that will determine
+when volumes from the VolumeClaimTemplates will be deleted when the controlling StatefulSet is
+deleted or scaled down.
+
+_Validation:_
+- Enum: [Retain Delete]
+
+_Appears in:_
+- [PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)
+
+| Field | Description |
+| --- | --- |
+| `Retain` | RetainPersistentVolumeClaimRetentionPolicyType is the default<br />PersistentVolumeClaimRetentionPolicy and specifies that<br />PersistentVolumeClaims associated with StatefulSet VolumeClaimTemplates<br />will not be deleted.<br /> |
+| `Delete` | DeletePersistentVolumeClaimRetentionPolicyType specifies that<br />PersistentVolumeClaims associated with StatefulSet VolumeClaimTemplates<br />will be deleted in the scenario specified in<br />StatefulSetPersistentVolumeClaimRetentionPolicy.<br /> |
+
+
 #### PodDisruptionBudgetConfig
 
 
@@ -713,6 +754,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
+| `persistentVolumeClaimRetentionPolicy` _[PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)_ | PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates. | \{ whenDeleted:Delete whenScaled:Delete \} | Optional: \{\} <br /> |
 
 
 #### StatefulSetStatus
@@ -919,6 +961,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
 | `annotations` _object (keys:string, values:string)_ | Annotations are additional annotations to add to components.<br />In case of conflicts, these annotations take precedence. |  | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
+| `persistentVolumeClaimRetentionPolicy` _[PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)_ | PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates. | \{ whenDeleted:Delete whenScaled:Delete \} | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the object storage configuration for the compact component. |  | Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Compact StatefulSets. |  | Required: \{\} <br /> |
 | `retentionConfig` _[RetentionResolutionConfig](#retentionresolutionconfig)_ | RetentionConfig is the retention configuration for the compact component. |  | Required: \{\} <br /> |
@@ -1123,6 +1166,7 @@ _Appears in:_
 | `ingesterSpec` _[IngesterSpec](#ingesterspec)_ | Ingester is the configuration for the ingestor. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
+| `persistentVolumeClaimRetentionPolicy` _[PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)_ | PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates. | \{ whenDeleted:Delete whenScaled:Delete \} | Optional: \{\} <br /> |
 
 
 #### ThanosReceiveStatus
@@ -1214,6 +1258,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
 | `annotations` _object (keys:string, values:string)_ | Annotations are additional annotations to add to components.<br />In case of conflicts, these annotations take precedence. |  | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
+| `persistentVolumeClaimRetentionPolicy` _[PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)_ | PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates. | \{ whenDeleted:Delete whenScaled:Delete \} | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />\{"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
@@ -1327,6 +1372,7 @@ _Appears in:_
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
 | `annotations` _object (keys:string, values:string)_ | Annotations are additional annotations to add to components.<br />In case of conflicts, these annotations take precedence. |  | Optional: \{\} <br /> |
 | `podManagementPolicy` _[PodManagementPolicyType](#podmanagementpolicytype)_ |  | OrderedReady | Enum: [OrderedReady Parallel] <br />Optional: \{\} <br /> |
+| `persistentVolumeClaimRetentionPolicy` _[PersistentVolumeClaimRetentionPolicy](#persistentvolumeclaimretentionpolicy)_ | PersistentVolumeClaimRetentionPolicy specifies the policy for retaining PVCs created from StatefulSet VolumeClaimTemplates. | \{ whenDeleted:Delete whenScaled:Delete \} | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of store or store shard replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Store Gateways. |  | Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Store StatefulSets. |  | Required: \{\} <br /> |
