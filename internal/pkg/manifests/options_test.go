@@ -673,6 +673,10 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 					PodDisruptionConfig:  &PodDisruptionBudgetOptions{},
 					StatefulSet: StatefulSet{
 						PodManagementPolicy: "Parallel",
+						PVCRetentionPolicy: PVCRetentionPolicy{
+							OnScale:  "Retain",
+							OnDelete: "Delete",
+						},
 					},
 				},
 			},
@@ -1027,6 +1031,97 @@ func TestSanitizeName(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expected, SanitizeName(tt.name))
+		})
+	}
+}
+
+func TestStatefulSet_PVCRetentionPolicy(t *testing.T) {
+	tests := []struct {
+		name                     string
+		pvcRetentionPolicy       *PVCRetentionPolicy
+		expectedRetentionPolicy  *appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy
+		expectRetentionPolicyNil bool
+	}{
+		{
+			name: "PVCRetentionPolicy with Retain on scale and Delete on delete",
+			pvcRetentionPolicy: &PVCRetentionPolicy{
+				OnScale:  "Retain",
+				OnDelete: "Delete",
+			},
+			expectedRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenScaled:  appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
+				WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			},
+		},
+		{
+			name: "PVCRetentionPolicy with Delete on both scale and delete",
+			pvcRetentionPolicy: &PVCRetentionPolicy{
+				OnScale:  "Delete",
+				OnDelete: "Delete",
+			},
+			expectedRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+				WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			},
+		},
+		{
+			name: "PVCRetentionPolicy with Retain on both scale and delete",
+			pvcRetentionPolicy: &PVCRetentionPolicy{
+				OnScale:  "Retain",
+				OnDelete: "Retain",
+			},
+			expectedRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+				WhenScaled:  appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
+				WhenDeleted: appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
+			},
+		},
+		{
+			name:                     "nil PVCRetentionPolicy is not set on StatefulSet",
+			pvcRetentionPolicy:       nil,
+			expectRetentionPolicyNil: true,
+		},
+		{
+			name: "empty PVCRetentionPolicy with empty strings is not set",
+			pvcRetentionPolicy: &PVCRetentionPolicy{
+				OnScale:  "",
+				OnDelete: "",
+			},
+			expectRetentionPolicyNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statefulSet := &appsv1.StatefulSet{
+				Spec: appsv1.StatefulSetSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := Options{
+				Owner:     "test",
+				Namespace: "default",
+			}
+
+			if tt.pvcRetentionPolicy != nil {
+				opts.StatefulSet = StatefulSet{
+					PVCRetentionPolicy: *tt.pvcRetentionPolicy,
+				}
+			}
+
+			AugmentWithOptions(statefulSet, opts)
+
+			if tt.expectRetentionPolicyNil {
+				assert.Nil(t, statefulSet.Spec.PersistentVolumeClaimRetentionPolicy)
+			} else {
+				assert.Equal(t, tt.expectedRetentionPolicy, statefulSet.Spec.PersistentVolumeClaimRetentionPolicy)
+			}
 		})
 	}
 }
