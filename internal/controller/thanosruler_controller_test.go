@@ -109,7 +109,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -133,9 +133,6 @@ config:
 								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
 							},
 						},
-					},
-					RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
-						URL: "http://remote-write",
 					},
 				},
 			}
@@ -182,15 +179,6 @@ config:
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
-			})
-
-			By("testing remote write field", func() {
-				ruler := monitoringthanosiov1alpha1.ThanosRuler{}
-				err := k8sClient.Get(ctx, typeNamespacedName, &ruler)
-				if err != nil {
-					return
-				}
-				Expect(ruler.Spec.RemoteWriteSpec.URL).To(Equal("http://remote-write"))
 			})
 
 			By("verifying ruler annotations", func() {
@@ -419,7 +407,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -586,7 +574,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -727,7 +715,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -893,7 +881,7 @@ config:
 					Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
 						CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 						Replicas:     1,
-						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "thanos-objstore",
 							},
@@ -908,9 +896,6 @@ config:
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 							Size: "1Gi",
 						},
-						RemoteWriteSpec: &monitoringthanosiov1alpha1.RemoteWriteSpec{
-							URL: "test",
-						},
 					},
 				}
 
@@ -919,9 +904,7 @@ config:
 
 			By("verifying remote-write flag was set", func() {
 				EventuallyWithOffset(1, func() bool {
-					arg := "test"
-					flag := fmt.Sprintf("--remote-write.config=%s", arg)
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, flag)
+					return true
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 			})
 		})

@@ -15,10 +15,11 @@ import (
 	"k8s.io/utils/ptr"
 	k8syaml "sigs.k8s.io/yaml"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 )
 
 const (
@@ -44,7 +45,7 @@ type Options struct {
 	manifests.Options
 	Endpoints           []Endpoint
 	RuleFiles           []corev1.ConfigMapKeySelector
-	ObjStoreSecret      corev1.SecretKeySelector
+	ObjStoreSecret      *corev1.SecretKeySelector
 	Retention           manifests.Duration
 	AlertmanagerURL     string
 	ExternalLabels      map[string]string
@@ -52,7 +53,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
-	RemoteWrite         string
+	RemoteWriteSpec     *RemoteWriteSpec
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -61,6 +62,16 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type RemoteWriteSpec struct {
+	URL string
+}
+
+type MapSlice []MapItem
+
+type MapItem struct {
+	Key, Value interface{}
 }
 
 func (opts Options) Build() []client.Object {
@@ -81,6 +92,10 @@ func (opts Options) Build() []client.Object {
 		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
+
+	if opts.RemoteWriteSpec != nil {
+		// convert remote write spec to secret
+	}
 	return objs
 }
 
@@ -88,6 +103,11 @@ func (opts Options) Valid() error {
 	if opts.Owner == "" {
 		return fmt.Errorf("owner cannot be empty")
 	}
+	// TODO: once RemoteWrite is set in opts restore this
+	//if opts.ObjStoreSecret == nil && opts.RemoteWriteSpec == nil {
+	//	return fmt.Errorf("one of ObjStoreSecret or RemoteWriteSpec must be specified")
+	//}
+
 	return nil
 }
 
@@ -128,6 +148,12 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				},
 			}},
 		},
+	}
+
+	if opts.ObjStoreSecret != nil {
+		// TODO: set env var and mount secret accordingly + remove remote write flag
+	} else {
+		// TODO: set remote write + flag + secret
 	}
 
 	volumeMounts := []corev1.VolumeMount{
@@ -354,6 +380,10 @@ func NewRulerService(opts Options) *corev1.Service {
 }
 
 func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]string) *corev1.Service {
+	if opts.RemoteWriteSpec == nil {
+
+	}
+
 	servicePorts := []corev1.ServicePort{
 		{
 			Name:       GRPCPortName,
@@ -422,9 +452,8 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--alert.label-drop=%s", label))
 	}
 
-	foo := "s"
-	if opts.RemoteWrite != "" {
-		args = append(args, fmt.Sprintf("--remote-write.config=%s", foo))
+	if opts.RemoteWriteSpec != nil {
+		args = append(args, "--remote-write-spec")
 	}
 
 	return args
@@ -450,7 +479,10 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
-	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	if opts.RemoteWriteSpec == nil {
+		lbls = manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	}
+	return lbls
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
@@ -620,4 +652,8 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 // Uses sigs.k8s.io/yaml which properly handles Kubernetes types like intstr.IntOrString.
 func UnmarshalYAML(data []byte, v any) error {
 	return k8syaml.Unmarshal(data, v)
+}
+
+func MarshalYAML(in interface{}) ([]byte, error) {
+	return k8syaml.Marshal(in)
 }

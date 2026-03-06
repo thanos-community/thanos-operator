@@ -673,7 +673,7 @@ var _ = Describe("controller", Ordered, func() {
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 					},
 				},
-				ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+				ObjectStorageConfig: &v1alpha1.ObjectStorageConfig{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: objStoreSecret,
 					},
