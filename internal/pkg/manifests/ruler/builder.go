@@ -136,7 +136,13 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		},
 	}
 
+	// Deduplicate rule cfgmap by name.
+	seenConfigMaps := make(map[string]bool)
 	for _, ruleFile := range opts.RuleFiles {
+		if seenConfigMaps[ruleFile.Name] {
+			continue
+		}
+		seenConfigMaps[ruleFile.Name] = true
 		// Mount the entire ConfigMap directory (not SubPath) so that updates propagate.
 		// SubPath mounts do not get ConfigMap updates, which breaks config-reloader functionality.
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
