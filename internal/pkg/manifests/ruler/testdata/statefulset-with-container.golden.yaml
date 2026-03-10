@@ -118,9 +118,8 @@ spec:
         volumeMounts:
         - mountPath: /var/thanos/rule
           name: data
-        - mountPath: /etc/thanos/rules/test-rules/rules.yaml
+        - mountPath: /etc/thanos/rules/test-rules
           name: test-rules
-          subPath: rules.yaml
       - args:
         - --listen-address=:8080
         - --reload-url=http://localhost:9090/-/reload

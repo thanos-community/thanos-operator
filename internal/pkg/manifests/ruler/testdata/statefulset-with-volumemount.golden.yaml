@@ -118,9 +118,8 @@ spec:
         volumeMounts:
         - mountPath: /var/thanos/rule
           name: data
-        - mountPath: /etc/thanos/rules/test-rules/rules.yaml
+        - mountPath: /etc/thanos/rules/test-rules
           name: test-rules
-          subPath: rules.yaml
         - mountPath: /some-rule
           name: some-rule
       - args:
