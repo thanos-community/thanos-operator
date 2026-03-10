@@ -137,10 +137,11 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 	}
 
 	for _, ruleFile := range opts.RuleFiles {
+		// Mount the entire ConfigMap directory (not SubPath) so that updates propagate.
+		// SubPath mounts do not get ConfigMap updates, which breaks config-reloader functionality.
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      ruleFile.Name,
-			MountPath: fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key),
-			SubPath:   ruleFile.Key,
+			MountPath: fmt.Sprintf("/etc/thanos/rules/%s", ruleFile.Name),
 		})
 	}
 
