@@ -164,6 +164,15 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 		secret = in.Spec.ObjectStorageConfig.ToSecretKeySelector()
 	}
 
+	if in.CRD.Spec.TerminationGracePeriodSeconds == nil {
+		// we set the max termination grace period for the ingester to ensure that it has enough time to flush all
+		// the data to the object storage before it gets forcefully terminated.
+		// This is especially important for large ingesters with a lot of data to flush.
+		// err on side of caution in absence of user input, since a too short termination grace period will lead to problems.
+		var defaultIngestMaxGracePeriod int64 = 900
+		in.CRD.Spec.TerminationGracePeriodSeconds = &defaultIngestMaxGracePeriod
+	}
+
 	opts := commonToOpts(&in.CRD, in.Spec.Replicas, common, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, additional)
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
@@ -462,6 +471,9 @@ func statefulSetToOpts(in *v1alpha1.StatefulSetFields) manifests.StatefulSet {
 			OnDelete: string(in.PersistentVolumeClaimRetentionPolicy.WhenDeleted),
 		}
 	}
+
+	stsConfig.TerminationGracePeriodSeconds = in.TerminationGracePeriodSeconds
+
 	return stsConfig
 }
 
