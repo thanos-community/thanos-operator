@@ -94,16 +94,16 @@ func LeaderElectionRoleBinding() *rbacv1.RoleBinding {
 	}
 }
 
-// AuthProxyClusterRole creates the ClusterRole for the auth proxy
-func AuthProxyClusterRole() *rbacv1.ClusterRole {
+// MetricsAuthClusterRole creates the ClusterRole for the metrics auth
+func MetricsAuthClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   prefixName(ProxyRoleName),
-			Labels: commonLabels("kube-rbac-proxy", ProxyRoleName, "clusterrole"),
+			Name:   prefixName("metrics-auth-role"),
+			Labels: commonLabels("metrics", "metrics-auth-role", "clusterrole"),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -120,21 +120,21 @@ func AuthProxyClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-// AuthProxyClusterRoleBinding creates the ClusterRoleBinding for the auth proxy
-func AuthProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+// MetricsAuthClusterRoleBinding creates the ClusterRoleBinding for the metrics auth
+func MetricsAuthClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   prefixName("proxy-rolebinding"),
-			Labels: commonLabels("kube-rbac-proxy", "proxy-rolebinding", "clusterrolebinding"),
+			Name:   prefixName("metrics-auth-rolebinding"),
+			Labels: commonLabels("metrics", "metrics-auth-rolebinding", "clusterrolebinding"),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     prefixName(ProxyRoleName),
+			Name:     prefixName("metrics-auth-role"),
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -146,8 +146,8 @@ func AuthProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-// AuthProxyClientClusterRole creates the ClusterRole for metrics reading.
-func AuthProxyClientClusterRole() *rbacv1.ClusterRole {
+// MetricsReaderClusterRole creates the ClusterRole for metrics reading.
+func MetricsReaderClusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -155,7 +155,7 @@ func AuthProxyClientClusterRole() *rbacv1.ClusterRole {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   prefixName(MetricsReaderName),
-			Labels: commonLabels("kube-rbac-proxy", MetricsReaderName, "clusterrole"),
+			Labels: commonLabels("metrics", MetricsReaderName, "clusterrole"),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -166,8 +166,8 @@ func AuthProxyClientClusterRole() *rbacv1.ClusterRole {
 	}
 }
 
-// AuthProxyService creates the Service for the auth proxy client for metrics.
-func AuthProxyService() *corev1.Service {
+// MetricsService creates the Service for the metrics client for metrics.
+func MetricsService() *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -180,7 +180,7 @@ func AuthProxyService() *corev1.Service {
 				"control-plane":                "controller-manager",
 				"app.kubernetes.io/name":       "service",
 				"app.kubernetes.io/instance":   "controller-manager-metrics-service",
-				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/component":  "metrics",
 				"app.kubernetes.io/created-by": DefaultCreatedBy,
 				"app.kubernetes.io/part-of":    DefaultPartOf,
 				"app.kubernetes.io/managed-by": DefaultManagedBy,

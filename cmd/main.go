@@ -58,6 +58,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	//+kubebuilder:scaffold:imports
@@ -228,20 +229,30 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress:   metricsAddr,
-			SecureServing: secureMetrics,
-			TLSOpts:       tlsOpts,
-			ExtraHandlers: map[string]http.Handler{
-				"/debug/pprof/":        http.HandlerFunc(pprof.Index),
-				"/debug/pprof/cmdline": http.HandlerFunc(pprof.Cmdline),
-				"/debug/pprof/profile": http.HandlerFunc(pprof.Profile),
-				"/debug/pprof/symbol":  http.HandlerFunc(pprof.Symbol),
-				"/debug/pprof/trace":   http.HandlerFunc(pprof.Trace),
-			},
+	msOpts := metricsserver.Options{
+		BindAddress:   metricsAddr,
+		SecureServing: secureMetrics,
+		TLSOpts:       tlsOpts,
+		ExtraHandlers: map[string]http.Handler{
+			"/debug/pprof/":        http.HandlerFunc(pprof.Index),
+			"/debug/pprof/cmdline": http.HandlerFunc(pprof.Cmdline),
+			"/debug/pprof/profile": http.HandlerFunc(pprof.Profile),
+			"/debug/pprof/symbol":  http.HandlerFunc(pprof.Symbol),
+			"/debug/pprof/trace":   http.HandlerFunc(pprof.Trace),
 		},
+	}
+
+	if secureMetrics {
+		// FilterProvider is used to protect the metrics endpoint with authn/authz.
+		// These configurations ensure that only authorized users and service accounts
+		// can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
+		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
+		msOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:                 scheme,
+		Metrics:                msOpts,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
