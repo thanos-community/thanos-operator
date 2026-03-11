@@ -40,9 +40,6 @@ func (c Config) Generate() error {
 	prometheusGen := c.generator("prometheus")
 	prometheusGen.Add("monitor.yaml", encoding.GhodssYAML(config.ControllerManagerServiceMonitor()))
 
-	defaultGen := c.generator("default")
-	defaultGen.Add("manager_auth_proxy_patch.yaml", encoding.GhodssYAML(config.ManagerAuthProxyPatch()))
-
 	rbacGen := c.generator("rbac")
 	rbacGen.Add("auth_proxy_client_clusterrole.yaml", encoding.GhodssYAML(config.AuthProxyClientClusterRole()))
 	rbacGen.Add("auth_proxy_role_binding.yaml", encoding.GhodssYAML(config.AuthProxyClusterRoleBinding()))
@@ -66,7 +63,6 @@ func (c Config) Generate() error {
 	managerGen.Generate()
 	prometheusGen.Generate()
 	samplesGen.Generate()
-	defaultGen.Generate()
 
 	return nil
 }

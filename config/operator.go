@@ -400,6 +400,13 @@ func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
 								FailureThreshold:    3,
 								SuccessThreshold:    1,
 							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "https",
+									ContainerPort: 8443,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -417,54 +424,12 @@ func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
 		},
 	}
 
-	if config.enableAuthProxy {
-		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
-			Name:            "kube-rbac-proxy",
-			Image:           DefaultAuthProxyImage,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Args:            []string{"--secure-listen-address=0.0.0.0:8443", "--upstream=http://127.0.0.1:8080/", "--logtostderr=true", "--v=0"},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
-				Capabilities: &corev1.Capabilities{
-					Drop: []corev1.Capability{"ALL"},
-				},
-			},
-			Ports: []corev1.ContainerPort{
-				{
-					ContainerPort: 8443,
-					Name:          "https",
-					Protocol:      corev1.ProtocolTCP,
-				},
-			},
-			Resources: corev1.ResourceRequirements{
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("500m"),
-					corev1.ResourceMemory: resource.MustParse("128Mi"),
-				},
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("5m"),
-					corev1.ResourceMemory: resource.MustParse("64Mi"),
-				},
-			},
-		})
-
-		// Update manager container args for auth proxy mode
-		for i, container := range deployment.Spec.Template.Spec.Containers {
-			if container.Name == "manager" {
-				deployment.Spec.Template.Spec.Containers[i].Args = append(deployment.Spec.Template.Spec.Containers[i].Args, "--metrics-bind-address=:8080")
-				deployment.Spec.Template.Spec.Containers[i].Args = append(deployment.Spec.Template.Spec.Containers[i].Args, "--health-probe-bind-address=:8081")
-				deployment.Spec.Template.Spec.Containers[i].Args = append(deployment.Spec.Template.Spec.Containers[i].Args, "--log.format=logfmt")
-				deployment.Spec.Template.Spec.Containers[i].Args = append(deployment.Spec.Template.Spec.Containers[i].Args, "--log.level=debug")
-			}
-		}
-	}
-
 	return deployment
 }
 
 // buildManagerArgs constructs the manager container arguments including feature flags.
 func buildManagerArgs(featureGate featuregate.Config) []string {
-	args := []string{"--leader-elect"}
+	args := []string{"--leader-elect", "--metrics-secure", "--metrics-bind-address=:8443", "--health-probe-bind-address=:8081", "--log.format=logfmt", "--log.level=debug"}
 
 	if featureGate.EnableServiceMonitor {
 		args = append(args, "--enable-feature="+featuregate.ServiceMonitor)

@@ -103,7 +103,7 @@ func AuthProxyClusterRole() *rbacv1.ClusterRole {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   prefixName(ProxyRoleName),
-			Labels: commonLabels("kube-rbac-proxy", ProxyRoleName, "clusterrole"),
+			Labels: commonLabels("metrics", ProxyRoleName, "clusterrole"),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -129,7 +129,7 @@ func AuthProxyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   prefixName("proxy-rolebinding"),
-			Labels: commonLabels("kube-rbac-proxy", "proxy-rolebinding", "clusterrolebinding"),
+			Labels: commonLabels("metrics", "proxy-rolebinding", "clusterrolebinding"),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -155,7 +155,7 @@ func AuthProxyClientClusterRole() *rbacv1.ClusterRole {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   prefixName(MetricsReaderName),
-			Labels: commonLabels("kube-rbac-proxy", MetricsReaderName, "clusterrole"),
+			Labels: commonLabels("metrics", MetricsReaderName, "clusterrole"),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -180,7 +180,7 @@ func AuthProxyService() *corev1.Service {
 				"control-plane":                "controller-manager",
 				"app.kubernetes.io/name":       "service",
 				"app.kubernetes.io/instance":   "controller-manager-metrics-service",
-				"app.kubernetes.io/component":  "kube-rbac-proxy",
+				"app.kubernetes.io/component":  "metrics",
 				"app.kubernetes.io/created-by": DefaultCreatedBy,
 				"app.kubernetes.io/part-of":    DefaultPartOf,
 				"app.kubernetes.io/managed-by": DefaultManagedBy,
