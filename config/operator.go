@@ -77,8 +77,6 @@ var (
 
 	DefaultManagerImage     = "controller:latest"
 	RecommendedManagerImage = "quay.io/thanos/thanos-operator:main"
-
-	DefaultAuthProxyImage = "gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0"
 )
 
 // SetGlobalCommonLabels sets the global common labels for all resources.
@@ -101,11 +99,6 @@ func SetGlobalNamespace(namespace string) {
 // SetGlobalManagerImage sets the global manager image for all resources.
 func SetGlobalManagerImage(image string) {
 	DefaultManagerImage = image
-}
-
-// SetGlobalAuthProxyImage sets the global auth proxy image for all resources.
-func SetGlobalAuthProxyImage(image string) {
-	DefaultAuthProxyImage = image
 }
 
 // commonLabels returns the standard labels used across all resources
