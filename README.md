@@ -56,6 +56,8 @@ Usage of ./bin/manager:
     	The name of the metrics server certificate file. (default "tls.crt")
   -metrics-cert-path string
     	The directory that contains the metrics server certificate.
+  -metrics-client-ca-file string
+    	The path to the client CA certificate file for mutual TLS authentication.
   -metrics-secure
     	If set the metrics endpoint is served securely
 ```
