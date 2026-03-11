@@ -145,6 +145,9 @@ type StatefulSetFields struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={whenDeleted: Delete, whenScaled: Delete}
 	PersistentVolumeClaimRetentionPolicy *PersistentVolumeClaimRetentionPolicy `json:"persistentVolumeClaimRetentionPolicy,omitempty"`
+	// TerminationGracePeriodSeconds is the duration in seconds the pod is allowed to terminate gracefully after SIGTERM.
+	// +kubebuilder:validation:Optional
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 }
 
 // PersistentVolumeClaimRetentionPolicyType is a string enumeration of the policies that will determine
