@@ -63,6 +63,7 @@ spec:
         disktype: ssd
       securityContext:
         fsGroup: 1001
+      terminationGracePeriodSeconds: 120
       tolerations:
       - effect: NoSchedule
         key: example-key
