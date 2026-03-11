@@ -20,7 +20,6 @@ const (
 	ServiceAccountName     = "controller-manager"
 	ManagerRoleName        = "manager-role"
 	LeaderElectionRoleName = "leader-election-role"
-	ProxyRoleName          = "proxy-role"
 	MetricsReaderName      = "metrics-reader"
 )
 

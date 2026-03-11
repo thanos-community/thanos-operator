@@ -38175,28 +38175,11 @@ metadata:
   labels:
     app.kubernetes.io/component: metrics
     app.kubernetes.io/created-by: thanos-operator
-    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/instance: metrics-auth-role
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/part-of: thanos-operator
-  name: thanos-operator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/component: metrics
-    app.kubernetes.io/created-by: thanos-operator
-    app.kubernetes.io/instance: proxy-role
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/part-of: thanos-operator
-  name: thanos-operator-proxy-role
+  name: thanos-operator-metrics-auth-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -38210,6 +38193,23 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/part-of: thanos-operator
+  name: thanos-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -38548,15 +38548,15 @@ metadata:
   labels:
     app.kubernetes.io/component: metrics
     app.kubernetes.io/created-by: thanos-operator
-    app.kubernetes.io/instance: proxy-rolebinding
+    app.kubernetes.io/instance: metrics-auth-rolebinding
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: clusterrolebinding
     app.kubernetes.io/part-of: thanos-operator
-  name: thanos-operator-proxy-rolebinding
+  name: thanos-operator-metrics-auth-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: thanos-operator-proxy-role
+  name: thanos-operator-metrics-auth-role
 subjects:
 - kind: ServiceAccount
   name: thanos-operator-controller-manager
