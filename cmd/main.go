@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"net/http"
@@ -162,6 +163,8 @@ func (s *sizeAdapter) Observe(ctx context.Context, verb string, host string, siz
 
 func main() {
 	var metricsAddr string
+	var metricsCertPath, metricsCertName, metricsCertKey string
+	var metricsClientCAFile string
 	var enableLeaderElection bool
 	var probeAddr string
 	var secureMetrics bool
@@ -179,6 +182,13 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", false,
 		"If set the metrics endpoint is served securely")
+	flag.StringVar(&metricsCertPath, "metrics-cert-path", "",
+		"The directory that contains the metrics server certificate.")
+	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
+	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
+	flag.StringVar(&metricsClientCAFile, "metrics-client-ca-file", "",
+		"The path to the client CA certificate file for mutual TLS authentication.")
+
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
@@ -229,7 +239,30 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	msOpts := metricsserver.Options{
+	if len(metricsClientCAFile) > 0 {
+		setupLog.Info("configuring client CA for mutual TLS authentication", "client-ca-file", metricsClientCAFile)
+
+		caCert, err := os.ReadFile(metricsClientCAFile)
+		if err != nil {
+			setupLog.Error(err, "unable to read client CA file")
+			os.Exit(1)
+		}
+
+		clientCAPool := x509.NewCertPool()
+		if !clientCAPool.AppendCertsFromPEM(caCert) {
+			setupLog.Error(fmt.Errorf("failed to parse client CA certificate"), "unable to add client CA to pool")
+			os.Exit(1)
+		}
+
+		configureClientCA := func(c *tls.Config) {
+			c.ClientCAs = clientCAPool
+			c.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
+		tlsOpts = append(tlsOpts, configureClientCA)
+	}
+
+	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,
 		SecureServing: secureMetrics,
 		TLSOpts:       tlsOpts,
@@ -242,17 +275,26 @@ func main() {
 		},
 	}
 
+	if len(metricsCertPath) > 0 {
+		setupLog.Info("Initializing metrics certificate watcher using provided certificates",
+			"metrics-cert-path", metricsCertPath, "metrics-cert-name", metricsCertName, "metrics-cert-key", metricsCertKey)
+
+		metricsServerOptions.CertDir = metricsCertPath
+		metricsServerOptions.CertName = metricsCertName
+		metricsServerOptions.KeyName = metricsCertKey
+	}
+
 	if secureMetrics {
 		// FilterProvider is used to protect the metrics endpoint with authn/authz.
 		// These configurations ensure that only authorized users and service accounts
 		// can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
 		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
-		msOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                msOpts,
+		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
