@@ -32,12 +32,13 @@ spec:
       containers:
       - args:
         - --leader-elect
-        - --enable-feature=service-monitor
-        - --enable-feature=prometheus-rule
-        - --metrics-bind-address=:8080
+        - --metrics-secure
+        - --metrics-bind-address=:8443
         - --health-probe-bind-address=:8081
         - --log.format=logfmt
         - --log.level=debug
+        - --enable-feature=service-monitor
+        - --enable-feature=prometheus-rule
         command:
         - /manager
         image: controller:latest
@@ -53,6 +54,10 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         name: manager
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -69,30 +74,6 @@ spec:
             memory: 128Mi
           requests:
             cpu: 10m
-            memory: 64Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
-        imagePullPolicy: IfNotPresent
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 5m
             memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false

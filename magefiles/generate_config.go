@@ -40,14 +40,11 @@ func (c Config) Generate() error {
 	prometheusGen := c.generator("prometheus")
 	prometheusGen.Add("monitor.yaml", encoding.GhodssYAML(config.ControllerManagerServiceMonitor()))
 
-	defaultGen := c.generator("default")
-	defaultGen.Add("manager_auth_proxy_patch.yaml", encoding.GhodssYAML(config.ManagerAuthProxyPatch()))
-
 	rbacGen := c.generator("rbac")
-	rbacGen.Add("auth_proxy_client_clusterrole.yaml", encoding.GhodssYAML(config.AuthProxyClientClusterRole()))
-	rbacGen.Add("auth_proxy_role_binding.yaml", encoding.GhodssYAML(config.AuthProxyClusterRoleBinding()))
-	rbacGen.Add("auth_proxy_role.yaml", encoding.GhodssYAML(config.AuthProxyClusterRole()))
-	rbacGen.Add("auth_proxy_service.yaml", encoding.GhodssYAML(config.AuthProxyService()))
+	rbacGen.Add("metrics_reader_clusterrole.yaml", encoding.GhodssYAML(config.MetricsReaderClusterRole()))
+	rbacGen.Add("metrics_auth_role_binding.yaml", encoding.GhodssYAML(config.MetricsAuthClusterRoleBinding()))
+	rbacGen.Add("metrics_auth_role.yaml", encoding.GhodssYAML(config.MetricsAuthClusterRole()))
+	rbacGen.Add("metrics_service.yaml", encoding.GhodssYAML(config.MetricsService()))
 	rbacGen.Add("leader_election_role.yaml", encoding.GhodssYAML(config.LeaderElectionRole()))
 	rbacGen.Add("leader_election_role_binding.yaml", encoding.GhodssYAML(config.LeaderElectionRoleBinding()))
 	rbacGen.Add("role_binding.yaml", encoding.GhodssYAML(config.ManagerClusterRoleBinding()))
@@ -66,7 +63,6 @@ func (c Config) Generate() error {
 	managerGen.Generate()
 	prometheusGen.Generate()
 	samplesGen.Generate()
-	defaultGen.Generate()
 
 	return nil
 }

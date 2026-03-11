@@ -32,6 +32,11 @@ spec:
       containers:
       - args:
         - --leader-elect
+        - --metrics-secure
+        - --metrics-bind-address=:8443
+        - --health-probe-bind-address=:8081
+        - --log.format=logfmt
+        - --log.level=debug
         - --enable-feature=service-monitor
         command:
         - /manager
@@ -48,6 +53,10 @@ spec:
           successThreshold: 1
           timeoutSeconds: 1
         name: manager
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         readinessProbe:
           failureThreshold: 3
           httpGet:

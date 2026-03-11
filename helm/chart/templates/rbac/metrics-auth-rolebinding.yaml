@@ -1,19 +1,21 @@
+{{- if .Values.metrics.enable }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
     labels:
         app.kubernetes.io/component: metrics
         app.kubernetes.io/created-by: thanos-operator
-        app.kubernetes.io/instance: proxy-rolebinding
+        app.kubernetes.io/instance: metrics-auth-rolebinding
         app.kubernetes.io/managed-by: {{ .Release.Service }}
         app.kubernetes.io/name: clusterrolebinding
         app.kubernetes.io/part-of: thanos-operator
-    name: thanos-operator-proxy-rolebinding
+    name: thanos-operator-metrics-auth-rolebinding
 roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
-    name: thanos-operator-proxy-role
+    name: thanos-operator-metrics-auth-role
 subjects:
     - kind: ServiceAccount
       name: thanos-operator-controller-manager
       namespace: {{ .Release.Namespace }}
+{{- end }}
