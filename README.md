@@ -50,6 +50,14 @@ Usage of ./bin/manager:
     	Only log messages with the given severity or above. One of: [debug, info, warn, error] (default "info")
   -metrics-bind-address string
     	The address the metric endpoint binds to. (default ":8080")
+  -metrics-cert-key string
+    	The name of the metrics server key file. (default "tls.key")
+  -metrics-cert-name string
+    	The name of the metrics server certificate file. (default "tls.crt")
+  -metrics-cert-path string
+    	The directory that contains the metrics server certificate.
+  -metrics-client-ca-file string
+    	The path to the client CA certificate file for mutual TLS authentication.
   -metrics-secure
     	If set the metrics endpoint is served securely
 ```
