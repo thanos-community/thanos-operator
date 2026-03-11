@@ -35,7 +35,7 @@ Thanos Operator binary CLI Options include,
 ```bash mdox-exec="./bin/manager --help"
 Usage of ./bin/manager:
   -enable-feature value
-    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule, kube-resource-sync.
+    	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule, kube-resource-sync, otel-sidecar.
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
   -health-probe-bind-address string
@@ -50,6 +50,12 @@ Usage of ./bin/manager:
     	Only log messages with the given severity or above. One of: [debug, info, warn, error] (default "info")
   -metrics-bind-address string
     	The address the metric endpoint binds to. (default ":8080")
+  -metrics-cert-key string
+    	The name of the metrics server key file. (default "tls.key")
+  -metrics-cert-name string
+    	The name of the metrics server certificate file. (default "tls.crt")
+  -metrics-cert-path string
+    	The directory that contains the metrics server certificate.
   -metrics-secure
     	If set the metrics endpoint is served securely
 ```
