@@ -31,16 +31,45 @@ spec:
         spec:
             containers:
                 - args:
+                    {{- if .Values.metrics.enable }}
+                    - --metrics-bind-address=:{{ .Values.metrics.port }}
+                    {{- else }}
+                    # Bind to :0 to disable the controller-runtime managed metrics server
+                    - --metrics-bind-address=0
+                    {{- end }}
+                    - --health-probe-bind-address=:8081
                     {{- range .Values.manager.args }}
                     - {{ . }}
                     {{- end }}
+                  command:
+                    - /manager
                   image: "{{ .Values.manager.image.repository }}:{{ .Values.manager.image.tag }}"
                   imagePullPolicy: {{ .Values.manager.image.pullPolicy }}
-                  name: kube-rbac-proxy
+                  livenessProbe:
+                    failureThreshold: 3
+                    httpGet:
+                        path: /healthz
+                        port: 8081
+                        scheme: HTTP
+                    initialDelaySeconds: 15
+                    periodSeconds: 20
+                    successThreshold: 1
+                    timeoutSeconds: 1
+                  name: manager
                   ports:
                     - containerPort: 8443
                       name: https
                       protocol: TCP
+                  readinessProbe:
+                    failureThreshold: 3
+                    httpGet:
+                        path: /readyz
+                        port: 8081
+                        scheme: HTTP
+                    initialDelaySeconds: 5
+                    periodSeconds: 10
+                    successThreshold: 1
+                    timeoutSeconds: 1
                   resources:
                     {{- if .Values.manager.resources }}
                     {{- toYaml .Values.manager.resources | nindent 20 }}
@@ -53,53 +82,6 @@ spec:
                     {{- else }}
                     {}
                     {{- end }}
-                - args:
-                    - --health-probe-bind-address=:8081
-                    - --metrics-bind-address=127.0.0.1:8080
-                    - --leader-elect
-                    - --log.format=logfmt
-                    - --log.level=debug
-                    - --enable-feature=prometheus-rule
-                    - --enable-feature=service-monitor
-                    - --enable-feature=otel-sidecar
-                    - --enable-feature=kube-resource-sync
-                  command:
-                    - /manager
-                  image: quay.io/thanos/thanos-operator:main
-                  imagePullPolicy: IfNotPresent
-                  livenessProbe:
-                    failureThreshold: 3
-                    httpGet:
-                        path: /healthz
-                        port: 8081
-                        scheme: HTTP
-                    initialDelaySeconds: 15
-                    periodSeconds: 20
-                    successThreshold: 1
-                    timeoutSeconds: 1
-                  name: manager
-                  readinessProbe:
-                    failureThreshold: 3
-                    httpGet:
-                        path: /readyz
-                        port: 8081
-                        scheme: HTTP
-                    initialDelaySeconds: 5
-                    periodSeconds: 10
-                    successThreshold: 1
-                    timeoutSeconds: 1
-                  resources:
-                    limits:
-                        cpu: 500m
-                        memory: 128Mi
-                    requests:
-                        cpu: 10m
-                        memory: 64Mi
-                  securityContext:
-                    allowPrivilegeEscalation: false
-                    capabilities:
-                        drop:
-                            - ALL
             securityContext:
               {{- if .Values.manager.podSecurityContext }}
               {{- toYaml .Values.manager.podSecurityContext | nindent 14 }}
