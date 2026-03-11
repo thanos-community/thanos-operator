@@ -162,6 +162,7 @@ func (s *sizeAdapter) Observe(ctx context.Context, verb string, host string, siz
 
 func main() {
 	var metricsAddr string
+	var metricsCertPath, metricsCertName, metricsCertKey string
 	var enableLeaderElection bool
 	var probeAddr string
 	var secureMetrics bool
@@ -179,6 +180,11 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", false,
 		"If set the metrics endpoint is served securely")
+	flag.StringVar(&metricsCertPath, "metrics-cert-path", "",
+		"The directory that contains the metrics server certificate.")
+	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
+	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
+
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
@@ -229,7 +235,7 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
-	msOpts := metricsserver.Options{
+	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,
 		SecureServing: secureMetrics,
 		TLSOpts:       tlsOpts,
@@ -242,17 +248,34 @@ func main() {
 		},
 	}
 
+	// If the certificate is not specified, controller-runtime will automatically
+	// generate self-signed certificates for the metrics server. While convenient for development and testing,
+	// this setup is not recommended for production.
+	//
+	// TODO(user): If you enable certManager, uncomment the following lines:
+	// - [METRICS-WITH-CERTS] at config/default/kustomization.yaml to generate and use certificates
+	// managed by cert-manager for the metrics server.
+	// - [PROMETHEUS-WITH-CERTS] at config/prometheus/kustomization.yaml for TLS certification.
+	if len(metricsCertPath) > 0 {
+		setupLog.Info("Initializing metrics certificate watcher using provided certificates",
+			"metrics-cert-path", metricsCertPath, "metrics-cert-name", metricsCertName, "metrics-cert-key", metricsCertKey)
+
+		metricsServerOptions.CertDir = metricsCertPath
+		metricsServerOptions.CertName = metricsCertName
+		metricsServerOptions.KeyName = metricsCertKey
+	}
+
 	if secureMetrics {
 		// FilterProvider is used to protect the metrics endpoint with authn/authz.
 		// These configurations ensure that only authorized users and service accounts
 		// can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
 		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
-		msOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                msOpts,
+		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
