@@ -1129,29 +1129,29 @@ func TestStatefulSet_PVCRetentionPolicy(t *testing.T) {
 
 func TestStatefulSet_TerminationGracePeriodSeconds(t *testing.T) {
 	tests := []struct {
-		name                              string
-		terminationGracePeriodSeconds     *int64
-		expectedTerminationGracePeriodSeconds *int64
+		name                                   string
+		terminationGracePeriodSeconds          *int64
+		expectedTerminationGracePeriodSeconds  *int64
 		expectTerminationGracePeriodSecondsNil bool
 	}{
 		{
-			name:                          "TerminationGracePeriodSeconds with 60 seconds",
-			terminationGracePeriodSeconds: ptr.To(int64(60)),
+			name:                                  "TerminationGracePeriodSeconds with 60 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(60)),
 			expectedTerminationGracePeriodSeconds: ptr.To(int64(60)),
 		},
 		{
-			name:                          "TerminationGracePeriodSeconds with 120 seconds",
-			terminationGracePeriodSeconds: ptr.To(int64(120)),
+			name:                                  "TerminationGracePeriodSeconds with 120 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(120)),
 			expectedTerminationGracePeriodSeconds: ptr.To(int64(120)),
 		},
 		{
-			name:                          "TerminationGracePeriodSeconds with 0 seconds",
-			terminationGracePeriodSeconds: ptr.To(int64(0)),
+			name:                                  "TerminationGracePeriodSeconds with 0 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(0)),
 			expectedTerminationGracePeriodSeconds: ptr.To(int64(0)),
 		},
 		{
-			name:                              "nil TerminationGracePeriodSeconds is not set on StatefulSet",
-			terminationGracePeriodSeconds:     nil,
+			name:                                   "nil TerminationGracePeriodSeconds is not set on StatefulSet",
+			terminationGracePeriodSeconds:          nil,
 			expectTerminationGracePeriodSecondsNil: true,
 		},
 	}
