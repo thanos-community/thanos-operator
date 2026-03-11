@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"net/http"
@@ -163,6 +164,7 @@ func (s *sizeAdapter) Observe(ctx context.Context, verb string, host string, siz
 func main() {
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
+	var metricsClientCAFile string
 	var enableLeaderElection bool
 	var probeAddr string
 	var secureMetrics bool
@@ -184,6 +186,8 @@ func main() {
 		"The directory that contains the metrics server certificate.")
 	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
+	flag.StringVar(&metricsClientCAFile, "metrics-client-ca-file", "",
+		"The path to the client CA certificate file for mutual TLS authentication.")
 
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
@@ -235,6 +239,29 @@ func main() {
 		TLSOpts: tlsOpts,
 	})
 
+	if len(metricsClientCAFile) > 0 {
+		setupLog.Info("configuring client CA for mutual TLS authentication", "client-ca-file", metricsClientCAFile)
+
+		caCert, err := os.ReadFile(metricsClientCAFile)
+		if err != nil {
+			setupLog.Error(err, "unable to read client CA file")
+			os.Exit(1)
+		}
+
+		clientCAPool := x509.NewCertPool()
+		if !clientCAPool.AppendCertsFromPEM(caCert) {
+			setupLog.Error(fmt.Errorf("failed to parse client CA certificate"), "unable to add client CA to pool")
+			os.Exit(1)
+		}
+
+		configureClientCA := func(c *tls.Config) {
+			c.ClientCAs = clientCAPool
+			c.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
+		tlsOpts = append(tlsOpts, configureClientCA)
+	}
+
 	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,
 		SecureServing: secureMetrics,
@@ -248,14 +275,6 @@ func main() {
 		},
 	}
 
-	// If the certificate is not specified, controller-runtime will automatically
-	// generate self-signed certificates for the metrics server. While convenient for development and testing,
-	// this setup is not recommended for production.
-	//
-	// TODO(user): If you enable certManager, uncomment the following lines:
-	// - [METRICS-WITH-CERTS] at config/default/kustomization.yaml to generate and use certificates
-	// managed by cert-manager for the metrics server.
-	// - [PROMETHEUS-WITH-CERTS] at config/prometheus/kustomization.yaml for TLS certification.
 	if len(metricsCertPath) > 0 {
 		setupLog.Info("Initializing metrics certificate watcher using provided certificates",
 			"metrics-cert-path", metricsCertPath, "metrics-cert-name", metricsCertName, "metrics-cert-key", metricsCertKey)
