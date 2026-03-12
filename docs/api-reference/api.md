@@ -400,6 +400,7 @@ _Appears in:_
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions is the configuration for the store API limits options. |  | Optional: \{\} <br /> |
 | `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `grpcCompression` _[GRPCCompression](#grpccompression)_ | GRPCCompression defines the compression algorithm for gRPC communication. | snappy | Enum: [none snappy] <br />Optional: \{\} <br /> |
+| `hashingAlgorithm` _string_ | HashingAlgorithm defines the hashing algorithm to use for the hashring. | ketama | Enum: [ketama hashmod] <br /> |
 
 
 #### IngesterSpec

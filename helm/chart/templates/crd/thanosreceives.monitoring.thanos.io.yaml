@@ -4587,6 +4587,13 @@ spec:
                                                         - none
                                                         - snappy
                                                     type: string
+                                                hashingAlgorithm:
+                                                    default: ketama
+                                                    description: HashingAlgorithm defines the hashing algorithm to use for the hashring.
+                                                    enum:
+                                                        - ketama
+                                                        - hashmod
+                                                    type: string
                                                 imagePullPolicy:
                                                     default: IfNotPresent
                                                     description: |-

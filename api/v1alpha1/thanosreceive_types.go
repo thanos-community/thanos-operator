@@ -158,6 +158,10 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:validation:Enum=none;snappy
 	// +kubebuilder:validation:Optional
 	GRPCCompression *GRPCCompression `json:"grpcCompression,omitempty"`
+	// HashingAlgorithm defines the hashing algorithm to use for the hashring.
+	// +kubebuilder:default="ketama"
+	// +kubebuilder:validation:Enum=ketama;hashmod
+	HashingAlgorithm *string `json:"hashingAlgorithm,omitempty"`
 }
 
 // TenancyConfig is the configuration for the tenancy options.
