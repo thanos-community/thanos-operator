@@ -88,7 +88,6 @@ type RouterOptions struct {
 	ReplicationFactor   int32
 	ExternalLabels      map[string]string
 	HashringConfig      string
-	HashringAlgorithm   string
 	ReplicationProtocol string
 	FeatureGateConfig   *FeatureGateConfig
 }
@@ -575,7 +574,6 @@ func routerArgsFrom(opts RouterOptions) []string {
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
-		fmt.Sprintf("--receive.hashrings-algorithm=%s", opts.HashringAlgorithm),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
 		fmt.Sprintf("--receive.grpc-service-config=%s", grpcDisableEndlessRetry),
 	)

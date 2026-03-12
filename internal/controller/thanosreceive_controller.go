@@ -294,9 +294,18 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			converter = receive.CapnProtoEndpointConverter
 		}
 
+		var hashingAlgo = receive.AlgorithmKetama
+		if hashring.HashingAlgorithm != nil {
+			switch *hashring.HashingAlgorithm {
+			case string(receive.AlgorithmHashmod):
+				hashingAlgo = receive.AlgorithmHashmod
+			}
+		}
+
 		hc := receive.HashringConfig{
 			Name:      hashring.Name,
 			Endpoints: receive.EndpointSliceListToEndpoints(converter, *eps, filters...),
+			Algorithm: hashingAlgo,
 		}
 
 		if hashring.TenancyConfig != nil {
