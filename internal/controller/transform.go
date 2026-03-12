@@ -10,7 +10,6 @@ import (
 	manifestreceive "github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
-	"github.com/thanos-community/thanos-operator/internal/pkg/receive"
 
 	"k8s.io/utils/ptr"
 
@@ -226,7 +225,6 @@ func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) 
 		Options:           opts,
 		ReplicationFactor: router.ReplicationFactor,
 		ExternalLabels:    router.ExternalLabels,
-		HashringAlgorithm: string(receive.AlgorithmKetama),
 	}
 
 	if in.FeatureGate.KubeResourceSyncEnabled() {

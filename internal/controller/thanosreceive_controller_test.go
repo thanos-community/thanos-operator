@@ -393,7 +393,8 @@ config:
 				"capnproto_address": "",
                 "az": ""
             }
-        ]
+        ],
+        "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName)
 				Eventually(func() bool {
@@ -611,7 +612,8 @@ config:
 				"capnproto_address": "capnproto-hostname-c.%s.treceive.svc:19391",
                 "az": ""
             }
-        ]
+        ],
+        "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName, svcName, svcName, svcName)
 

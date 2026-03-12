@@ -291,14 +291,15 @@ var _ = Describe("controller", Ordered, func() {
 					expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
-		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             }
-        ]
+        ],
+        "algorithm": "ketama",
+		"external_labels": {}
     },
     {
         "hashring": "%s",
@@ -306,14 +307,15 @@ var _ = Describe("controller", Ordered, func() {
             "tenant1"
         ],
         "tenant_matcher_type": "exact",
-		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc:10901",
 				"capnproto_address": "",
                 "az": ""
             }
-        ]
+        ],
+        "algorithm": "ketama",
+		"external_labels": {}
     }
 ]`, hashringName, ingesterName, ingesterName, hashringTwoName, ingesterTwoName, ingesterTwoName)
 					Eventually(func() bool {
@@ -451,14 +453,15 @@ var _ = Describe("controller", Ordered, func() {
 				expect := fmt.Sprintf(`[
     {
         "hashring": "%s",
-		"external_labels": {},
         "endpoints": [
             {
                 "address": "%s-0.%s.thanos-operator-system.svc:10901",
 				"capnproto_address": "%s-0.%s.thanos-operator-system.svc:19391",
                 "az": ""
             }
-        ]
+        ],
+        "algorithm": "ketama",
+		"external_labels": {}
     }
 ]`, hashringName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName, capnprotoIngesterName)
 
