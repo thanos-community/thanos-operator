@@ -677,6 +677,7 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 							OnScale:  "Retain",
 							OnDelete: "Delete",
 						},
+						TerminationGracePeriodSeconds: ptr.To(int64(120)),
 					},
 				},
 			},
@@ -1121,6 +1122,68 @@ func TestStatefulSet_PVCRetentionPolicy(t *testing.T) {
 				assert.Nil(t, statefulSet.Spec.PersistentVolumeClaimRetentionPolicy)
 			} else {
 				assert.Equal(t, tt.expectedRetentionPolicy, statefulSet.Spec.PersistentVolumeClaimRetentionPolicy)
+			}
+		})
+	}
+}
+
+func TestStatefulSet_TerminationGracePeriodSeconds(t *testing.T) {
+	tests := []struct {
+		name                                   string
+		terminationGracePeriodSeconds          *int64
+		expectedTerminationGracePeriodSeconds  *int64
+		expectTerminationGracePeriodSecondsNil bool
+	}{
+		{
+			name:                                  "TerminationGracePeriodSeconds with 60 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(60)),
+			expectedTerminationGracePeriodSeconds: ptr.To(int64(60)),
+		},
+		{
+			name:                                  "TerminationGracePeriodSeconds with 120 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(120)),
+			expectedTerminationGracePeriodSeconds: ptr.To(int64(120)),
+		},
+		{
+			name:                                  "TerminationGracePeriodSeconds with 0 seconds",
+			terminationGracePeriodSeconds:         ptr.To(int64(0)),
+			expectedTerminationGracePeriodSeconds: ptr.To(int64(0)),
+		},
+		{
+			name:                                   "nil TerminationGracePeriodSeconds is not set on StatefulSet",
+			terminationGracePeriodSeconds:          nil,
+			expectTerminationGracePeriodSecondsNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statefulSet := &appsv1.StatefulSet{
+				Spec: appsv1.StatefulSetSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := Options{
+				Owner:     "test",
+				Namespace: "default",
+				StatefulSet: StatefulSet{
+					TerminationGracePeriodSeconds: tt.terminationGracePeriodSeconds,
+				},
+			}
+
+			AugmentWithOptions(statefulSet, opts)
+
+			if tt.expectTerminationGracePeriodSecondsNil {
+				assert.Nil(t, statefulSet.Spec.Template.Spec.TerminationGracePeriodSeconds)
+			} else {
+				assert.Equal(t, tt.expectedTerminationGracePeriodSeconds, statefulSet.Spec.Template.Spec.TerminationGracePeriodSeconds)
 			}
 		})
 	}

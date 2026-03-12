@@ -5151,6 +5151,10 @@ spec:
                                         format: int64
                                         type: integer
                                 type: object
+                            terminationGracePeriodSeconds:
+                                description: TerminationGracePeriodSeconds is the duration in seconds the pod is allowed to terminate gracefully after SIGTERM.
+                                format: int64
+                                type: integer
                             timeRangeConfig:
                                 description: TimeRangeConfig configures the time range of data to serve for the store component.
                                 properties:

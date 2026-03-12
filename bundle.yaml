@@ -5387,6 +5387,11 @@ spec:
                 required:
                 - size
                 type: object
+              terminationGracePeriodSeconds:
+                description: TerminationGracePeriodSeconds is the duration in seconds
+                  the pod is allowed to terminate gracefully after SIGTERM.
+                format: int64
+                type: integer
               timeRangeConfig:
                 description: TimeRangeConfig configures the time range of data to
                   serve for the compact component..
@@ -26906,6 +26911,11 @@ spec:
                 - replicas
                 - replicationFactor
                 type: object
+              terminationGracePeriodSeconds:
+                description: TerminationGracePeriodSeconds is the duration in seconds
+                  the pod is allowed to terminate gracefully after SIGTERM.
+                format: int64
+                type: integer
             required:
             - ingesterSpec
             - routerSpec
@@ -32398,6 +32408,11 @@ spec:
                 required:
                 - size
                 type: object
+              terminationGracePeriodSeconds:
+                description: TerminationGracePeriodSeconds is the duration in seconds
+                  the pod is allowed to terminate gracefully after SIGTERM.
+                format: int64
+                type: integer
               tolerations:
                 description: Tolerations defines the workloads tolerations if specified.
                 items:
@@ -37933,6 +37948,11 @@ spec:
                     format: int64
                     type: integer
                 type: object
+              terminationGracePeriodSeconds:
+                description: TerminationGracePeriodSeconds is the duration in seconds
+                  the pod is allowed to terminate gracefully after SIGTERM.
+                format: int64
+                type: integer
               timeRangeConfig:
                 description: TimeRangeConfig configures the time range of data to
                   serve for the store component.
