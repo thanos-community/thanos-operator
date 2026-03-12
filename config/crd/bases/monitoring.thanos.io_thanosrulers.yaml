@@ -5345,6 +5345,11 @@ spec:
                 required:
                 - size
                 type: object
+              terminationGracePeriodSeconds:
+                description: TerminationGracePeriodSeconds is the duration in seconds
+                  the pod is allowed to terminate gracefully after SIGTERM.
+                format: int64
+                type: integer
               tolerations:
                 description: Tolerations defines the workloads tolerations if specified.
                 items:

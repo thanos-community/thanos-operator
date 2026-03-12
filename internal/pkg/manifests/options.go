@@ -381,6 +381,10 @@ config:
 			}
 		}
 
+		if opts.StatefulSet.TerminationGracePeriodSeconds != nil {
+			o.Spec.Template.Spec.TerminationGracePeriodSeconds = opts.StatefulSet.TerminationGracePeriodSeconds
+		}
+
 		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
 			FSGroup: ptr.To(DefaultFSGroup),
 		}
@@ -434,8 +438,9 @@ type Additional struct {
 
 type StatefulSet struct {
 	// Pod management policy of the statefulset.
-	PodManagementPolicy string
-	PVCRetentionPolicy  PVCRetentionPolicy
+	PodManagementPolicy           string
+	PVCRetentionPolicy            PVCRetentionPolicy
+	TerminationGracePeriodSeconds *int64
 }
 
 // PVCRetentionPolicy defines the retention policy for PVCs created by the operator.
