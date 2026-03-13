@@ -62,6 +62,7 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 
 		routerName := ReceiveRouterNameFromParent(resourceName)
 		ingesterName := ReceiveIngesterNameFromParent(resourceName, hashringName)
+		hashmodIngesterName := ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
 
 		BeforeAll(func() {
 			By("creating the namespace")
@@ -232,6 +233,21 @@ config:
 								},
 								Replicas: 3,
 							},
+							{
+								CommonFields: monitoringthanosiov1alpha1.CommonFields{
+									Labels: map[string]string{"test": "my-hashmod-ingester-test"},
+								},
+								Name: "test-hashmod-hashring",
+								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+									Size: "200Mi",
+								},
+								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
+									TenantMatcherType: "exact",
+									Tenants:           []string{"hashmod-tenant"},
+								},
+								HashingAlgorithm: ptr.To("hashmod"),
+								Replicas:         3,
+							},
 						},
 						Additional: monitoringthanosiov1alpha1.Additional{
 							Containers: []corev1.Container{
@@ -251,6 +267,9 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
+				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				Eventually(func() bool {
+					return verifier.Verify(k8sClient, hashmodIngesterName, ns)
 				}, time.Minute*1, time.Second*5).Should(BeTrue())
 			})
 
@@ -399,6 +418,120 @@ config:
 ]`, svcName, svcName, svcName)
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
+				}, time.Minute*1, time.Second*1).Should(BeTrue())
+			})
+
+			By("verifying hashmod hashring configuration", func() {
+				epSliceHashmod := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "EndpointSlice",
+						APIVersion: "discovery.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-ep-slice-hashmod",
+						Namespace: ns,
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Name:       hashmodIngesterName,
+								Kind:       "Service",
+								APIVersion: "v1",
+								UID:        types.UID("hashmod-1234"),
+							},
+						},
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: hashmodIngesterName,
+							manifests.ComponentLabel:     receive.IngestComponentName},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{"10.0.0.1"},
+							Hostname:  ptr.To("hashmod-host-a"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"10.0.0.2"},
+							Hostname:  ptr.To("hashmod-host-b"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+						{
+							Addresses: []string{"10.0.0.3"},
+							Hostname:  ptr.To("hashmod-host-c"),
+							Conditions: discoveryv1.EndpointConditions{
+								Ready:       ptr.To(true),
+								Serving:     ptr.To(true),
+								Terminating: ptr.To(false),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), epSliceHashmod)).Should(Succeed())
+
+				svcName := ingesterName
+				expectWithHashmod := fmt.Sprintf(`[
+    {
+        "hashring": "test-hashmod-hashring",
+        "tenants": [
+            "hashmod-tenant"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "hashmod-host-a.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            },
+            {
+                "address": "hashmod-host-b.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            },
+            {
+                "address": "hashmod-host-c.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            }
+        ],
+        "algorithm": "hashmod",
+        "external_labels": {}
+    },
+    {
+        "hashring": "test-hashring",
+        "tenants": [
+            "test-tenant"
+        ],
+        "tenant_matcher_type": "exact",
+        "endpoints": [
+            {
+                "address": "some-hostname-b.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            },
+            {
+                "address": "some-hostname-c.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            },
+            {
+                "address": "some-hostname.%s.treceive.svc:10901",
+                "capnproto_address": "",
+                "az": ""
+            }
+        ],
+        "algorithm": "ketama",
+        "external_labels": {}
+    }
+]`, hashmodIngesterName, hashmodIngesterName, hashmodIngesterName, svcName, svcName, svcName)
+				Eventually(func() bool {
+					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 
