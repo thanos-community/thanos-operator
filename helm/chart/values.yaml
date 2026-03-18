@@ -3,16 +3,18 @@ manager:
   replicas: 1
   
   image:
-    repository: gcr.io/kubebuilder/kube-rbac-proxy
-    tag: v0.16.0
+    repository: quay.io/thanos/thanos-operator
+    tag: main
     pullPolicy: IfNotPresent
 
-  # Arguments
+  # Extra arguments appended to the manager container.
+  # Note: --metrics-bind-address and --health-probe-bind-address=:8081
+  # are already injected by the template based on metrics.enable/metrics.port.
   args:
-    - --secure-listen-address=0.0.0.0:8443
-    - --upstream=http://127.0.0.1:8080/
-    - --logtostderr=true
-    - --v=0
+    - --leader-elect
+    - --metrics-secure
+    - --log.format=logfmt
+    - --log.level=info
 
   # Environment variables
   env: []
