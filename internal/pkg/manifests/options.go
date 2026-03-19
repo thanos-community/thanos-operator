@@ -381,8 +381,13 @@ config:
 			}
 		}
 
-		if opts.StatefulSet.TerminationGracePeriodSeconds != nil {
-			o.Spec.Template.Spec.TerminationGracePeriodSeconds = opts.StatefulSet.TerminationGracePeriodSeconds
+		o.Spec.Template.Spec.TerminationGracePeriodSeconds = opts.StatefulSet.TerminationGracePeriodSeconds
+
+		if opts.StatefulSet.MinReadySeconds != nil {
+			minReadySeconds := *opts.StatefulSet.MinReadySeconds
+			if minReadySeconds >= 0 {
+				o.Spec.MinReadySeconds = minReadySeconds
+			}
 		}
 
 		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
@@ -441,6 +446,7 @@ type StatefulSet struct {
 	PodManagementPolicy           string
 	PVCRetentionPolicy            PVCRetentionPolicy
 	TerminationGracePeriodSeconds *int64
+	MinReadySeconds               *int32
 }
 
 // PVCRetentionPolicy defines the retention policy for PVCs created by the operator.

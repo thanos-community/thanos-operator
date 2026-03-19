@@ -4916,6 +4916,12 @@ spec:
                 - warn
                 - error
                 type: string
+              minReadySeconds:
+                description: |-
+                  MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without
+                  any of its container crashing, for it to be considered available.
+                format: int32
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -21694,6 +21700,12 @@ spec:
                 - defaultObjectStorageConfig
                 - hashrings
                 type: object
+              minReadySeconds:
+                description: |-
+                  MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without
+                  any of its container crashing, for it to be considered available.
+                format: int32
+                type: integer
               paused:
                 description: |-
                   When a resource is paused, no actions except for deletion
@@ -31885,6 +31897,12 @@ spec:
                 - warn
                 - error
                 type: string
+              minReadySeconds:
+                description: |-
+                  MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without
+                  any of its container crashing, for it to be considered available.
+                format: int32
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -37514,6 +37532,12 @@ spec:
                 - warn
                 - error
                 type: string
+              minReadySeconds:
+                description: |-
+                  MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without
+                  any of its container crashing, for it to be considered available.
+                format: int32
+                type: integer
               nodeSelector:
                 additionalProperties:
                   type: string
