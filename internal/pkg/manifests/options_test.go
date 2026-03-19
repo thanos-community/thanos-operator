@@ -1188,3 +1188,63 @@ func TestStatefulSet_TerminationGracePeriodSeconds(t *testing.T) {
 		})
 	}
 }
+
+func TestStatefulSet_MinReadySeconds(t *testing.T) {
+	tests := []struct {
+		name                     string
+		minReadySeconds          *int32
+		expectedMinReadySeconds  int32
+		expectMinReadySecondsSet bool
+	}{
+		{
+			name:                     "MinReadySeconds with 30 seconds",
+			minReadySeconds:          ptr.To(int32(30)),
+			expectedMinReadySeconds:  30,
+			expectMinReadySecondsSet: true,
+		},
+		{
+			name:                     "negative MinReadySeconds is ignored",
+			minReadySeconds:          ptr.To(int32(-5)),
+			expectedMinReadySeconds:  0,
+			expectMinReadySecondsSet: false,
+		},
+		{
+			name:                     "nil MinReadySeconds is not set on StatefulSet",
+			minReadySeconds:          nil,
+			expectedMinReadySeconds:  0,
+			expectMinReadySecondsSet: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statefulSet := &appsv1.StatefulSet{
+				Spec: appsv1.StatefulSetSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			}
+
+			opts := Options{
+				Owner:     "test",
+				Namespace: "default",
+				StatefulSet: StatefulSet{
+					MinReadySeconds: tt.minReadySeconds,
+				},
+			}
+
+			AugmentWithOptions(statefulSet, opts)
+
+			if tt.expectMinReadySecondsSet {
+				assert.Equal(t, tt.expectedMinReadySeconds, statefulSet.Spec.MinReadySeconds)
+			} else {
+				assert.Equal(t, int32(0), statefulSet.Spec.MinReadySeconds)
+			}
+		})
+	}
+}
