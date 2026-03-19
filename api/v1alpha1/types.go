@@ -148,6 +148,10 @@ type StatefulSetFields struct {
 	// TerminationGracePeriodSeconds is the duration in seconds the pod is allowed to terminate gracefully after SIGTERM.
 	// +kubebuilder:validation:Optional
 	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+	// MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without
+	// any of its container crashing, for it to be considered available.
+	// +kubebuilder:validation:Optional
+	MinReadySeconds *int32 `json:"minReadySeconds,omitempty"`
 }
 
 // PersistentVolumeClaimRetentionPolicyType is a string enumeration of the policies that will determine
