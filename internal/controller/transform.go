@@ -473,6 +473,7 @@ func statefulSetToOpts(in *v1alpha1.StatefulSetFields) manifests.StatefulSet {
 	}
 
 	stsConfig.TerminationGracePeriodSeconds = in.TerminationGracePeriodSeconds
+	stsConfig.MinReadySeconds = in.MinReadySeconds
 
 	return stsConfig
 }
