@@ -160,6 +160,9 @@ func mutateStatefulSet(existing, desired *appsv1.StatefulSet) {
 		existing.Spec.Selector = desired.Spec.Selector
 	}
 	existing.Spec.Replicas = desired.Spec.Replicas
+	existing.Spec.MinReadySeconds = desired.Spec.MinReadySeconds
+	existing.Spec.PodManagementPolicy = desired.Spec.PodManagementPolicy
+	existing.Spec.PersistentVolumeClaimRetentionPolicy = desired.Spec.PersistentVolumeClaimRetentionPolicy
 	mutatePodTemplate(&existing.Spec.Template, &desired.Spec.Template)
 }
 
@@ -177,6 +180,9 @@ func mutatePodSpec(existing *corev1.PodSpec, desired *corev1.PodSpec) {
 	existing.Tolerations = desired.Tolerations
 	existing.TopologySpreadConstraints = desired.TopologySpreadConstraints
 	existing.Volumes = desired.Volumes
+	existing.TerminationGracePeriodSeconds = desired.TerminationGracePeriodSeconds
+	existing.SecurityContext = desired.SecurityContext
+	existing.ServiceAccountName = desired.ServiceAccountName
 }
 
 func mutateServiceMonitor(existing, desired *monitoringv1.ServiceMonitor) {
