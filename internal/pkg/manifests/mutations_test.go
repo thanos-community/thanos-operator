@@ -572,6 +572,57 @@ func TestMutateFuncFor_MutateStatefulSetSpec(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "update StatefulSet specific fields including MinReadySeconds",
+			got: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Now()},
+				Spec: appsv1.StatefulSetSpec{
+					PodManagementPolicy: appsv1.ParallelPodManagement,
+					MinReadySeconds:     0,
+					Replicas:            ptr.To[int32](1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"test": "test",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: "test"},
+							},
+						},
+					},
+				},
+			},
+			want: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Now()},
+				Spec: appsv1.StatefulSetSpec{
+					PodManagementPolicy: appsv1.OrderedReadyPodManagement,
+					MinReadySeconds:     60,
+					Replicas:            ptr.To[int32](3),
+					PersistentVolumeClaimRetentionPolicy: &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+						WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+						WhenDeleted: appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
+					},
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"test": "test",
+							"new":  "label",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "test",
+									Args: []string{"--updated"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tst := range table {
 		t.Run(tst.name, func(t *testing.T) {
@@ -591,6 +642,11 @@ func TestMutateFuncFor_MutateStatefulSetSpec(t *testing.T) {
 			require.Equal(t, tst.got.Spec.Replicas, tst.want.Spec.Replicas)
 			require.Equal(t, tst.got.Spec.Template, tst.want.Spec.Template)
 			require.Equal(t, tst.got.Spec.VolumeClaimTemplates, tst.got.Spec.VolumeClaimTemplates)
+
+			// Ensure StatefulSet-specific fields are mutated
+			require.Equal(t, tst.got.Spec.MinReadySeconds, tst.want.Spec.MinReadySeconds)
+			require.Equal(t, tst.got.Spec.PodManagementPolicy, tst.want.Spec.PodManagementPolicy)
+			require.Equal(t, tst.got.Spec.PersistentVolumeClaimRetentionPolicy, tst.want.Spec.PersistentVolumeClaimRetentionPolicy)
 		})
 	}
 }
