@@ -9,6 +9,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -199,6 +200,51 @@ func ControllerManagerNamespace() *corev1.Namespace {
 	}
 }
 
+// AllowMetricsTrafficNetworkPolicy creates a NetworkPolicy that allows ingress traffic
+// to the controller manager metrics endpoint from namespaces labeled with 'metrics: enabled'.
+func AllowMetricsTrafficNetworkPolicy() *networkingv1.NetworkPolicy {
+	return &networkingv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "networking.k8s.io/v1",
+			Kind:       "NetworkPolicy",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "allow-metrics-traffic",
+			Namespace: DefaultNamespace,
+			Labels:    commonControllerManagerLabels("metrics", "allow-metrics-traffic", "networkpolicy"),
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"control-plane": "controller-manager",
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeIngress,
+			},
+			Ingress: []networkingv1.NetworkPolicyIngressRule{
+				{
+					From: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"metrics": "enabled",
+								},
+							},
+						},
+					},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: ptr.To(corev1.ProtocolTCP),
+							Port:     ptr.To(intstr.FromInt(8443)),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // DeploymentOption represents a functional option for configuring the controller manager deployment.
 // Use functional options to customize deployment behavior:
 //
@@ -217,17 +263,7 @@ type DeploymentOption func(*deploymentConfig)
 
 // deploymentConfig holds the configuration for the controller manager deployment.
 type deploymentConfig struct {
-	enableAuthProxy bool
-	featureGate     featuregate.Config
-}
-
-// WithAuthProxy enables the auth proxy sidecar.
-// This adds a kube-rbac-proxy container alongside the manager container
-// and configures metrics to be served through the proxy.
-func WithAuthProxy() DeploymentOption {
-	return func(c *deploymentConfig) {
-		c.enableAuthProxy = true
-	}
+	featureGate featuregate.Config
 }
 
 // WithServiceMonitor enables the service monitor feature.

@@ -1,20 +1,21 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-    labels:
-        app.kubernetes.io/component: rbac
-        app.kubernetes.io/created-by: thanos-operator
-        app.kubernetes.io/instance: leader-election-rolebinding
-        app.kubernetes.io/managed-by: {{ .Release.Service }}
-        app.kubernetes.io/name: rolebinding
-        app.kubernetes.io/part-of: thanos-operator
-    name: thanos-operator-leader-election-rolebinding
-    namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: leader-election-rolebinding
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: rolebinding
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: thanos-operator
+  name: {{ include "thanos-operator.resourceName" (dict "suffix" "leader-election-rolebinding" "context" $) }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: thanos-operator-leader-election-role
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "thanos-operator.resourceName" (dict "suffix" "leader-election-role" "context" $) }}
 subjects:
-    - kind: ServiceAccount
-      name: thanos-operator-controller-manager
-      namespace: {{ .Release.Namespace }}
+- kind: ServiceAccount
+  name: {{ include "thanos-operator.resourceName" (dict "suffix" "controller-manager" "context" $) }}
+  namespace: {{ .Release.Namespace }}

@@ -39,6 +39,13 @@ func (c Config) Generate() error {
 
 	prometheusGen := c.generator("prometheus")
 	prometheusGen.Add("monitor.yaml", encoding.GhodssYAML(config.ControllerManagerServiceMonitor()))
+	prometheusGen.Add("monitor_tls_patch.yaml", encoding.GhodssYAML(config.MonitorTLSPatch()))
+
+	defaultGen := c.generator("default")
+	defaultGen.Add("cert_metrics_manager_patch.yaml", encoding.GhodssYAML(config.CertMetricsManagerPatch()))
+
+	networkPolicyGen := c.generator("network-policy")
+	networkPolicyGen.Add("allow-metrics-traffic.yaml", encoding.GhodssYAML(config.AllowMetricsTrafficNetworkPolicy()))
 
 	rbacGen := c.generator("rbac")
 	rbacGen.Add("metrics_reader_clusterrole.yaml", encoding.GhodssYAML(config.MetricsReaderClusterRole()))
@@ -63,6 +70,8 @@ func (c Config) Generate() error {
 	managerGen.Generate()
 	prometheusGen.Generate()
 	samplesGen.Generate()
+	defaultGen.Generate()
+	networkPolicyGen.Generate()
 
 	return nil
 }

@@ -2,31 +2,32 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-    labels:
-        app.kubernetes.io/component: rbac
-        app.kubernetes.io/created-by: thanos-operator
-        app.kubernetes.io/instance: thanoscompact-editor-role
-        app.kubernetes.io/managed-by: {{ .Release.Service }}
-        app.kubernetes.io/name: clusterrole
-        app.kubernetes.io/part-of: thanos-operator
-    name: thanos-operator-thanoscompact-editor-role
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: thanos-operator
+    app.kubernetes.io/instance: thanoscompact-editor-role
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: clusterrole
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/part-of: thanos-operator
+  name: {{ include "thanos-operator.resourceName" (dict "suffix" "thanoscompact-editor-role" "context" $) }}
 rules:
-    - apiGroups:
-        - monitoring.thanos.io
-      resources:
-        - thanoscompacts
-      verbs:
-        - create
-        - delete
-        - get
-        - list
-        - patch
-        - update
-        - watch
-    - apiGroups:
-        - monitoring.thanos.io
-      resources:
-        - thanoscompacts/status
-      verbs:
-        - get
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanoscompacts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.thanos.io
+  resources:
+  - thanoscompacts/status
+  verbs:
+  - get
 {{- end }}

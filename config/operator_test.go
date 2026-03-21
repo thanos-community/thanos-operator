@@ -19,11 +19,6 @@ func TestControllerManagerDeployment(t *testing.T) {
 			opts:   []DeploymentOption{},
 		},
 		{
-			name:   "deployment with auth proxy",
-			golden: "deployment-auth-proxy.golden.yaml",
-			opts:   []DeploymentOption{WithAuthProxy()},
-		},
-		{
 			name:   "deployment with service monitor",
 			golden: "deployment-service-monitor.golden.yaml",
 			opts:   []DeploymentOption{WithServiceMonitor()},
@@ -37,11 +32,6 @@ func TestControllerManagerDeployment(t *testing.T) {
 			name:   "deployment with multiple features",
 			golden: "deployment-multiple-features.golden.yaml",
 			opts:   []DeploymentOption{WithServiceMonitor(), WithPrometheusRule()},
-		},
-		{
-			name:   "deployment with auth proxy and features",
-			golden: "deployment-auth-proxy-features.golden.yaml",
-			opts:   []DeploymentOption{WithAuthProxy(), WithServiceMonitor(), WithPrometheusRule()},
 		},
 		{
 			name:   "deployment with features using WithFeatures helper",
