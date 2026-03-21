@@ -1,7 +1,14 @@
 apiVersion: v2
 name: thanos-operator
-description: A Helm chart to distribute the project thanos-operator
+description: A Helm chart to distribute thanos-operator
 type: application
+
 version: 0.1.0
 appVersion: "0.1.0"
-icon: "https://example.com/icon.png"
+
+keywords:
+  - kubernetes
+  - operator
+
+annotations:
+  kubebuilder.io/generated-by: kubebuilder
