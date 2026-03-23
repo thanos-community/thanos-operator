@@ -226,6 +226,9 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosReceiveSpec{
+						StatefulSetFields: v1alpha1.StatefulSetFields{
+							MinReadySeconds: ptr.To(int32(1)),
+						},
 						Ingester: v1alpha1.IngesterSpec{
 							DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 								LocalObjectReference: corev1.LocalObjectReference{
@@ -403,6 +406,9 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 					},
 					Spec: v1alpha1.ThanosReceiveSpec{
+						StatefulSetFields: v1alpha1.StatefulSetFields{
+							MinReadySeconds: ptr.To(int32(1)),
+						},
 						Ingester: v1alpha1.IngesterSpec{
 							DefaultObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 								LocalObjectReference: corev1.LocalObjectReference{
