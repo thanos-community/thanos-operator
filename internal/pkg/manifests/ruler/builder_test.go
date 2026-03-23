@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -296,6 +297,50 @@ func TestNewRulerStatefulSet(t *testing.T) {
 				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
+				},
+			},
+		},
+		{
+			name:   "test stateless ruler statefulset resource",
+			golden: "statefulset-stateless.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test":    "annotation",
+						"another": "annotation",
+					},
+				},
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
+				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
+				RemoteWriteSpec: RemoteWriteSpecs{
+					{
+						URL: "http://test-url.com:9093",
+					},
 				},
 			},
 		},
@@ -777,4 +822,73 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
+}
+
+func TestToYAML(t *testing.T) {
+	rws := RemoteWriteSpecs{
+		{
+			URL: "http://test-url",
+		},
+	}
+
+	y, err := rws.ToYAML()
+	if err != nil {
+		t.Fatalf("failed to marshal remote write spec to YAML: %v", err)
+	}
+
+	expected := "remote_write:\n- url: http://test-url\n"
+	assert.Equal(t, expected, y)
+}
+
+func TestNewRemoteWriteToSecret(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Namespace: "ns",
+			Image:     ptr.To("some-custom-image"),
+			Labels: map[string]string{
+				"some-custom-label":      someCustomLabelValue,
+				"some-other-label":       someOtherLabelValue,
+				"app.kubernetes.io/name": "expect-to-be-discarded",
+			},
+			Annotations: map[string]string{
+				"test":    "annotation",
+				"another": "annotation",
+			},
+		},
+		Endpoints: []Endpoint{
+			{
+				ServiceName: "test-query",
+				Namespace:   "ns",
+				Port:        19101,
+			},
+		},
+		RuleFiles: []corev1.ConfigMapKeySelector{
+			{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "test-rules",
+				},
+				Key: "rules.yaml",
+			},
+		},
+		Retention:       "15d",
+		AlertmanagerURL: "http://test-alertmanager.com:9093",
+		ExternalLabels: map[string]string{
+			"rule_replica": "0",
+		},
+		RemoteWriteSpec: RemoteWriteSpecs{
+			{
+				URL: "http://test-url.com:9093",
+			},
+		},
+	}
+
+	secret := NewRemoteWriteSecret(opts, GetLabels(opts))
+
+	// Test against golden file
+	yamlBytes, err := yaml.Marshal(secret)
+	if err != nil {
+		t.Fatalf("failed to marshal secret to YAML: %v", err)
+	}
+	golden.Assert(t, string(yamlBytes), "secret-stateless.yaml")
+
 }

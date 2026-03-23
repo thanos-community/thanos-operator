@@ -160,7 +160,7 @@ var _ = Describe("controller", Ordered, func() {
 			_, err = utils.Run(cmd)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-			By("loading the the manager(Operator) image on Kind")
+			By("loading the manager(Operator) image on Kind")
 			err = utils.LoadImageToKindClusterWithName(projectimage)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
@@ -780,6 +780,60 @@ var _ = Describe("controller", Ordered, func() {
 						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
+		})
+
+		Context("When ThanosRuler with remote write is created", func() {
+			rwRulerName := "remote-write-ruler"
+
+			It("should generate correct resources", func() {
+				r := v1alpha1.ThanosRuler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      rwRulerName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.ThanosRulerSpec{
+						Replicas: 1,
+						CommonFields: v1alpha1.CommonFields{
+							Labels: map[string]string{
+								"foo": "bar",
+							},
+						},
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "1Gi",
+						},
+						RemoteWriteSpec: []v1alpha1.RemoteWriteSpec{
+							{
+								URL: "http://test.url",
+							},
+						},
+						RuleConfigSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							},
+						},
+						AlertmanagerURL: "http://alertmanager.com:9093",
+						RuleTenancyConfig: &v1alpha1.RuleTenancyConfig{
+							EnforcedTenantIdentifier: ptr.To("tenant"),
+							TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
+						},
+						Additional: v1alpha1.Additional{
+							Containers: []corev1.Container{
+								{
+									Name:  "jaeger-agent",
+									Image: "jaegertracing/jaeger-agent:1.22",
+									Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+								},
+							},
+						},
+					},
+				}
+				err := c.Create(context.Background(), &r, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, controller.RulerNameFromParent(rwRulerName), namespace)
+				})
 			})
 		})
 	})

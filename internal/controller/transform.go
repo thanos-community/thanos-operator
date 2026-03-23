@@ -131,9 +131,9 @@ func QueryFrontendNameFromParent(resourceName string) string {
 
 func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
-	return manifestruler.Options{
-		Options:         opts,
-		ObjStoreSecret:  ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector()),
+	rulerOpts := manifestruler.Options{
+		Options: opts,
+		//ObjStoreSecret:  ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector()),
 		Retention:       manifests.Duration(in.CRD.Spec.Retention),
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
 		ExternalLabels:  in.CRD.Spec.ExternalLabels,
@@ -146,15 +146,18 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		ConfigReloaderImage: in.ConfigReloaderImage,
 	}
 
-	// TODO: add remote write
+	if in.CRD.Spec.RemoteWriteSpec != nil {
+		rulerOpts.RemoteWriteSpec = remoteWriteSpecToOpts(in.CRD.Spec.RemoteWriteSpec)
+	} else {
+		rulerOpts.ObjStoreSecret = ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector())
+	}
+
+	return rulerOpts
 }
 
 // RulerNameFromParent returns the name of the Thanos Ruler component.
 func RulerNameFromParent(resourceName string) string {
 	opts := manifestruler.Options{Options: manifests.Options{Owner: resourceName}}
-	if err := opts.Valid(); err != nil {
-		panic("invalid ruler options")
-	}
 	return opts.GetGeneratedResourceName()
 }
 
@@ -552,4 +555,17 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 		InMemoryCacheConfig: toInMemoryCacheConfig,
 		FromSecret:          nil,
 	}
+}
+
+func remoteWriteSpecToOpts(spec []v1alpha1.RemoteWriteSpec) []manifestruler.RemoteWriteSpec {
+	var cfgs []manifestruler.RemoteWriteSpec
+
+	for _, s := range spec {
+		cfg := manifestruler.RemoteWriteSpec{
+			URL: s.URL,
+		}
+		cfgs = append(cfgs, cfg)
+	}
+
+	return cfgs
 }

@@ -246,57 +246,13 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		FeatureGate:         r.featureGate,
 		ConfigReloaderImage: r.configReloaderImage,
 	})
+	if err := opts.Valid(); err != nil {
+		return nil, nil, err
+	}
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
 	return opts, expectedDerivedConfigMapNames, nil
-}
-
-func (r *ThanosRulerReconciler) createRemoteWriteSecret(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) error {
-	var objs []client.Object
-
-	// this should be done BEFORE generating  secrets
-	if len(ruler.Spec.RemoteWriteSpec) == 0 {
-		r.logger.Error(fmt.Errorf("no remote write config specified"), "no remote write config specified", "ruler", ruler.Name)
-		return fmt.Errorf("no remote write config specified")
-	}
-
-	rwConfig, err := manifestruler.MarshalYAML(manifestruler.MapSlice{GenerateRemoteWriteConfig(ruler.Spec.RemoteWriteSpec)})
-	if err != nil {
-		return fmt.Errorf("failed to marshal remote write config: %w", err)
-	}
-
-	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-remote-write-config", ruler.GetName()),
-			Namespace: ruler.GetNamespace(),
-		},
-		Data: map[string][]byte{
-			"remote_write.yaml": rwConfig,
-		},
-	}
-	objs = append(objs, s)
-
-	r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs)
-
-	return nil
-}
-
-func GenerateRemoteWriteConfig(rw []monitoringthanosiov1alpha1.RemoteWriteSpec) manifestruler.MapItem {
-	var cfgs []manifestruler.MapSlice
-
-	for _, spec := range rw {
-		cfg := manifestruler.MapSlice{
-			{Key: "url", Value: spec.URL},
-		}
-
-		cfgs = append(cfgs, cfg)
-	}
-
-	return manifestruler.MapItem{
-		Key:   "remote_write",
-		Value: cfgs,
-	}
 }
 
 func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
