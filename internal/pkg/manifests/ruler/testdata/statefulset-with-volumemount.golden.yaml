@@ -61,10 +61,10 @@ spec:
         - --log.format=logfmt
         - --http-address=0.0.0.0:9090
         - --grpc-address=0.0.0.0:10901
-        - --tsdb.retention=15d
         - --data-dir=/var/thanos/rule
         - --alertmanagers.url=http://test-alertmanager.com:9093
         - --objstore.config=$(OBJSTORE_CONFIG)
+        - --tsdb.retention=15d
         - --label=rule_replica="0"
         - --rule-file=/etc/thanos/rules/test-rules/rules.yaml
         - --query=dnssrv+_http._tcp.test-query.ns.svc

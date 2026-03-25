@@ -132,8 +132,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	rulerOpts := manifestruler.Options{
-		Options: opts,
-		//ObjStoreSecret:  ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector()),
+		Options:         opts,
 		Retention:       manifests.Duration(in.CRD.Spec.Retention),
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
 		ExternalLabels:  in.CRD.Spec.ExternalLabels,
@@ -146,9 +145,10 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		ConfigReloaderImage: in.ConfigReloaderImage,
 	}
 
-	if in.CRD.Spec.RemoteWriteSpec != nil {
+	if in.CRD.Spec.ObjectStorageConfig == nil {
 		rulerOpts.RemoteWriteSpec = remoteWriteSpecToOpts(in.CRD.Spec.RemoteWriteSpec)
-	} else {
+	}
+	if in.CRD.Spec.RemoteWriteSpec == nil {
 		rulerOpts.ObjStoreSecret = ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector())
 	}
 
@@ -557,8 +557,8 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 	}
 }
 
-func remoteWriteSpecToOpts(spec []v1alpha1.RemoteWriteSpec) []manifestruler.RemoteWriteSpec {
-	var cfgs []manifestruler.RemoteWriteSpec
+func remoteWriteSpecToOpts(spec []v1alpha1.RemoteWriteSpec) manifestruler.RemoteWriteSpecs {
+	var cfgs manifestruler.RemoteWriteSpecs
 
 	for _, s := range spec {
 		cfg := manifestruler.RemoteWriteSpec{

@@ -80,7 +80,7 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 
-	if opts.RemoteWriteSpec != nil {
+	if len(opts.RemoteWriteSpec) > 0 {
 		objs = append(objs, NewRemoteWriteSecret(opts, objectMetaLabels))
 	}
 
@@ -104,8 +104,11 @@ func (opts Options) Valid() error {
 		return fmt.Errorf("one of ObjStoreSecret or RemoteWriteSpec must be specified")
 	}
 
-	_, err := opts.RemoteWriteSpec.ToYAML()
-	if err != nil {
+	if opts.ObjStoreSecret != nil && opts.RemoteWriteSpec != nil {
+		return fmt.Errorf("only one of ObjStoreSecret or RemoteWriteSpec can be specified")
+	}
+
+	if _, err := opts.RemoteWriteSpec.ToYAML(); err != nil {
 		return fmt.Errorf("invalid remote write spec: %w", err)
 	}
 
@@ -445,7 +448,6 @@ func rulerArgs(opts Options) []string {
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)
@@ -453,7 +455,9 @@ func rulerArgs(opts Options) []string {
 	if opts.RemoteWriteSpec != nil {
 		args = append(args, fmt.Sprintf("--remote-write.config-file=%s/%s", remoteWriteVolumeMountPath, remoteWriteYAML))
 	} else {
-		args = append(args, fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName))
+		args = append(args,
+			fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+			fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)))
 	}
 
 	if opts.EvaluationInterval != "" {
@@ -677,7 +681,7 @@ func UnmarshalYAML(data []byte, v any) error {
 func (rws RemoteWriteSpecs) ToYAML() (string, error) {
 	rwConfig, err := yaml.Marshal(yaml.MapSlice{generateRemoteWriteConfig(rws)})
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return string(rwConfig), nil
 }
@@ -703,10 +707,7 @@ func generateRemoteWriteConfig(rws RemoteWriteSpecs) yaml.MapItem {
 }
 
 func NewRemoteWriteSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
-	conf, err := opts.RemoteWriteSpec.ToYAML()
-	if err != nil {
-		return nil
-	}
+	conf, _ := opts.RemoteWriteSpec.ToYAML()
 
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{

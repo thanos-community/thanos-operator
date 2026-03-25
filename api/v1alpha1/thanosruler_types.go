@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -40,8 +39,8 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
-	// +kubebuilder:validation:Required
-	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	// +kubebuilder:validation:Optional
+	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -88,7 +87,7 @@ type ThanosRulerSpec struct {
 	Additional `json:",inline"`
 	// RemoteWriteSpec defines the configuration to write samples from Prometheus to a remote endpoint
 	// +kubebuilder:validation:Optional
-	RemoteWriteSpec *RemoteWriteSpec `json:"remoteWriteSpec,omitempty"`
+	RemoteWriteSpec []RemoteWriteSpec `json:"remoteWriteSpec,omitempty"`
 }
 
 type RuleTenancyConfig struct {
@@ -132,40 +131,6 @@ type RemoteWriteSpec struct {
 	// Be aware that headers that are set by Prometheus itself can’t be overwritten.
 	// +kubebuilder:validation:Optional
 	Headers *map[string]string `json:"headers,omitempty"`
-	// WriteRelabelConfigs defines the list of remote write relabel configurations.
-	// +kubebuilder:validation:Optional
-	WriteRelabelConfigs *[]manifests.RelabelConfig `json:"writeRelabelConfigs,omitempty"`
-	// OAuth2 configuration for the URL.
-	// Cannot be set at the same time as sigv4, authorization, basicAuth, or azureAd.
-	// +kubebuilder:validation:Optional
-	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
-	// BasicAuth configuration for the URL.
-	// Cannot be set at the same time as sigv4, authorization, oauth2, or azureAd.
-	// +kubebuilder:validation:Optional
-	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
-	// BearerTokenFile defines the file from which to read bearer token for the URL.
-	// Deprecated: this will be removed in a future release. Prefer using authorization.
-	// +kubebuilder:validation:Optional
-	BearerTokenFile *string `json:"bearerTokenFile,omitempty"`
-	// Authorization section for the URL.
-	// Cannot be set at the same time as sigv4, basicAuth, oauth2, or azureAd.
-	// +kubebuilder:validation:Optional
-	Authorization *Authorization `json:"authorization,omitempty"`
-	// Sigv4 defines the AWS’s Signature Verification 4 for the URL.
-	// Cannot be set at the same time as authorization, basicAuth, oauth2, or azureAd.
-	// +kubebuilder:validation:Optional
-	Sigv4 *Sigv4 `json:"sigv4,omitempty"`
-	// AzureAd for the URL.
-	// Cannot be set at the same time as authorization, basicAuth, oauth2, or sigv4.
-	// +kubebuilder:validation:Optional
-	AzureAd *AzureAD `json:"azureAd,omitempty"`
-	// BearerToken is deprecated: this will be removed in a future release.
-	// Warning: this field shouldn’t be used because the token value appears in clear-text. Prefer using authorization.
-	// +kubebuilder:validation:Optional
-	BearerToken *string `json:"bearerToken,omitempty"`
-	// TLSConfig to use for the URL.
-	// +kubebuilder:validation:Optional
-	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 	// ProxyURL defines the HTTP proxy server to use.
 	// +kubebuilder:validation:Optional
 	ProxyURL *string `json:"proxyUrl,omitempty"`
@@ -185,37 +150,9 @@ type RemoteWriteSpec struct {
 	// QueueConfig allows tuning of the remote write queue parameters.
 	// +kubebuilder:validation:Optional
 	QueueConfig *QueueConfig `json:"queueConfig,omitempty"`
-	// MetadataConfig defines how to send a series metadata to the remote storage.
-	// When the field is empty, no metadata is sent. But when the field is null, metadata is sent.
-	// +kubebuilder:validation:Optional
-	MetadataConfig *MetadataConfig `json:"metadataConfig,omitempty"`
-	// EnableHTTP2 defines whether to enable HTTP2.
-	// +kubebuilder:validation:Optional
-	EnableHTTP2 *bool `json:"enableHTTP2,omitempty"`
-	// RoundRobinDNS controls the DNS resolution behavior for remote-write connections.
-	// When enabled: - The remote-write mechanism will resolve the hostname via DNS. - It will randomly select one of the resolved IP addresses and connect to it.
-	// When disabled (default behavior): - The Go standard library will handle hostname resolution. - It will attempt connections to each resolved IP address sequentially.
-	//
-	// Note: The connection timeout applies to the entire resolution and connection process.
-	// +kubebuilder:validation:Optional
-	RoundRobinDNS *bool `json:"roundRobinDNS,omitempty"`
 }
 
-type OAuth2 struct{}
-
-type BasicAuth struct{}
-
-type Authorization struct{}
-
-type Sigv4 struct{}
-
-type AzureAD struct{}
-
-type TLSConfig struct{}
-
 type QueueConfig struct{}
-
-type MetadataConfig struct{}
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {

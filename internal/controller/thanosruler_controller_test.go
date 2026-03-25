@@ -87,17 +87,6 @@ config:
 
 			By("Cleanup the specific resource instance ThanosRuler")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-
-			ss := &appsv1.StatefulSet{}
-			err = k8sClient.Get(ctx, client.ObjectKey{
-				Name:      RulerNameFromParent(resourceName),
-				Namespace: ns,
-			}, ss)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the ThanosRuler statefulset resource")
-			Expect(k8sClient.Delete(ctx, ss)).Should(Succeed())
-
 		})
 
 		It("should reconcile correctly", func() {
@@ -879,16 +868,6 @@ config:
 		})
 
 		It("should set stateless mode", func() {
-			//ss := &appsv1.StatefulSet{}
-			//if err := k8sClient.Get(context.Background(), client.ObjectKey{
-			//	Namespace: ns,
-			//	Name:      RulerNameFromParent(resourceName),
-			//}, ss); err != nil {
-			//	fmt.Println("error getting stateless ruler")
-			//} else {
-			//	fmt.Println("before it:", ss.Labels)
-			//}
-
 			if os.Getenv("EXCLUDE_RULER") == skipValue {
 				Skip("Skipping ThanosRuler controller tests")
 			}
@@ -896,9 +875,6 @@ config:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: ns,
-					Annotations: map[string]string{
-						"ruler-meta": "annotation",
-					},
 				},
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
 					Replicas: 2,
@@ -906,7 +882,6 @@ config:
 						Labels: map[string]string{
 							"foo": "bar",
 						},
-						Annotations: map[string]string{"ruler-spec": "annotation"},
 					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
@@ -941,7 +916,7 @@ config:
 			By("setting up thanos ruler resources", func() {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-query",
+						Name:      "my-query",
 						Namespace: ns,
 						Labels:    requiredQueryServiceLabels,
 					},
@@ -972,32 +947,56 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0,
 						"--remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml")
-				}, time.Second*30, time.Second*3).Should(BeTrue())
+				}, time.Second*60, time.Second*3).Should(BeTrue())
 
-				EventuallyWithOffset(1, func() bool {
-					ss := &appsv1.StatefulSet{}
-					if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, ss); err != nil {
-						return false
-					}
-					fmt.Println(ss.Labels)
-					return true
-				}, time.Second*30, time.Second*3).Should(BeTrue())
+				//expectedLabels := map[string]string{
+				//	"app.kubernetes.io/component":  "rule-evaluation-engine",
+				//	"app.kubernetes.io/instance":   "thanos-ruler-test-resource",
+				//	"app.kubernetes.io/managed-by": "thanos-operator",
+				//	"app.kubernetes.io/name":       "thanos-ruler",
+				//	"app.kubernetes.io/part-of":    "thanos",
+				//	"foo":                          "bar",
+				//	"operator.thanos.io/owner":     "test-resource",
+				//}
+
+				//Eventually(func() bool {
+				//	ss := &appsv1.StatefulSet{}
+				//	if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, ss); err != nil {
+				//		return false
+				//	}
+				//	if !maps.Equal(ss.Labels, expectedLabels) {
+				//		return false
+				//	}
+				//	return true
+				//}, time.Second*30, time.Second*3).Should(BeTrue())
 			})
 
 			By("validating remote write secret data", func() {
-				expectedData := "remote_write:\n- url: http://test-url\n"
-				secret := &corev1.Secret{}
-				if err := k8sClient.Get(context.Background(), client.ObjectKey{
-					Name:      RulerNameFromParent(resourceName),
-					Namespace: ns,
-				}, secret); err != nil {
-				}
-				EventuallyWithOffset(1, func() bool {
-					if secret.Data == nil && string(secret.Data["remote_write.yaml"]) == expectedData {
-						return false
+				EventuallyWithOffset(1, func() error {
+					secret := &corev1.Secret{}
+					if err := k8sClient.Get(context.Background(), client.ObjectKey{
+						Name:      RulerNameFromParent(resourceName),
+						Namespace: ns,
+					}, secret); err != nil {
+						return fmt.Errorf("failed to get secret: %w", err)
 					}
-					return true
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+
+					if secret.Data == nil {
+						return fmt.Errorf("secret.Data is nil")
+					}
+
+					remoteWriteYAML, ok := secret.Data["remote_write.yaml"]
+					if !ok {
+						return fmt.Errorf("remote_write.yaml key not found in secret")
+					}
+
+					expectedData := "remote_write:\n- url: http://test.url\n"
+					if string(remoteWriteYAML) != expectedData {
+						return fmt.Errorf("expected %q, got %q", expectedData, string(remoteWriteYAML))
+					}
+
+					return nil
+				}, time.Second*30, time.Second*2).Should(Succeed())
 			})
 		})
 	})

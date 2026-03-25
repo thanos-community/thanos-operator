@@ -246,11 +246,11 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		FeatureGate:         r.featureGate,
 		ConfigReloaderImage: r.configReloaderImage,
 	})
+	opts.Endpoints = endpoints
+	opts.RuleFiles = ruleFiles
 	if err := opts.Valid(); err != nil {
 		return nil, nil, err
 	}
-	opts.Endpoints = endpoints
-	opts.RuleFiles = ruleFiles
 
 	return opts, expectedDerivedConfigMapNames, nil
 }

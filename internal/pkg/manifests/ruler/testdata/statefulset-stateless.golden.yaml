@@ -59,7 +59,6 @@ spec:
         - --log.format=logfmt
         - --http-address=0.0.0.0:9090
         - --grpc-address=0.0.0.0:10901
-        - --tsdb.retention=15d
         - --data-dir=/var/thanos/rule
         - --alertmanagers.url=http://test-alertmanager.com:9093
         - --remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml
@@ -112,9 +111,8 @@ spec:
           name: data
         - mountPath: /etc/thanos/remote-write/remote_write.yaml
           name: remote-write
-        - mountPath: /etc/thanos/rules/test-rules/rules.yaml
+        - mountPath: /etc/thanos/rules/test-rules
           name: test-rules
-          subPath: rules.yaml
       - args:
         - --listen-address=:8080
         - --reload-url=http://localhost:9090/-/reload
@@ -132,8 +130,7 @@ spec:
           capabilities:
             drop:
             - ALL
-          runAsNonRoot: true
-          runAsUser: 65534
+          readOnlyRootFilesystem: true
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
