@@ -109,7 +109,7 @@ spec:
         volumeMounts:
         - mountPath: /var/thanos/rule
           name: data
-        - mountPath: /etc/thanos/remote-write/remote_write.yaml
+        - mountPath: /etc/thanos/remote-write
           name: remote-write
         - mountPath: /etc/thanos/rules/test-rules
           name: test-rules

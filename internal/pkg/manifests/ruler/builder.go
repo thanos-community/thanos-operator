@@ -167,7 +167,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 	if opts.RemoteWriteSpec != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      remoteWriteVolumeName,
-			MountPath: fmt.Sprintf("%s/%s", remoteWriteVolumeMountPath, remoteWriteYAML),
+			MountPath: remoteWriteVolumeMountPath,
 		})
 	}
 

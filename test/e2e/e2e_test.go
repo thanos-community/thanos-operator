@@ -821,16 +821,7 @@ var _ = Describe("controller", Ordered, func() {
 
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetReplicasRunning(c, 1, controller.RulerNameFromParent(rwRulerName), namespace)
-				})
-
-				Eventually(func() bool {
-					s := corev1.Secret{}
-					err := c.Get(context.Background(), client.ObjectKey{Name: controller.RulerNameFromParent(rwRulerName), Namespace: namespace}, &s)
-					if err != nil {
-						return false
-					}
-					return true
-				})
+				}, time.Minute*2, time.Second*5).Should(BeTrue())
 			})
 
 			It("should validate stateless ruler has discovered the query service", func() {
@@ -859,7 +850,7 @@ var _ = Describe("controller", Ordered, func() {
 								Name: "example-rule",
 								Rules: []monitoringv1.Rule{
 									{
-										Record: "test:example-rule:sum",
+										Record: "example-stateless-rule",
 										Expr:   intstr.FromString("sum(test_metric)"),
 									},
 								},
@@ -885,8 +876,12 @@ var _ = Describe("controller", Ordered, func() {
 				Expect(err).To(BeNil())
 				defer cancelFn()
 
-				_, err = utils.QueryPrometheus("test_metric_sum")
+				_, err = utils.QueryPrometheus("example-stateless-rule")
 				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return false
+				}, time.Hour, time.Minute*3).Should(BeTrue())
 			})
 		})
 	})
