@@ -373,7 +373,7 @@ func VerifyDeploymentReplicasRunning(c client.Client, expect int, name string, n
 	return true
 }
 
-func VerifyDeploymentArgs(c client.Client, name string, namespace string, containerIndex int, containsArg string) bool {
+func VerifyDeploymentArgs(c client.Client, name string, namespace string, containerIndex int, containsArgs ...string) bool {
 	deployment := &appsv1.Deployment{}
 	err := c.Get(context.Background(), client.ObjectKey{
 		Name:      name,
@@ -383,7 +383,7 @@ func VerifyDeploymentArgs(c client.Client, name string, namespace string, contai
 		return false
 	}
 
-	return slices.Contains(deployment.Spec.Template.Spec.Containers[containerIndex].Args, containsArg)
+	return verifyArgs(deployment.Spec.Template.Spec.Containers[containerIndex].Args, containsArgs...)
 }
 
 func VerifyStatefulSetArgs(
@@ -391,7 +391,7 @@ func VerifyStatefulSetArgs(
 	name string,
 	namespace string,
 	containerIndex int,
-	containsArg string,
+	containsArgs ...string,
 ) bool {
 	statefulset := &appsv1.StatefulSet{}
 	err := c.Get(context.Background(), client.ObjectKey{
@@ -402,7 +402,16 @@ func VerifyStatefulSetArgs(
 		return false
 	}
 
-	return slices.Contains(statefulset.Spec.Template.Spec.Containers[containerIndex].Args, containsArg)
+	return verifyArgs(statefulset.Spec.Template.Spec.Containers[containerIndex].Args, containsArgs...)
+}
+
+func verifyArgs(args []string, containsArgs ...string) bool {
+	for _, arg := range containsArgs {
+		if !slices.Contains(args, arg) {
+			return false
+		}
+	}
+	return true
 }
 
 func VerifyStatefulSetExists(c client.Client, name string, namespace string) bool {
@@ -587,6 +596,30 @@ func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	return s.RoundTripper.RoundTrip(req)
 }
 
+// DoRemoteWriteRequest sends a remote write request to the remote write endpoint for the Thanos Receive in the namespace.
+func DoRemoteWriteRequest(c client.Client, req RemoteWriteRequest, namespace string, matchLabels map[string]string, port int32) error {
+	ctx := context.Background()
+	selector := client.MatchingLabels(matchLabels)
+	router := &corev1.PodList{}
+	err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
+	if err != nil {
+		return err
+	}
+
+	if len(router.Items) == 0 {
+		return fmt.Errorf("no router pods found")
+	}
+
+	pod := router.Items[0].Name
+	portIntStr := intstr.IntOrString{IntVal: port}
+	cancelFn, err := StartPortForward(ctx, portIntStr, "https", pod, namespace)
+	if err != nil {
+		return err
+	}
+	defer cancelFn()
+	return RemoteWrite(req, nil, nil)
+}
+
 func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
 	switch obj.(type) {
 	case *appsv1.Deployment:
@@ -661,16 +694,6 @@ func ValidateObjectLabelsEqual(t *testing.T, wantLabels map[string]string, onObj
 		if !equality.Semantic.DeepEqual(obj.GetLabels(), wantLabels) {
 			t.Errorf("expected object %s of kind %s to have labels %v, got %v",
 				obj.GetName(), obj.GetObjectKind().GroupVersionKind().Kind, wantLabels, obj.GetLabels())
-		}
-	}
-}
-
-func ValidateHasLabels(t *testing.T, obj client.Object, labels map[string]string) {
-	t.Helper()
-	for k, v := range labels {
-		if obj.GetLabels()[k] != v {
-			t.Errorf("expected object %s to have label %s with value %s, got %s",
-				obj.GetName(), k, v, obj.GetLabels()[k])
 		}
 	}
 }
