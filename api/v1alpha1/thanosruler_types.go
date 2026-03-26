@@ -130,7 +130,7 @@ type RemoteWriteSpec struct {
 	// Headers defines the custom HTTP headers to be sent along with each remote write request.
 	// Be aware that headers that are set by Prometheus itself can’t be overwritten.
 	// +kubebuilder:validation:Optional
-	Headers *map[string]string `json:"headers,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 	// ProxyURL defines the HTTP proxy server to use.
 	// +kubebuilder:validation:Optional
 	ProxyURL *string `json:"proxyUrl,omitempty"`
@@ -187,13 +187,10 @@ type QueueConfig struct {
 	// +kubebuilder:validation:Optional
 	MaxBackoff *Duration `json:"maxBackoff,omitempty"`
 	// RetryOnRateLimit defines the retry upon receiving a 429 status code from the remote-write storage.
-	//
 	// This is an *experimental feature*, it may change in any upcoming release in a breaking way.
 	// +kubebuilder:validation:Optional
-	RetryOnRateLimit bool `json:"retryOnRateLimit,omitempty"` // nolint:kubeapilinter
-	// sampleAgeLimit drops samples older than the limit.
-	// It requires Prometheus >= v2.50.0 or Thanos >= v0.32.0.
-	//
+	RetryOnRateLimit bool `json:"retryOnRateLimit,omitempty"`
+	// SampleAgeLimit drops samples older than the limit.
 	// +kubebuilder:validation:Optional
 	SampleAgeLimit *Duration `json:"sampleAgeLimit,omitempty"`
 }
