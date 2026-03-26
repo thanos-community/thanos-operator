@@ -649,6 +649,35 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 			})
 		})
+		Context("When querying for written metrics", func() {
+			It("should be able to query the test metric written via remote write", func() {
+				ctx := context.Background()
+				selector := client.MatchingLabels{
+					manifests.ComponentLabel: "query-layer",
+				}
+				queryPods := &corev1.PodList{}
+				err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: namespace})
+				Expect(err).To(BeNil())
+				Expect(len(queryPods.Items) > 0).To(BeTrue())
+
+				pod := queryPods.Items[0].Name
+				port := intstr.IntOrString{IntVal: 9090}
+				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					resp, err := utils.QueryPrometheus("test_metric")
+					if err != nil {
+						return err
+					}
+					if len(resp.Data.Result) == 0 {
+						return fmt.Errorf("no results found for test_metric")
+					}
+					return nil
+				}, time.Minute*3, time.Second*5).Should(Succeed())
+			})
+		})
 	})
 
 	Describe("Thanos Ruler", Ordered, func() {
