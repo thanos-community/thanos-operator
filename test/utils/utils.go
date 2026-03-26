@@ -563,12 +563,10 @@ type RemoteWriteRequest struct {
 
 // DefaultRemoteWriteRequest returns a default RemoteWriteRequest.
 func DefaultRemoteWriteRequest() RemoteWriteRequest {
+	now := time.Now().UnixMilli()
+	d := []byte(fmt.Sprintf("# HELP test_metric This is a test metric.\n# TYPE test_metric gauge\ntest_metric{foo=\"bar\"} 1 %d\n", now))
 	return RemoteWriteRequest{
-		Data: []byte(`
-	# HELP test_metric This is a test metric.
-	# TYPE test_metric gauge
-	test_metric{foo="bar"} 1 1
-	`),
+		Data: d,
 		Labels: map[string]string{
 			"job": "e2e-test",
 		},
