@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -84,6 +85,9 @@ type ThanosRulerSpec struct {
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
+	// RemoteWriteSpec defines the configuration to write samples from Prometheus to a remote endpoint
+	// +kubebuilder:validation:Optional
+	RemoteWriteSpec []RemoteWriteSpec `json:"remoteWriteSpec,omitempty"`
 }
 
 type RuleTenancyConfig struct {
@@ -98,7 +102,101 @@ type RuleTenancyConfig struct {
 	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
 }
 
-// TODO(saswatamcode): Add stateless mode
+type RemoteWriteSpec struct {
+	// URL defines the URL of the endpoint to send samples to.
+	// +kubebuilder:validation:Required
+	URL string `json:"url"`
+	// Name of the remote write queue, it must be unique if specified.
+	// The name is used in metrics and logging in order to differentiate queues.
+	// +kubebuilder:validation:Optional
+	Name *string `json:"name,omitempty"`
+	// MessageVersion defines the Remote Write message’s version to use when writing to the endpoint.
+	// Version1.0 corresponds to the prometheus.WriteRequest protobuf message introduced in Remote Write 1.0.
+	// Version2.0 corresponds to the io.prometheus.write.v2.Request protobuf message introduced in Remote Write 2.0.
+	// When Version2.0 is selected, Prometheus will automatically be configured to append the metadata of scraped metrics to the WAL.
+	// Before setting this field, consult with your remote storage provider what message version it supports.
+	// +kubebuilder:validation:Optional
+	MessageVersion *RemoteWriteMessageVersion `json:"messageVersion,omitempty"`
+	// SendExemplars enables sending of exemplars over remote write.
+	// Note that exemplar-storage itself must be enabled using the spec.enableFeatures option for exemplars to be scraped in the first place.
+	// +kubebuilder:validation:Optional
+	SendExemplars *bool `json:"sendExamples,omitempty"`
+	// SendNativeHistograms enables sending of native histograms, also known as sparse histograms over remote write.
+	// +kubebuilder:validation:Optional
+	SendNativeHistograms *bool `json:"sendNativeHistograms,omitempty"`
+	// RemoteTimeout defines the timeout for requests to the remote write endpoint.
+	// +kubebuilder:validation:Optional
+	RemoteTimeout *Duration `json:"remoteTimeout,omitempty"`
+	// Headers defines the custom HTTP headers to be sent along with each remote write request.
+	// Be aware that headers that are set by Prometheus itself can’t be overwritten.
+	// +kubebuilder:validation:Optional
+	Headers *map[string]string `json:"headers,omitempty"`
+	// ProxyURL defines the HTTP proxy server to use.
+	// +kubebuilder:validation:Optional
+	ProxyURL *string `json:"proxyUrl,omitempty"`
+	// NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.
+	// IP and domain names can contain port numbers.
+	// +kubebuilder:validation:Optional
+	NoProxy *string `json:"noProxy,omitempty"`
+	// ProxyFromEnvironment defines whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).
+	// +kubebuilder:validation:Optional
+	ProxyFromEnvironment *bool `json:"proxyFromEnvironment,omitempty"`
+	// ProxyConnectHeader optionally specifies headers to send to proxies during CONNECT requests.
+	// +kubebuilder:validation:Optional
+	ProxyConnectHeader *map[string]corev1.SecretKeySelector `json:"proxyConnectHeader,omitempty"`
+	// FollowRedirects defines whether HTTP requests follow HTTP 3xx redirects.
+	// +kubebuilder:validation:Optional
+	FollowRedirects *bool `json:"followRedirects,omitempty"`
+	// QueueConfig allows tuning of the remote write queue parameters.
+	// +kubebuilder:validation:Optional
+	QueueConfig *QueueConfig `json:"queueConfig,omitempty"`
+}
+
+type RemoteWriteMessageVersion string
+
+const (
+	// Remote Write message's version 1.0.
+	RemoteWriteMessageVersion1_0 = RemoteWriteMessageVersion("V1.0")
+	// Remote Write message's version 2.0.
+	RemoteWriteMessageVersion2_0 = RemoteWriteMessageVersion("V2.0")
+)
+
+type QueueConfig struct {
+	// Capacity defines the number of samples to buffer per shard before we start dropping them.
+	// +kubebuilder:validation:Optional
+	Capacity int `json:"capacity,omitempty"`
+	// MinShards defines the minimum number of shards, i.e. amount of concurrency.
+	// +kubebuilder:validation:Optional
+	MinShards int `json:"minShards,omitempty"`
+	// MaxShards defines the maximum number of shards, i.e. amount of concurrency.
+	// +kubebuilder:validation:Optional
+	MaxShards int `json:"maxShards,omitempty"`
+	// MaxSamplesPerSend defines the maximum number of samples per send.
+	// +kubebuilder:validation:Optional
+	MaxSamplesPerSend int `json:"maxSamplesPerSend,omitempty"`
+	// BatchSendDeadline defines the maximum time a sample will wait in buffer.
+	// +kubebuilder:validation:Optional
+	BatchSendDeadline *Duration `json:"batchSendDeadline,omitempty"`
+	// MaxRetries defines the maximum number of times to retry a batch on recoverable errors.
+	// +kubebuilder:validation:Optional
+	MaxRetries int `json:"maxRetries,omitempty"`
+	// MinBackoff defines the initial retry delay. Gets doubled for every retry.
+	// +kubebuilder:validation:Optional
+	MinBackoff *Duration `json:"minBackoff,omitempty"`
+	// MaxBackoff defines the maximum retry delay.
+	// +kubebuilder:validation:Optional
+	MaxBackoff *Duration `json:"maxBackoff,omitempty"`
+	// RetryOnRateLimit defines the retry upon receiving a 429 status code from the remote-write storage.
+	//
+	// This is an *experimental feature*, it may change in any upcoming release in a breaking way.
+	// +kubebuilder:validation:Optional
+	RetryOnRateLimit bool `json:"retryOnRateLimit,omitempty"` // nolint:kubeapilinter
+	// sampleAgeLimit drops samples older than the limit.
+	// It requires Prometheus >= v2.50.0 or Thanos >= v0.32.0.
+	//
+	// +kubebuilder:validation:Optional
+	SampleAgeLimit *Duration `json:"sampleAgeLimit,omitempty"`
+}
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {
