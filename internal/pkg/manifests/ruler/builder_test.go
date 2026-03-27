@@ -778,3 +778,54 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 		})
 	}
 }
+
+func TestToYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     RemoteWriteSpecs
+		expected string
+	}{
+		{
+			name:     "no remote write specs",
+			expected: "",
+		},
+		{
+			name: "with one remote write spec",
+			spec: RemoteWriteSpecs{
+				{
+					URL: "http://test.url",
+				},
+			},
+			expected: `remote_write:
+- url: http://test.url
+`,
+		},
+		{
+			name: "with multiple remote write specs",
+			spec: RemoteWriteSpecs{
+				{
+					URL: "http://test1.url",
+				},
+				{
+					URL: "http://test2.url",
+				},
+			},
+			expected: `remote_write:
+- url: http://test1.url
+- url: http://test2.url
+`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := tc.spec.ToYAML()
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if r != tc.expected {
+				t.Errorf("expected:\n%s\ngot:\n%s", tc.expected, r)
+			}
+		})
+	}
+}

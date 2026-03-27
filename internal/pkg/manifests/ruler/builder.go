@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	RemoteWriteSpec     RemoteWriteSpecs
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +61,12 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type RemoteWriteSpecs []RemoteWriteSpec
+
+type RemoteWriteSpec struct {
+	URL string
 }
 
 func (opts Options) Build() []client.Object {
@@ -100,6 +107,8 @@ const (
 
 	dataVolumeName      = "data"
 	dataVolumeMountPath = "/var/thanos/rule"
+
+	remoteWriteYAML = "remote_write.yaml"
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
@@ -614,4 +623,36 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 // Uses sigs.k8s.io/yaml which properly handles Kubernetes types like intstr.IntOrString.
 func UnmarshalYAML(data []byte, v any) error {
 	return k8syaml.Unmarshal(data, v)
+}
+
+func generateRemoteWriteConfig(rws RemoteWriteSpecs) yaml.MapItem {
+	cfgs := make([]yaml.MapSlice, 0, len(rws))
+
+	for _, spec := range rws {
+		cfg := yaml.MapSlice{
+			yaml.MapItem{
+				Key:   "url",
+				Value: spec.URL,
+			},
+		}
+
+		cfgs = append(cfgs, cfg)
+	}
+
+	return yaml.MapItem{
+		Key:   "remote_write",
+		Value: cfgs,
+	}
+}
+
+func (rws RemoteWriteSpecs) ToYAML() (string, error) {
+	if rws == nil {
+		return "", nil
+	}
+	rwConfig, err := yaml.Marshal(yaml.MapSlice{generateRemoteWriteConfig(rws)})
+	if err != nil {
+		return "", err
+	}
+
+	return string(rwConfig), nil
 }
