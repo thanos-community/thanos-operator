@@ -372,25 +372,13 @@ var _ = Describe("controller", Ordered, func() {
 
 		Context("When ThanosReceive is fully operational", func() {
 			It("should accept metrics over remote write", func() {
-				ctx := context.Background()
-				selector := client.MatchingLabels{
+				matchLabels := map[string]string{
 					manifests.ComponentLabel: receive.RouterComponentName,
+					manifests.OwnerLabel:     receiveName,
 				}
-				router := &corev1.PodList{}
-				err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
-				Expect(err).To(BeNil())
-				Expect(len(router.Items)).To(Equal(1))
-
-				pod := router.Items[0].Name
-				port := intstr.IntOrString{IntVal: receive.RemoteWritePort}
-				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
-				Expect(err).To(BeNil())
-				defer cancelFn()
-
 				Eventually(func() error {
-					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
+					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, receive.RemoteWritePort)
 				}, time.Minute*2, time.Second*1).Should(Succeed())
-
 			})
 		})
 
@@ -499,24 +487,12 @@ var _ = Describe("controller", Ordered, func() {
 			})
 
 			It("should accept metrics over remote write with capnproto protocol", func() {
-				ctx := context.Background()
-				selector := client.MatchingLabels{
+				matchLabels := map[string]string{
 					manifests.ComponentLabel: receive.RouterComponentName,
 					manifests.OwnerLabel:     capnprotoReceiveName,
 				}
-				router := &corev1.PodList{}
-				err := c.List(ctx, router, selector, &client.ListOptions{Namespace: namespace})
-				Expect(err).To(BeNil())
-				Expect(len(router.Items)).To(Equal(1))
-
-				pod := router.Items[0].Name
-				port := intstr.IntOrString{IntVal: receive.RemoteWritePort}
-				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
-				Expect(err).To(BeNil())
-				defer cancelFn()
-
 				Eventually(func() error {
-					return utils.RemoteWrite(utils.DefaultRemoteWriteRequest(), nil, nil)
+					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, receive.RemoteWritePort)
 				}, time.Minute*2, time.Second*1).Should(Succeed())
 			})
 
