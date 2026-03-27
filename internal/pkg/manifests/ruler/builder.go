@@ -453,7 +453,10 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
-	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	if len(opts.RemoteWriteSpec) == 0 {
+		lbls = manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	}
+	return lbls
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
@@ -655,4 +658,24 @@ func (rws RemoteWriteSpecs) ToYAML() (string, error) {
 	}
 
 	return string(rwConfig), nil
+}
+
+func NewRemoteWriteSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
+	conf, _ := opts.RemoteWriteSpec.ToYAML()
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
+		},
+		StringData: map[string]string{
+			remoteWriteYAML: conf,
+		},
+	}
 }

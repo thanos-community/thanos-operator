@@ -829,3 +829,29 @@ func TestToYAML(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRemoteWriteSecret(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Namespace: "ns",
+			Owner:     "test-ruler",
+			Labels: map[string]string{
+				"foo": "bar",
+			},
+		},
+		RemoteWriteSpec: RemoteWriteSpecs{
+			{
+				URL: "http://test.url",
+			},
+		},
+	}
+
+	s := NewRemoteWriteSecret(opts, GetLabels(opts))
+
+	// Test against golden file
+	yamlBytes, err := yaml.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal secret to YAML: %v", err)
+	}
+	golden.Assert(t, string(yamlBytes), "secret-stateless.yaml")
+}
