@@ -79,6 +79,10 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
 
+	if len(opts.RemoteWriteSpec) > 0 {
+		objs = append(objs, NewRemoteWriteSecret(opts, objectMetaLabels))
+	}
+
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
@@ -108,7 +112,9 @@ const (
 	dataVolumeName      = "data"
 	dataVolumeMountPath = "/var/thanos/rule"
 
-	remoteWriteYAML = "remote_write.yaml"
+	remoteWriteYAML            = "remote_write.yaml"
+	remoteWriteVolumeName      = "remote-write"
+	remoteWriteVolumeMountPath = "/etc/thanos/remote-write"
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
@@ -143,6 +149,12 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			Name:      dataVolumeName,
 			MountPath: dataVolumeMountPath,
 		},
+	}
+	if len(opts.RemoteWriteSpec) > 0 {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      remoteWriteVolumeName,
+			MountPath: remoteWriteVolumeMountPath,
+		})
 	}
 
 	// Deduplicate rule cfgmap by name.
@@ -211,18 +223,6 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					},
 				},
 			},
-			{
-				Name: rulerObjectStoreEnvVarName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: opts.ObjStoreSecret.Name,
-						},
-						Key:      opts.ObjStoreSecret.Key,
-						Optional: ptr.To(false),
-					},
-				},
-			},
 		},
 		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
@@ -272,6 +272,36 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: ruleFile.Name,
 					},
+				},
+			},
+		})
+	}
+
+	if len(opts.RemoteWriteSpec) > 0 {
+		volumes = append(volumes, corev1.Volume{
+			Name: remoteWriteVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: opts.GetGeneratedResourceName(),
+					Items: []corev1.KeyToPath{
+						{
+							Key:  remoteWriteYAML,
+							Path: remoteWriteYAML,
+						},
+					},
+				},
+			},
+		})
+	} else {
+		rulerContainer.Env = append(rulerContainer.Env, corev1.EnvVar{
+			Name: rulerObjectStoreEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.ObjStoreSecret.Name,
+					},
+					Key:      opts.ObjStoreSecret.Key,
+					Optional: ptr.To(false),
 				},
 			},
 		})
@@ -404,11 +434,17 @@ func rulerArgs(opts Options) []string {
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
-		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)
+
+	if opts.RemoteWriteSpec != nil {
+		args = append(args, fmt.Sprintf("--remote-write.config-file=%s/%s", remoteWriteVolumeMountPath, remoteWriteYAML))
+	} else {
+		args = append(args,
+			fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+			fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)))
+	}
 
 	if opts.EvaluationInterval != "" {
 		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))

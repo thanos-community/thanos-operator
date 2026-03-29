@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   annotations:
+    another: annotation
     test: annotation
   labels:
     app.kubernetes.io/component: rule-evaluation-engine
@@ -10,7 +11,6 @@ metadata:
     app.kubernetes.io/name: thanos-ruler
     app.kubernetes.io/part-of: thanos
     operator.thanos.io/owner: ""
-    operator.thanos.io/store-api: "true"
     some-custom-label: xyz
     some-other-label: abc
   name: thanos-ruler
@@ -28,8 +28,6 @@ spec:
   serviceName: thanos-ruler
   template:
     metadata:
-      annotations:
-        sidecar.opentelemetry.io/inject: "true"
       labels:
         app.kubernetes.io/component: rule-evaluation-engine
         app.kubernetes.io/instance: thanos-ruler
@@ -37,7 +35,6 @@ spec:
         app.kubernetes.io/name: thanos-ruler
         app.kubernetes.io/part-of: thanos
         operator.thanos.io/owner: ""
-        operator.thanos.io/store-api: "true"
         some-custom-label: xyz
         some-other-label: abc
     spec:
@@ -64,28 +61,15 @@ spec:
         - --grpc-address=0.0.0.0:10901
         - --data-dir=/var/thanos/rule
         - --alertmanagers.url=http://test-alertmanager.com:9093
-        - --objstore.config=$(OBJSTORE_CONFIG)
-        - --tsdb.retention=15d
+        - --remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml
         - --label=rule_replica="0"
         - --rule-file=/etc/thanos/rules/test-rules/rules.yaml
         - --query=dnssrv+_http._tcp.test-query.ns.svc
-        - |-
-          --tracing.config=type: OTLP
-          config:
-            client_type: http
-            endpoint: localhost:4318
-            insecure: true
         env:
         - name: NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: OBJSTORE_CONFIG
-          valueFrom:
-            secretKeyRef:
-              key: thanos.yaml
-              name: test-secret
-              optional: false
         image: some-custom-image:v0.39.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -125,6 +109,8 @@ spec:
         volumeMounts:
         - mountPath: /var/thanos/rule
           name: data
+        - mountPath: /etc/thanos/remote-write
+          name: remote-write
         - mountPath: /etc/thanos/rules/test-rules
           name: test-rules
       - args:
@@ -158,6 +144,12 @@ spec:
       - configMap:
           name: test-rules
         name: test-rules
+      - name: remote-write
+        secret:
+          items:
+          - key: remote_write.yaml
+            path: remote_write.yaml
+          secretName: thanos-ruler
   updateStrategy: {}
   volumeClaimTemplates:
   - metadata:
@@ -168,7 +160,6 @@ spec:
         app.kubernetes.io/name: thanos-ruler
         app.kubernetes.io/part-of: thanos
         operator.thanos.io/owner: ""
-        operator.thanos.io/store-api: "true"
         some-custom-label: xyz
         some-other-label: abc
       name: data

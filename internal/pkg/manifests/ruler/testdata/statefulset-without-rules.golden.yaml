@@ -54,10 +54,10 @@ spec:
         - --log.format=logfmt
         - --http-address=0.0.0.0:9090
         - --grpc-address=0.0.0.0:10901
-        - --tsdb.retention=15d
         - --data-dir=/var/thanos/rule
-        - --objstore.config=$(OBJSTORE_CONFIG)
         - --alertmanagers.url=http://test-alertmanager.com:9093
+        - --objstore.config=$(OBJSTORE_CONFIG)
+        - --tsdb.retention=15d
         - --query=dnssrv+_http._tcp.test-query.ns.svc
         env:
         - name: NAME
