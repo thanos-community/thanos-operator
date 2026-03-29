@@ -95,8 +95,17 @@ func (opts Options) Build() []client.Object {
 }
 
 func (opts Options) Valid() error {
-	if opts.Owner == "" {
-		return fmt.Errorf("owner cannot be empty")
+	// TODO: implement validation in controller
+	if opts.ObjStoreSecret == nil && opts.RemoteWriteSpec == nil {
+		return fmt.Errorf("one of ObjStoreSecret or RemoteWriteSpec must be specified")
+	}
+
+	if opts.ObjStoreSecret != nil && opts.RemoteWriteSpec != nil {
+		return fmt.Errorf("only one of ObjStoreSecret or RemoteWriteSpec can be specified")
+	}
+
+	if _, err := opts.RemoteWriteSpec.ToYAML(); err != nil {
+		return fmt.Errorf("invalid remote write spec: %w", err)
 	}
 	return nil
 }
