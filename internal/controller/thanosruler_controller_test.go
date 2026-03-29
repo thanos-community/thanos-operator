@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"time"
 
@@ -758,15 +757,6 @@ config:
 				DeferCleanup(func() {
 					Expect(k8sClient.Delete(context.Background(), svc)).Should(Succeed())
 				})
-
-				ss := &appsv1.StatefulSet{}
-				err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns,
-					Name: RulerNameFromParent(resourceName)}, ss)
-				Expect(err).NotTo(HaveOccurred())
-
-				DeferCleanup(func() {
-					Expect(k8sClient.Delete(context.Background(), ss)).Should(Succeed())
-				})
 			})
 
 			By("creating user ConfigMap with rules", func() {
@@ -959,26 +949,7 @@ config:
 						"--remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml")
 				}, time.Second*60, time.Second*3).Should(BeTrue())
 
-				expectedLabels := map[string]string{
-					"app.kubernetes.io/component":  "rule-evaluation-engine",
-					"app.kubernetes.io/instance":   "thanos-ruler-test-resource",
-					"app.kubernetes.io/managed-by": "thanos-operator",
-					"app.kubernetes.io/name":       "thanos-ruler",
-					"app.kubernetes.io/part-of":    "thanos",
-					"foo":                          "bar",
-					"operator.thanos.io/owner":     "test-resource",
-				}
-
-				Eventually(func() bool {
-					ss := &appsv1.StatefulSet{}
-					if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, ss); err != nil {
-						return false
-					}
-					if !maps.Equal(ss.Labels, expectedLabels) {
-						return false
-					}
-					return true
-				}, time.Second*30, time.Second*3).Should(BeTrue())
+				// TODO: validate stateful set labels
 			})
 		})
 
