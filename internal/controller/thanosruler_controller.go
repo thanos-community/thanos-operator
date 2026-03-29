@@ -106,7 +106,7 @@ func NewThanosRulerReconciler(conf Config, configReloaderImage string, client cl
 // +kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosrulers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosrulers/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=services;configmaps;serviceaccounts;secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;watch
 
@@ -256,7 +256,7 @@ func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 	listOpt := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
-	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
+	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor().WithSecret()
 	return pruner.Prune(ctx, expectedResources, listOpts...)
 }
 
