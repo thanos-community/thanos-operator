@@ -44,7 +44,7 @@ type Options struct {
 	manifests.Options
 	Endpoints           []Endpoint
 	RuleFiles           []corev1.ConfigMapKeySelector
-	ObjStoreSecret      corev1.SecretKeySelector
+	ObjStoreSecret      *corev1.SecretKeySelector
 	Retention           manifests.Duration
 	AlertmanagerURL     string
 	ExternalLabels      map[string]string
