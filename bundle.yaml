@@ -32629,7 +32629,6 @@ spec:
             required:
             - alertmanagerURL
             - externalLabels
-            - objectStorageConfig
             - replicas
             - retention
             - ruleConfigSelector
@@ -38363,6 +38362,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
   - serviceaccounts
   - services
   verbs:
