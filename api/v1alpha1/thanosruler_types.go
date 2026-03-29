@@ -39,7 +39,7 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
