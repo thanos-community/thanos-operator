@@ -27,6 +27,8 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
@@ -948,8 +950,28 @@ config:
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0,
 						"--remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml")
 				}, time.Second*60, time.Second*3).Should(BeTrue())
+			})
 
-				// TODO: validate stateful set labels
+			By("validating statefulset labels", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.StatefulSet{})
+
+					expectedLabels := map[string]string{
+						manifests.NameLabel:      ruler.Name,
+						manifests.ComponentLabel: ruler.ComponentName,
+						manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
+						manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
+						manifests.InstanceLabel:  RulerNameFromParent(resourceName),
+						manifests.OwnerLabel:     resourceName,
+						"foo":                    "bar",
+					}
+
+					if !utils.VerifyLabels(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedLabels) {
+						return fmt.Errorf("expected labels %v, got %v", expectedLabels, objs)
+					}
+					return nil
+				}, time.Minute, time.Second*5).Should(BeNil())
 			})
 		})
 
