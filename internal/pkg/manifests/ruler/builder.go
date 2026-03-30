@@ -3,6 +3,7 @@ package ruler
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"sort"
 
@@ -95,7 +96,6 @@ func (opts Options) Build() []client.Object {
 }
 
 func (opts Options) Valid() error {
-	// TODO: implement validation in controller
 	if opts.ObjStoreSecret == nil && opts.RemoteWriteSpec == nil {
 		return fmt.Errorf("one of ObjStoreSecret or RemoteWriteSpec must be specified")
 	}
@@ -697,6 +697,13 @@ func (rws RemoteWriteSpecs) ToYAML() (string, error) {
 	if rws == nil {
 		return "", nil
 	}
+
+	for _, rw := range rws {
+		if _, err := url.ParseRequestURI(rw.URL); err != nil {
+			return "", err
+		}
+	}
+
 	rwConfig, err := yaml.Marshal(yaml.MapSlice{generateRemoteWriteConfig(rws)})
 	if err != nil {
 		return "", err

@@ -249,6 +249,10 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
+	if err := opts.Valid(); err != nil {
+		return nil, nil, err
+	}
+
 	return opts, expectedDerivedConfigMapNames, nil
 }
 
