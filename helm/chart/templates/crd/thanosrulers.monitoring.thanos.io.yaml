@@ -5549,7 +5549,6 @@ spec:
             required:
             - alertmanagerURL
             - externalLabels
-            - objectStorageConfig
             - replicas
             - retention
             - ruleConfigSelector
