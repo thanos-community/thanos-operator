@@ -79,15 +79,36 @@ func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Option
 			Series:   in.CRD.Spec.TelemetryQuantiles.Series,
 		}
 	}
+	var queryMode string
+	var selectorRelabelConfigs manifests.RelabelConfigs
+	if in.CRD.Spec.QueryFederation != nil {
+		if in.CRD.Spec.QueryFederation.QueryMode != nil {
+			queryMode = *in.CRD.Spec.QueryFederation.QueryMode
+		}
+		if in.CRD.Spec.QueryFederation.TSDBExternalLabelSelector != nil {
+			selectorRelabelConfigs = make(manifests.RelabelConfigs, 0, len(*in.CRD.Spec.QueryFederation.TSDBExternalLabelSelector))
+			for _, c := range *in.CRD.Spec.QueryFederation.TSDBExternalLabelSelector {
+				selectorRelabelConfigs = append(selectorRelabelConfigs, manifests.RelabelConfig{
+					Action:      c.Action,
+					SourceLabel: c.SourceLabel,
+					TargetLabel: c.TargetLabel,
+					Modulus:     c.Modulus,
+					Regex:       c.Regex,
+				})
+			}
+		}
+	}
 	return manifestquery.Options{
-		Options:            opts,
-		ReplicaLabels:      in.CRD.Spec.ReplicaLabels,
-		Timeout:            "15m",
-		LookbackDelta:      "5m",
-		MaxConcurrent:      20,
-		WebOptions:         webOptions,
-		TelemetryQuantiles: telemetryQuantiles,
-		GRPCProxyStrategy:  in.CRD.Spec.GRPCProxyStrategy,
+		Options:                opts,
+		ReplicaLabels:          in.CRD.Spec.ReplicaLabels,
+		Timeout:                "15m",
+		LookbackDelta:          "5m",
+		MaxConcurrent:          20,
+		WebOptions:             webOptions,
+		TelemetryQuantiles:     telemetryQuantiles,
+		GRPCProxyStrategy:      in.CRD.Spec.GRPCProxyStrategy,
+		QueryMode:              queryMode,
+		SelectorRelabelConfigs: selectorRelabelConfigs,
 	}
 }
 
