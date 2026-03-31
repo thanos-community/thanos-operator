@@ -821,6 +821,7 @@ var _ = Describe("controller", Ordered, func() {
 						RuleConfigSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+								"stateless":                          "true",
 							},
 						},
 						AlertmanagerURL: "http://alertmanager.com:9093",
@@ -849,13 +850,14 @@ var _ = Describe("controller", Ordered, func() {
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
 			})
 
-			It("should be able to send requests via remote write", func() {
+			It("should set up remote write rule", func() {
 				promRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "stateless-prometheus-rule",
 						Namespace: namespace,
 						Labels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"stateless":                          "true",
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -875,25 +877,34 @@ var _ = Describe("controller", Ordered, func() {
 
 				err := c.Create(context.Background(), promRule, &client.CreateOptions{})
 				Expect(err).To(BeNil())
+			})
 
-				pods := &corev1.PodList{}
+			It("should be able to query remote write rule", func() {
+				ctx := context.Background()
 				selector := client.MatchingLabels{
-					"prometheus": "test-prometheus",
+					manifests.ComponentLabel: "query-layer",
 				}
-				err = c.List(context.Background(), pods, selector, &client.ListOptions{Namespace: "default"})
+				queryPods := &corev1.PodList{}
+				err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: namespace})
 				Expect(err).To(BeNil())
-				Expect(len(pods.Items)).To(Equal(1))
+				Expect(len(queryPods.Items) > 0).To(BeTrue())
 
-				pod := pods.Items[0].Name
-				port := intstr.IntOrString{IntVal: prometheusPort}
-				cancelFn, err := utils.StartPortForward(context.Background(), port, "https", pod, "default")
+				pod := queryPods.Items[0].Name
+				port := intstr.IntOrString{IntVal: 9090}
+				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
 				Expect(err).To(BeNil())
 				defer cancelFn()
 
-				_, err = utils.QueryPrometheus("example_stateless_rule")
-				Expect(err).To(BeNil())
-
-				// TODO: assert rule metric
+				Eventually(func() error {
+					resp, err := utils.QueryPrometheus(`example_stateless_rule{tenant_id="default-tenant"}`)
+					if err != nil {
+						return err
+					}
+					if len(resp.Data.Result) == 0 {
+						return fmt.Errorf("no results found for test_metric")
+					}
+					return nil
+				}, time.Minute*3, time.Second*5).Should(Succeed())
 			})
 		})
 	})
