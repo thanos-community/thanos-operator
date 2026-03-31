@@ -851,7 +851,7 @@ func CreateClusterRoleBinding(c client.Client) error {
 }
 
 func QueryPrometheus(query string) (*PrometheusResponse, error) {
-	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", query)
+	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", url.QueryEscape(query))
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
