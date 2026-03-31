@@ -250,6 +250,8 @@ _Appears in:_
 - [IndexHeaderConfig](#indexheaderconfig)
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [QueryFrontendSpec](#queryfrontendspec)
+- [QueueConfig](#queueconfig)
+- [RemoteWriteSpec](#remotewritespec)
 - [RetentionResolutionConfig](#retentionresolutionconfig)
 - [TSDBConfig](#tsdbconfig)
 - [ThanosRulerSpec](#thanosrulerspec)
@@ -581,6 +583,72 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+
+
+#### QueueConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [RemoteWriteSpec](#remotewritespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `capacity` _integer_ | Capacity defines the number of samples to buffer per shard before we start dropping them. |  | Optional: \{\} <br /> |
+| `minShards` _integer_ | MinShards defines the minimum number of shards, i.e. amount of concurrency. |  | Optional: \{\} <br /> |
+| `maxShards` _integer_ | MaxShards defines the maximum number of shards, i.e. amount of concurrency. |  | Optional: \{\} <br /> |
+| `maxSamplesPerSend` _integer_ | MaxSamplesPerSend defines the maximum number of samples per send. |  | Optional: \{\} <br /> |
+| `batchSendDeadline` _[Duration](#duration)_ | BatchSendDeadline defines the maximum time a sample will wait in buffer. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `maxRetries` _integer_ | MaxRetries defines the maximum number of times to retry a batch on recoverable errors. |  | Optional: \{\} <br /> |
+| `minBackoff` _[Duration](#duration)_ | MinBackoff defines the initial retry delay. Gets doubled for every retry. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `maxBackoff` _[Duration](#duration)_ | MaxBackoff defines the maximum retry delay. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `retryOnRateLimit` _boolean_ | RetryOnRateLimit defines the retry upon receiving a 429 status code from the remote-write storage.<br />This is an *experimental feature*, it may change in any upcoming release in a breaking way. |  | Optional: \{\} <br /> |
+| `sampleAgeLimit` _[Duration](#duration)_ | SampleAgeLimit drops samples older than the limit. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+
+
+#### RemoteWriteMessageVersion
+
+_Underlying type:_ _string_
+
+
+
+
+
+_Appears in:_
+- [RemoteWriteSpec](#remotewritespec)
+
+
+
+#### RemoteWriteSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosRulerSpec](#thanosrulerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `url` _string_ | URL defines the URL of the endpoint to send samples to. |  | Required: \{\} <br /> |
+| `name` _string_ | Name of the remote write queue, it must be unique if specified.<br />The name is used in metrics and logging in order to differentiate queues. |  | Optional: \{\} <br /> |
+| `messageVersion` _[RemoteWriteMessageVersion](#remotewritemessageversion)_ | MessageVersion defines the Remote Write message’s version to use when writing to the endpoint.<br />Version1.0 corresponds to the prometheus.WriteRequest protobuf message introduced in Remote Write 1.0.<br />Version2.0 corresponds to the io.prometheus.write.v2.Request protobuf message introduced in Remote Write 2.0.<br />When Version2.0 is selected, Prometheus will automatically be configured to append the metadata of scraped metrics to the WAL.<br />Before setting this field, consult with your remote storage provider what message version it supports. |  | Optional: \{\} <br /> |
+| `sendExamples` _boolean_ | SendExemplars enables sending of exemplars over remote write.<br />Note that exemplar-storage itself must be enabled using the spec.enableFeatures option for exemplars to be scraped in the first place. |  | Optional: \{\} <br /> |
+| `sendNativeHistograms` _boolean_ | SendNativeHistograms enables sending of native histograms, also known as sparse histograms over remote write. |  | Optional: \{\} <br /> |
+| `remoteTimeout` _[Duration](#duration)_ | RemoteTimeout defines the timeout for requests to the remote write endpoint. |  | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
+| `headers` _object (keys:string, values:string)_ | Headers defines the custom HTTP headers to be sent along with each remote write request.<br />Be aware that headers that are set by Prometheus itself can’t be overwritten. |  | Optional: \{\} <br /> |
+| `proxyUrl` _string_ | ProxyURL defines the HTTP proxy server to use. |  | Optional: \{\} <br /> |
+| `noProxy` _string_ | NoProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying.<br />IP and domain names can contain port numbers. |  | Optional: \{\} <br /> |
+| `proxyFromEnvironment` _boolean_ | ProxyFromEnvironment defines whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY). |  | Optional: \{\} <br /> |
+| `proxyConnectHeader` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#secretkeyselector-v1-core)_ | ProxyConnectHeader optionally specifies headers to send to proxies during CONNECT requests. |  | Optional: \{\} <br /> |
+| `followRedirects` _boolean_ | FollowRedirects defines whether HTTP requests follow HTTP 3xx redirects. |  | Optional: \{\} <br /> |
+| `queueConfig` _[QueueConfig](#queueconfig)_ | QueueConfig allows tuning of the remote write queue parameters. |  | Optional: \{\} <br /> |
 
 
 #### ReplicationProtocol
@@ -1260,7 +1328,7 @@ _Appears in:_
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without<br />any of its container crashing, for it to be considered available. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />\{"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
-| `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
+| `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Optional: \{\} <br /> |
 | `ruleConfigSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It also discovers PrometheusRule CustomResources if the feature flag is enabled.<br />PrometheusRules are converted them into ConfigMaps with rule files internally.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true" | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `alertmanagerURL` _string_ | AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups. |  | Pattern: `^((dns\+)?(dnssrv\+)?(http\|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$` <br />Required: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
@@ -1277,6 +1345,7 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `remoteWriteSpec` _[RemoteWriteSpec](#remotewritespec) array_ | RemoteWriteSpec defines the configuration to write samples from Prometheus to a remote endpoint |  | Optional: \{\} <br /> |
 
 
 #### ThanosRulerStatus

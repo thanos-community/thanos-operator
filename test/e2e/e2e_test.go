@@ -684,7 +684,7 @@ var _ = Describe("controller", Ordered, func() {
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 					},
 				},
-				ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+				ObjectStorageConfig: &v1alpha1.ObjectStorageConfig{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: objStoreSecret,
 					},
@@ -791,6 +791,120 @@ var _ = Describe("controller", Ordered, func() {
 						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
+		})
+
+		Context("When ThanosRuler with remote write is created", func() {
+			rwRulerName := "remote-write-ruler"
+			statefulSetName := controller.RulerNameFromParent(rwRulerName)
+
+			It("should generate correct resources", func() {
+				r := v1alpha1.ThanosRuler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      rwRulerName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.ThanosRulerSpec{
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						Replicas: 1,
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "1Gi",
+						},
+						RemoteWriteSpec: []v1alpha1.RemoteWriteSpec{
+							{
+								URL: fmt.Sprintf("http://%s.thanos-operator-system.svc:19291/api/v1/receive",
+									controller.ReceiveRouterNameFromParent(receiveName)),
+							},
+						},
+						RuleConfigSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+								"stateless":                          "true",
+							},
+						},
+						AlertmanagerURL: "http://alertmanager.com:9093",
+						RuleTenancyConfig: &v1alpha1.RuleTenancyConfig{
+							EnforcedTenantIdentifier: ptr.To("tenant"),
+							TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
+						},
+					},
+				}
+				err := c.Create(context.Background(), &r)
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, controller.RulerNameFromParent(rwRulerName), namespace)
+				}, time.Minute*3, time.Second*5).Should(BeTrue())
+			})
+
+			It("should validate stateless ruler has discovered the query service", func() {
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetArgs(c,
+						statefulSetName,
+						namespace,
+						0,
+						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.thanos-operator-system.svc", svcName),
+					)
+				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
+
+			It("should set up remote write rule", func() {
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "stateless-prometheus-rule",
+						Namespace: namespace,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"stateless":                          "true",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "example-rule",
+								Rules: []monitoringv1.Rule{
+									{
+										Record: "example_stateless_rule",
+										Expr:   intstr.FromString("sum(test_metric)"),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				err := c.Create(context.Background(), promRule, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+			})
+
+			It("should be able to query remote write rule", func() {
+				ctx := context.Background()
+				selector := client.MatchingLabels{
+					manifests.ComponentLabel: "query-layer",
+				}
+				queryPods := &corev1.PodList{}
+				err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: namespace})
+				Expect(err).To(BeNil())
+				Expect(len(queryPods.Items) > 0).To(BeTrue())
+
+				pod := queryPods.Items[0].Name
+				port := intstr.IntOrString{IntVal: 9090}
+				cancelFn, err := utils.StartPortForward(ctx, port, "https", pod, namespace)
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					resp, err := utils.QueryPrometheus(`example_stateless_rule{tenant_id="default-tenant"}`)
+					if err != nil {
+						return err
+					}
+					if len(resp.Data.Result) == 0 {
+						return fmt.Errorf("no results found for test_metric")
+					}
+					return nil
+				}, time.Minute*3, time.Second*5).Should(Succeed())
 			})
 		})
 	})
