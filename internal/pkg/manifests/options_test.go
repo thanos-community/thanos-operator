@@ -441,6 +441,163 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "deployment-augmented-mount-secret",
+			objInit: func() *appsv1.Deployment {
+				return &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-query",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-query",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-query",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "test-ns",
+					Replicas:  2,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-query",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						Secrets: []string{"example-secret"},
+					},
+				},
+			},
+		},
+		{
+			name: "deployment-augmented-mount-configmap",
+			objInit: func() *appsv1.Deployment {
+				return &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-query",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-query",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-query",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "test-ns",
+					Replicas:  2,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-query",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						ConfigMaps: []string{"example-configmap"},
+					},
+				},
+			},
+		},
+		{
+			name: "deployment-augmented-mount-both",
+			objInit: func() *appsv1.Deployment {
+				return &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Deployment",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-query",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-query",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-query",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "test-ns",
+					Replicas:  2,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-query",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						Secrets:    []string{"example-secret"},
+						ConfigMaps: []string{"example-configmap"},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -678,6 +835,163 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 							OnDelete: "Delete",
 						},
 						TerminationGracePeriodSeconds: ptr.To(int64(120)),
+					},
+				},
+			},
+		},
+		{
+			name: "statefulset-augment-mount-secret",
+			objInit: func() *appsv1.StatefulSet {
+				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-ruler",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-ruler",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-ruler",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "monitoring",
+					Replicas:  3,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-ruler",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						Secrets: []string{"example-secret"},
+					},
+				},
+			},
+		},
+		{
+			name: "statefulset-augment-mount-configmap",
+			objInit: func() *appsv1.StatefulSet {
+				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-ruler",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-ruler",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-ruler",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "monitoring",
+					Replicas:  3,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-ruler",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						ConfigMaps: []string{"example-configmap"},
+					},
+				},
+			},
+		},
+		{
+			name: "statefulset-augment-mount-both",
+			objInit: func() *appsv1.StatefulSet {
+				return &appsv1.StatefulSet{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "StatefulSet",
+						APIVersion: "apps/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "thanos-ruler",
+						Namespace: "test-ns",
+					},
+					Spec: appsv1.StatefulSetSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "thanos-ruler",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: map[string]string{
+									"app": "thanos-ruler",
+								},
+							},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "thanos",
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			opts: mockOptionsForGolden{
+				Options: Options{
+					Owner:     "thanos-controller",
+					Namespace: "monitoring",
+					Replicas:  3,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": "thanos-ruler",
+					},
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Additional: Additional{
+						Secrets:    []string{"example-secret"},
+						ConfigMaps: []string{"example-configmap"},
 					},
 				},
 			},
