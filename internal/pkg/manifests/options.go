@@ -28,6 +28,11 @@ const (
 	DefaultFSGroup = int64(1001)
 
 	hashSuffixLength = 16
+
+	secretVolumeName    = "secret-"
+	secretMountPath     = "/etc/thanos/secrets/"
+	configMapVolumeName = "configmap-"
+	configMapMountPath  = "/etc/thanos/configmaps/"
 )
 
 var alphaNumericRe = regexp.MustCompile("[a-z0-9]")
@@ -323,6 +328,10 @@ config:
 			)
 		}
 
+		if len(opts.Secrets) > 0 || len(opts.ConfigMaps) > 0 {
+			MountResource(&o.Spec.Template, opts)
+		}
+
 	case *appsv1.StatefulSet:
 		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
 
@@ -414,6 +423,10 @@ config:
 				o.Spec.Template.Spec.Containers[0].Args,
 				tracingArg,
 			)
+		}
+
+		if len(opts.Secrets) > 0 || len(opts.ConfigMaps) > 0 {
+			MountResource(&o.Spec.Template, opts)
 		}
 
 	default:
@@ -555,4 +568,49 @@ func (sl StoreLimitsOpts) ToFlags() []string {
 type StorageConfig struct {
 	StorageSize      resource.Quantity
 	StorageClassName *string
+}
+
+func mountSecrets(pt *corev1.PodTemplateSpec, opts Options) {
+	for _, s := range opts.Secrets {
+		name := secretVolumeName + SanitizeName(s)
+		pt.Spec.Containers[0].VolumeMounts = append(pt.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      name,
+			ReadOnly:  true,
+			MountPath: secretMountPath + s,
+		})
+		pt.Spec.Volumes = append(pt.Spec.Volumes, corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: s,
+				},
+			},
+		})
+	}
+}
+
+func mountConfigMap(pt *corev1.PodTemplateSpec, opts Options) {
+	for _, cm := range opts.ConfigMaps {
+		name := configMapVolumeName + SanitizeName(cm)
+		pt.Spec.Containers[0].VolumeMounts = append(pt.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      name,
+			ReadOnly:  true,
+			MountPath: configMapMountPath + cm,
+		})
+		pt.Spec.Volumes = append(pt.Spec.Volumes, corev1.Volume{
+			Name: name,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm,
+					},
+				},
+			},
+		})
+	}
+}
+
+func MountResource(pt *corev1.PodTemplateSpec, opts Options) {
+	mountConfigMap(pt, opts)
+	mountSecrets(pt, opts)
 }
