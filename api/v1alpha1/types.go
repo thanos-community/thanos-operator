@@ -230,6 +230,16 @@ type Additional struct {
 	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
 	// +kubebuilder:validation:Optional
 	ServicePorts []corev1.ServicePort `json:"additionalServicePorts,omitempty"`
+	// ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+	// Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+	// The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+	// +kubebuilder:validation:Optional
+	ConfigMaps []string `json:"configMaps,omitempty"`
+	// Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+	// Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+	// The Secrets are mounted into /etc/thanos/secrets/ in the container.
+	// +kubebuilder:validation:Optional
+	Secrets []string `json:"secrets,omitempty"`
 }
 
 // PodDisruptionBudgetConfig is the configuration for the PodDisruptionBudget.
