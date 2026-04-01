@@ -439,6 +439,10 @@ type Additional struct {
 	Env []corev1.EnvVar
 	// AdditionalServicePorts are additional ports to expose on the Service for the Thanos component.
 	ServicePorts []corev1.ServicePort
+	// Additional ConfigMaps to mount onto the Thanos components.
+	ConfigMaps []string
+	// Additional Secrets t mount onto the Thanos components.
+	Secrets []string
 }
 
 type StatefulSet struct {
