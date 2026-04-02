@@ -4746,6 +4746,14 @@ spec:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
                 type: string
+              configMaps:
+                description: |-
+                  ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                  The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                items:
+                  type: string
+                type: array
               evaluationInterval:
                 default: 1m
                 description: EvaluationInterval is the default interval at which rules
@@ -5240,6 +5248,14 @@ spec:
                       of the EnforcedTenantIdentifier
                     type: string
                 type: object
+              secrets:
+                description: |-
+                  Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                  The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                items:
+                  type: string
+                type: array
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.

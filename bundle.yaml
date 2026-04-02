@@ -4825,6 +4825,14 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              configMaps:
+                description: |-
+                  ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                  The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                items:
+                  type: string
+                type: array
               debugConfig:
                 description: DebugConfig is the debug configuration for the compact
                   component.
@@ -5100,6 +5108,14 @@ spec:
                 - oneHour
                 - raw
                 type: object
+              secrets:
+                description: |-
+                  Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                  The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                items:
+                  type: string
+                type: array
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.
@@ -10325,6 +10341,14 @@ spec:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
                 type: string
+              configMaps:
+                description: |-
+                  ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                  The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                items:
+                  type: string
+                type: array
               customStoreLabelSelector:
                 description: |-
                   StoreLabelSelector enables adding additional labels to build a custom label selector
@@ -15189,6 +15213,14 @@ spec:
                     default: true
                     description: CompressResponses enables response compression
                     type: boolean
+                  configMaps:
+                    description: |-
+                      ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                      The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                    items:
+                      type: string
+                    type: array
                   imagePullPolicy:
                     default: IfNotPresent
                     description: |-
@@ -15455,6 +15487,14 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
+                  secrets:
+                    description: |-
+                      Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                      The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                    items:
+                      type: string
+                    type: array
                   securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
@@ -15814,6 +15854,14 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              secrets:
+                description: |-
+                  Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                  The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                items:
+                  type: string
+                type: array
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.
@@ -20124,6 +20172,14 @@ spec:
                       - name
                       type: object
                     type: array
+                  configMaps:
+                    description: |-
+                      ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                      The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                    items:
+                      type: string
+                    type: array
                   defaultObjectStorageConfig:
                     description: |-
                       DefaultObjectStorageConfig is the secret that contains the object storage configuration for the ingest components.
@@ -21696,6 +21752,14 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
+                  secrets:
+                    description: |-
+                      Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                      The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                    items:
+                      type: string
+                    type: array
                 required:
                 - defaultObjectStorageConfig
                 - hashrings
@@ -26470,6 +26534,14 @@ spec:
                     description: Base container image (without tags) to use for the
                       Thanos components deployed via operator.
                     type: string
+                  configMaps:
+                    description: |-
+                      ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                      The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                    items:
+                      type: string
+                    type: array
                   externalLabels:
                     additionalProperties:
                       type: string
@@ -26644,6 +26716,14 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
+                  secrets:
+                    description: |-
+                      Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                      Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                      The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                    items:
+                      type: string
+                    type: array
                   securityContext:
                     description: |-
                       SecurityContext holds pod-level security attributes and common container settings.
@@ -31829,6 +31909,14 @@ spec:
                 description: Base container image (without tags) to use for the Thanos
                   components deployed via operator.
                 type: string
+              configMaps:
+                description: |-
+                  ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                  The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                items:
+                  type: string
+                type: array
               evaluationInterval:
                 default: 1m
                 description: EvaluationInterval is the default interval at which rules
@@ -32323,6 +32411,14 @@ spec:
                       of the EnforcedTenantIdentifier
                     type: string
                 type: object
+              secrets:
+                description: |-
+                  Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                  The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                items:
+                  type: string
+                type: array
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.
@@ -37536,6 +37632,14 @@ spec:
                         type: string
                     type: object
                 type: object
+              configMaps:
+                description: |-
+                  ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.
+                  The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container.
+                items:
+                  type: string
+                type: array
               ignoreDeletionMarksDelay:
                 default: 24h
                 description: |-
@@ -37829,6 +37933,14 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
+              secrets:
+                description: |-
+                  Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
+                  Each Secret is added to the workload definition as a volume named secret-<secret-name>.
+                  The Secrets are mounted into /etc/thanos/secrets/ in the container.
+                items:
+                  type: string
+                type: array
               securityContext:
                 description: |-
                   SecurityContext holds pod-level security attributes and common container settings.

@@ -58,6 +58,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### BlockConfig
@@ -437,6 +439,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### ObjectStorageConfig
@@ -593,6 +597,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### QueueConfig
@@ -735,6 +741,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### RuleTenancyConfig
@@ -1054,6 +1062,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### ThanosCompactStatus
@@ -1158,6 +1168,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### ThanosQueryStatus
@@ -1355,6 +1367,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 | `remoteWriteSpec` _[RemoteWriteSpec](#remotewritespec) array_ | RemoteWriteSpec defines the configuration to write samples from Prometheus to a remote endpoint |  | Optional: \{\} <br /> |
 
 
@@ -1472,6 +1486,8 @@ _Appears in:_
 | `additionalPorts` _[ContainerPort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#containerport-v1-core) array_ | Additional ports to expose on the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalEnv` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | Additional environment variables to add to the Thanos component container in a Deployment or StatefulSet<br />controlled by the operator. |  | Optional: \{\} <br /> |
 | `additionalServicePorts` _[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#serviceport-v1-core) array_ | AdditionalServicePorts are additional ports to expose on the Service for the Thanos component. |  | Optional: \{\} <br /> |
+| `configMaps` _string array_ | ConfigMaps defines a list of ConfigMaps in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each ConfigMap is added to the workload definition as a volume named configmap-<configmap-name>.<br />The ConfigMaps are mounted into /etc/thanos/configmaps/ in the container. |  | Optional: \{\} <br /> |
+| `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
 #### ThanosStoreStatus
