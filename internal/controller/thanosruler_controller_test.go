@@ -949,7 +949,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0,
 						"--remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml")
-				}, time.Second*60, time.Second*3).Should(BeTrue())
+				}, time.Minute, time.Second*3).Should(BeTrue())
 			})
 
 			By("validating statefulset labels", func() {
