@@ -851,7 +851,7 @@ func CreateClusterRoleBinding(c client.Client) error {
 }
 
 func QueryPrometheus(query string) (*PrometheusResponse, error) {
-	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", query)
+	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", url.QueryEscape(query))
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -896,6 +896,26 @@ func VerifyAnnotations(c client.Client, objs []client.Object, name, namespace st
 
 		for k, v := range annotations {
 			if objAnnotations[k] != v {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func VerifyLabels(c client.Client, objs []client.Object, name, namespace string, labels map[string]string) bool {
+	for _, obj := range objs {
+		err := c.Get(context.Background(), client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		}, obj)
+		if err != nil {
+			return false
+		}
+
+		objLabels := obj.GetLabels()
+		for k, v := range labels {
+			if objLabels[k] != v {
 				return false
 			}
 		}

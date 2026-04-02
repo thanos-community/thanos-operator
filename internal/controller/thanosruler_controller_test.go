@@ -27,6 +27,8 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
+
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
@@ -109,7 +111,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -407,7 +409,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -574,7 +576,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -715,7 +717,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -864,6 +866,112 @@ config:
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-promrule-0/" + promRuleName + ".yaml"
 					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
+			})
+		})
+
+		It("should set stateless mode", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas: 2,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+					},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					RemoteWriteSpec: []monitoringthanosiov1alpha1.RemoteWriteSpec{
+						{
+							URL: "http://test.url",
+						},
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
+						EnforcedTenantIdentifier: ptr.To("tenant"),
+						TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
+					},
+					Additional: monitoringthanosiov1alpha1.Additional{
+						Containers: []corev1.Container{
+							{
+								Name:  "jaeger-agent",
+								Image: "jaegertracing/jaeger-agent:1.22",
+								Args:  []string{"--reporter.grpc.host-port=jaeger-collector:14250"},
+							},
+						},
+					},
+				},
+			}
+
+			By("setting up thanos ruler resources", func() {
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-query",
+						Namespace: ns,
+						Labels:    requiredQueryServiceLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt32(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
+
+				DeferCleanup(func() {
+					_ = k8sClient.Delete(context.Background(), svc)
+				})
+
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet().WithSecret()
+				EventuallyWithOffset(1, func() bool {
+					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
+				}, time.Second*30, time.Second*3).Should(BeTrue())
+			})
+
+			By("validating statefulset", func() {
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0,
+						"--remote-write.config-file=/etc/thanos/remote-write/remote_write.yaml")
+				}, time.Minute, time.Second*3).Should(BeTrue())
+			})
+
+			By("validating statefulset labels", func() {
+				EventuallyWithOffset(1, func() error {
+					var objs []client.Object
+					objs = append(objs, &appsv1.StatefulSet{})
+
+					expectedLabels := map[string]string{
+						manifests.NameLabel:      ruler.Name,
+						manifests.ComponentLabel: ruler.ComponentName,
+						manifests.PartOfLabel:    manifests.DefaultPartOfLabel,
+						manifests.ManagedByLabel: manifests.DefaultManagedByLabel,
+						manifests.InstanceLabel:  RulerNameFromParent(resourceName),
+						manifests.OwnerLabel:     resourceName,
+						"foo":                    "bar",
+					}
+
+					if !utils.VerifyLabels(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedLabels) {
+						return fmt.Errorf("expected labels %v, got %v", expectedLabels, objs)
+					}
+					return nil
+				}, time.Minute, time.Second*5).Should(BeNil())
 			})
 		})
 

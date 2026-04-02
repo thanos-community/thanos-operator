@@ -55,7 +55,7 @@ func TestBuildRuler(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -128,7 +128,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -181,7 +181,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -239,7 +239,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -286,7 +286,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -296,6 +296,50 @@ func TestNewRulerStatefulSet(t *testing.T) {
 				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
+				},
+			},
+		},
+		{
+			name:   "test stateless ruler statefulset resource",
+			golden: "statefulset-stateless.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test":    "annotation",
+						"another": "annotation",
+					},
+				},
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
+				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
+				RemoteWriteSpec: RemoteWriteSpecs{
+					{
+						URL: "http://test-url.com:9093",
+					},
 				},
 			},
 		},
@@ -314,57 +358,114 @@ func TestNewRulerStatefulSet(t *testing.T) {
 }
 
 func TestNewRulerService(t *testing.T) {
+	tests := []struct {
+		name   string
+		golden string
+		opts   Options
+	}{
+		{
+			name:   "test ruler stateful service",
+			golden: "service-stateful.golden.yaml",
+			opts: Options{
 
-	opts := Options{
-		Options: manifests.Options{
-			Namespace: "ns",
-			Image:     ptr.To("some-custom-image"),
-			Labels: map[string]string{
-				"some-custom-label":      someCustomLabelValue,
-				"some-other-label":       someOtherLabelValue,
-				"app.kubernetes.io/name": "expect-to-be-discarded",
-			},
-			Annotations: map[string]string{
-				"test-annotation": "qwer",
-				"another-one":     "asdf",
-			},
-		},
-		Endpoints: []Endpoint{
-			{
-				ServiceName: "test-query",
-				Namespace:   "ns",
-				Port:        19101,
-			},
-		},
-		RuleFiles: []corev1.ConfigMapKeySelector{
-			{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "test-rules",
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test-annotation": "qwer",
+						"another-one":     "asdf",
+					},
 				},
-				Key: "rules.yaml",
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
+				ObjStoreSecret: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "test-secret",
+					},
+					Key: "thanos.yaml",
+				},
+				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: "test-secret",
+		{
+			name:   "test ruler stateless service",
+			golden: "service-stateless.golden.yaml",
+			opts: Options{
+
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+					Annotations: map[string]string{
+						"test-annotation": "qwer",
+						"another-one":     "asdf",
+					},
+				},
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
+				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
+				RemoteWriteSpec: RemoteWriteSpecs{
+					{
+						URL: "http://test-url.com:9093",
+					},
+				},
 			},
-			Key: "thanos.yaml",
-		},
-		Retention:       "15d",
-		AlertmanagerURL: "http://test-alertmanager.com:9093",
-		ExternalLabels: map[string]string{
-			"rule_replica": "0",
 		},
 	}
 
-	ruler := NewRulerService(opts)
-
-	// Test against golden file
-	yamlBytes, err := yaml.Marshal(ruler)
-	if err != nil {
-		t.Fatalf("failed to marshal service to YAML: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := NewRulerService(tt.opts)
+			yamlBytes, err := yaml.Marshal(svc)
+			if err != nil {
+				t.Fatalf("failed to marshal service to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tt.golden)
+		})
 	}
-	golden.Assert(t, string(yamlBytes), "service-basic.golden.yaml")
 }
 
 func TestGenerateRuleFileContent(t *testing.T) {
@@ -722,7 +823,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				RuleFiles: []corev1.ConfigMapKeySelector{
 					{LocalObjectReference: corev1.LocalObjectReference{Name: "test-rules"}, Key: "rules.yaml"},
 				},
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -740,7 +841,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				},
 				Endpoints:           []Endpoint{{ServiceName: "test-query", Namespace: "ns", Port: 19101}},
 				RuleFiles:           []corev1.ConfigMapKeySelector{}, // Empty rule files
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -777,4 +878,81 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
 	}
+}
+
+func TestToYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     RemoteWriteSpecs
+		expected string
+	}{
+		{
+			name:     "no remote write specs",
+			expected: "",
+		},
+		{
+			name: "with one remote write spec",
+			spec: RemoteWriteSpecs{
+				{
+					URL: "http://test.url",
+				},
+			},
+			expected: `remote_write:
+- url: http://test.url
+`,
+		},
+		{
+			name: "with multiple remote write specs",
+			spec: RemoteWriteSpecs{
+				{
+					URL: "http://test1.url",
+				},
+				{
+					URL: "http://test2.url",
+				},
+			},
+			expected: `remote_write:
+- url: http://test1.url
+- url: http://test2.url
+`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := tc.spec.ToYAML()
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if r != tc.expected {
+				t.Errorf("expected:\n%s\ngot:\n%s", tc.expected, r)
+			}
+		})
+	}
+}
+
+func TestNewRemoteWriteSecret(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Namespace: "ns",
+			Owner:     "test-ruler",
+			Labels: map[string]string{
+				"foo": "bar",
+			},
+		},
+		RemoteWriteSpec: RemoteWriteSpecs{
+			{
+				URL: "http://test.url",
+			},
+		},
+	}
+
+	s := NewRemoteWriteSecret(opts, GetLabels(opts))
+
+	// Test against golden file
+	yamlBytes, err := yaml.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal secret to YAML: %v", err)
+	}
+	golden.Assert(t, string(yamlBytes), "secret-stateless.yaml")
 }

@@ -3,6 +3,7 @@ package ruler
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"sort"
 
@@ -44,7 +45,7 @@ type Options struct {
 	manifests.Options
 	Endpoints           []Endpoint
 	RuleFiles           []corev1.ConfigMapKeySelector
-	ObjStoreSecret      corev1.SecretKeySelector
+	ObjStoreSecret      *corev1.SecretKeySelector
 	Retention           manifests.Duration
 	AlertmanagerURL     string
 	ExternalLabels      map[string]string
@@ -52,6 +53,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	RemoteWriteSpec     RemoteWriteSpecs
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +62,12 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type RemoteWriteSpecs []RemoteWriteSpec
+
+type RemoteWriteSpec struct {
+	URL string
 }
 
 func (opts Options) Build() []client.Object {
@@ -71,6 +79,10 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
+
+	if len(opts.RemoteWriteSpec) > 0 {
+		objs = append(objs, NewRemoteWriteSecret(opts, objectMetaLabels))
+	}
 
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
@@ -84,8 +96,16 @@ func (opts Options) Build() []client.Object {
 }
 
 func (opts Options) Valid() error {
-	if opts.Owner == "" {
-		return fmt.Errorf("owner cannot be empty")
+	if opts.ObjStoreSecret == nil && opts.RemoteWriteSpec == nil {
+		return fmt.Errorf("one of ObjStoreSecret or RemoteWriteSpec must be specified")
+	}
+
+	if opts.ObjStoreSecret != nil && opts.RemoteWriteSpec != nil {
+		return fmt.Errorf("only one of ObjStoreSecret or RemoteWriteSpec can be specified")
+	}
+
+	if _, err := opts.RemoteWriteSpec.ToYAML(); err != nil {
+		return fmt.Errorf("invalid remote write spec: %w", err)
 	}
 	return nil
 }
@@ -100,6 +120,10 @@ const (
 
 	dataVolumeName      = "data"
 	dataVolumeMountPath = "/var/thanos/rule"
+
+	remoteWriteYAML            = "remote_write.yaml"
+	remoteWriteVolumeName      = "remote-write"
+	remoteWriteVolumeMountPath = "/etc/thanos/remote-write"
 )
 
 func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
@@ -134,6 +158,12 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			Name:      dataVolumeName,
 			MountPath: dataVolumeMountPath,
 		},
+	}
+	if len(opts.RemoteWriteSpec) > 0 {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      remoteWriteVolumeName,
+			MountPath: remoteWriteVolumeMountPath,
+		})
 	}
 
 	// Deduplicate rule cfgmap by name.
@@ -202,18 +232,6 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					},
 				},
 			},
-			{
-				Name: rulerObjectStoreEnvVarName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: opts.ObjStoreSecret.Name,
-						},
-						Key:      opts.ObjStoreSecret.Key,
-						Optional: ptr.To(false),
-					},
-				},
-			},
 		},
 		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
@@ -263,6 +281,36 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: ruleFile.Name,
 					},
+				},
+			},
+		})
+	}
+
+	if len(opts.RemoteWriteSpec) > 0 {
+		volumes = append(volumes, corev1.Volume{
+			Name: remoteWriteVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: opts.GetGeneratedResourceName(),
+					Items: []corev1.KeyToPath{
+						{
+							Key:  remoteWriteYAML,
+							Path: remoteWriteYAML,
+						},
+					},
+				},
+			},
+		})
+	} else {
+		rulerContainer.Env = append(rulerContainer.Env, corev1.EnvVar{
+			Name: rulerObjectStoreEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.ObjStoreSecret.Name,
+					},
+					Key:      opts.ObjStoreSecret.Key,
+					Optional: ptr.To(false),
 				},
 			},
 		})
@@ -395,11 +443,17 @@ func rulerArgs(opts Options) []string {
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
-		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)
+
+	if opts.RemoteWriteSpec != nil {
+		args = append(args, fmt.Sprintf("--remote-write.config-file=%s/%s", remoteWriteVolumeMountPath, remoteWriteYAML))
+	} else {
+		args = append(args,
+			fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+			fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)))
+	}
 
 	if opts.EvaluationInterval != "" {
 		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))
@@ -444,7 +498,10 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
-	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	if len(opts.RemoteWriteSpec) == 0 {
+		lbls = manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
+	}
+	return lbls
 }
 
 func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
@@ -614,4 +671,63 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 // Uses sigs.k8s.io/yaml which properly handles Kubernetes types like intstr.IntOrString.
 func UnmarshalYAML(data []byte, v any) error {
 	return k8syaml.Unmarshal(data, v)
+}
+
+func generateRemoteWriteConfig(rws RemoteWriteSpecs) yaml.MapItem {
+	cfgs := make([]yaml.MapSlice, 0, len(rws))
+
+	for _, spec := range rws {
+		cfg := yaml.MapSlice{
+			yaml.MapItem{
+				Key:   "url",
+				Value: spec.URL,
+			},
+		}
+
+		cfgs = append(cfgs, cfg)
+	}
+
+	return yaml.MapItem{
+		Key:   "remote_write",
+		Value: cfgs,
+	}
+}
+
+func (rws RemoteWriteSpecs) ToYAML() (string, error) {
+	if rws == nil {
+		return "", nil
+	}
+
+	for _, rw := range rws {
+		if _, err := url.ParseRequestURI(rw.URL); err != nil {
+			return "", err
+		}
+	}
+
+	rwConfig, err := yaml.Marshal(yaml.MapSlice{generateRemoteWriteConfig(rws)})
+	if err != nil {
+		return "", err
+	}
+
+	return string(rwConfig), nil
+}
+
+func NewRemoteWriteSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
+	conf, _ := opts.RemoteWriteSpec.ToYAML()
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      objectMetaLabels,
+			Annotations: opts.Annotations,
+		},
+		StringData: map[string]string{
+			remoteWriteYAML: conf,
+		},
+	}
 }
