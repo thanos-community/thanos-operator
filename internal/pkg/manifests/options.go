@@ -256,76 +256,14 @@ func (o Options) GetContainerImage() string {
 func AugmentWithOptions(obj client.Object, opts Options) {
 	switch o := obj.(type) {
 	case *appsv1.Deployment:
-		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
-
-		if opts.ResourceRequirements != nil {
-			o.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-		}
-
-		if opts.Additional.VolumeMounts != nil {
-			o.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				o.Spec.Template.Spec.Containers[0].VolumeMounts,
-				opts.Additional.VolumeMounts...)
-		}
-
-		if opts.Additional.Containers != nil {
-			o.Spec.Template.Spec.Containers = append(
-				o.Spec.Template.Spec.Containers,
-				opts.Additional.Containers...)
-		}
-
-		if opts.Additional.Volumes != nil {
-			o.Spec.Template.Spec.Volumes = append(
-				o.Spec.Template.Spec.Volumes,
-				opts.Additional.Volumes...)
-		}
-
-		if opts.Additional.Ports != nil {
-			o.Spec.Template.Spec.Containers[0].Ports = append(
-				o.Spec.Template.Spec.Containers[0].Ports,
-				opts.Additional.Ports...)
-		}
-
-		if opts.Additional.Env != nil {
-			o.Spec.Template.Spec.Containers[0].Env = append(
-				o.Spec.Template.Spec.Containers[0].Env,
-				opts.Additional.Env...)
-		}
-
-		if opts.PlacementConfig != nil {
-			o.Spec.Template.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
-			o.Spec.Template.Spec.Affinity = opts.PlacementConfig.Affinity
-			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
-		}
-
-		if opts.Additional.Args != nil {
-			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
-				o.Spec.Template.Spec.Containers[0].Args,
-				opts.Additional.Args,
-			)
-		}
+		augmentPodTemplate(&o.Spec.Template, opts)
 
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}
 
 		if opts.Features.EnableOtelSidecar {
-			if o.Spec.Template.ObjectMeta.Annotations == nil {
-				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
-			}
-			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
-
-			// Add tracing configuration for OpenTelemetry sidecar
-			tracingConfig := `type: OTLP
-config:
-  client_type: http
-  endpoint: localhost:4318
-  insecure: true`
-			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
-			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
-				o.Spec.Template.Spec.Containers[0].Args,
-				tracingArg,
-			)
+			augmentOtel(&o.Spec.Template)
 		}
 
 		if len(opts.Secrets) > 0 || len(opts.ConfigMaps) > 0 {
@@ -333,54 +271,8 @@ config:
 		}
 
 	case *appsv1.StatefulSet:
-		o.Spec.Template.Spec.Containers[0].Image = opts.GetContainerImage()
+		augmentPodTemplate(&o.Spec.Template, opts)
 
-		if opts.ResourceRequirements != nil {
-			o.Spec.Template.Spec.Containers[0].Resources = *opts.ResourceRequirements
-		}
-
-		if opts.Additional.VolumeMounts != nil {
-			o.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				o.Spec.Template.Spec.Containers[0].VolumeMounts,
-				opts.Additional.VolumeMounts...)
-		}
-
-		if opts.Additional.Containers != nil {
-			o.Spec.Template.Spec.Containers = append(
-				o.Spec.Template.Spec.Containers,
-				opts.Additional.Containers...)
-		}
-
-		if opts.Additional.Volumes != nil {
-			o.Spec.Template.Spec.Volumes = append(
-				o.Spec.Template.Spec.Volumes,
-				opts.Additional.Volumes...)
-		}
-
-		if opts.Additional.Ports != nil {
-			o.Spec.Template.Spec.Containers[0].Ports = append(
-				o.Spec.Template.Spec.Containers[0].Ports,
-				opts.Additional.Ports...)
-		}
-
-		if opts.Additional.Env != nil {
-			o.Spec.Template.Spec.Containers[0].Env = append(
-				o.Spec.Template.Spec.Containers[0].Env,
-				opts.Additional.Env...)
-		}
-
-		if opts.PlacementConfig != nil {
-			o.Spec.Template.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
-			o.Spec.Template.Spec.Affinity = opts.PlacementConfig.Affinity
-			o.Spec.Template.Spec.Tolerations = opts.PlacementConfig.Tolerations
-		}
-
-		if opts.Additional.Args != nil {
-			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
-				o.Spec.Template.Spec.Containers[0].Args,
-				opts.Additional.Args,
-			)
-		}
 		o.Spec.PodManagementPolicy = appsv1.PodManagementPolicyType(opts.PodManagementPolicy)
 
 		if opts.StatefulSet.PVCRetentionPolicy.OnScale != "" || opts.StatefulSet.PVCRetentionPolicy.OnDelete != "" {
@@ -407,22 +299,7 @@ config:
 		}
 
 		if opts.Features.EnableOtelSidecar {
-			if o.Spec.Template.ObjectMeta.Annotations == nil {
-				o.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
-			}
-			o.Spec.Template.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
-
-			// Add tracing configuration for OpenTelemetry sidecar
-			tracingConfig := `type: OTLP
-config:
-  client_type: http
-  endpoint: localhost:4318
-  insecure: true`
-			tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
-			o.Spec.Template.Spec.Containers[0].Args = MergeArgs(
-				o.Spec.Template.Spec.Containers[0].Args,
-				tracingArg,
-			)
+			augmentOtel(&o.Spec.Template)
 		}
 
 		if len(opts.Secrets) > 0 || len(opts.ConfigMaps) > 0 {
@@ -432,6 +309,64 @@ config:
 	default:
 		//no-op
 	}
+}
+
+func augmentPodTemplate(tl *corev1.PodTemplateSpec, opts Options) {
+	c := &tl.Spec.Containers[0]
+	c.Image = opts.GetContainerImage()
+
+	if opts.ResourceRequirements != nil {
+		c.Resources = *opts.ResourceRequirements
+	}
+
+	if opts.Additional.VolumeMounts != nil {
+		c.VolumeMounts = append(c.VolumeMounts, opts.Additional.VolumeMounts...)
+	}
+
+	if opts.Additional.Volumes != nil {
+		tl.Spec.Volumes = append(tl.Spec.Volumes, opts.Additional.Volumes...)
+	}
+
+	if opts.Additional.Ports != nil {
+		c.Ports = append(c.Ports, opts.Additional.Ports...)
+	}
+
+	if opts.Additional.Env != nil {
+		c.Env = append(c.Env, opts.Additional.Env...)
+	}
+
+	if opts.Additional.Args != nil {
+		c.Args = MergeArgs(c.Args, opts.Additional.Args)
+	}
+
+	if opts.PlacementConfig != nil {
+		tl.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
+		tl.Spec.Affinity = opts.PlacementConfig.Affinity
+		tl.Spec.Tolerations = opts.PlacementConfig.Tolerations
+	}
+
+	if opts.Additional.Containers != nil {
+		tl.Spec.Containers = append(tl.Spec.Containers, opts.Additional.Containers...)
+	}
+}
+
+func augmentOtel(tl *corev1.PodTemplateSpec) {
+	if tl.ObjectMeta.Annotations == nil {
+		tl.ObjectMeta.Annotations = make(map[string]string)
+	}
+	tl.ObjectMeta.Annotations["sidecar.opentelemetry.io/inject"] = "true"
+
+	// Add tracing configuration for OpenTelemetry sidecar
+	tracingConfig := `type: OTLP
+config:
+  client_type: http
+  endpoint: localhost:4318
+  insecure: true`
+	tracingArg := []string{fmt.Sprintf("--tracing.config=%s", tracingConfig)}
+	tl.Spec.Containers[0].Args = MergeArgs(
+		tl.Spec.Containers[0].Args,
+		tracingArg,
+	)
 }
 
 type Additional struct {
