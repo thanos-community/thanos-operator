@@ -202,7 +202,7 @@ test-update-golden: ## Update golden test files.
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
 .PHONY: test-e2e  # Run the e2e tests against a Kind k8s instance that is spun up.
 test-e2e:
-	go test -timeout=15m -v ./test/e2e/ -v -ginkgo.v
+	go test -timeout=15m -v ./test/e2e/ -v -ginkgo.v -ginkgo.parallel.total=2
 
 define require_clean_work_tree
 	@git update-index -q --ignore-submodules --refresh
