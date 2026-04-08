@@ -11,7 +11,7 @@ on:
       - main
 
 env:
-  golang-version: '1.25'
+  golang-version: '1.26'
   kind-version: 'v0.30.0'
 
 permissions:
