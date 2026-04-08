@@ -127,6 +127,7 @@ func mutateSecret(existing, desired *corev1.Secret) {
 	existing.Annotations = desired.Annotations
 	existing.Labels = desired.Labels
 	existing.Data = desired.Data
+	existing.StringData = desired.StringData
 }
 
 func mutateServiceAccount(existing, desired *corev1.ServiceAccount) {

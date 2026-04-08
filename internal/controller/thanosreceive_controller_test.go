@@ -767,7 +767,7 @@ config:
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")
 				}, time.Second*10, time.Second*1).Should(BeTrue())
-			})
+			}) //
 		})
 	})
 })
