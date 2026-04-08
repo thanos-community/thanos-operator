@@ -20,6 +20,56 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// SelectorRelabelConfig defines a single relabel rule for the query's TSDB selector.
+// Used to filter or rewrite store labels for distributed query execution.
+// See https://thanos.io/tip/components/query.md/#selector-relabel-config
+// +kubebuilder:validation:Optional
+// +kubebuilder:validation:XValidation:rule="self.action != 'hashmod' || (has(self.targetLabel) && self.targetLabel != ”)",message="targetLabel is required and cannot be empty when action is hashmod"
+// +kubebuilder:validation:XValidation:rule="self.action == 'hashmod' || self.modulus == 0",message="modulus must be 0 when action is not hashmod"
+type SelectorRelabelConfig struct {
+	// Action is the relabel action: keep, drop, replace, hashmod, labelmap, labeldrop, labelkeep.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=keep;drop;replace;hashmod;labelmap;labeldrop;labelkeep
+	Action string `json:"action"`
+	// SourceLabel is the source label name for the action.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	SourceLabel string `json:"sourceLabel"`
+	// TargetLabel is the target label name (e.g. for replace/hashmod). Optional for keep/drop.
+	// +kubebuilder:validation:Optional
+	TargetLabel string `json:"targetLabel,omitempty"`
+	// Modulus is used for the hashmod action.
+	// +kubebuilder:validation:Optional
+	Modulus int `json:"modulus,omitempty"`
+	// Regex is the regular expression to match against the source label value.
+	// +kubebuilder:validation:Optional
+	Regex string `json:"regex,omitempty"`
+}
+
+// QueryFederationConfig configures hierarchical query federation and
+// distributed query execution, so that you can run trees of queriers, and implement query pushdown.
+// Root and middle queriers set DownstreamQueryStoreAPISelector to discover other query
+// services as StoreAPIs. Leaf queriers are normal ThanosQueries with no QueryFederation.
+// +kubebuilder:validation:Optional
+type QueryFederationConfig struct {
+	// DownstreamQueryStoreAPISelector enables discovering other query services as StoreAPIs.
+	// Set this on root and middle queriers to discover and query downstream queriers.
+	// +kubebuilder:validation:Optional
+	DownstreamQueryStoreAPISelector *metav1.LabelSelector `json:"downstreamQueryStoreAPISelector,omitempty"`
+	// QueryMode sets the query execution mode. Use "distributed" to enable distributed
+	// query execution (--query.mode=distributed), which delegates subqueries to leaf queriers.
+	// When unset or empty, the default query mode is used.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=distributed
+	QueryMode *string `json:"queryMode,omitempty"`
+	// TSDBExternalLabelSelector adds relabel rules for the TSDB selector (--selector.relabel-config).
+	// Use this to filter TSDBs to query based on external labels, particularly useful for
+	// distributed query execution where you might want to maintain query shards across
+	// multi-TSDB components like receive.
+	// +kubebuilder:validation:Optional
+	TSDBExternalLabelSelector *[]SelectorRelabelConfig `json:"tsdbExternalLabelSelector,omitempty"`
+}
+
 // ThanosQuerySpec defines the desired state of ThanosQuery
 type ThanosQuerySpec struct {
 	CommonFields `json:",inline"`
@@ -40,6 +90,12 @@ type ThanosQuerySpec struct {
 	// {"operator.thanos.io/store-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	StoreLabelSelector *metav1.LabelSelector `json:"customStoreLabelSelector,omitempty"`
+	// QueryFederationConfig configures hierarchical query federation and
+	// distributed query execution, so that you can run trees of queriers, and implement query pushdown.
+	// Set QueryAsStoreAPILabelSelector on root and middle queriers to discover downstream queriers.
+	// Leaf queriers are normal ThanosQueries with no QueryFederation.
+	// +kubebuilder:validation:Optional
+	QueryFederation *QueryFederationConfig `json:"queryFederation,omitempty"`
 	// TelemetryQuantiles is the configuration for the request telemetry quantiles.
 	// +kubebuilder:validation:Optional
 	TelemetryQuantiles *TelemetryQuantiles `json:"telemetryQuantiles,omitempty"`
