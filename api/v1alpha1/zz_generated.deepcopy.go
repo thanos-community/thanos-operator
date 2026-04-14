@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -1398,7 +1398,11 @@ func (in *ThanosRulerSpec) DeepCopyInto(out *ThanosRulerSpec) {
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	in.ObjectStorageConfig.DeepCopyInto(&out.ObjectStorageConfig)
+	if in.ObjectStorageConfig != nil {
+		in, out := &in.ObjectStorageConfig, &out.ObjectStorageConfig
+		*out = new(ObjectStorageConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	in.RuleConfigSelector.DeepCopyInto(&out.RuleConfigSelector)
 	if in.ExternalLabels != nil {
 		in, out := &in.ExternalLabels, &out.ExternalLabels
