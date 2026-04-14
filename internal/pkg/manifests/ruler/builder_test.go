@@ -55,7 +55,7 @@ func TestBuildRuler(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -128,7 +128,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -181,7 +181,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -239,7 +239,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -286,7 +286,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -344,7 +344,7 @@ func TestNewRulerService(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -722,7 +722,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				RuleFiles: []corev1.ConfigMapKeySelector{
 					{LocalObjectReference: corev1.LocalObjectReference{Name: "test-rules"}, Key: "rules.yaml"},
 				},
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -740,7 +740,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				},
 				Endpoints:           []Endpoint{{ServiceName: "test-query", Namespace: "ns", Port: 19101}},
 				RuleFiles:           []corev1.ConfigMapKeySelector{}, // Empty rule files
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
