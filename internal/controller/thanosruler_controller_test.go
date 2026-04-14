@@ -109,7 +109,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -407,7 +407,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -574,7 +574,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},
@@ -715,7 +715,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+					ObjectStorageConfig: &monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "thanos-objstore",
 						},

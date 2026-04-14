@@ -220,7 +220,7 @@ func SampleCR(crd CRD) any {
 						"app.kubernetes.io/part-of":    "thanos",
 					},
 				},
-				ObjectStorageConfig: thanosv1alpha1.ObjectStorageConfig{
+				ObjectStorageConfig: &thanosv1alpha1.ObjectStorageConfig{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "thanos-object-storage",
 					},
