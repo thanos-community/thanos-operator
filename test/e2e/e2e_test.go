@@ -75,7 +75,7 @@ func getThanosVersion() *string {
 	return ptr.To(version)
 }
 
-var _ = Describe("controller", Ordered, func() {
+var _ = Describe("controller", func() {
 	var c client.Client
 
 	BeforeAll(func() {
@@ -213,7 +213,7 @@ var _ = Describe("controller", Ordered, func() {
 		})
 	})
 
-	Describe("Thanos Receive", Ordered, func() {
+	Describe("Thanos Receive", func() {
 		routerName := controller.ReceiveRouterNameFromParent(receiveName)
 		ingesterName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
 		ingesterTwoName := controller.ReceiveIngesterNameFromParent(receiveName, hashringTwoName)
