@@ -31997,30 +31997,6 @@ spec:
                 description: NodeSelector defines on which Nodes the workloads are
                   scheduled.
                 type: object
-              objectStorageConfig:
-                description: ObjectStorageConfig is the secret that contains the object
-                  storage configuration for Ruler to upload blocks.
-                properties:
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
-                type: object
-                x-kubernetes-map-type: atomic
               paused:
                 description: |-
                   When a resource is paused, no actions except for deletion
@@ -32512,6 +32488,97 @@ spec:
                           PodSecurityContext, the value specified in SecurityContext takes precedence.
                         type: string
                     type: object
+                type: object
+              statefulSpec:
+                description: |-
+                  StatefulSpec are options used to configure a stateful ruler, which stores rule evaluations results in a local TSDB,
+                  occasionally creating blocks and sending them to ObjectStorage.
+                properties:
+                  objectStorageConfig:
+                    description: ObjectStorageConfig is the secret that contains the
+                      object storage configuration for Ruler to upload blocks.
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - objectStorageConfig
+                type: object
+              statelessSpec:
+                description: |-
+                  StatelessSpec are options used to configure a stateless ruler, which uses remote-write to send rule evaluation
+                  results directly to Receive endpoint.
+                properties:
+                  receiveLabelSelector:
+                    description: |-
+                      ReceiveLabelSelector is the label selector to discover Receive endpoints.
+                      It enables adding additional labels to build a custom label selector for discoverable Routers.
+                      Values provided here will be appended to the default which are:
+                      {"TBD", "app.kubernetes.io/part-of": "thanos"}.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - receiveLabelSelector
                 type: object
               storage:
                 description: StorageConfiguration represents the storage to be used
