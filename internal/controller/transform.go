@@ -145,8 +145,8 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		ConfigReloaderImage: in.ConfigReloaderImage,
 	}
 
-	if in.CRD.Spec.ObjectStorageConfig != nil {
-		rulerOpts.ObjStoreSecret = ptr.To(in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector())
+	if in.CRD.Spec.StatefulSpec != nil {
+		rulerOpts.ObjStoreSecret = ptr.To(in.CRD.Spec.StatefulSpec.ObjectStorageConfig.ToSecretKeySelector())
 	}
 
 	return rulerOpts
