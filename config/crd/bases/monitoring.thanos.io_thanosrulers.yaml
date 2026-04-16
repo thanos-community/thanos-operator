@@ -5493,6 +5493,10 @@ spec:
             - ruleConfigSelector
             - storage
             type: object
+            x-kubernetes-validations:
+            - message: statefulSpec and statelessSpec are mutually exclusive, only
+                one can be set
+              rule: '!(has(self.statelessSpec) && has(self.statefulSpec)) '
           status:
             description: ThanosRulerStatus defines the observed state of ThanosRuler
             properties:
