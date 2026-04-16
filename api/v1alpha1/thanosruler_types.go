@@ -21,6 +21,7 @@ import (
 )
 
 // ThanosRulerSpec defines the desired state of ThanosRuler
+// +kubebuilder:validation:XValidation:rule="!(has(self.statelessSpec) && has(self.statefulSpec)) ", message="statefulSpec and statelessSpec are mutually exclusive, only one can be set"
 type ThanosRulerSpec struct {
 	CommonFields `json:",inline"`
 	// StatefulSetFields are the options available to all Thanos stateful
