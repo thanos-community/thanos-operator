@@ -444,8 +444,8 @@ See https://thanos.io/tip/thanos/storage.md/#supported-clients for relevant docu
 _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [IngesterSpec](#ingesterspec)
+- [StatefulSpec](#statefulspec)
 - [ThanosCompactSpec](#thanoscompactspec)
-- [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
 
 | Field | Description | Default | Validation |
@@ -779,6 +779,38 @@ _Appears in:_
 | `availableReplicas` _integer_ | Total number of available pods (ready for at least minReadySeconds) targeted by this StatefulSet. |  |  |
 | `readyReplicas` _integer_ | ReadyReplicas is the number of pods created for this StatefulSet with a Ready Condition. |  |  |
 | `currentReplicas` _integer_ | currentReplicas is the number of Pods created by the StatefulSet. |  |  |
+
+
+#### StatefulSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosRulerSpec](#thanosrulerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
+
+
+#### StatelessSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosRulerSpec](#thanosrulerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `receiveLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | ReceiveLabelSelector is the label selector to discover Receive endpoints.<br />It enables adding additional labels to build a custom label selector for discoverable Routers.<br />Values provided here will be appended to the default which are:<br />\{"TBD", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
 
 
 #### StorageConfiguration
@@ -1272,7 +1304,8 @@ _Appears in:_
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without<br />any of its container crashing, for it to be considered available. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />\{"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
-| `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
+| `statelessSpec` _[StatelessSpec](#statelessspec)_ | StatelessSpec are options used to configure a stateless ruler, which uses remote-write to send rule evaluation<br />results directly to Receive endpoint. |  | Optional: \{\} <br /> |
+| `statefulSpec` _[StatefulSpec](#statefulspec)_ | StatefulSpec are options used to configure a stateful ruler, which stores rule evaluations results in a local TSDB,<br />occasionally creating blocks and sending them to ObjectStorage. |  | Optional: \{\} <br /> |
 | `ruleConfigSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It also discovers PrometheusRule CustomResources if the feature flag is enabled.<br />PrometheusRules are converted them into ConfigMaps with rule files internally.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true" | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `alertmanagerURL` _string_ | AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups. |  | Pattern: `^((dns\+)?(dnssrv\+)?(http\|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$` <br />Required: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |

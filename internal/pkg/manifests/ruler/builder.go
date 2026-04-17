@@ -44,7 +44,7 @@ type Options struct {
 	manifests.Options
 	Endpoints           []Endpoint
 	RuleFiles           []corev1.ConfigMapKeySelector
-	ObjStoreSecret      corev1.SecretKeySelector
+	ObjStoreSecret      *corev1.SecretKeySelector
 	Retention           manifests.Duration
 	AlertmanagerURL     string
 	ExternalLabels      map[string]string
@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	DiscoveryInfo       RemoteWriteSpecs
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +61,13 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type RemoteWriteSpecs []RemoteWriteSpec
+
+type RemoteWriteSpec struct {
+	RouterEndpoint Endpoint
+	Tenant         string
 }
 
 func (opts Options) Build() []client.Object {
@@ -202,18 +210,6 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					},
 				},
 			},
-			{
-				Name: rulerObjectStoreEnvVarName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: opts.ObjStoreSecret.Name,
-						},
-						Key:      opts.ObjStoreSecret.Key,
-						Optional: ptr.To(false),
-					},
-				},
-			},
 		},
 		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
@@ -229,6 +225,21 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		Args:                     rulerArgs(opts),
+	}
+
+	if opts.ObjStoreSecret != nil {
+		rulerContainer.Env = append(rulerContainer.Env, corev1.EnvVar{
+			Name: rulerObjectStoreEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.ObjStoreSecret.Name,
+					},
+					Key:      opts.ObjStoreSecret.Key,
+					Optional: ptr.To(false),
+				},
+			},
+		})
 	}
 
 	vc := []corev1.PersistentVolumeClaim{{
@@ -395,11 +406,16 @@ func rulerArgs(opts Options) []string {
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
-		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)
+
+	if opts.ObjStoreSecret != nil {
+		args = append(args,
+			fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+			fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
+		)
+	}
 
 	if opts.EvaluationInterval != "" {
 		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))

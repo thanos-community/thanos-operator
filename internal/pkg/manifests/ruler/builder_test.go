@@ -55,7 +55,7 @@ func TestBuildRuler(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -128,7 +128,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -181,7 +181,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -239,7 +239,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -286,13 +286,47 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
 					Key: "thanos.yaml",
 				},
 				Retention:       "15d",
+				AlertmanagerURL: "http://test-alertmanager.com:9093",
+				ExternalLabels: map[string]string{
+					"rule_replica": "0",
+				},
+			},
+		},
+		{
+			name:   "test without object store",
+			golden: "statefulset-no-objstore.golden.yaml",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Image:     ptr.To("some-custom-image"),
+					Labels: map[string]string{
+						"some-custom-label":      someCustomLabelValue,
+						"some-other-label":       someOtherLabelValue,
+						"app.kubernetes.io/name": "expect-to-be-discarded",
+					},
+				},
+				Endpoints: []Endpoint{
+					{
+						ServiceName: "test-query",
+						Namespace:   "ns",
+						Port:        19101,
+					},
+				},
+				RuleFiles: []corev1.ConfigMapKeySelector{
+					{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-rules",
+						},
+						Key: "rules.yaml",
+					},
+				},
 				AlertmanagerURL: "http://test-alertmanager.com:9093",
 				ExternalLabels: map[string]string{
 					"rule_replica": "0",
@@ -344,7 +378,7 @@ func TestNewRulerService(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -722,7 +756,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				RuleFiles: []corev1.ConfigMapKeySelector{
 					{LocalObjectReference: corev1.LocalObjectReference{Name: "test-rules"}, Key: "rules.yaml"},
 				},
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -740,7 +774,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				},
 				Endpoints:           []Endpoint{{ServiceName: "test-query", Namespace: "ns", Port: 19101}},
 				RuleFiles:           []corev1.ConfigMapKeySelector{}, // Empty rule files
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",

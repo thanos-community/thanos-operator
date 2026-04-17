@@ -684,11 +684,13 @@ var _ = Describe("controller", Ordered, func() {
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 					},
 				},
-				ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: objStoreSecret,
+				StatefulSpec: &v1alpha1.StatefulSpec{
+					ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: objStoreSecret,
+						},
+						Key: objStoreSecretKey,
 					},
-					Key: objStoreSecretKey,
 				},
 				AlertmanagerURL: "http://alertmanager.com:9093",
 			},

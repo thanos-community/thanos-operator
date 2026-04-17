@@ -109,11 +109,13 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-objstore",
+					StatefulSpec: &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
 						},
-						Key: "thanos.yaml",
 					},
 					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -407,11 +409,13 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-objstore",
+					StatefulSpec: &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
 						},
-						Key: "thanos.yaml",
 					},
 					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -574,11 +578,13 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-objstore",
+					StatefulSpec: &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
 						},
-						Key: "thanos.yaml",
 					},
 					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -715,11 +721,13 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-objstore",
+					StatefulSpec: &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
 						},
-						Key: "thanos.yaml",
 					},
 					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{

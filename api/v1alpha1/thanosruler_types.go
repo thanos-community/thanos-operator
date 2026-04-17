@@ -21,6 +21,7 @@ import (
 )
 
 // ThanosRulerSpec defines the desired state of ThanosRuler
+// +kubebuilder:validation:XValidation:rule="!(has(self.statelessSpec) && has(self.statefulSpec)) ", message="statefulSpec and statelessSpec are mutually exclusive, only one can be set"
 type ThanosRulerSpec struct {
 	CommonFields `json:",inline"`
 	// StatefulSetFields are the options available to all Thanos stateful
@@ -37,9 +38,14 @@ type ThanosRulerSpec struct {
 	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
-	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
-	// +kubebuilder:validation:Required
-	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	// StatelessSpec are options used to configure a stateless ruler, which uses remote-write to send rule evaluation
+	// results directly to Receive endpoint.
+	// +kubebuilder:validation:Optional
+	StatelessSpec *StatelessSpec `json:"statelessSpec,omitempty"`
+	// StatefulSpec are options used to configure a stateful ruler, which stores rule evaluations results in a local TSDB,
+	// occasionally creating blocks and sending them to ObjectStorage.
+	// +kubebuilder:validation:Optional
+	StatefulSpec *StatefulSpec `json:"statefulSpec,omitempty"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -84,6 +90,21 @@ type ThanosRulerSpec struct {
 	// and StatefulSets. Ideal to use for things like sidecars.
 	// +kubebuilder:validation:Optional
 	Additional `json:",inline"`
+}
+
+type StatelessSpec struct {
+	// ReceiveLabelSelector is the label selector to discover Receive endpoints.
+	// It enables adding additional labels to build a custom label selector for discoverable Routers.
+	// Values provided here will be appended to the default which are:
+	// {"TBD", "app.kubernetes.io/part-of": "thanos"}.
+	// +kubebuilder:validation:Optional
+	ReceiveLabelSelector *metav1.LabelSelector `json:"receiveLabelSelector,omitempty"`
+}
+
+type StatefulSpec struct {
+	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// +kubebuilder:validation:Required
+	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig"`
 }
 
 type RuleTenancyConfig struct {

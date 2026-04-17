@@ -1,8 +1,6 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  annotations:
-    test: annotation
   labels:
     app.kubernetes.io/component: rule-evaluation-engine
     app.kubernetes.io/instance: thanos-ruler
@@ -28,8 +26,6 @@ spec:
   serviceName: thanos-ruler
   template:
     metadata:
-      annotations:
-        sidecar.opentelemetry.io/inject: "true"
       labels:
         app.kubernetes.io/component: rule-evaluation-engine
         app.kubernetes.io/instance: thanos-ruler
@@ -64,28 +60,14 @@ spec:
         - --grpc-address=0.0.0.0:10901
         - --data-dir=/var/thanos/rule
         - --alertmanagers.url=http://test-alertmanager.com:9093
-        - --objstore.config=$(OBJSTORE_CONFIG)
-        - --tsdb.retention=15d
         - --label=rule_replica="0"
         - --rule-file=/etc/thanos/rules/test-rules/rules.yaml
         - --query=dnssrv+_http._tcp.test-query.ns.svc
-        - |-
-          --tracing.config=type: OTLP
-          config:
-            client_type: http
-            endpoint: localhost:4318
-            insecure: true
         env:
         - name: NAME
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: OBJSTORE_CONFIG
-          valueFrom:
-            secretKeyRef:
-              key: thanos.yaml
-              name: test-secret
-              optional: false
         image: some-custom-image:v0.39.0
         imagePullPolicy: IfNotPresent
         livenessProbe:

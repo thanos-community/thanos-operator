@@ -131,9 +131,8 @@ func QueryFrontendNameFromParent(resourceName string) string {
 
 func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
-	return manifestruler.Options{
+	rulerOpts := manifestruler.Options{
 		Options:         opts,
-		ObjStoreSecret:  in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
 		Retention:       manifests.Duration(in.CRD.Spec.Retention),
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
 		ExternalLabels:  in.CRD.Spec.ExternalLabels,
@@ -145,6 +144,12 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		EvaluationInterval:  manifests.Duration(in.CRD.Spec.EvaluationInterval),
 		ConfigReloaderImage: in.ConfigReloaderImage,
 	}
+
+	if in.CRD.Spec.StatefulSpec != nil {
+		rulerOpts.ObjStoreSecret = ptr.To(in.CRD.Spec.StatefulSpec.ObjectStorageConfig.ToSecretKeySelector())
+	}
+
+	return rulerOpts
 }
 
 // RulerNameFromParent returns the name of the Thanos Ruler component.

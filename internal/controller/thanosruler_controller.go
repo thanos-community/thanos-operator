@@ -65,6 +65,8 @@ var defaultRuleLabels = map[string]string{
 	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
+var requiredReceiveServiceLabels = map[string]string{}
+
 const (
 	defaultTenantIdentifier string = "tenant_id"
 	defaultTenantSpecifier  string = "operator.thanos.io/tenant"
@@ -249,6 +251,29 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
+	if ruler.Spec.StatelessSpec != nil {
+		endpoints, err = r.getReceiveServiceEndpoints(ctx, ruler)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(endpoints) == 0 {
+			return nil, nil, fmt.Errorf("no receive services found")
+		}
+
+		tenant := defaultTenantSpecifier
+		if ruler.Spec.RuleTenancyConfig != nil && ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel != nil {
+			tenant = *ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
+		}
+
+		for _, endpoint := range endpoints {
+			opts.DiscoveryInfo = append(opts.DiscoveryInfo, manifestruler.RemoteWriteSpec{
+				RouterEndpoint: endpoint,
+				Tenant:         tenant,
+			})
+		}
+	}
+
 	return opts, expectedDerivedConfigMapNames, nil
 }
 
@@ -284,6 +309,44 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredQueryServiceLabels)
 		if !ok {
 			r.logger.Info("service is not a gRPC service", "service", svc.GetName())
+			continue
+		}
+
+		endpoints[i] = manifestruler.Endpoint{
+			Port:        port,
+			ServiceName: svc.GetName(),
+			Namespace:   svc.GetNamespace(),
+		}
+	}
+
+	r.metrics.EndpointsConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(endpoints)))
+
+	return endpoints, nil
+}
+
+func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.ReceiveLabelSelector, requiredReceiveServiceLabels)
+	if err != nil {
+		return []manifestruler.Endpoint{}, err
+	}
+
+	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: labelSelector}, client.InNamespace(ruler.Namespace)}
+
+	services := &corev1.ServiceList{}
+	if err := r.List(ctx, services, opts...); err != nil {
+		return nil, err
+	}
+
+	if len(services.Items) == 0 {
+		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoEndpointsFound", "Discovery", "No Receive services found")
+		return []manifestruler.Endpoint{}, nil
+	}
+
+	endpoints := make([]manifestruler.Endpoint, len(services.Items))
+	for i, svc := range services.Items {
+		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, requiredReceiveServiceLabels)
+		if !ok {
+			r.logger.Info("service is not a remote-write service", "service", svc.GetName())
 			continue
 		}
 
