@@ -302,7 +302,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.StatelessSpec.ReceiveLabelSelector, requiredReceiveServiceLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.ReceiveLabelSelector, requiredReceiveServiceLabels)
 	if err != nil {
 		return []manifestruler.Endpoint{}, err
 	}

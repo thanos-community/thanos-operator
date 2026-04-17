@@ -97,8 +97,8 @@ type StatelessSpec struct {
 	// It enables adding additional labels to build a custom label selector for discoverable Routers.
 	// Values provided here will be appended to the default which are:
 	// {"TBD", "app.kubernetes.io/part-of": "thanos"}.
-	// +kubebuilder:validation:Required
-	ReceiveLabelSelector metav1.LabelSelector `json:"receiveLabelSelector"`
+	// +kubebuilder:validation:Optional
+	ReceiveLabelSelector *metav1.LabelSelector `json:"receiveLabelSelector,omitempty"`
 }
 
 type StatefulSpec struct {
