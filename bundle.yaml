@@ -32577,8 +32577,6 @@ spec:
                         type: object
                     type: object
                     x-kubernetes-map-type: atomic
-                required:
-                - receiveLabelSelector
                 type: object
               storage:
                 description: StorageConfiguration represents the storage to be used

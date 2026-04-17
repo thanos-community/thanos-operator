@@ -820,7 +820,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `receiveLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | ReceiveLabelSelector is the label selector to discover Receive endpoints.<br />It enables adding additional labels to build a custom label selector for discoverable Routers.<br />Values provided here will be appended to the default which are:<br />\{"TBD", "app.kubernetes.io/part-of": "thanos"\}. |  | Required: \{\} <br /> |
+| `receiveLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | ReceiveLabelSelector is the label selector to discover Receive endpoints.<br />It enables adding additional labels to build a custom label selector for discoverable Routers.<br />Values provided here will be appended to the default which are:<br />\{"TBD", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
 
 
 #### StorageConfiguration
