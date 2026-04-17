@@ -321,9 +321,9 @@ func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, 
 
 	endpoints := make([]manifestruler.Endpoint, len(services.Items))
 	for i, svc := range services.Items {
-		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredReceiveServiceLabels)
+		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, requiredReceiveServiceLabels)
 		if !ok {
-			r.logger.Info("service is not a gRPC service", "service", svc.GetName())
+			r.logger.Info("service is not a remote-write service", "service", svc.GetName())
 			continue
 		}
 

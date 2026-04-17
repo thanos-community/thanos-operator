@@ -192,6 +192,10 @@ func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string
 	return CheckServicePort(obj, requiredLabels, "grpc")
 }
 
+func IsRemoteWriteServiceWithLabels(obj client.Object, requiredLabels map[string]string) (int32, bool) {
+	return CheckServicePort(obj, requiredLabels, "remote-write")
+}
+
 // CheckServicePort checks for a specific port name in a service with required labels.
 func CheckServicePort(obj client.Object, requiredLabels map[string]string, portName string) (int32, bool) {
 	if !HasRequiredLabels(obj, requiredLabels) {
