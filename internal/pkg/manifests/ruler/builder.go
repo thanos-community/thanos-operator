@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	DiscoveryInfo       RemoteWriteSpecs
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +61,13 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type RemoteWriteSpecs []RemoteWriteSpec
+
+type RemoteWriteSpec struct {
+	RouterEndpoint Endpoint
+	Tenant         string
 }
 
 func (opts Options) Build() []client.Object {
