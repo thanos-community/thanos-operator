@@ -251,6 +251,29 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = endpoints
 	opts.RuleFiles = ruleFiles
 
+	if ruler.Spec.StatelessSpec != nil {
+		endpoints, err = r.getReceiveServiceEndpoints(ctx, ruler)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(endpoints) == 0 {
+			return nil, nil, fmt.Errorf("no receive services found")
+		}
+
+		tenant := defaultTenantSpecifier
+		if ruler.Spec.RuleTenancyConfig != nil && ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel != nil {
+			tenant = *ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
+		}
+
+		for _, endpoint := range endpoints {
+			opts.DiscoveryInfo = append(opts.DiscoveryInfo, manifestruler.RemoteWriteSpec{
+				RouterEndpoint: endpoint,
+				Tenant:         tenant,
+			})
+		}
+	}
+
 	return opts, expectedDerivedConfigMapNames, nil
 }
 
