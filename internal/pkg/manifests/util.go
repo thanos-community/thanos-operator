@@ -211,6 +211,14 @@ func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string
 	return CheckServicePort(obj, requiredLabels, "grpc")
 }
 
+// IsRemoteWriteServiceWithLabels returns true if the given object is a remote write service with required labels.
+// The requiredLabels map is used to match the labels of the object.
+// The function returns false if the object is not a service or if it does not have a remote-write port.
+// The function returns true, alongside the port if the object is a service with a remote-write port and has the required labels.
+func IsRemoteWriteServiceWithLabels(obj client.Object, requiredLabels map[string]string) (int32, bool) {
+	return CheckServicePort(obj, requiredLabels, "remote-write")
+}
+
 // HasRequiredLabels returns true if the given object has the required labels.
 func HasRequiredLabels(obj client.Object, requiredLabels map[string]string) bool {
 	for k, v := range requiredLabels {
