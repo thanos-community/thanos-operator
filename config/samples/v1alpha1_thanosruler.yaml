@@ -9,9 +9,6 @@ spec:
     rule_replica: $(NAME)
   imagePullPolicy: IfNotPresent
   logFormat: logfmt
-  objectStorageConfig:
-    key: thanos.yaml
-    name: thanos-object-storage
   queryLabelSelector:
     matchLabels:
       app.kubernetes.io/part-of: thanos
@@ -21,6 +18,10 @@ spec:
   ruleConfigSelector:
     matchLabels:
       operator.thanos.io/prometheus-rule: "true"
+  statefulSpec:
+    objectStorageConfig:
+      key: thanos.yaml
+      name: thanos-object-storage
   storage:
     size: 1Gi
 status: {}

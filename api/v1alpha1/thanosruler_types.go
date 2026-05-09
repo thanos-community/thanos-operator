@@ -37,9 +37,13 @@ type ThanosRulerSpec struct {
 	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
-	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// StatelessSpec configures Thanos Ruler in Stateless mode.
+	// See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
 	// +kubebuilder:validation:Optional
-	ObjectStorageConfig *ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	StatelessSpec *StatelessSpec `json:"statelessSpec,omitempty"`
+	// StatefulSpec configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
+	// +kubebuilder:validation:Optional
+	StatefulSpec *StatefulSpec `json:"statefulSpec,omitempty"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -86,6 +90,22 @@ type ThanosRulerSpec struct {
 	Additional `json:",inline"`
 }
 
+type StatelessSpec struct {
+	// LabelSelector discovers remote write endpoints that Ruler will write metrics to.
+	// If multiple services are discovered, the results will be written to each service.
+	// Values provided here will be appended to the defaults which are:
+	// operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos"
+	// +kubebuilder:default= {matchLabels:{"operator.thanos.io/remote-write-api": "true", "app.kubernetes.io/part-of": "thanos"}}
+	// +kubebuilder:validation:Optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
+}
+
+type StatefulSpec struct {
+	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// +kubebuilder:validation:Required
+	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig"`
+}
+
 type RuleTenancyConfig struct {
 	// EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy
 	// For example if enforcedTenantIdentifier: "tenant_id" then up{} becomes up{tenant_id={TenantSpecifierLabelValue}
@@ -97,8 +117,6 @@ type RuleTenancyConfig struct {
 	// +kubebuilder:validation:Optional
 	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
 }
-
-// TODO(saswatamcode): Add stateless mode
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {
