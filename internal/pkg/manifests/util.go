@@ -184,11 +184,8 @@ func extractFlag(arg string) string {
 	return arg
 }
 
-// IsGrpcServiceWithLabels returns true if the given object is a gRPC service with required labels.
-// The requiredLabels map is used to match the labels of the object.
-// The function returns false if the object is not a service or if it does not have a gRPC port.
-// The function returns true, alongside the port if the object is a service with a gRPC port and has the required labels.
-func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string) (int32, bool) {
+// CheckServicePort returns true if the given port name is in a service with required labels.
+func CheckServicePort(obj client.Object, requiredLabels map[string]string, portName string) (int32, bool) {
 	if !HasRequiredLabels(obj, requiredLabels) {
 		return 0, false
 	}
@@ -199,11 +196,19 @@ func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string
 	}
 
 	for _, port := range svc.Spec.Ports {
-		if port.Name == "grpc" {
+		if port.Name == portName {
 			return port.Port, true
 		}
 	}
 	return 0, false
+}
+
+// IsGrpcServiceWithLabels returns true if the given object is a gRPC service with required labels.
+// The requiredLabels map is used to match the labels of the object.
+// The function returns false if the object is not a service or if it does not have a gRPC port.
+// The function returns true, alongside the port if the object is a service with a gRPC port and has the required labels.
+func IsGrpcServiceWithLabels(obj client.Object, requiredLabels map[string]string) (int32, bool) {
+	return CheckServicePort(obj, requiredLabels, "grpc")
 }
 
 // HasRequiredLabels returns true if the given object has the required labels.
