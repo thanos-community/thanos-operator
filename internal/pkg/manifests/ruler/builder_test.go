@@ -778,3 +778,42 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 		})
 	}
 }
+
+func TestNewRulerSecret(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Namespace: "ns",
+			Owner:     "test-ruler",
+			Labels: map[string]string{
+				"foo": "bar",
+			},
+		},
+		DiscoveryInfos: DiscoveryInfos{
+			ServiceEndpoints: []Endpoint{
+				{
+					ServiceName: "test-receive-one",
+					Namespace:   "ns",
+					Port:        19101,
+				},
+				{
+					ServiceName: "test-receive-two",
+					Namespace:   "ns",
+					Port:        19102,
+				},
+			},
+			Tenants: []string{
+				"test-tenant- one",
+				"test-tenant- two",
+			},
+		},
+	}
+
+	s := NewRulerSecret(opts)
+
+	// Test against golden file
+	yamlBytes, err := yaml.Marshal(s)
+	if err != nil {
+		t.Fatalf("failed to marshal secret to YAML: %v", err)
+	}
+	golden.Assert(t, string(yamlBytes), "secret-remote-write.yaml")
+}

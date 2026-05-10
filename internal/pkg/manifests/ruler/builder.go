@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	DiscoveryInfos      DiscoveryInfos
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +61,20 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type DiscoveryInfos struct {
+	ServiceEndpoints []Endpoint
+	Tenants          []string
+}
+
+type remoteWrite struct {
+	URL     string            `yaml:"url"`
+	Headers map[string]string `yaml:"headers,omitempty"`
+}
+
+type remoteWriteConfig struct {
+	RemoteWrite []remoteWrite `yaml:"remoteWrite"`
 }
 
 func (opts Options) Build() []client.Object {
@@ -388,6 +403,73 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 			Ports:     servicePorts,
 			ClusterIP: corev1.ClusterIPNone,
 		},
+	}
+}
+
+const (
+	remoteWriteYAML  = "remote-write.yaml"
+	defaultHeaderKey = "THANOS-TENANT"
+
+	generatedRemoteWriteSecretLabel = "operator.thanos.io/generated-remote-write-secret"
+	generatedRemoteWriteSecretValue = "true"
+)
+
+func NewRulerSecret(opts Options) *corev1.Secret {
+	objectMetaLabels := GetLabels(opts)
+	return newRulerSecret(opts, objectMetaLabels)
+}
+
+func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
+	rwConfig := opts.DiscoveryInfos.toRemoteWrite()
+	stringData, _ := yaml.Marshal(rwConfig)
+
+	additionalLabels := map[string]string{
+		generatedRemoteWriteSecretLabel: generatedRemoteWriteSecretValue,
+	}
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      manifests.MergeMaps(objectMetaLabels, additionalLabels),
+			Annotations: opts.Annotations,
+		},
+		StringData: map[string]string{
+			remoteWriteYAML: string(stringData),
+		},
+	}
+}
+
+func (e Endpoint) toURL() string {
+	return fmt.Sprintf("http://%s.%s.svc:%d/api/v1/receive", e.ServiceName, e.Namespace, e.Port)
+}
+
+func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
+	config := make([]remoteWrite, 0, len(di.ServiceEndpoints))
+
+	for _, endpoint := range di.ServiceEndpoints {
+		rw := remoteWrite{
+			URL: endpoint.toURL(),
+		}
+		if len(di.Tenants) == 0 {
+			config = append(config, rw)
+		} else {
+			for _, tenant := range di.Tenants {
+				rw.Headers = map[string]string{
+					defaultHeaderKey: tenant,
+				}
+				config = append(config, rw)
+			}
+		}
+
+	}
+
+	return remoteWriteConfig{
+		RemoteWrite: config,
 	}
 }
 
