@@ -449,6 +449,9 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
+	if opts.ObjStoreSecret == nil {
+		return lbls
+	}
 	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
 }
 
