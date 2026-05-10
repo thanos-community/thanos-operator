@@ -196,12 +196,12 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 }
 
 func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (manifests.Buildable, []string, error) {
-	endpoints, err := r.getQueryAPIServiceEndpoints(ctx, ruler)
+	queryEndpoints, err := r.getQueryAPIServiceEndpoints(ctx, ruler)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(endpoints) == 0 {
+	if len(queryEndpoints) == 0 {
 		return nil, nil, fmt.Errorf("no query API services found")
 	}
 
@@ -251,8 +251,31 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		FeatureGate:         r.featureGate,
 		ConfigReloaderImage: r.configReloaderImage,
 	})
-	opts.Endpoints = endpoints
+	opts.Endpoints = queryEndpoints
 	opts.RuleFiles = ruleFiles
+
+	if ruler.Spec.StatelessSpec != nil {
+		receiveEndpoints, err := r.getReceiveServiceEndpoints(ctx, ruler)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(receiveEndpoints) == 0 {
+			// todo: add metric
+			return nil, nil, fmt.Errorf("no receive services found")
+		}
+
+		opts.DiscoveryInfos.ServiceEndpoints = receiveEndpoints
+
+		if ruler.Spec.RuleTenancyConfig != nil {
+			tenants, err := r.getConfigMapTenantValues(ctx, ruler)
+			if err != nil {
+				return nil, nil, err
+			}
+			opts.DiscoveryInfos.Tenants = tenants
+		}
+
+	}
 
 	return opts, expectedDerivedConfigMapNames, nil
 }
