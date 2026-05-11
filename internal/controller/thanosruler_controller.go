@@ -257,6 +257,73 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	return opts, expectedDerivedConfigMapNames, nil
 }
 
+func (r *ThanosRulerReconciler) getConfigMapTenantValues(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]string, error) {
+	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
+		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
+		return []string{}, fmt.Errorf("no prometheus rule selector specified")
+	}
+
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add a requirement to exclude derived ConfigMaps (those created from PrometheusRules)
+	excludeDerivedReq, err := labels.NewRequirement(
+		manifests.PromRuleDerivedConfigMapLabel,
+		selection.NotIn,
+		[]string{manifests.PromRuleDerivedConfigMapValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add a requirement to exclude user-provided ConfigMaps (those created from user-provided ConfigMaps)
+	excludeDerivedConfigMapReq, err := labels.NewRequirement(
+		manifests.UserConfigMapSourceLabel,
+		selection.NotIn,
+		[]string{manifests.UserConfigMapSourceValue},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	combinedSelector := labelSelector.Add(*excludeDerivedReq, *excludeDerivedConfigMapReq)
+	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: combinedSelector}, client.InNamespace(ruler.Namespace)}
+	cfgmaps := &corev1.ConfigMapList{}
+	if err := r.List(ctx, cfgmaps, opts...); err != nil {
+		return []string{}, err
+	}
+
+	if len(cfgmaps.Items) == 0 {
+		return []string{}, nil
+	}
+
+	var tenants []string
+
+	if ruler.Spec.RuleTenancyConfig != nil {
+		if ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel == nil {
+			return []string{}, fmt.Errorf("no tenancy label found for %s", ruler.GetName())
+		}
+		tenantValueLabel := *ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
+		for _, cm := range cfgmaps.Items {
+			value, exists := cm.Labels[tenantValueLabel]
+			if !exists {
+				continue
+			}
+			tenants = append(tenants, value)
+		}
+	} else {
+		return nil, nil
+	}
+
+	// Remove duplicate entries
+	slices.Sort(tenants)
+	tenants = slices.Compact(tenants)
+
+	return tenants, nil
+}
+
 func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
 	listOpt := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
