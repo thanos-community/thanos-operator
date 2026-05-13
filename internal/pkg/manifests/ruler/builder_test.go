@@ -780,40 +780,132 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 }
 
 func TestNewRulerSecret(t *testing.T) {
-	opts := Options{
-		Options: manifests.Options{
-			Namespace: "ns",
-			Owner:     "test-ruler",
-			Labels: map[string]string{
-				"foo": "bar",
+	tests := []struct {
+		name   string
+		opts   Options
+		golden string
+	}{
+		{
+			name: "single endpoint, no tenancy",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-query",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+					},
+				},
 			},
+			golden: "secret-single-endpoint-no-tenancy.golden.yaml",
 		},
-		DiscoveryInfos: DiscoveryInfos{
-			ServiceEndpoints: []Endpoint{
-				{
-					ServiceName: "test-receive-one",
-					Namespace:   "ns",
-					Port:        19101,
+		{
+			name: "single tenant, single endpoint, with relabeling",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
 				},
-				{
-					ServiceName: "test-receive-two",
-					Namespace:   "ns",
-					Port:        19102,
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-receive",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+					},
+					Tenants: []string{
+						"test-tenant",
+					},
+					TenantIdentifier: "tenant-id",
 				},
 			},
-			Tenants: []string{
-				"test-tenant- one",
-				"test-tenant- two",
+			golden: "secret-single_tenant-single_endpoint-with_relabel.golden.yaml",
+		},
+		{
+			name: "multi tenant, multi endpoint, with relabeling",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-receive-one",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+						{
+							ServiceName: "test-receive-two",
+							Namespace:   "ns",
+							Port:        19102,
+						},
+					},
+					Tenants: []string{
+						"test-tenant-one",
+						"test-tenant-two",
+					},
+					TenantIdentifier: "tenant-id",
+				},
 			},
+			golden: "secret-multi_tenant-multi_endpoint-with_relabel.golden.yaml",
+		},
+		{
+			name: "multi tenant, multi endpoint, without relabeling",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-receive-one",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+						{
+							ServiceName: "test-receive-two",
+							Namespace:   "ns",
+							Port:        19102,
+						},
+					},
+					Tenants: []string{
+						"test-tenant-one",
+						"test-tenant-two",
+					},
+				},
+			},
+			golden: "secret-multi_tenant-multi_endpoint-without_relabel.golden.yaml",
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewRulerSecret(tt.opts)
 
-	s := NewRulerSecret(opts)
-
-	// Test against golden file
-	yamlBytes, err := yaml.Marshal(s)
-	if err != nil {
-		t.Fatalf("failed to marshal secret to YAML: %v", err)
+			yamlBytes, err := yaml.Marshal(s)
+			if err != nil {
+				t.Fatalf("failed to marshal secret to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tt.golden)
+		})
 	}
-	golden.Assert(t, string(yamlBytes), "secret-remote-write.yaml")
 }

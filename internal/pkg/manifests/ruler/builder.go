@@ -66,15 +66,23 @@ type Endpoint struct {
 type DiscoveryInfos struct {
 	ServiceEndpoints []Endpoint
 	Tenants          []string
+	TenantIdentifier string
 }
 
 type remoteWrite struct {
-	URL     string            `yaml:"url"`
-	Headers map[string]string `yaml:"headers,omitempty"`
+	URL            string            `yaml:"url"`
+	Headers        map[string]string `yaml:"headers,omitempty"`
+	RelabelConfigs []relabelConfig   `yaml:"relabelConfigs,omitempty"`
 }
 
 type remoteWriteConfig struct {
 	RemoteWrite []remoteWrite `yaml:"remoteWrite"`
+}
+
+type relabelConfig struct {
+	SourceLabels []string `yaml:"sourceLabels"`
+	Regex        string   `yaml:"regex"`
+	Action       string   `yaml:"action"`
 }
 
 func (opts Options) Build() []client.Object {
@@ -440,6 +448,8 @@ const (
 
 	remoteWriteVolumeName = "remote-write"
 	remoteWriteVolumePath = "/etc/thanos/remote-write"
+
+	defaultRelabelAction = "keep"
 )
 
 func NewRulerSecret(opts Options) *corev1.Secret {
@@ -489,6 +499,15 @@ func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
 			for _, tenant := range di.Tenants {
 				rw.Headers = map[string]string{
 					defaultHeaderKey: tenant,
+				}
+				if di.TenantIdentifier != "" {
+					rw.RelabelConfigs = []relabelConfig{
+						{
+							SourceLabels: []string{di.TenantIdentifier},
+							Regex:        tenant,
+							Action:       defaultRelabelAction,
+						},
+					}
 				}
 				config = append(config, rw)
 			}

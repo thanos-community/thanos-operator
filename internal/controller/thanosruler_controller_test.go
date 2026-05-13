@@ -1002,6 +1002,11 @@ config:
 - url: http://test-receive.test-ruler.svc:19291/api/v1/receive
   headers:
     THANOS-TENANT: test-tenant
+  relabelConfigs:
+  - sourceLabels:
+    - tenant_id
+    regex: test-tenant
+    action: keep
 `
 
 					return string(secret.Data["remote-write.yaml"]) == expectedContent

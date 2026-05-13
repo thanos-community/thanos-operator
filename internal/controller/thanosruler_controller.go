@@ -273,6 +273,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 				return nil, nil, err
 			}
 			opts.DiscoveryInfos.Tenants = tenants
+			opts.DiscoveryInfos.TenantIdentifier = ptr.Deref(ruler.Spec.RuleTenancyConfig.EnforcedTenantIdentifier, defaultTenantIdentifier)
 		}
 
 	}
