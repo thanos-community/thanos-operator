@@ -443,8 +443,8 @@ const (
 	remoteWriteYAML  = "remote-write.yaml"
 	defaultHeaderKey = "THANOS-TENANT"
 
-	generatedRemoteWriteSecretLabel = "operator.thanos.io/generated-remote-write-secret"
-	generatedRemoteWriteSecretValue = "true"
+	GeneratedRemoteWriteSecretLabel = "operator.thanos.io/generated-remote-write-secret"
+	GeneratedRemoteWriteSecretValue = "true"
 
 	remoteWriteVolumeName = "remote-write"
 	remoteWriteVolumePath = "/etc/thanos/remote-write"
@@ -462,7 +462,7 @@ func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Se
 	stringData, _ := yaml.Marshal(rwConfig)
 
 	additionalLabels := map[string]string{
-		generatedRemoteWriteSecretLabel: generatedRemoteWriteSecretValue,
+		GeneratedRemoteWriteSecretLabel: GeneratedRemoteWriteSecretValue,
 	}
 
 	return &corev1.Secret{

@@ -1052,6 +1052,9 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 	}
 
 	cleanErrCount += r.pruneOrphanedDerivedConfigMaps(ctx, ns, expectedDerivedConfigMaps)
+	if resource.Spec.StatefulSpec != nil {
+		cleanErrCount += r.pruneGeneratedRemoteWriteSecret(ctx, ns)
+	}
 
 	return cleanErrCount
 }
@@ -1077,6 +1080,17 @@ func (r *ThanosRulerReconciler) pruneOrphanedDerivedConfigMaps(ctx context.Conte
 	prunedUCMD := pruner.Prune(ctx, expectedDerivedConfigMaps, listOptsUserConfigMapSourceConfigMaps...)
 
 	return prunedPrd + prunedUCMD
+}
+
+func (r *ThanosRulerReconciler) pruneGeneratedRemoteWriteSecret(ctx context.Context, ns string) int {
+	pruner := r.handler.NewResourcePruner().WithSecret()
+	listOpts := []client.ListOption{
+		client.InNamespace(ns),
+		client.MatchingLabels{
+			manifestruler.GeneratedRemoteWriteSecretLabel: manifestruler.GeneratedRemoteWriteSecretValue,
+		},
+	}
+	return pruner.Prune(ctx, []string{}, listOpts...)
 }
 
 func (r *ThanosRulerReconciler) DisableConditionUpdate() *ThanosRulerReconciler {

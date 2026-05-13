@@ -1012,6 +1012,44 @@ config:
 					return string(secret.Data["remote-write.yaml"]) == expectedContent
 				}, time.Second*30, time.Second*5).Should(BeTrue())
 			})
+
+			By("switching to stateful mode", func() {
+				Eventually(func() bool {
+					existingRuler := &monitoringthanosiov1alpha1.ThanosRuler{}
+					if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: resourceName}, existingRuler); err != nil {
+						return false
+					}
+					existingRuler.Spec.StatelessSpec = nil
+					existingRuler.Spec.StatefulSpec = &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
+						},
+					}
+					if err := k8sClient.Update(ctx, existingRuler); err != nil {
+						return false
+					}
+					return true
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
+					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--objstore.config=$(OBJSTORE_CONFIG)"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				Eventually(func() bool {
+					secret := &corev1.Secret{}
+					err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, secret)
+					return err != nil
+				}, time.Minute, time.Second*5).Should(BeTrue())
+			})
 		})
 	})
 })
