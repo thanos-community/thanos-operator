@@ -902,3 +902,27 @@ func VerifyAnnotations(c client.Client, objs []client.Object, name, namespace st
 	}
 	return true
 }
+
+func SetupQueryPortForward(c client.Client, ns string) (context.CancelFunc, error) {
+	ctx := context.Background()
+	selector := client.MatchingLabels{
+		manifests.ComponentLabel: "query-layer",
+	}
+	queryPods := &corev1.PodList{}
+	if err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: ns}); err != nil {
+		return nil, err
+	}
+	if len(queryPods.Items) == 0 {
+		return nil, fmt.Errorf("expected at least one pod found in %s namespace", ns)
+	}
+
+	pod := queryPods.Items[0].Name
+	port := intstr.IntOrString{IntVal: 9090}
+	cancelFn, err := StartPortForward(ctx, port, "https", pod, ns)
+	if err != nil {
+		return nil, err
+	}
+
+	return cancelFn, nil
+
+}
