@@ -737,6 +737,8 @@ var _ = Describe("controller", Ordered, func() {
           severity: critical
         annotations:
           summary: High request rate
+      - record: example_recording_rule
+        expr: vector(1)
 `,
 					},
 				}
@@ -791,6 +793,23 @@ var _ = Describe("controller", Ordered, func() {
 						"--rule-file=/etc/thanos/rules/"+cr.GetName()+"-promrule-0/"+promRule.Name+".yaml",
 					)
 				}, time.Minute*3, time.Second*1).Should(BeTrue())
+			})
+
+			It("should allow querying of evaluated rules", func() {
+				cancelFn, err := utils.SetupQueryPortForward(c, namespace)
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					resp, err := utils.QueryPrometheus(`example_recording_rule`)
+					if err != nil {
+						return err
+					}
+					if len(resp.Data.Result) == 0 {
+						return fmt.Errorf("no results found for recording rule")
+					}
+					return nil
+				}, time.Minute*3, time.Second*1).Should(BeNil())
 			})
 		})
 	})
