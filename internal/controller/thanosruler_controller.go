@@ -268,84 +268,17 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		opts.DiscoveryInfos.ServiceEndpoints = receiveEndpoints
 
 		if ruler.Spec.RuleTenancyConfig != nil {
-			tenants, err := r.getConfigMapTenantValues(ctx, ruler)
-			if err != nil {
-				return nil, nil, err
-			}
-			opts.DiscoveryInfos.Tenants = tenants
+			allTenants := append(userConfigMaps.tenants, promRuleConfigMaps.tenants...)
+			slices.Sort(allTenants)
+			allTenants = slices.Compact(allTenants)
+
+			opts.DiscoveryInfos.Tenants = allTenants
 			opts.DiscoveryInfos.TenantIdentifier = ptr.Deref(ruler.Spec.RuleTenancyConfig.EnforcedTenantIdentifier, defaultTenantIdentifier)
 		}
 
 	}
 
 	return opts, expectedDerivedConfigMapNames, nil
-}
-
-func (r *ThanosRulerReconciler) getConfigMapTenantValues(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]string, error) {
-	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
-		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
-		return []string{}, fmt.Errorf("no prometheus rule selector specified")
-	}
-
-	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add a requirement to exclude derived ConfigMaps (those created from PrometheusRules)
-	excludeDerivedReq, err := labels.NewRequirement(
-		manifests.PromRuleDerivedConfigMapLabel,
-		selection.NotIn,
-		[]string{manifests.PromRuleDerivedConfigMapValue},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add a requirement to exclude user-provided ConfigMaps (those created from user-provided ConfigMaps)
-	excludeDerivedConfigMapReq, err := labels.NewRequirement(
-		manifests.UserConfigMapSourceLabel,
-		selection.NotIn,
-		[]string{manifests.UserConfigMapSourceValue},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	combinedSelector := labelSelector.Add(*excludeDerivedReq, *excludeDerivedConfigMapReq)
-	opts := []client.ListOption{client.MatchingLabelsSelector{Selector: combinedSelector}, client.InNamespace(ruler.Namespace)}
-	cfgmaps := &corev1.ConfigMapList{}
-	if err := r.List(ctx, cfgmaps, opts...); err != nil {
-		return []string{}, err
-	}
-
-	if len(cfgmaps.Items) == 0 {
-		return []string{}, nil
-	}
-
-	var tenants []string
-
-	if ruler.Spec.RuleTenancyConfig != nil {
-		if ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel == nil {
-			return []string{}, fmt.Errorf("no tenancy label found for %s", ruler.GetName())
-		}
-		tenantValueLabel := *ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
-		for _, cm := range cfgmaps.Items {
-			value, exists := cm.Labels[tenantValueLabel]
-			if !exists {
-				continue
-			}
-			tenants = append(tenants, value)
-		}
-	} else {
-		return nil, nil
-	}
-
-	// Remove duplicate entries
-	slices.Sort(tenants)
-	tenants = slices.Compact(tenants)
-
-	return tenants, nil
 }
 
 func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectedResources []string) int {
@@ -435,6 +368,7 @@ func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, 
 
 type ruleConfigMaps struct {
 	ruleKeySelectors []corev1.ConfigMapKeySelector
+	tenants          []string
 }
 
 func (rcm ruleConfigMaps) getNames() []string {
@@ -546,6 +480,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 
 					if _, exists := tenantRuleGroupCount[value]; !exists {
 						tenantRuleGroupCount[value] = 0
+						result.tenants = append(result.tenants, value)
 					}
 					tenantRuleGroupCount[value] += len(groups)
 				}
@@ -651,6 +586,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 
 				if _, exists := tenantRuleGroupCount[value]; !exists {
 					tenantRuleGroupCount[value] = 0
+					result.tenants = append(result.tenants, value)
 				}
 				tenantRuleGroupCount[value] += len(groups)
 			}
