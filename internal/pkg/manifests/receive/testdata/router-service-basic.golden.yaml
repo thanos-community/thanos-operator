@@ -10,6 +10,7 @@ metadata:
     app.kubernetes.io/name: thanos-receive
     app.kubernetes.io/part-of: thanos
     operator.thanos.io/owner: ""
+    operator.thanos.io/remote-write-api: "true"
     some-custom-label: xyz
     some-other-label: abc
   name: thanos-receive-router

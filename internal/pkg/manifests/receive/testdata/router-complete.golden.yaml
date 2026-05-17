@@ -26,6 +26,7 @@
       app.kubernetes.io/part-of: thanos
       app.kubernetes.io/version: v0.40.1
       operator.thanos.io/owner: test-owner
+      operator.thanos.io/remote-write-api: "true"
     name: thanos-receive-router-test-owner
     namespace: test-namespace
   spec:
@@ -68,6 +69,7 @@
       app.kubernetes.io/part-of: thanos
       app.kubernetes.io/version: v0.40.1
       operator.thanos.io/owner: test-owner
+      operator.thanos.io/remote-write-api: "true"
     name: thanos-receive-router-test-owner
     namespace: test-namespace
   spec:
@@ -96,6 +98,7 @@
           app.kubernetes.io/part-of: thanos
           app.kubernetes.io/version: v0.40.1
           operator.thanos.io/owner: test-owner
+          operator.thanos.io/remote-write-api: "true"
         name: thanos-receive-router-test-owner
         namespace: test-namespace
       spec:
@@ -186,6 +189,7 @@
       app.kubernetes.io/part-of: thanos
       app.kubernetes.io/version: v0.40.1
       operator.thanos.io/owner: test-owner
+      operator.thanos.io/remote-write-api: "true"
     name: thanos-receive-router-test-owner
     namespace: test-namespace
 - apiVersion: policy/v1
@@ -201,6 +205,7 @@
       app.kubernetes.io/part-of: thanos
       app.kubernetes.io/version: v0.40.1
       operator.thanos.io/owner: test-owner
+      operator.thanos.io/remote-write-api: "true"
     name: thanos-receive-router-test-owner
     namespace: test-namespace
   spec:
