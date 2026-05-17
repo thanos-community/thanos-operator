@@ -808,7 +808,7 @@ func TestNewRulerSecret(t *testing.T) {
 			golden: "secret-single-endpoint-no-tenancy.golden.yaml",
 		},
 		{
-			name: "single tenant, single endpoint, with relabeling",
+			name: "single tenant, single endpoint",
 			opts: Options{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -831,10 +831,10 @@ func TestNewRulerSecret(t *testing.T) {
 					TenantIdentifier: "tenant-id",
 				},
 			},
-			golden: "secret-single_tenant-single_endpoint-with_relabel.golden.yaml",
+			golden: "secret-single_tenant-single_endpoint.golden.yaml",
 		},
 		{
-			name: "multi tenant, multi endpoint, with relabeling",
+			name: "multi tenant, multi endpoint",
 			opts: Options{
 				Options: manifests.Options{
 					Namespace: "ns",
@@ -863,38 +863,7 @@ func TestNewRulerSecret(t *testing.T) {
 					TenantIdentifier: "tenant-id",
 				},
 			},
-			golden: "secret-multi_tenant-multi_endpoint-with_relabel.golden.yaml",
-		},
-		{
-			name: "multi tenant, multi endpoint, without relabeling",
-			opts: Options{
-				Options: manifests.Options{
-					Namespace: "ns",
-					Owner:     "test-ruler",
-					Labels: map[string]string{
-						"foo": "bar",
-					},
-				},
-				DiscoveryInfos: DiscoveryInfos{
-					ServiceEndpoints: []Endpoint{
-						{
-							ServiceName: "test-receive-one",
-							Namespace:   "ns",
-							Port:        19101,
-						},
-						{
-							ServiceName: "test-receive-two",
-							Namespace:   "ns",
-							Port:        19102,
-						},
-					},
-					Tenants: []string{
-						"test-tenant-one",
-						"test-tenant-two",
-					},
-				},
-			},
-			golden: "secret-multi_tenant-multi_endpoint-without_relabel.golden.yaml",
+			golden: "secret-multi_tenant-multi_endpoint.golden.yaml",
 		},
 	}
 	for _, tt := range tests {
