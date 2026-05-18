@@ -1053,7 +1053,7 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 
 	cleanErrCount += r.pruneOrphanedDerivedConfigMaps(ctx, ns, expectedDerivedConfigMaps)
 	if resource.Spec.StatefulSpec != nil {
-		cleanErrCount += r.pruneGeneratedRemoteWriteSecret(ctx, ns)
+		cleanErrCount += r.pruneGeneratedRemoteWriteSecret(ctx, ns, owner)
 	}
 
 	return cleanErrCount
@@ -1082,9 +1082,11 @@ func (r *ThanosRulerReconciler) pruneOrphanedDerivedConfigMaps(ctx context.Conte
 	return prunedPrd + prunedUCMD
 }
 
-func (r *ThanosRulerReconciler) pruneGeneratedRemoteWriteSecret(ctx context.Context, ns string) int {
+func (r *ThanosRulerReconciler) pruneGeneratedRemoteWriteSecret(ctx context.Context, ns, owner string) int {
+	ownerOpts := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})
 	pruner := r.handler.NewResourcePruner().WithSecret()
 	listOpts := []client.ListOption{
+		ownerOpts,
 		client.InNamespace(ns),
 		client.MatchingLabels{
 			manifestruler.GeneratedRemoteWriteSecretLabel: manifestruler.GeneratedRemoteWriteSecretValue,
