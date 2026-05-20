@@ -584,6 +584,19 @@ func DefaultRemoteWriteRequest() RemoteWriteRequest {
 	}
 }
 
+func StatelessRemoteWriteRequest() RemoteWriteRequest {
+	return RemoteWriteRequest{
+		Data: []byte(fmt.Sprintf(`
+	# HELP test_metric This is a test metric.
+	# TYPE test_metric gauge
+	test_metric{tenant_id="stateless_tenant"} 1 %d
+	`, time.Now().UnixMilli())),
+		Labels: map[string]string{
+			"job": "e2e-test",
+		},
+	}
+}
+
 type setHeadersTransport struct {
 	http.RoundTripper
 	headers map[string]string
@@ -597,7 +610,7 @@ func (s *setHeadersTransport) RoundTrip(req *http.Request) (*http.Response, erro
 }
 
 // DoRemoteWriteRequest sends a remote write request to the remote write endpoint for the Thanos Receive in the namespace.
-func DoRemoteWriteRequest(c client.Client, req RemoteWriteRequest, namespace string, matchLabels map[string]string, port int32) error {
+func DoRemoteWriteRequest(c client.Client, req RemoteWriteRequest, namespace string, matchLabels, header map[string]string, port int32) error {
 	ctx := context.Background()
 	selector := client.MatchingLabels(matchLabels)
 	router := &corev1.PodList{}
@@ -617,7 +630,7 @@ func DoRemoteWriteRequest(c client.Client, req RemoteWriteRequest, namespace str
 		return err
 	}
 	defer cancelFn()
-	return RemoteWrite(req, nil, nil)
+	return RemoteWrite(req, nil, header)
 }
 
 func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
