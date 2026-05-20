@@ -998,12 +998,12 @@ config:
 						return false
 					}
 
-					expectedContent := `remoteWrite:
+					expectedContent := `remote_write:
 - url: http://test-receive.test-ruler.svc:19291/api/v1/receive
   headers:
     THANOS-TENANT: test-tenant
-  relabelConfigs:
-  - sourceLabels:
+  write_relabel_configs:
+  - source_labels:
     - tenant_id
     regex: test-tenant
     action: keep

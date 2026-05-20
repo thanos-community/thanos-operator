@@ -72,15 +72,15 @@ type DiscoveryInfos struct {
 type remoteWrite struct {
 	URL            string            `yaml:"url"`
 	Headers        map[string]string `yaml:"headers,omitempty"`
-	RelabelConfigs []relabelConfig   `yaml:"relabelConfigs,omitempty"`
+	RelabelConfigs []relabelConfig   `yaml:"write_relabel_configs,omitempty"`
 }
 
 type remoteWriteConfig struct {
-	RemoteWrite []remoteWrite `yaml:"remoteWrite"`
+	RemoteWrite []remoteWrite `yaml:"remote_write"`
 }
 
 type relabelConfig struct {
-	SourceLabels []string `yaml:"sourceLabels"`
+	SourceLabels []string `yaml:"source_labels"`
 	Regex        string   `yaml:"regex"`
 	Action       string   `yaml:"action"`
 }
