@@ -393,7 +393,6 @@ build-installer: manifests generate format kustomize ## Generate a consolidated 
 	@echo ">> generating bundle.yaml (override image using IMG_MAIN)"
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_MAIN}
 	$(KUSTOMIZE) build config/default > bundle.yaml
-	$(call require_clean_work_tree,'run make build-chart and commit changes')
 
 .PHONY: build-chart
 build-chart: build-installer kubebuilder ## Build the helm chart.

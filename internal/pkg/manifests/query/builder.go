@@ -31,14 +31,16 @@ const (
 // Options for Thanos Query
 type Options struct {
 	manifests.Options
-	ReplicaLabels      []string
-	Timeout            string
-	LookbackDelta      string
-	MaxConcurrent      int
-	WebOptions         WebOptions
-	TelemetryQuantiles TelemetryQuantiles
-	GRPCProxyStrategy  string
-	Endpoints          []Endpoint
+	ReplicaLabels          []string
+	Timeout                string
+	LookbackDelta          string
+	MaxConcurrent          int
+	WebOptions             WebOptions
+	TelemetryQuantiles     TelemetryQuantiles
+	GRPCProxyStrategy      string
+	Endpoints              []Endpoint
+	QueryMode              string
+	SelectorRelabelConfigs manifests.RelabelConfigs
 }
 
 type WebOptions struct {
@@ -293,20 +295,47 @@ func queryArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
 	}
 
+	if opts.QueryMode == "distributed" {
+		args = append(args, "--query.mode=distributed")
+	}
+	if len(opts.SelectorRelabelConfigs) > 0 {
+		args = append(args, opts.SelectorRelabelConfigs.ToFlags())
+	}
+
 	for _, ep := range opts.Endpoints {
-		switch ep.Type {
-		case manifests.RegularLabel:
-			// TODO(saswatamcode): For regular probably use SD file.
-			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
-		case manifests.StrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
-		case manifests.GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		case manifests.GroupStrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		default:
-			panic("unknown endpoint type")
+		var endpoint string
+
+		// If namespace is empty, it's an external service - use serviceName directly
+		if ep.Namespace == "" {
+			switch ep.Type {
+			case manifests.RegularLabel:
+				endpoint = fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s", ep.ServiceName)
+			case manifests.StrictLabel:
+				endpoint = fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s", ep.ServiceName)
+			case manifests.GroupLabel:
+				endpoint = fmt.Sprintf("--endpoint-group=%s:%d", ep.ServiceName, ep.Port)
+			case manifests.GroupStrictLabel:
+				endpoint = fmt.Sprintf("--endpoint-group-strict=%s:%d", ep.ServiceName, ep.Port)
+			default:
+				panic("unknown endpoint type")
+			}
+		} else {
+			// Regular in-cluster service
+			switch ep.Type {
+			case manifests.RegularLabel:
+				// TODO(saswatamcode): For regular probably use SD file.
+				endpoint = fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace)
+			case manifests.StrictLabel:
+				endpoint = fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace)
+			case manifests.GroupLabel:
+				endpoint = fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port)
+			case manifests.GroupStrictLabel:
+				endpoint = fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port)
+			default:
+				panic("unknown endpoint type")
+			}
 		}
+		args = append(args, endpoint)
 	}
 
 	return manifests.PruneEmptyArgs(args)
