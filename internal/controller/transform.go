@@ -444,9 +444,10 @@ func commonToOpts(
 		ServiceMonitorConfig: serviceMonitorConfigToOptsGlobal(featureGate, labels),
 		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(replicas, common.PodDisruptionBudgetConfig),
 		PlacementConfig: &manifests.Placement{
-			NodeSelector: common.NodeSelector,
-			Affinity:     common.Affinity,
-			Tolerations:  common.Tolerations,
+			NodeSelector:              common.NodeSelector,
+			Affinity:                  common.Affinity,
+			Tolerations:               common.Tolerations,
+			TopologySpreadConstraints: common.TopologySpreadConstraints,
 		},
 		StatefulSet:     statefulSetToOpts(statefulSet),
 		SecurityContext: common.SecurityContext,

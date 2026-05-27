@@ -125,9 +125,10 @@ type Options struct {
 
 // Placement is a struct that holds the placement configuration for the component
 type Placement struct {
-	NodeSelector map[string]string
-	Affinity     *corev1.Affinity
-	Tolerations  []corev1.Toleration
+	NodeSelector              map[string]string
+	Affinity                  *corev1.Affinity
+	Tolerations               []corev1.Toleration
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint
 }
 
 type Features struct {
@@ -343,6 +344,7 @@ func augmentPodTemplate(tl *corev1.PodTemplateSpec, opts Options) {
 		tl.Spec.NodeSelector = opts.PlacementConfig.NodeSelector
 		tl.Spec.Affinity = opts.PlacementConfig.Affinity
 		tl.Spec.Tolerations = opts.PlacementConfig.Tolerations
+		tl.Spec.TopologySpreadConstraints = opts.PlacementConfig.TopologySpreadConstraints
 	}
 
 	if opts.Additional.Containers != nil {
