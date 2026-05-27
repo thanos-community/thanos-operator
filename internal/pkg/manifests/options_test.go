@@ -435,6 +435,18 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 								},
 							},
 						},
+						TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+							{
+								MaxSkew:           1,
+								TopologyKey:       "topology.kubernetes.io/zone",
+								WhenUnsatisfiable: corev1.DoNotSchedule,
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app.kubernetes.io/name": "thanos-query",
+									},
+								},
+							},
+						},
 					},
 					ServiceMonitorConfig: &ServiceMonitorConfig{},
 					PodDisruptionConfig:  &PodDisruptionBudgetOptions{},
@@ -821,6 +833,18 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 												},
 											},
 										},
+									},
+								},
+							},
+						},
+						TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+							{
+								MaxSkew:           1,
+								TopologyKey:       "topology.kubernetes.io/zone",
+								WhenUnsatisfiable: corev1.DoNotSchedule,
+								LabelSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app.kubernetes.io/name": "thanos-query",
 									},
 								},
 							},
