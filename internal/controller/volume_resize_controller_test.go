@@ -21,10 +21,12 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -180,11 +182,16 @@ func TestVolumeResizeReconciler_Reconcile(t *testing.T) {
 			clientBuilder := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...)
 			fakeClient := clientBuilder.Build()
 
+			// Create a fake metrics registry for testing
+			reg := prometheus.NewRegistry()
+			commonMetrics := metrics.NewCommonMetrics(reg)
+
 			reconciler := &VolumeResizeReconciler{
 				Client:   fakeClient,
 				Scheme:   scheme,
 				logger:   logr.Discard(),
 				recorder: events.NewFakeRecorder(10),
+				metrics:  metrics.NewVolumeResizeMetrics(reg, commonMetrics),
 			}
 
 			result, err := reconciler.Reconcile(context.Background(), tt.request)

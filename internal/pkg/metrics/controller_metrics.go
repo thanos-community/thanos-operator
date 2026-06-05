@@ -53,6 +53,12 @@ type ThanosCompactMetrics struct {
 	ShardCreationUpdateFailures *prometheus.CounterVec
 }
 
+type VolumeResizeMetrics struct {
+	*CommonMetrics
+	ResizeSuccessTotal *prometheus.CounterVec
+	ResizeFailureTotal *prometheus.CounterVec
+}
+
 var (
 	commonMetricsInstance *CommonMetrics
 	commonMetricsOnce     sync.Once
@@ -185,5 +191,19 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 			Name: "thanos_operator_compact_shards_creation_update_failures_total",
 			Help: "Number of shard creation/update failures for ThanosCompact resources",
 		}, []string{"resource", "namespace"}),
+	}
+}
+
+func NewVolumeResizeMetrics(reg prometheus.Registerer, commonMetrics *CommonMetrics) VolumeResizeMetrics {
+	return VolumeResizeMetrics{
+		CommonMetrics: commonMetrics,
+		ResizeSuccessTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "thanos_operator_volume_resize_success_total",
+			Help: "Total number of successful PVC resize operations",
+		}, []string{"statefulset", "namespace", "pvc"}),
+		ResizeFailureTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "thanos_operator_volume_resize_failure_total",
+			Help: "Total number of failed PVC resize operations",
+		}, []string{"statefulset", "namespace", "pvc"}),
 	}
 }

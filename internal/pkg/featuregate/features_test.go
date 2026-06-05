@@ -14,6 +14,7 @@ func TestAllFeatures(t *testing.T) {
 		PrometheusRule,
 		OtelSidecar,
 		KubeResourceSync,
+		VolumeResize,
 	}
 	got := AllFeatures()
 	slices.Sort(expected)
@@ -41,6 +42,11 @@ func TestIsValidFeature(t *testing.T) {
 		{
 			name:    "valid otel-sidecar",
 			feature: OtelSidecar,
+			want:    true,
+		},
+		{
+			name:    "valid volume-resize",
+			feature: VolumeResize,
 			want:    true,
 		},
 		{
@@ -91,6 +97,33 @@ func TestConfig_OtelSidecarEnabled(t *testing.T) {
 	}
 }
 
+func TestConfig_VolumeResizeEnabled(t *testing.T) {
+	tests := []struct {
+		name   string
+		config Config
+		want   bool
+	}{
+		{
+			name:   "volume resize enabled",
+			config: Config{EnableVolumeResize: true},
+			want:   true,
+		},
+		{
+			name:   "volume resize disabled",
+			config: Config{EnableVolumeResize: false},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.config.VolumeResizeEnabled(); got != tt.want {
+				t.Errorf("Config.VolumeResizeEnabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestFlag_ToFeatureGate(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -104,15 +137,17 @@ func TestFlag_ToFeatureGate(t *testing.T) {
 				EnableServiceMonitor:          false,
 				EnablePrometheusRuleDiscovery: false,
 				EnableOtelSidecar:             false,
+				EnableVolumeResize:            false,
 			},
 		},
 		{
 			name:     "all features enabled",
-			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar},
+			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, VolumeResize},
 			want: Config{
 				EnableServiceMonitor:          true,
 				EnablePrometheusRuleDiscovery: true,
 				EnableOtelSidecar:             true,
+				EnableVolumeResize:            true,
 			},
 		},
 	}

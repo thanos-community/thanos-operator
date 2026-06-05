@@ -52,3 +52,8 @@ func (f *Flag) EnablesOtelSidecar() bool {
 func (f *Flag) EnablesKubeResourceSync() bool {
 	return f.Contains(KubeResourceSync)
 }
+
+// EnablesVolumeResize returns true if volume resize features should be enabled.
+func (f *Flag) EnablesVolumeResize() bool {
+	return f.Contains(VolumeResize)
+}

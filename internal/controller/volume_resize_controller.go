@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,6 +44,7 @@ type VolumeResizeReconciler struct {
 
 	logger   logr.Logger
 	recorder events.EventRecorder
+	metrics  metrics.VolumeResizeMetrics
 }
 
 // NewVolumeResizeReconciler returns a reconciler for volume resize operations.
@@ -52,6 +54,7 @@ func NewVolumeResizeReconciler(conf Config, client client.Client, scheme *runtim
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger.WithName("volume-resize"),
 		recorder: conf.InstrumentationConfig.EventRecorder,
+		metrics:  metrics.NewVolumeResizeMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 	}
 }
 
@@ -125,18 +128,21 @@ func (r *VolumeResizeReconciler) processPVCs(ctx context.Context, sts *appsv1.St
 		return fmt.Errorf("failed to list PVCs for StatefulSet %s: %w", sts.GetName(), err)
 	}
 
-	r.logger.Info("Found PVCs for StatefulSet", "statefulset", sts.GetName(), "pvcCount", len(pvcList.Items))
+	r.logger.Info("Found PersistentVolumeClaims for StatefulSet", "statefulset", sts.GetName(), "count", len(pvcList.Items))
 
-	// Process each PVC
+	var errCount int
 	for _, pvc := range pvcList.Items {
 		err = r.processPVC(ctx, &pvc, sts)
 		if err != nil {
-			r.logger.Error(err, "failed to process PVC", "pvc", pvc.GetName(), "statefulset", sts.GetName())
-			// Continue processing other PVCs even if one fails
+			errCount++
+			r.logger.Error(err, "failed to process PersistentVolumeClaim", "pvc", pvc.GetName(), "statefulset", sts.GetName())
 			continue
 		}
 	}
 
+	if errCount > 0 {
+		return fmt.Errorf("encountered errors processing %d PVC(s) for StatefulSet %s", errCount, sts.GetName())
+	}
 	return nil
 }
 
@@ -146,33 +152,34 @@ func (r *VolumeResizeReconciler) processPVC(ctx context.Context, pvc *corev1.Per
 
 	requestedSizeStr, exists := sts.GetAnnotations()[manifests.StorageSizeAnnotation]
 	if !exists {
-		r.logger.V(1).Info("StatefulSet does not have storage size annotation, skipping", "statefulset", sts.GetName())
+		r.logger.Info("StatefulSet does not have storage size annotation, skipping", "statefulset", sts.GetName())
 		return nil
 	}
 
 	requestedSize, err := parseStorageSize(requestedSizeStr)
 	if err != nil {
+		r.metrics.ResizeFailureTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
 		return fmt.Errorf("failed to parse requested storage size %s for PVC %s: %w", requestedSizeStr, pvc.GetName(), err)
 	}
 
 	currentSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
 
-	if requestedSize.Cmp(currentSize) > 0 {
-		r.logger.Info("PVC needs to be resized",
-			"pvc", pvc.GetName(),
-			"currentSize", currentSize.String(),
-			"requestedSize", requestedSize.String())
-
-		err = r.resizePVC(ctx, pvc, requestedSize)
-		if err != nil {
-			return fmt.Errorf("failed to resize PVC %s: %w", pvc.GetName(), err)
-		}
-
-		r.recorder.Eventf(pvc, nil, corev1.EventTypeNormal, "VolumeResized", "VolumeResize",
-			"PVC resized from %s to %s", currentSize.String(), requestedSize.String())
-	} else {
-		r.logger.V(1).Info("PVC does not need resizing", "pvc", pvc.GetName())
+	if requestedSize.Cmp(currentSize) < 1 {
+		return nil
 	}
+
+	r.logger.Info("volume expansion required",
+		"PersistentVolumeClaim", pvc.GetName(), "currentSize", currentSize.String(), "requestedSize", requestedSize.String())
+
+	err = r.resizePVC(ctx, pvc, requestedSize)
+	if err != nil {
+		r.metrics.ResizeFailureTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
+		return fmt.Errorf("failed to resize PVC %s: %w", pvc.GetName(), err)
+	}
+
+	r.metrics.ResizeSuccessTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
+	r.recorder.Eventf(pvc, nil, corev1.EventTypeNormal, "VolumeResized", "VolumeResize",
+		"PVC resized from %s to %s", currentSize.String(), requestedSize.String())
 
 	return nil
 }
