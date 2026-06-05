@@ -192,8 +192,9 @@ config:
 					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.StatefulSet{}, &corev1.Service{})
 
 					expectedAnnotations := map[string]string{
-						"ruler-meta": "annotation",
-						"ruler-spec": "annotation",
+						"ruler-meta":                    "annotation",
+						"ruler-spec":                    "annotation",
+						manifests.StorageSizeAnnotation: "1Gi",
 					}
 
 					if !utils.VerifyAnnotations(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedAnnotations) {

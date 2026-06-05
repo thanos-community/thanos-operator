@@ -131,6 +131,7 @@ func QueryFrontendNameFromParent(resourceName string) string {
 
 func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Options {
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
+	addStorageSizeAnnotation(&opts, in.CRD.Spec.StorageConfiguration.Size)
 	rulerOpts := manifestruler.Options{
 		Options:         opts,
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
@@ -179,6 +180,8 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 	}
 
 	opts := commonToOpts(&in.CRD, in.Spec.Replicas, common, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, additional)
+	addStorageSizeAnnotation(&opts, in.Spec.StorageConfiguration.Size)
+
 	ingestOpts := manifestreceive.IngesterOptions{
 		Options:        opts,
 		ObjStoreSecret: secret,
@@ -266,6 +269,8 @@ func ReceiveRouterNameFromParent(resourceName string) string {
 
 func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Options {
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
+	addStorageSizeAnnotation(&opts, in.CRD.Spec.StorageConfiguration.Size)
+
 	var indexHeaderOpts *manifestsstore.IndexHeaderOptions
 	if in.CRD.Spec.IndexHeaderConfig != nil {
 		indexHeaderOpts = &manifestsstore.IndexHeaderOptions{
@@ -314,6 +319,7 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 	opts := commonToOpts(&in.CRD, 1, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	// we always set nil for compactor since it should run as single pod
 	opts.PodDisruptionConfig = nil
+	addStorageSizeAnnotation(&opts, in.CRD.Spec.StorageConfiguration.Size)
 
 	downsamplingConfig := func() *manifestscompact.DownsamplingOptions {
 		if in.CRD.Spec.DownsamplingConfig == nil {
@@ -556,4 +562,13 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 		InMemoryCacheConfig: toInMemoryCacheConfig,
 		FromSecret:          nil,
 	}
+}
+
+// addStorageSizeAnnotation adds a storage size annotation to the provided options based on the storage configuration
+func addStorageSizeAnnotation(opts *manifests.Options, storageSize v1alpha1.StorageSize) {
+	if opts.Annotations == nil {
+		opts.Annotations = make(map[string]string)
+	}
+	quantity := storageSize.ToResourceQuantity()
+	opts.Annotations[manifests.StorageSizeAnnotation] = quantity.String()
 }

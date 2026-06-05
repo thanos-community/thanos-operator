@@ -279,14 +279,16 @@ config:
 					objs = append(objs, &appsv1.StatefulSet{})
 
 					expectedAnnotations := map[string]string{
-						"receive":  "annotation",
-						"ingestor": "annotation",
-						"conflict": "ingestor-override",
+						"receive":                       "annotation",
+						"ingestor":                      "annotation",
+						"conflict":                      "ingestor-override",
+						manifests.StorageSizeAnnotation: "100Mi",
 					}
 
 					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
+
 					return nil
 				}, time.Minute, time.Second*10).Should(Succeed())
 			})

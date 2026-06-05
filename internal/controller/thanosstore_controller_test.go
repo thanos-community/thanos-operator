@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -155,8 +156,9 @@ config:
 					objs = append(objs, &corev1.ServiceAccount{}, &corev1.Service{}, &appsv1.StatefulSet{})
 
 					expectedAnnotations := map[string]string{
-						"store-meta": "annotation",
-						"store-spec": "annotation",
+						"store-meta":                    "annotation",
+						"store-spec":                    "annotation",
+						manifests.StorageSizeAnnotation: "1Gi",
 					}
 
 					for _, shard := range []string{firstShard, secondShard, thirdShard} {

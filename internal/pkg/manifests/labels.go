@@ -54,6 +54,9 @@ const (
 
 	HashringLabel = "operator.thanos.io/hashring"
 	ShardLabel    = "operator.thanos.io/shard"
+
+	// StorageSizeAnnotation is the annotation used to identify the requested storage size.
+	StorageSizeAnnotation = "operator.thanos.io/storage-size"
 )
 
 // MergeMaps merges the provided labels with the default labels for a component.
