@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
 
@@ -131,57 +132,65 @@ func (r *VolumeResizeReconciler) processPVCs(ctx context.Context, sts *appsv1.St
 	r.logger.Info("Found PersistentVolumeClaims for StatefulSet", "statefulset", sts.GetName(), "count", len(pvcList.Items))
 
 	var errCount int
+	var needsRecreation bool
 	for _, pvc := range pvcList.Items {
-		err = r.processPVC(ctx, &pvc, sts)
+		ok, err := r.processPVC(ctx, &pvc, sts)
 		if err != nil {
 			errCount++
 			r.logger.Error(err, "failed to process PersistentVolumeClaim", "pvc", pvc.GetName(), "statefulset", sts.GetName())
 			continue
+		}
+		if !needsRecreation && ok {
+			needsRecreation = true
 		}
 	}
 
 	if errCount > 0 {
 		return fmt.Errorf("encountered errors processing %d PVC(s) for StatefulSet %s", errCount, sts.GetName())
 	}
+
+	if needsRecreation {
+		err = r.orphanAndDeleteStatefulSet(ctx, sts)
+		if err != nil {
+			return fmt.Errorf("failed to orphan and delete StatefulSet: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // processPVC handles volume resize operations for a single PVC
-func (r *VolumeResizeReconciler) processPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim, sts *appsv1.StatefulSet) error {
+func (r *VolumeResizeReconciler) processPVC(ctx context.Context, pvc *corev1.PersistentVolumeClaim, sts *appsv1.StatefulSet) (bool, error) {
 	r.logger.Info("Processing PVC", "pvc", pvc.GetName(), "namespace", pvc.GetNamespace())
 
 	requestedSizeStr, exists := sts.GetAnnotations()[manifests.StorageSizeAnnotation]
 	if !exists {
 		r.logger.Info("StatefulSet does not have storage size annotation, skipping", "statefulset", sts.GetName())
-		return nil
+		return false, nil
 	}
 
 	requestedSize, err := parseStorageSize(requestedSizeStr)
 	if err != nil {
-		r.metrics.ResizeFailureTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
-		return fmt.Errorf("failed to parse requested storage size %s for PVC %s: %w", requestedSizeStr, pvc.GetName(), err)
+		return false, fmt.Errorf("failed to parse requested storage size %s for PVC %s: %w", requestedSizeStr, pvc.GetName(), err)
 	}
 
 	currentSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
 
 	if requestedSize.Cmp(currentSize) < 1 {
-		return nil
+		return false, nil
 	}
 
+	r.metrics.ResizeAttemptsTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
 	r.logger.Info("volume expansion required",
 		"PersistentVolumeClaim", pvc.GetName(), "currentSize", currentSize.String(), "requestedSize", requestedSize.String())
 
 	err = r.resizePVC(ctx, pvc, requestedSize)
 	if err != nil {
-		r.metrics.ResizeFailureTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
-		return fmt.Errorf("failed to resize PVC %s: %w", pvc.GetName(), err)
+		r.metrics.ResizeFailuresTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
+		return false, fmt.Errorf("failed to resize PVC %s: %w", pvc.GetName(), err)
 	}
 
-	r.metrics.ResizeSuccessTotal.WithLabelValues(sts.Name, sts.Namespace, pvc.Name).Inc()
-	r.recorder.Eventf(pvc, nil, corev1.EventTypeNormal, "VolumeResized", "VolumeResize",
-		"PVC resized from %s to %s", currentSize.String(), requestedSize.String())
-
-	return nil
+	return true, nil
 }
 
 // resizePVC performs the actual PVC resize operation
@@ -204,6 +213,24 @@ func parseStorageSize(sizeStr string) (resource.Quantity, error) {
 		return resource.Quantity{}, fmt.Errorf("invalid storage size format: %w", err)
 	}
 	return quantity, nil
+}
+
+// orphanAndDeleteStatefulSet orphans the StatefulSet's managed resources and deletes the StatefulSet
+// This allows the operator to recreate it with the new storage configuration
+func (r *VolumeResizeReconciler) orphanAndDeleteStatefulSet(ctx context.Context, sts *appsv1.StatefulSet) error {
+	r.logger.Info("Orphaning and deleting StatefulSet for recreation", "statefulset", sts.GetName())
+
+	err := r.Delete(ctx, sts, client.PropagationPolicy(metav1.DeletePropagationOrphan))
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Info("StatefulSet already deleted", "statefulset", sts.GetName())
+			return nil
+		}
+		return fmt.Errorf("failed to delete StatefulSet: %w", err)
+	}
+
+	r.logger.Info("Successfully orphaned and deleted StatefulSet", "statefulset", sts.GetName())
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -234,8 +261,6 @@ func (r *VolumeResizeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 
 	if err != nil {
-		r.recorder.Eventf(&appsv1.StatefulSet{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup",
-			"Failed to set up volume resize controller: %v", err)
 		return fmt.Errorf("failed to set up volume resize controller: %w", err)
 	}
 

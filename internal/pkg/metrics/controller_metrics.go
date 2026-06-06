@@ -55,8 +55,8 @@ type ThanosCompactMetrics struct {
 
 type VolumeResizeMetrics struct {
 	*CommonMetrics
-	ResizeSuccessTotal *prometheus.CounterVec
-	ResizeFailureTotal *prometheus.CounterVec
+	ResizeAttemptsTotal *prometheus.CounterVec
+	ResizeFailuresTotal *prometheus.CounterVec
 }
 
 var (
@@ -197,12 +197,12 @@ func NewThanosCompactMetrics(reg prometheus.Registerer, commonMetrics *CommonMet
 func NewVolumeResizeMetrics(reg prometheus.Registerer, commonMetrics *CommonMetrics) VolumeResizeMetrics {
 	return VolumeResizeMetrics{
 		CommonMetrics: commonMetrics,
-		ResizeSuccessTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_volume_resize_success_total",
-			Help: "Total number of successful PVC resize operations",
+		ResizeAttemptsTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "thanos_operator_volume_resize_attempts_total",
+			Help: "Total number of PVC resize attempts",
 		}, []string{"statefulset", "namespace", "pvc"}),
-		ResizeFailureTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
-			Name: "thanos_operator_volume_resize_failure_total",
+		ResizeFailuresTotal: promauto.With(reg).NewCounterVec(prometheus.CounterOpts{
+			Name: "thanos_operator_volume_resize_failures_total",
 			Help: "Total number of failed PVC resize operations",
 		}, []string{"statefulset", "namespace", "pvc"}),
 	}

@@ -8,8 +8,8 @@ rules:
   - ""
   resources:
   - configmaps
-  - secrets
   - persistentvolumeclaims
+  - secrets
   - serviceaccounts
   - services
   verbs:
