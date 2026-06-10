@@ -500,14 +500,12 @@ func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
 				rw.Headers = map[string]string{
 					defaultHeaderKey: tenant,
 				}
-				if di.TenantIdentifier != "" {
-					rw.RelabelConfigs = []relabelConfig{
-						{
-							SourceLabels: []string{di.TenantIdentifier},
-							Regex:        tenant,
-							Action:       defaultRelabelAction,
-						},
-					}
+				rw.RelabelConfigs = []relabelConfig{
+					{
+						SourceLabels: []string{di.TenantIdentifier},
+						Regex:        tenant,
+						Action:       defaultRelabelAction,
+					},
 				}
 				config = append(config, rw)
 			}
