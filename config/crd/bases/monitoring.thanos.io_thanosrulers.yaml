@@ -5369,7 +5369,7 @@ spec:
                         app.kubernetes.io/part-of: thanos
                         operator.thanos.io/remote-write-api: "true"
                     description: |-
-                      LabelSelector discovers remote write endpoints that Ruler will write metrics to.
+                      LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.
                       If multiple services are discovered, the results will be written to each service.
                       Values provided here will be appended to the defaults which are:
                       operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos"

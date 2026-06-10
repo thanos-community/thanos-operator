@@ -810,7 +810,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `labelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | LabelSelector discovers remote write endpoints that Ruler will write metrics to.<br />If multiple services are discovered, the results will be written to each service.<br />Values provided here will be appended to the defaults which are:<br />operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos" | \{ matchLabels:map[app.kubernetes.io/part-of:thanos operator.thanos.io/remote-write-api:true] \} | Optional: \{\} <br /> |
+| `labelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.<br />If multiple services are discovered, the results will be written to each service.<br />Values provided here will be appended to the defaults which are:<br />operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos" | \{ matchLabels:map[app.kubernetes.io/part-of:thanos operator.thanos.io/remote-write-api:true] \} | Optional: \{\} <br /> |
 
 
 #### StorageConfiguration
