@@ -261,8 +261,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		}
 
 		if len(receiveEndpoints) == 0 {
-			// todo: add metric
-			return nil, nil, fmt.Errorf("no receive services found")
+			return nil, nil, nil
 		}
 
 		opts.DiscoveryInfos.ServiceEndpoints = receiveEndpoints
@@ -342,23 +341,29 @@ func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, 
 	}
 
 	if len(services.Items) == 0 {
-		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoEndpointsFound", "Discovery", "No remote write services found")
+		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoEndpointsFound", "Discovery", "No receive services found")
 		return []manifestruler.Endpoint{}, nil
 	}
 
-	endpoints := make([]manifestruler.Endpoint, len(services.Items))
-	for i, svc := range services.Items {
+	endpoints := make([]manifestruler.Endpoint, 0, len(services.Items))
+	for _, svc := range services.Items {
 		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, requiredReceiveServiceLabels)
 		if !ok {
 			r.logger.Info("service is not a remote write service", "service", svc.GetName())
 			continue
 		}
 
-		endpoints[i] = manifestruler.Endpoint{
+		e := manifestruler.Endpoint{
 			Port:        port,
 			ServiceName: svc.GetName(),
 			Namespace:   svc.GetNamespace(),
 		}
+
+		endpoints = append(endpoints, e)
+	}
+	if len(endpoints) == 0 {
+		r.recorder.Eventf(&ruler, nil, corev1.EventTypeWarning, "NoValidEndpointsFound", "Discovery", "Services found but none are valid remote-write endpoints")
+		return []manifestruler.Endpoint{}, nil
 	}
 
 	r.metrics.EndpointsConfigured.WithLabelValues(ruler.GetName(), ruler.GetNamespace()).Set(float64(len(endpoints)))
