@@ -4837,30 +4837,6 @@ spec:
                 description: NodeSelector defines on which Nodes the workloads are
                   scheduled.
                 type: object
-              objectStorageConfig:
-                description: ObjectStorageConfig is the secret that contains the object
-                  storage configuration for Ruler to upload blocks.
-                properties:
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
-                type: object
-                x-kubernetes-map-type: atomic
               paused:
                 description: |-
                   When a resource is paused, no actions except for deletion
@@ -5590,6 +5566,53 @@ spec:
                   - whenUnsatisfiable
                   type: object
                 type: array
+              tsdb:
+                description: TSDB configures the statefulness of the Ruler.
+                properties:
+                  stateful:
+                    description: Stateful configures Thanos Ruler to write directly
+                      to disk and upload generated blocks to object storage.
+                    properties:
+                      objectStorageConfig:
+                        description: ObjectStorageConfig is the secret that contains
+                          the object storage configuration for Ruler to upload blocks.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                    - objectStorageConfig
+                    type: object
+                  type:
+                    default: Stateful
+                    description: Type determines the mode of operation for the Ruler.
+                    enum:
+                    - Stateful
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: stateful config required when type is Stateful
+                  rule: 'self.type == ''Stateful'' ? has(self.stateful) : true'
               version:
                 description: |-
                   Version of Thanos to be deployed. Could also be image tag in case of custom downstream image.
@@ -5599,11 +5622,11 @@ spec:
             required:
             - alertmanagerURL
             - externalLabels
-            - objectStorageConfig
             - replicas
             - retention
             - ruleConfigSelector
             - storage
+            - tsdb
             type: object
           status:
             description: ThanosRulerStatus defines the observed state of ThanosRuler
