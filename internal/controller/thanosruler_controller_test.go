@@ -890,7 +890,6 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					StatelessSpec: &monitoringthanosiov1alpha1.StatelessSpec{},
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
 						TenantSpecifierLabel: ptr.To(defaultTenantSpecifier),
 					},
@@ -933,7 +932,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels:    requiredReceiveServiceLabels,
+						Labels:    defaultRemoteWriteLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{

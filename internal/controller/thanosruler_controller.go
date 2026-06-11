@@ -62,7 +62,7 @@ var requiredQueryServiceLabels = map[string]string{
 	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 }
 
-var requiredReceiveServiceLabels = map[string]string{
+var defaultRemoteWriteLabels = map[string]string{
 	manifests.DefaultRemoteWriteAPILabel: manifests.DefaultRemoteWriteAPIValue,
 	manifests.PartOfLabel:                manifests.DefaultPartOfLabel,
 }
@@ -254,7 +254,14 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = queryEndpoints
 	opts.RuleFiles = ruleFiles
 
-	if ruler.Spec.StatelessSpec != nil {
+	if ruler.Spec.StatefulSpec == nil {
+		if ruler.Spec.StatelessSpec == nil {
+			ruler.Spec.StatelessSpec = &monitoringthanosiov1alpha1.StatelessSpec{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: defaultRemoteWriteLabels,
+				},
+			}
+		}
 		receiveEndpoints, err := r.getReceiveServiceEndpoints(ctx, ruler)
 		if err != nil {
 			return nil, nil, err
@@ -328,7 +335,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, requiredReceiveServiceLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, defaultRemoteWriteLabels)
 	if err != nil {
 		return []manifestruler.Endpoint{}, err
 	}
@@ -347,7 +354,7 @@ func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, 
 
 	endpoints := make([]manifestruler.Endpoint, 0, len(services.Items))
 	for _, svc := range services.Items {
-		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, requiredReceiveServiceLabels)
+		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, defaultRemoteWriteLabels)
 		if !ok {
 			r.logger.Info("service is not a remote write service", "service", svc.GetName())
 			continue
@@ -636,7 +643,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	receiveServiceLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: requiredReceiveServiceLabels,
+		MatchLabels: defaultRemoteWriteLabels,
 	})
 	if err != nil {
 		return err
@@ -727,7 +734,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 			}
 
 			if ruler.Spec.StatelessSpec != nil {
-				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, requiredReceiveServiceLabels)
+				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, defaultRemoteWriteLabels)
 				if err != nil {
 					r.logger.Error(err, "failed to build label selector from stateless ruler label selector", "ruler", ruler.GetName())
 					continue
@@ -796,7 +803,7 @@ func (r *ThanosRulerReconciler) isQueueableQueryService(obj client.Object) bool 
 }
 
 func (r *ThanosRulerReconciler) isQueueableReceiveService(obj client.Object) bool {
-	_, isRemoteWriteSvc := manifests.IsRemoteWriteServiceWithLabels(obj, requiredReceiveServiceLabels)
+	_, isRemoteWriteSvc := manifests.IsRemoteWriteServiceWithLabels(obj, defaultRemoteWriteLabels)
 	return isRemoteWriteSvc
 }
 
