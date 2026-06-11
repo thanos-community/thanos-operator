@@ -37,9 +37,9 @@ type ThanosRulerSpec struct {
 	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
-	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// TSDB configures the statefulness of the Ruler.
 	// +kubebuilder:validation:Required
-	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	TSDB TSDBState `json:"tsdb"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -98,7 +98,22 @@ type RuleTenancyConfig struct {
 	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
 }
 
-// TODO(saswatamcode): Add stateless mode
+// +kubebuilder:validation:XValidation:rule="self.type == 'Stateful' ? has(self.stateful) : true", message="stateful config required when type is Stateful"
+type TSDBState struct {
+	// Type determines the mode of operation for the Ruler.
+	// +kubebuilder:default="Stateful"
+	// +kubebuilder:validation:Enum=Stateful
+	Type string `json:"type"`
+	// Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
+	// +kubebuilder:validation:Optional
+	Stateful *StatefulSpec `json:"stateful,omitempty"`
+}
+
+type StatefulSpec struct {
+	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// +kubebuilder:validation:Required
+	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+}
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
 type ThanosRulerStatus struct {
