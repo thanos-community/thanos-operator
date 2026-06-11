@@ -802,7 +802,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `size` _[StorageSize](#storagesize)_ | Size is the size of the PV storage to be used by a Thanos component. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
-| `storageClass` _string_ | StorageClass is the name of the storage class to be used. If specified,<br />it will use the default storage class. |  | Optional: \{\} <br /> |
+| `storageClass` _string_ | StorageClass is the name of the storage class to be used.<br />If not specified, it will use the default storage class. |  | MaxLength: 253 <br />Optional: \{\} <br /> |
 
 
 #### StorageSize

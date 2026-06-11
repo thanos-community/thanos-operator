@@ -50,6 +50,7 @@ type StorageConfiguration struct {
 	// StorageClass is the name of the storage class to be used.
 	// If not specified, it will use the default storage class.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="storageClass is immutable"
 	StorageClass *string `json:"storageClass,omitempty"`
 }

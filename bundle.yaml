@@ -5403,9 +5403,13 @@ spec:
                     type: string
                   storageClass:
                     description: |-
-                      StorageClass is the name of the storage class to be used. If specified,
-                      it will use the default storage class.
+                      StorageClass is the name of the storage class to be used.
+                      If not specified, it will use the default storage class.
+                    maxLength: 253
                     type: string
+                    x-kubernetes-validations:
+                    - message: storageClass is immutable
+                      rule: self == oldSelf
                 required:
                 - size
                 type: object
@@ -22126,9 +22130,13 @@ spec:
                               type: string
                             storageClass:
                               description: |-
-                                StorageClass is the name of the storage class to be used. If specified,
-                                it will use the default storage class.
+                                StorageClass is the name of the storage class to be used.
+                                If not specified, it will use the default storage class.
+                              maxLength: 253
                               type: string
+                              x-kubernetes-validations:
+                              - message: storageClass is immutable
+                                rule: self == oldSelf
                           required:
                           - size
                           type: object
@@ -33400,9 +33408,13 @@ spec:
                     type: string
                   storageClass:
                     description: |-
-                      StorageClass is the name of the storage class to be used. If specified,
-                      it will use the default storage class.
+                      StorageClass is the name of the storage class to be used.
+                      If not specified, it will use the default storage class.
+                    maxLength: 253
                     type: string
+                    x-kubernetes-validations:
+                    - message: storageClass is immutable
+                      rule: self == oldSelf
                 required:
                 - size
                 type: object
@@ -39118,9 +39130,13 @@ spec:
                     type: string
                   storageClass:
                     description: |-
-                      StorageClass is the name of the storage class to be used. If specified,
-                      it will use the default storage class.
+                      StorageClass is the name of the storage class to be used.
+                      If not specified, it will use the default storage class.
+                    maxLength: 253
                     type: string
+                    x-kubernetes-validations:
+                    - message: storageClass is immutable
+                      rule: self == oldSelf
                 required:
                 - size
                 type: object
