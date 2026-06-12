@@ -47,9 +47,11 @@ type StorageConfiguration struct {
 	// Size is the size of the PV storage to be used by a Thanos component.
 	// +kubebuilder:validation:Required
 	Size StorageSize `json:"size"`
-	// StorageClass is the name of the storage class to be used. If specified,
-	// it will use the default storage class.
+	// StorageClass is the name of the storage class to be used.
+	// If not specified, it will use the default storage class.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="storageClass is immutable"
 	StorageClass *string `json:"storageClass,omitempty"`
 }
 
