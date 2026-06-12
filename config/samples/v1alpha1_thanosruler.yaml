@@ -5,8 +5,6 @@ metadata:
 spec:
   alertmanagerURL: http://alertmanager.example.com:9093
   evaluationInterval: 1m
-  externalLabels:
-    rule_replica: $(NAME)
   imagePullPolicy: IfNotPresent
   logFormat: logfmt
   queryLabelSelector:
@@ -14,15 +12,17 @@ spec:
       app.kubernetes.io/part-of: thanos
       operator.thanos.io/query-api: "true"
   replicas: 1
-  retention: 2h
   ruleConfigSelector:
     matchLabels:
       operator.thanos.io/prometheus-rule: "true"
   rulerMode:
     stateful:
+      externalLabels:
+        rule_replica: $(NAME)
       objectStorageConfig:
         key: thanos.yaml
         name: thanos-object-storage
+      retention: 2h
     type: Stateful
   storage:
     size: 1Gi

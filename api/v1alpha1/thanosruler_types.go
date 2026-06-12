@@ -55,20 +55,12 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$`
 	AlertmanagerURL string `json:"alertmanagerURL,omitempty"` //nolint:tagliatelle
-	// ExternalLabels set on Ruler TSDB, for query time deduplication.
-	// +kubebuilder:default={rule_replica: "$(NAME)"}
-	// +kubebuilder:validation:Required
-	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 	// EvaluationInterval is the default interval at which rules are evaluated.
 	// +kubebuilder:default="1m"
 	EvaluationInterval Duration `json:"evaluationInterval,omitempty"`
 	// Labels to drop before Ruler sends alerts to alertmanager.
 	// +kubebuilder:validation:Optional
 	AlertLabelDrop []string `json:"alertLabelDrop,omitempty"`
-	// Retention is the duration for which the Thanos Rule StatefulSet will retain data.
-	// +kubebuilder:default="2h"
-	// +kubebuilder:validation:Required
-	Retention Duration `json:"retention,omitempty"`
 	// StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets.
 	// +kubebuilder:validation:Required
 	StorageConfiguration StorageConfiguration `json:"storage"`
@@ -113,6 +105,14 @@ type StatefulSpec struct {
 	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
 	// +kubebuilder:validation:Required
 	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	// Retention is the duration for which the Thanos Rule StatefulSet will retain data.
+	// +kubebuilder:default="2h"
+	// +kubebuilder:validation:Required
+	Retention Duration `json:"retention,omitempty"`
+	// ExternalLabels set on Ruler TSDB, for query time deduplication.
+	// +kubebuilder:default={rule_replica: "$(NAME)"}
+	// +kubebuilder:validation:Required
+	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 }
 
 // ThanosRulerStatus defines the observed state of ThanosRuler

@@ -254,6 +254,7 @@ _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [QueryFrontendSpec](#queryfrontendspec)
 - [RetentionResolutionConfig](#retentionresolutionconfig)
+- [StatefulSpec](#statefulspec)
 - [TSDBConfig](#tsdbconfig)
 - [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
@@ -292,7 +293,7 @@ _Validation:_
 _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [RouterSpec](#routerspec)
-- [ThanosRulerSpec](#thanosrulerspec)
+- [StatefulSpec](#statefulspec)
 
 
 
@@ -816,6 +817,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
+| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
+| `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
 
 
 #### StorageConfiguration
@@ -1315,10 +1318,8 @@ _Appears in:_
 | `rulerMode` _[RulerMode](#rulermode)_ | RulerMode configures the statefulness of the Ruler. |  | Required: \{\} <br /> |
 | `ruleConfigSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It also discovers PrometheusRule CustomResources if the feature flag is enabled.<br />PrometheusRules are converted them into ConfigMaps with rule files internally.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true" | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `alertmanagerURL` _string_ | AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups. |  | Pattern: `^((dns\+)?(dnssrv\+)?(http\|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$` <br />Required: \{\} <br /> |
-| `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
 | `evaluationInterval` _[Duration](#duration)_ | EvaluationInterval is the default interval at which rules are evaluated. | 1m | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `alertLabelDrop` _string array_ | Labels to drop before Ruler sends alerts to alertmanager. |  | Optional: \{\} <br /> |
-| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `ruleTenancyConfig` _[RuleTenancyConfig](#ruletenancyconfig)_ | RuleTenancyConfig is the configuration for the rule tenancy. |  | Optional: \{\} <br /> |

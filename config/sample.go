@@ -229,14 +229,14 @@ func SampleCR(crd CRD) any {
 							},
 							Key: "thanos.yaml",
 						},
+						ExternalLabels: map[string]string{
+							"rule_replica": "$(NAME)",
+						},
+						Retention: "2h",
 					},
 				},
-				AlertmanagerURL: "http://alertmanager.example.com:9093",
-				ExternalLabels: map[string]string{
-					"rule_replica": "$(NAME)",
-				},
+				AlertmanagerURL:    "http://alertmanager.example.com:9093",
 				EvaluationInterval: "1m",
-				Retention:          "2h",
 				StorageConfiguration: thanosv1alpha1.StorageConfiguration{
 					Size: "1Gi",
 				},
