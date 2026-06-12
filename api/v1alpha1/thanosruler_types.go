@@ -37,9 +37,9 @@ type ThanosRulerSpec struct {
 	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
-	// TSDB configures the statefulness of the Ruler.
+	// RulerMode configures the statefulness of the Ruler.
 	// +kubebuilder:validation:Required
-	TSDB TSDBState `json:"tsdb"`
+	RulerMode RulerMode `json:"rulerMode"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -99,7 +99,7 @@ type RuleTenancyConfig struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="self.type == 'Stateful' ? has(self.stateful) : true", message="stateful config required when type is Stateful"
-type TSDBState struct {
+type RulerMode struct {
 	// Type determines the mode of operation for the Ruler.
 	// +kubebuilder:default="Stateful"
 	// +kubebuilder:validation:Enum=Stateful

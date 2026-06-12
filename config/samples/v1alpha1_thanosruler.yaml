@@ -18,12 +18,12 @@ spec:
   ruleConfigSelector:
     matchLabels:
       operator.thanos.io/prometheus-rule: "true"
-  storage:
-    size: 1Gi
-  tsdb:
+  rulerMode:
     stateful:
       objectStorageConfig:
         key: thanos.yaml
         name: thanos-object-storage
     type: Stateful
+  storage:
+    size: 1Gi
 status: {}

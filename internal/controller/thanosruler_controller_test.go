@@ -109,7 +109,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					TSDB: monitoringthanosiov1alpha1.TSDBState{
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
 						Stateful: &monitoringthanosiov1alpha1.StatefulSpec{
 							ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -412,7 +412,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					TSDB: monitoringthanosiov1alpha1.TSDBState{
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
 						Stateful: &monitoringthanosiov1alpha1.StatefulSpec{
 							ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -584,7 +584,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					TSDB: monitoringthanosiov1alpha1.TSDBState{
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
 						Stateful: &monitoringthanosiov1alpha1.StatefulSpec{
 							ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
@@ -730,7 +730,7 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					TSDB: monitoringthanosiov1alpha1.TSDBState{
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
 						Stateful: &monitoringthanosiov1alpha1.StatefulSpec{
 							ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{

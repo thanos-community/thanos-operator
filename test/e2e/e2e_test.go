@@ -684,7 +684,7 @@ var _ = Describe("controller", Ordered, func() {
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 					},
 				},
-				TSDB: v1alpha1.TSDBState{
+				RulerMode: v1alpha1.RulerMode{
 					Type: "Stateful",
 					Stateful: &v1alpha1.StatefulSpec{
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{

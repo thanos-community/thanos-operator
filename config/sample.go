@@ -220,7 +220,7 @@ func SampleCR(crd CRD) any {
 						"app.kubernetes.io/part-of":    "thanos",
 					},
 				},
-				TSDB: thanosv1alpha1.TSDBState{
+				RulerMode: thanosv1alpha1.RulerMode{
 					Type: "Stateful",
 					Stateful: &thanosv1alpha1.StatefulSpec{
 						ObjectStorageConfig: thanosv1alpha1.ObjectStorageConfig{
