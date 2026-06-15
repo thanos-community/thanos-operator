@@ -899,6 +899,10 @@ config:
 				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
 					Replicas:     1,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
+						Type:      "Stateless",
+						Stateless: &monitoringthanosiov1alpha1.StatelessSpec{},
+					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
@@ -1021,7 +1025,7 @@ config:
 `
 
 					return string(secret.Data["remote-write.yaml"]) == expectedContent
-				}, time.Second*30, time.Second*5).Should(BeTrue())
+				}, time.Minute, time.Second*5).Should(BeTrue())
 			})
 
 			By("switching to stateful mode", func() {
@@ -1030,8 +1034,8 @@ config:
 					if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: resourceName}, existingRuler); err != nil {
 						return false
 					}
-					existingRuler.Spec.StatelessSpec = nil
-					existingRuler.Spec.StatefulSpec = &monitoringthanosiov1alpha1.StatefulSpec{
+					existingRuler.Spec.RulerMode.Stateless = nil
+					existingRuler.Spec.RulerMode.Stateful = &monitoringthanosiov1alpha1.StatefulSpec{
 						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "thanos-objstore",

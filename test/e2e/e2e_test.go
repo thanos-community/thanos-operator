@@ -843,7 +843,10 @@ var _ = Describe("controller", Ordered, func() {
 						StorageConfiguration: v1alpha1.StorageConfiguration{
 							Size: "1Gi",
 						},
-						StatelessSpec: &v1alpha1.StatelessSpec{},
+						RulerMode: v1alpha1.RulerMode{
+							Type:      "Stateless",
+							Stateless: &v1alpha1.StatelessSpec{},
+						},
 						RuleConfigSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,

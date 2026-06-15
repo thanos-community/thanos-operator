@@ -254,14 +254,7 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 	opts.Endpoints = queryEndpoints
 	opts.RuleFiles = ruleFiles
 
-	if ruler.Spec.StatefulSpec == nil {
-		if ruler.Spec.StatelessSpec == nil {
-			ruler.Spec.StatelessSpec = &monitoringthanosiov1alpha1.StatelessSpec{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: defaultRemoteWriteLabels,
-				},
-			}
-		}
+	if ruler.Spec.RulerMode.Stateful == nil {
 		receiveEndpoints, err := r.getReceiveServiceEndpoints(ctx, ruler)
 		if err != nil {
 			return nil, nil, err
@@ -335,7 +328,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, defaultRemoteWriteLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, defaultRemoteWriteLabels)
 	if err != nil {
 		return []manifestruler.Endpoint{}, err
 	}
@@ -733,8 +726,8 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 				})
 			}
 
-			if ruler.Spec.StatelessSpec != nil {
-				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.StatelessSpec.LabelSelector, defaultRemoteWriteLabels)
+			if ruler.Spec.RulerMode.Stateless != nil {
+				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, defaultRemoteWriteLabels)
 				if err != nil {
 					r.logger.Error(err, "failed to build label selector from stateless ruler label selector", "ruler", ruler.GetName())
 					continue
@@ -1000,7 +993,7 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 	}
 
 	cleanErrCount += r.pruneOrphanedDerivedConfigMaps(ctx, ns, expectedDerivedConfigMaps)
-	if resource.Spec.StatefulSpec != nil {
+	if resource.Spec.RulerMode.Stateful != nil {
 		cleanErrCount += r.pruneGeneratedRemoteWriteSecret(ctx, ns, owner)
 	}
 
