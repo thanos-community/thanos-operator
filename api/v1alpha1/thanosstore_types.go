@@ -67,6 +67,11 @@ type ThanosStoreSpec struct {
 	// BlockConfig defines settings for block handling.
 	// +kubebuilder:validation:Optional
 	BlockConfig *BlockConfig `json:"blockConfig,omitempty"`
+	// DownloadedBytesLimit is the maximum amount of downloaded (either fetched or touched) bytes
+	// in a single Series/LabelNames/LabelValues gRPC call. The Series call fails if this limit is exceeded.
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Optional
+	DownloadedBytesLimit *uint64 `json:"downloadedBytesLimit,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

@@ -1407,6 +1407,7 @@ _Appears in:_
 | `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions allows configuration of the store API limits. |  | Optional: \{\} <br /> |
 | `indexHeaderConfig` _[IndexHeaderConfig](#indexheaderconfig)_ | IndexHeaderConfig allows configuration of the Store Gateway index header. |  | Optional: \{\} <br /> |
 | `blockConfig` _[BlockConfig](#blockconfig)_ | BlockConfig defines settings for block handling. |  | Optional: \{\} <br /> |
+| `downloadedBytesLimit` _integer_ | DownloadedBytesLimit is the maximum amount of downloaded (either fetched or touched) bytes<br />in a single Series/LabelNames/LabelValues gRPC call. The Series call fails if this limit is exceeded. | 0 | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |

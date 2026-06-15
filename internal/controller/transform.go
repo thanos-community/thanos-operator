@@ -302,6 +302,8 @@ func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Optio
 		sops.Max = manifests.Duration(manifests.OptionalToString(in.CRD.Spec.TimeRangeConfig.MaxTime))
 	}
 
+	sops.DownloadedBytesLimit = in.CRD.Spec.DownloadedBytesLimit
+
 	return sops
 }
 
