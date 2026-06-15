@@ -225,6 +225,7 @@ func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) 
 		Options:           opts,
 		ReplicationFactor: router.ReplicationFactor,
 		ExternalLabels:    router.ExternalLabels,
+		LimitsConfig:      router.LimitsConfig,
 	}
 
 	if in.FeatureGate.KubeResourceSyncEnabled() {

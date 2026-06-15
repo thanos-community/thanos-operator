@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -82,6 +83,11 @@ type RouterSpec struct {
 	// +kubebuilder:default={receive: "true"}
 	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
+	// LimitsConfig is the reference to a ConfigMap containing the receive limits configuration.
+	// The ConfigMap must contain a key with the YAML configuration for request limits and gates.
+	// See https://thanos.io/tip/components/receive.md/#limits--gates-experimental for details.
+	// +kubebuilder:validation:Optional
+	LimitsConfig *corev1.ConfigMapKeySelector `json:"limitsConfig,omitempty"`
 	// Additional configuration for the Thanos components. Allows you to add
 	// additional args, containers, volumes, and volume mounts to Thanos Deployments,
 	// and StatefulSets. Ideal to use for things like sidecars.
