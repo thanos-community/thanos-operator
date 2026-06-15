@@ -52,6 +52,22 @@ _Appears in:_
 | `secrets` _string array_ | Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.<br />Each Secret is added to the workload definition as a volume named secret-<secret-name>.<br />The Secrets are mounted into /etc/thanos/secrets/ in the container. |  | Optional: \{\} <br /> |
 
 
+#### AutoscalingConfig
+
+
+
+AutoscalingConfig defines autoscaling configuration for a workload.
+
+
+
+_Appears in:_
+- [IngesterHashringSpec](#ingesterhashringspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `horizontalPodAutoscalerConfig` _[HorizontalPodAutoscalerConfig](#horizontalpodautoscalerconfig)_ | HorizontalPodAutoscalerConfig is the configuration for HorizontalPodAutoscaler. |  | Optional: \{\} <br /> |
+
+
 #### BlockConfig
 
 
@@ -330,6 +346,30 @@ _Appears in:_
 | `dynamic` | HashringPolicyDynamic is a dynamic hashring policy.<br />This type of hashring is dynamic and whilst it is based on the IngesterHashringSpec.Replicas field,<br />it will remove members that become unavailable due to voluntary disruptions (e.g rolling updates, scale down, etc).<br /> |
 
 
+#### HorizontalPodAutoscalerConfig
+
+
+
+HorizontalPodAutoscalerConfig defines configuration for HorizontalPodAutoscaler.
+
+
+
+_Appears in:_
+- [AutoscalingConfig](#autoscalingconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled enables the creation of a HorizontalPodAutoscaler. |  | Optional: \{\} <br /> |
+| `minReplicas` _integer_ | MinReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.<br />Defaults to the spec.replicas value if not set. |  | Minimum: 1 <br />Optional: \{\} <br /> |
+| `maxReplicas` _integer_ | MaxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. |  | Minimum: 1 <br />Required: \{\} <br /> |
+| `targetCPUUtilizationPercentage` _integer_ | TargetCPUUtilizationPercentage is the target average CPU utilization (as a percentage of requested CPU). |  | Maximum: 100 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `targetMemoryUtilizationPercentage` _integer_ | TargetMemoryUtilizationPercentage is the target average memory utilization (as a percentage of requested memory). |  | Maximum: 100 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `scaleDownStabilizationWindowSeconds` _integer_ | ScaleDownStabilizationWindowSeconds is the number of seconds for which past recommendations<br />should be considered while scaling down. Defaults to 300 seconds. | 300 | Maximum: 3600 <br />Minimum: 0 <br />Optional: \{\} <br /> |
+| `scaleUpStabilizationWindowSeconds` _integer_ | ScaleUpStabilizationWindowSeconds is the number of seconds for which past recommendations<br />should be considered while scaling up. Defaults to 0 seconds (immediate scale up). | 0 | Maximum: 3600 <br />Minimum: 0 <br />Optional: \{\} <br /> |
+| `scaleUpPods` _integer_ | ScaleUpPods is the number of pods to add when scaling up.<br />Defaults to 2 if not specified.<br />For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup). | 2 | Minimum: 1 <br />Optional: \{\} <br /> |
+| `scaleDownPods` _integer_ | ScaleDownPods is the number of pods to remove when scaling down.<br />Defaults to 2 if not specified.<br />For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup). | 2 | Minimum: 1 <br />Optional: \{\} <br /> |
+
+
 #### InMemoryCacheConfig
 
 
@@ -405,6 +445,7 @@ _Appears in:_
 | `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `grpcCompression` _[GRPCCompression](#grpccompression)_ | GRPCCompression defines the compression algorithm for gRPC communication. | snappy | Enum: [none snappy] <br />Optional: \{\} <br /> |
 | `hashingAlgorithm` _string_ | HashingAlgorithm defines the hashing algorithm to use for the hashring. | ketama | Enum: [ketama hashmod] <br /> |
+| `autoscalingConfig` _[AutoscalingConfig](#autoscalingconfig)_ | AutoscalingConfig defines autoscaling configuration for the hashring. |  | Optional: \{\} <br /> |
 
 
 #### IngesterSpec

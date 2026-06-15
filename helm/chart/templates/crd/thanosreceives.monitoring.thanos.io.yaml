@@ -4811,6 +4811,87 @@ spec:
                             workers processing forwarding of remote-write requests.
                           format: int64
                           type: integer
+                        autoscalingConfig:
+                          description: AutoscalingConfig defines autoscaling configuration
+                            for the hashring.
+                          properties:
+                            horizontalPodAutoscalerConfig:
+                              description: HorizontalPodAutoscalerConfig is the configuration
+                                for HorizontalPodAutoscaler.
+                              properties:
+                                enabled:
+                                  description: Enabled enables the creation of a HorizontalPodAutoscaler.
+                                  type: boolean
+                                maxReplicas:
+                                  description: MaxReplicas is the upper limit for
+                                    the number of replicas to which the autoscaler
+                                    can scale up.
+                                  format: int32
+                                  minimum: 1
+                                  type: integer
+                                minReplicas:
+                                  description: |-
+                                    MinReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+                                    Defaults to the spec.replicas value if not set.
+                                  format: int32
+                                  minimum: 1
+                                  type: integer
+                                scaleDownPods:
+                                  default: 2
+                                  description: |-
+                                    ScaleDownPods is the number of pods to remove when scaling down.
+                                    Defaults to 2 if not specified.
+                                    For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup).
+                                  format: int32
+                                  minimum: 1
+                                  type: integer
+                                scaleDownStabilizationWindowSeconds:
+                                  default: 300
+                                  description: |-
+                                    ScaleDownStabilizationWindowSeconds is the number of seconds for which past recommendations
+                                    should be considered while scaling down. Defaults to 300 seconds.
+                                  format: int32
+                                  maximum: 3600
+                                  minimum: 0
+                                  type: integer
+                                scaleUpPods:
+                                  default: 2
+                                  description: |-
+                                    ScaleUpPods is the number of pods to add when scaling up.
+                                    Defaults to 2 if not specified.
+                                    For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup).
+                                  format: int32
+                                  minimum: 1
+                                  type: integer
+                                scaleUpStabilizationWindowSeconds:
+                                  default: 0
+                                  description: |-
+                                    ScaleUpStabilizationWindowSeconds is the number of seconds for which past recommendations
+                                    should be considered while scaling up. Defaults to 0 seconds (immediate scale up).
+                                  format: int32
+                                  maximum: 3600
+                                  minimum: 0
+                                  type: integer
+                                targetCPUUtilizationPercentage:
+                                  description: TargetCPUUtilizationPercentage is the
+                                    target average CPU utilization (as a percentage
+                                    of requested CPU).
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 1
+                                  type: integer
+                                targetMemoryUtilizationPercentage:
+                                  description: TargetMemoryUtilizationPercentage is
+                                    the target average memory utilization (as a percentage
+                                    of requested memory).
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - maxReplicas
+                              type: object
+                          type: object
                         baseImage:
                           description: Base container image (without tags) to use
                             for the Thanos components deployed via operator.

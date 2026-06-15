@@ -323,6 +323,67 @@ type TimeRangeConfig struct {
 	MaxTime *Duration `json:"maxTime,omitempty"`
 }
 
+// AutoscalingConfig defines autoscaling configuration for a workload.
+type AutoscalingConfig struct {
+	// HorizontalPodAutoscalerConfig is the configuration for HorizontalPodAutoscaler.
+	// +kubebuilder:validation:Optional
+	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig `json:"horizontalPodAutoscalerConfig,omitempty"`
+}
+
+// HorizontalPodAutoscalerConfig defines configuration for HorizontalPodAutoscaler.
+type HorizontalPodAutoscalerConfig struct {
+	// Enabled enables the creation of a HorizontalPodAutoscaler.
+	// +kubebuilder:validation:Optional
+	Enabled *bool `json:"enabled,omitempty"`
+	// MinReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.
+	// Defaults to the spec.replicas value if not set.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	// MaxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Required
+	MaxReplicas int32 `json:"maxReplicas"`
+	// TargetCPUUtilizationPercentage is the target average CPU utilization (as a percentage of requested CPU).
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:validation:Optional
+	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"` //nolint:tagliatelle
+	// TargetMemoryUtilizationPercentage is the target average memory utilization (as a percentage of requested memory).
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:validation:Optional
+	TargetMemoryUtilizationPercentage *int32 `json:"targetMemoryUtilizationPercentage,omitempty"` //nolint:tagliatelle
+	// ScaleDownStabilizationWindowSeconds is the number of seconds for which past recommendations
+	// should be considered while scaling down. Defaults to 300 seconds.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=3600
+	// +kubebuilder:default=300
+	// +kubebuilder:validation:Optional
+	ScaleDownStabilizationWindowSeconds *int32 `json:"scaleDownStabilizationWindowSeconds,omitempty"`
+	// ScaleUpStabilizationWindowSeconds is the number of seconds for which past recommendations
+	// should be considered while scaling up. Defaults to 0 seconds (immediate scale up).
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=3600
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Optional
+	ScaleUpStabilizationWindowSeconds *int32 `json:"scaleUpStabilizationWindowSeconds,omitempty"`
+	// ScaleUpPods is the number of pods to add when scaling up.
+	// Defaults to 2 if not specified.
+	// For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup).
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=2
+	// +kubebuilder:validation:Optional
+	ScaleUpPods *int32 `json:"scaleUpPods,omitempty"`
+	// ScaleDownPods is the number of pods to remove when scaling down.
+	// Defaults to 2 if not specified.
+	// For topology-aware setups, set this to the number of zones (e.g., 3 for 3-zone setup).
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=2
+	// +kubebuilder:validation:Optional
+	ScaleDownPods *int32 `json:"scaleDownPods,omitempty"`
+}
+
 type StatefulSetStatus struct {
 	// Replicas is the number of replicas of the StatefulSet.
 	Replicas int32 `json:"replicas,omitempty"`

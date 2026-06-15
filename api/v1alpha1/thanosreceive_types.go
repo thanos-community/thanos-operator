@@ -162,6 +162,9 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:default="ketama"
 	// +kubebuilder:validation:Enum=ketama;hashmod
 	HashingAlgorithm *string `json:"hashingAlgorithm,omitempty"`
+	// AutoscalingConfig defines autoscaling configuration for the hashring.
+	// +kubebuilder:validation:Optional
+	AutoscalingConfig *AutoscalingConfig `json:"autoscalingConfig,omitempty"`
 }
 
 // TenancyConfig is the configuration for the tenancy options.

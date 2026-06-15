@@ -62,6 +62,7 @@ import (
 //+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 
 const (
 	receiveFinalizer = "monitoring.thanos.io/receive-finalizer"
@@ -313,8 +314,26 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 			hc.TenantMatcherType = receive.TenantMatcher(hashring.TenancyConfig.TenantMatcherType)
 		}
 
+		// If HPA is enabled, use the actual StatefulSet replicas, controlled by HPA.
+		// Otherwise use the CR spec.replicas
+		desiredReplicas := int(hashring.Replicas)
+		if hashring.AutoscalingConfig != nil &&
+			hashring.AutoscalingConfig.HorizontalPodAutoscalerConfig != nil &&
+			hashring.AutoscalingConfig.HorizontalPodAutoscalerConfig.Enabled != nil &&
+			*hashring.AutoscalingConfig.HorizontalPodAutoscalerConfig.Enabled {
+			// HPA is enabled, get actual replicas from StatefulSet
+			stsName := ReceiveIngesterNameFromParent(receiver.GetName(), hashring.Name)
+			sts := &appsv1.StatefulSet{}
+			if err := r.Client.Get(ctx, client.ObjectKey{Namespace: receiver.GetNamespace(), Name: stsName}, sts); err == nil {
+				if sts.Spec.Replicas != nil {
+					desiredReplicas = int(*sts.Spec.Replicas)
+				}
+			}
+			// If Get fails, fall back to CR replicas.
+		}
+
 		fetchedReadyState[hashring.Name] = receive.HashringMeta{
-			DesiredReplicas: int(hashring.Replicas),
+			DesiredReplicas: desiredReplicas,
 			Config:          hc,
 		}
 	}

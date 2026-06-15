@@ -2,11 +2,13 @@ package receive
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +65,23 @@ type IngesterOptions struct {
 	TooFarInFutureTimeWindow manifests.Duration
 	ReplicationProtocol      string
 	GRPCCompression          string
+	AutoscalingConfig        *AutoscalingConfig
+}
+
+type AutoscalingConfig struct {
+	HPAConfig *HPAConfig
+}
+
+type HPAConfig struct {
+	Enabled                             bool
+	MinReplicas                         *int32
+	MaxReplicas                         int32
+	TargetCPUUtilizationPercentage      *int32
+	TargetMemoryUtilizationPercentage   *int32
+	ScaleDownStabilizationWindowSeconds *int32
+	ScaleUpStabilizationWindowSeconds   *int32
+	ScaleUpPods                         *int32
+	ScaleDownPods                       *int32
 }
 
 type TSDBOpts struct {
@@ -111,6 +130,12 @@ func (opts IngesterOptions) Build() []client.Object {
 		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 	}
+
+	if opts.AutoscalingConfig != nil && opts.AutoscalingConfig.HPAConfig != nil && opts.AutoscalingConfig.HPAConfig.Enabled {
+		hpaOpts := newIngestorHPAOptions(opts, name, objectMetaLabels)
+		objs = append(objs, manifests.BuildHorizontalPodAutoscaler(hpaOpts))
+	}
+
 	return objs
 }
 
@@ -215,6 +240,14 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 		},
 	}
 
+	// Add marker annotation if HPA is managing this StatefulSet
+	// This prevents the operator from overwriting replicas that HPA sets
+	annotations := make(map[string]string)
+	maps.Copy(annotations, opts.Annotations)
+	if opts.AutoscalingConfig != nil && opts.AutoscalingConfig.HPAConfig != nil && opts.AutoscalingConfig.HPAConfig.Enabled {
+		annotations[manifests.ManagedByHPAAnnotation] = "true"
+	}
+
 	sts := &appsv1.StatefulSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StatefulSet",
@@ -224,7 +257,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			Name:        name,
 			Namespace:   opts.Namespace,
 			Labels:      objectMetaLabels,
-			Annotations: opts.Annotations,
+			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
@@ -666,6 +699,28 @@ func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceM
 	return manifests.ServiceMonitorOptions{
 		Port:     ptr.To(HTTPPortName),
 		Interval: from.Interval,
+	}
+}
+
+func newIngestorHPAOptions(opts IngesterOptions, name string, labels map[string]string) manifests.HorizontalPodAutoscalerOptions {
+	return manifests.HorizontalPodAutoscalerOptions{
+		Name:        name,
+		Namespace:   opts.Namespace,
+		Labels:      labels,
+		Annotations: opts.Annotations,
+		TargetRef: autoscalingv2.CrossVersionObjectReference{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+			Name:       name,
+		},
+		MinReplicas:                         opts.AutoscalingConfig.HPAConfig.MinReplicas,
+		MaxReplicas:                         opts.AutoscalingConfig.HPAConfig.MaxReplicas,
+		TargetCPUUtilizationPercentage:      opts.AutoscalingConfig.HPAConfig.TargetCPUUtilizationPercentage,
+		TargetMemoryUtilizationPercentage:   opts.AutoscalingConfig.HPAConfig.TargetMemoryUtilizationPercentage,
+		ScaleDownStabilizationWindowSeconds: opts.AutoscalingConfig.HPAConfig.ScaleDownStabilizationWindowSeconds,
+		ScaleUpStabilizationWindowSeconds:   opts.AutoscalingConfig.HPAConfig.ScaleUpStabilizationWindowSeconds,
+		ScaleUpPods:                         opts.AutoscalingConfig.HPAConfig.ScaleUpPods,
+		ScaleDownPods:                       opts.AutoscalingConfig.HPAConfig.ScaleDownPods,
 	}
 }
 
