@@ -263,12 +263,15 @@ config:
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
 						Size: "1Gi",
 					},
-					StatefulSpec: &monitoringthanosiov1alpha1.StatefulSpec{
-						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "thanos-objstore",
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
+						Type: "Stateful",
+						Stateful: &monitoringthanosiov1alpha1.StatefulSpec{
+							ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "thanos-objstore",
+								},
+								Key: "thanos.yaml",
 							},
-							Key: "thanos.yaml",
 						},
 					},
 					RuleConfigSelector: metav1.LabelSelector{

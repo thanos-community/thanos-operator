@@ -164,6 +164,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -263,6 +264,7 @@ _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [QueryFrontendSpec](#queryfrontendspec)
 - [RetentionResolutionConfig](#retentionresolutionconfig)
+- [StatefulSpec](#statefulspec)
 - [TSDBConfig](#tsdbconfig)
 - [ThanosRulerSpec](#thanosrulerspec)
 - [ThanosStoreSpec](#thanosstorespec)
@@ -301,7 +303,7 @@ _Validation:_
 _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
 - [RouterSpec](#routerspec)
-- [ThanosRulerSpec](#thanosrulerspec)
+- [StatefulSpec](#statefulspec)
 
 
 
@@ -397,6 +399,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -574,6 +577,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -657,6 +661,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -692,6 +697,23 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `enforcedTenantIdentifier` _string_ | EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy<br />For example if enforcedTenantIdentifier: "tenant_id" then up\{\} becomes up\{tenant_id=\{TenantSpecifierLabelValue\} |  | Optional: \{\} <br /> |
 | `tenantSpecifierLabel` _string_ | TenantSpecifierLabel is the key of the label of the ConfigMap or PrometheusRule that will be used to set the value of the EnforcedTenantIdentifier |  | Optional: \{\} <br /> |
+
+
+#### RulerMode
+
+
+
+
+
+
+
+_Appears in:_
+- [ThanosRulerSpec](#thanosrulerspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _string_ | Type determines the mode of operation for the Ruler. | Stateful | Enum: [Stateful] <br /> |
+| `stateful` _[StatefulSpec](#statefulspec)_ | Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage. |  | Optional: \{\} <br /> |
 
 
 #### ShardingConfig
@@ -800,27 +822,13 @@ _Appears in:_
 
 
 _Appears in:_
-- [ThanosRulerSpec](#thanosrulerspec)
+- [RulerMode](#rulermode)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
-
-
-#### StatelessSpec
-
-
-
-
-
-
-
-_Appears in:_
-- [ThanosRulerSpec](#thanosrulerspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `labelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.<br />If multiple services are discovered, the results will be written to each service.<br />Values provided here will be appended to the defaults which are:<br />operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos" | \{ matchLabels:map[app.kubernetes.io/part-of:thanos operator.thanos.io/remote-write-api:true] \} | Optional: \{\} <br /> |
+| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
+| `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
 
 
 #### StorageConfiguration
@@ -840,7 +848,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `size` _[StorageSize](#storagesize)_ | Size is the size of the PV storage to be used by a Thanos component. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
-| `storageClass` _string_ | StorageClass is the name of the storage class to be used. If specified,<br />it will use the default storage class. |  | Optional: \{\} <br /> |
+| `storageClass` _string_ | StorageClass is the name of the storage class to be used.<br />If not specified, it will use the default storage class. |  | MaxLength: 253 <br />Optional: \{\} <br /> |
 
 
 #### StorageSize
@@ -999,6 +1007,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -1113,6 +1122,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -1304,6 +1314,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |
@@ -1314,14 +1325,11 @@ _Appears in:_
 | `minReadySeconds` _integer_ | MinReadySeconds is the minimum number of seconds for which a newly created pod should be ready without<br />any of its container crashing, for it to be considered available. |  | Optional: \{\} <br /> |
 | `replicas` _integer_ | Replicas is the number of Ruler replicas. | 1 | Minimum: 1 <br />Required: \{\} <br /> |
 | `queryLabelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | QueryLabelSelector is the label selector to discover Queriers.<br />It enables adding additional labels to build a custom label selector for discoverable QueryAPIs.<br />Values provided here will be appended to the default which are:<br />\{"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"\}. |  | Optional: \{\} <br /> |
-| `statelessSpec` _[StatelessSpec](#statelessspec)_ | StatelessSpec configures Thanos Ruler in Stateless mode.<br />See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write |  | Optional: \{\} <br /> |
-| `statefulSpec` _[StatefulSpec](#statefulspec)_ | StatefulSpec configures Thanos Ruler to write directly to disk and upload generated blocks to object storage. |  | Optional: \{\} <br /> |
+| `rulerMode` _[RulerMode](#rulermode)_ | RulerMode configures the statefulness of the Ruler. |  | Required: \{\} <br /> |
 | `ruleConfigSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | RuleConfigSelector is the label selector to discover ConfigMaps with rule files.<br />It also discovers PrometheusRule CustomResources if the feature flag is enabled.<br />PrometheusRules are converted them into ConfigMaps with rule files internally.<br />It enables adding additional labels to build a custom label selector for discoverable rule files.<br />Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true" | \{ matchLabels:map[operator.thanos.io/prometheus-rule:true] \} | Required: \{\} <br /> |
 | `alertmanagerURL` _string_ | AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.<br />The scheme should not be empty e.g http might be used. The scheme may be prefixed with<br />'dns+' or 'dnssrv+' to detect Alertmanager IPs through respective DNS lookups. |  | Pattern: `^((dns\+)?(dnssrv\+)?(http\|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}(:[0-9]\{1,5\})?$` <br />Required: \{\} <br /> |
-| `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
 | `evaluationInterval` _[Duration](#duration)_ | EvaluationInterval is the default interval at which rules are evaluated. | 1m | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `alertLabelDrop` _string array_ | Labels to drop before Ruler sends alerts to alertmanager. |  | Optional: \{\} <br /> |
-| `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets. |  | Required: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `ruleTenancyConfig` _[RuleTenancyConfig](#ruletenancyconfig)_ | RuleTenancyConfig is the configuration for the rule tenancy. |  | Optional: \{\} <br /> |
@@ -1423,6 +1431,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | NodeSelector defines on which Nodes the workloads are scheduled. |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#affinity-v1-core)_ | Affinity defines the workloads affinity scheduling rules if specified. |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations defines the workloads tolerations if specified. |  | Optional: \{\} <br /> |
+| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints defines how pods are spread across topology domains. |  | Optional: \{\} <br /> |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings.<br />This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.<br />If not specified, the operator will default to FSGroup=1001. |  | Optional: \{\} <br /> |
 | `podDisruptionBudgetConfig` _[PodDisruptionBudgetConfig](#poddisruptionbudgetconfig)_ | PodDisruptionBudgetConfig holds the configuration for the PodDisruptionBudget.<br />This allows enabling or disabling the creation of a PodDisruptionBudget for the Thanos component.<br />When enabled, a resource that has more than one replica will have a PodDisruptionBudget created<br />that sets maxUnavailable to 1. | \{ enable:true \} | Optional: \{\} <br /> |
 | `labels` _object (keys:string, values:string)_ | Labels are additional labels to add to components.<br />In case of conflicts, these labels take precedence. |  | Optional: \{\} <br /> |

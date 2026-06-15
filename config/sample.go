@@ -220,20 +220,23 @@ func SampleCR(crd CRD) any {
 						"app.kubernetes.io/part-of":    "thanos",
 					},
 				},
-				StatefulSpec: &thanosv1alpha1.StatefulSpec{
-					ObjectStorageConfig: thanosv1alpha1.ObjectStorageConfig{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "thanos-object-storage",
+				RulerMode: thanosv1alpha1.RulerMode{
+					Type: "Stateful",
+					Stateful: &thanosv1alpha1.StatefulSpec{
+						ObjectStorageConfig: thanosv1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-object-storage",
+							},
+							Key: "thanos.yaml",
 						},
-						Key: "thanos.yaml",
+						ExternalLabels: map[string]string{
+							"rule_replica": "$(NAME)",
+						},
+						Retention: "2h",
 					},
 				},
-				AlertmanagerURL: "http://alertmanager.example.com:9093",
-				ExternalLabels: map[string]string{
-					"rule_replica": "$(NAME)",
-				},
+				AlertmanagerURL:    "http://alertmanager.example.com:9093",
 				EvaluationInterval: "1m",
-				Retention:          "2h",
 				StorageConfiguration: thanosv1alpha1.StorageConfiguration{
 					Size: "1Gi",
 				},

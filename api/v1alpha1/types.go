@@ -47,9 +47,11 @@ type StorageConfiguration struct {
 	// Size is the size of the PV storage to be used by a Thanos component.
 	// +kubebuilder:validation:Required
 	Size StorageSize `json:"size"`
-	// StorageClass is the name of the storage class to be used. If specified,
-	// it will use the default storage class.
+	// StorageClass is the name of the storage class to be used.
+	// If not specified, it will use the default storage class.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="storageClass is immutable"
 	StorageClass *string `json:"storageClass,omitempty"`
 }
 
@@ -112,6 +114,9 @@ type CommonFields struct {
 	// Tolerations defines the workloads tolerations if specified.
 	// +kubebuilder:validation:Optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// TopologySpreadConstraints defines how pods are spread across topology domains.
+	// +kubebuilder:validation:Optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// This allows setting the FSGroup, RunAsUser, RunAsGroup, etc. for the pod.
 	// If not specified, the operator will default to FSGroup=1001.

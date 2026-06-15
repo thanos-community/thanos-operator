@@ -21,7 +21,6 @@ import (
 )
 
 // ThanosRulerSpec defines the desired state of ThanosRuler
-// +kubebuilder:validation:XValidation:rule="!(has(self.statelessSpec) && has(self.statefulSpec))", message="statefulSpec and statelessSpec are mutually exclusive, only one can be set"
 type ThanosRulerSpec struct {
 	CommonFields `json:",inline"`
 	// StatefulSetFields are the options available to all Thanos stateful
@@ -38,13 +37,9 @@ type ThanosRulerSpec struct {
 	// {"operator.thanos.io/query-api": "true", "app.kubernetes.io/part-of": "thanos"}.
 	// +kubebuilder:validation:Optional
 	QueryLabelSelector *metav1.LabelSelector `json:"queryLabelSelector,omitempty"`
-	// StatelessSpec configures Thanos Ruler in Stateless mode.
-	// See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
-	// +kubebuilder:validation:Optional
-	StatelessSpec *StatelessSpec `json:"statelessSpec,omitempty"`
-	// StatefulSpec configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
-	// +kubebuilder:validation:Optional
-	StatefulSpec *StatefulSpec `json:"statefulSpec,omitempty"`
+	// RulerMode configures the statefulness of the Ruler.
+	// +kubebuilder:validation:Required
+	RulerMode RulerMode `json:"rulerMode"`
 	// RuleConfigSelector is the label selector to discover ConfigMaps with rule files.
 	// It also discovers PrometheusRule CustomResources if the feature flag is enabled.
 	// PrometheusRules are converted them into ConfigMaps with rule files internally.
@@ -60,20 +55,12 @@ type ThanosRulerSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^((dns\+)?(dnssrv\+)?(http|https):\/\/)[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}(:[0-9]{1,5})?$`
 	AlertmanagerURL string `json:"alertmanagerURL,omitempty"` //nolint:tagliatelle
-	// ExternalLabels set on Ruler TSDB, for query time deduplication.
-	// +kubebuilder:default={rule_replica: "$(NAME)"}
-	// +kubebuilder:validation:Required
-	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 	// EvaluationInterval is the default interval at which rules are evaluated.
 	// +kubebuilder:default="1m"
 	EvaluationInterval Duration `json:"evaluationInterval,omitempty"`
 	// Labels to drop before Ruler sends alerts to alertmanager.
 	// +kubebuilder:validation:Optional
 	AlertLabelDrop []string `json:"alertLabelDrop,omitempty"`
-	// Retention is the duration for which the Thanos Rule StatefulSet will retain data.
-	// +kubebuilder:default="2h"
-	// +kubebuilder:validation:Required
-	Retention Duration `json:"retention,omitempty"`
 	// StorageConfiguration represents the storage to be used by the Thanos Ruler StatefulSets.
 	// +kubebuilder:validation:Required
 	StorageConfiguration StorageConfiguration `json:"storage"`
@@ -91,22 +78,6 @@ type ThanosRulerSpec struct {
 	Additional `json:",inline"`
 }
 
-type StatelessSpec struct {
-	// LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.
-	// If multiple services are discovered, the results will be written to each service.
-	// Values provided here will be appended to the defaults which are:
-	// operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos"
-	// +kubebuilder:default= {matchLabels:{"operator.thanos.io/remote-write-api": "true", "app.kubernetes.io/part-of": "thanos"}}
-	// +kubebuilder:validation:Optional
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
-}
-
-type StatefulSpec struct {
-	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
-	// +kubebuilder:validation:Required
-	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig"`
-}
-
 type RuleTenancyConfig struct {
 	// EnforcedTenantIdentifier will be injected into each Prometheus rule as a label to enforce tenancy
 	// For example if enforcedTenantIdentifier: "tenant_id" then up{} becomes up{tenant_id={TenantSpecifierLabelValue}
@@ -117,6 +88,31 @@ type RuleTenancyConfig struct {
 	// +kubebuilder:default "operator.thanos.io/tenant"
 	// +kubebuilder:validation:Optional
 	TenantSpecifierLabel *string `json:"tenantSpecifierLabel,omitempty"`
+}
+
+// +kubebuilder:validation:XValidation:rule="self.type == 'Stateful' ? has(self.stateful) : true", message="stateful config required when type is Stateful"
+type RulerMode struct {
+	// Type determines the mode of operation for the Ruler.
+	// +kubebuilder:default="Stateful"
+	// +kubebuilder:validation:Enum=Stateful
+	Type string `json:"type"`
+	// Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
+	// +kubebuilder:validation:Optional
+	Stateful *StatefulSpec `json:"stateful,omitempty"`
+}
+
+type StatefulSpec struct {
+	// ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks.
+	// +kubebuilder:validation:Required
+	ObjectStorageConfig ObjectStorageConfig `json:"objectStorageConfig,omitempty"`
+	// Retention is the duration for which the Thanos Rule StatefulSet will retain data.
+	// +kubebuilder:default="2h"
+	// +kubebuilder:validation:Required
+	Retention Duration `json:"retention,omitempty"`
+	// ExternalLabels set on Ruler TSDB, for query time deduplication.
+	// +kubebuilder:default={rule_replica: "$(NAME)"}
+	// +kubebuilder:validation:Required
+	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
 }
 
 // ThanosRulerStatus defines the observed state of ThanosRuler
