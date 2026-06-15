@@ -712,8 +712,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _string_ | Type determines the mode of operation for the Ruler. | Stateful | Enum: [Stateful] <br /> |
+| `type` _string_ | Type determines the mode of operation for the Ruler. | Stateless | Enum: [Stateful Stateless] <br /> |
 | `stateful` _[StatefulSpec](#statefulspec)_ | Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage. |  | Optional: \{\} <br /> |
+| `stateless` _[StatelessSpec](#statelessspec)_ | Stateless configures Thanos Ruler in Stateless mode.<br />See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write |  |  |
 
 
 #### ShardingConfig
@@ -829,6 +830,22 @@ _Appears in:_
 | `objectStorageConfig` _[ObjectStorageConfig](#objectstorageconfig)_ | ObjectStorageConfig is the secret that contains the object storage configuration for Ruler to upload blocks. |  | Required: \{\} <br /> |
 | `retention` _[Duration](#duration)_ | Retention is the duration for which the Thanos Rule StatefulSet will retain data. | 2h | Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br />Required: \{\} <br /> |
 | `externalLabels` _[ExternalLabels](#externallabels)_ | ExternalLabels set on Ruler TSDB, for query time deduplication. | \{ rule_replica:$(NAME) \} | MinProperties: 1 <br />Required: \{\} <br /> |
+
+
+#### StatelessSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [RulerMode](#rulermode)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `labelSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.<br />If multiple services are discovered, the results will be written to each service.<br />Values provided here will be appended to the defaults which are:<br />operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos" | \{ matchLabels:map[app.kubernetes.io/part-of:thanos operator.thanos.io/remote-write-api:true] \} | Optional: \{\} <br /> |
 
 
 #### StorageConfiguration
