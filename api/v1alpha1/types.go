@@ -346,12 +346,12 @@ type HorizontalPodAutoscalerConfig struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:validation:Optional
-	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"`
+	TargetCPUUtilizationPercentage *int32 `json:"targetCPUUtilizationPercentage,omitempty"` //nolint:tagliatelle
 	// TargetMemoryUtilizationPercentage is the target average memory utilization (as a percentage of requested memory).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:validation:Optional
-	TargetMemoryUtilizationPercentage *int32 `json:"targetMemoryUtilizationPercentage,omitempty"`
+	TargetMemoryUtilizationPercentage *int32 `json:"targetMemoryUtilizationPercentage,omitempty"` //nolint:tagliatelle
 	// ScaleDownStabilizationWindowSeconds is the number of seconds for which past recommendations
 	// should be considered while scaling down. Defaults to 300 seconds.
 	// +kubebuilder:validation:Minimum=0
