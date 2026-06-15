@@ -133,10 +133,10 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 	opts := commonToOpts(&in.CRD, in.CRD.Spec.Replicas, in.CRD.Spec.CommonFields, &in.CRD.Spec.StatefulSetFields, in.FeatureGate, in.CRD.Spec.Additional)
 	return manifestruler.Options{
 		Options:         opts,
-		ObjStoreSecret:  in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
-		Retention:       manifests.Duration(in.CRD.Spec.Retention),
+		ObjStoreSecret:  in.CRD.Spec.RulerMode.Stateful.ObjectStorageConfig.ToSecretKeySelector(),
+		Retention:       manifests.Duration(in.CRD.Spec.RulerMode.Stateful.Retention),
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
-		ExternalLabels:  in.CRD.Spec.ExternalLabels,
+		ExternalLabels:  in.CRD.Spec.RulerMode.Stateful.ExternalLabels,
 		AlertLabelDrop:  in.CRD.Spec.AlertLabelDrop,
 		StorageConfig: manifests.StorageConfig{
 			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
