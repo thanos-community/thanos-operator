@@ -54,6 +54,9 @@ type ThanosQuerySpec struct {
 	// If you specify this, the operator will create a Query Frontend in front of your query deployment.
 	// +kubebuilder:validation:Optional
 	QueryFrontend *QueryFrontendSpec `json:"queryFrontend,omitempty"`
+	// StoreLimitsOptions allows configuration of the store API limits.
+	// +kubebuilder:validation:Optional
+	StoreLimitsOptions *StoreLimitsOptions `json:"storeLimitsOptions,omitempty"`
 	// When a resource is paused, no actions except for deletion
 	// will be performed on the underlying objects.
 	// +kubebuilder:validation:Optional

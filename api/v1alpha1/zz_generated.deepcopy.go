@@ -1172,6 +1172,11 @@ func (in *ThanosQuerySpec) DeepCopyInto(out *ThanosQuerySpec) {
 		*out = new(QueryFrontendSpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.StoreLimitsOptions != nil {
+		in, out := &in.StoreLimitsOptions, &out.StoreLimitsOptions
+		*out = new(StoreLimitsOptions)
+		**out = **in
+	}
 	if in.Paused != nil {
 		in, out := &in.Paused, &out.Paused
 		*out = new(bool)

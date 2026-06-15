@@ -79,7 +79,7 @@ func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Option
 			Series:   in.CRD.Spec.TelemetryQuantiles.Series,
 		}
 	}
-	return manifestquery.Options{
+	qopts := manifestquery.Options{
 		Options:            opts,
 		ReplicaLabels:      in.CRD.Spec.ReplicaLabels,
 		Timeout:            "15m",
@@ -89,6 +89,15 @@ func queryV1Alpha1ToOptions(in queryV1Alpha1TransformInput) manifestquery.Option
 		TelemetryQuantiles: telemetryQuantiles,
 		GRPCProxyStrategy:  in.CRD.Spec.GRPCProxyStrategy,
 	}
+
+	if in.CRD.Spec.StoreLimitsOptions != nil {
+		qopts.StoreLimitsOpts = manifests.StoreLimitsOpts{
+			StoreLimitsRequestSamples: in.CRD.Spec.StoreLimitsOptions.StoreLimitsRequestSamples,
+			StoreLimitsRequestSeries:  in.CRD.Spec.StoreLimitsOptions.StoreLimitsRequestSeries,
+		}
+	}
+
+	return qopts
 }
 
 // QueryNameFromParent returns the name of the Thanos Query component.
