@@ -159,7 +159,14 @@ func mutateStatefulSet(existing, desired *appsv1.StatefulSet) {
 	if existing.CreationTimestamp.IsZero() {
 		existing.Spec.Selector = desired.Spec.Selector
 	}
-	existing.Spec.Replicas = desired.Spec.Replicas
+
+	// Only update replicas if HPA is not managing this StatefulSet.
+	// Annot is set whilst creating StatefulSet.
+	// If HPA is managing replicas, we must not overwrite it or we'll fight with HPA.
+	if existing.Annotations[ManagedByHPAAnnotation] != "true" {
+		existing.Spec.Replicas = desired.Spec.Replicas
+	}
+
 	existing.Spec.MinReadySeconds = desired.Spec.MinReadySeconds
 	existing.Spec.PodManagementPolicy = desired.Spec.PodManagementPolicy
 	existing.Spec.PersistentVolumeClaimRetentionPolicy = desired.Spec.PersistentVolumeClaimRetentionPolicy

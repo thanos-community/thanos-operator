@@ -51,6 +51,9 @@ const (
 
 	HashringLabel = "operator.thanos.io/hashring"
 	ShardLabel    = "operator.thanos.io/shard"
+
+	// ManagedByHPAAnnotation is the annotation used to identify if an HPA is managing the StatefulSet.
+	ManagedByHPAAnnotation = "operator.thanos.io/managed-by-hpa"
 )
 
 // MergeMaps merges the provided labels with the default labels for a component.

@@ -214,6 +214,10 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 		}
 	}
 
+	if in.Spec.AutoscalingConfig != nil {
+		ingestOpts.AutoscalingConfig = toManifestAutoscalingConfig(in.Spec.AutoscalingConfig, in.Spec.Replicas)
+	}
+
 	return ingestOpts
 }
 
@@ -550,5 +554,34 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 	return manifests.CacheConfig{
 		InMemoryCacheConfig: toInMemoryCacheConfig,
 		FromSecret:          nil,
+	}
+}
+
+func toManifestAutoscalingConfig(config *v1alpha1.AutoscalingConfig, specReplicas int32) *manifestreceive.AutoscalingConfig {
+	if config == nil || config.HorizontalPodAutoscalerConfig == nil {
+		return nil
+	}
+
+	if !ptr.Deref(config.HorizontalPodAutoscalerConfig.Enabled, false) {
+		return nil
+	}
+
+	minReplicas := config.HorizontalPodAutoscalerConfig.MinReplicas
+	if minReplicas == nil {
+		minReplicas = ptr.To(specReplicas)
+	}
+
+	return &manifestreceive.AutoscalingConfig{
+		HPAConfig: &manifestreceive.HPAConfig{
+			Enabled:                             true,
+			MinReplicas:                         minReplicas,
+			MaxReplicas:                         config.HorizontalPodAutoscalerConfig.MaxReplicas,
+			TargetCPUUtilizationPercentage:      config.HorizontalPodAutoscalerConfig.TargetCPUUtilizationPercentage,
+			TargetMemoryUtilizationPercentage:   config.HorizontalPodAutoscalerConfig.TargetMemoryUtilizationPercentage,
+			ScaleDownStabilizationWindowSeconds: config.HorizontalPodAutoscalerConfig.ScaleDownStabilizationWindowSeconds,
+			ScaleUpStabilizationWindowSeconds:   config.HorizontalPodAutoscalerConfig.ScaleUpStabilizationWindowSeconds,
+			ScaleUpPods:                         config.HorizontalPodAutoscalerConfig.ScaleUpPods,
+			ScaleDownPods:                       config.HorizontalPodAutoscalerConfig.ScaleDownPods,
+		},
 	}
 }
