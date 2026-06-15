@@ -377,7 +377,7 @@ var _ = Describe("controller", Ordered, func() {
 					manifests.OwnerLabel:     receiveName,
 				}
 				Eventually(func() error {
-					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, receive.RemoteWritePort)
+					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, nil, receive.RemoteWritePort)
 				}, time.Minute*2, time.Second*1).Should(Succeed())
 			})
 		})
@@ -492,7 +492,7 @@ var _ = Describe("controller", Ordered, func() {
 					manifests.OwnerLabel:     capnprotoReceiveName,
 				}
 				Eventually(func() error {
-					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, receive.RemoteWritePort)
+					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, nil, receive.RemoteWritePort)
 				}, time.Minute*2, time.Second*1).Should(Succeed())
 			})
 
@@ -682,6 +682,7 @@ var _ = Describe("controller", Ordered, func() {
 				RuleConfigSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						"stateful":                           "true",
 					},
 				},
 				RulerMode: v1alpha1.RulerMode{
@@ -729,6 +730,7 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 						Labels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"stateful":                           "true",
 						},
 					},
 					Data: map[string]string{
@@ -766,6 +768,7 @@ var _ = Describe("controller", Ordered, func() {
 						Namespace: namespace,
 						Labels: map[string]string{
 							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"stateful":                           "true",
 						},
 					},
 					Spec: monitoringv1.PrometheusRuleSpec{
@@ -815,6 +818,112 @@ var _ = Describe("controller", Ordered, func() {
 					}
 					return nil
 				}, time.Minute*3, time.Second*1).Should(BeNil())
+			})
+		})
+
+		Context("When stateless ruler is created", func() {
+			statelessRulerName := "stateless-ruler"
+
+			It("should generate correct resources", func() {
+				r := v1alpha1.ThanosRuler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      statelessRulerName,
+						Namespace: namespace,
+					},
+					Spec: v1alpha1.ThanosRulerSpec{
+						QueryLabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
+							},
+						},
+						CommonFields: v1alpha1.CommonFields{
+							Version: getThanosVersion(),
+						},
+						Replicas: 1,
+						StorageConfiguration: v1alpha1.StorageConfiguration{
+							Size: "1Gi",
+						},
+						RulerMode: v1alpha1.RulerMode{
+							Type:      "Stateless",
+							Stateless: &v1alpha1.StatelessSpec{},
+						},
+						RuleConfigSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+								"stateless":                          "true",
+							},
+						},
+						AlertmanagerURL: "http://alertmanager.com:9093",
+						RuleTenancyConfig: &v1alpha1.RuleTenancyConfig{
+							EnforcedTenantIdentifier: ptr.To("tenant_id"),
+							TenantSpecifierLabel:     ptr.To("operator.thanos.io/tenant"),
+						},
+					},
+				}
+				err := c.Create(context.Background(), &r)
+				Expect(err).To(BeNil())
+
+				Eventually(func() bool {
+					return utils.VerifyStatefulSetReplicasRunning(c, 1, controller.RulerNameFromParent(statelessRulerName), namespace)
+				}, time.Minute*3, time.Second*5).Should(BeTrue())
+			})
+
+			It("should set up rule resource", func() {
+				promRule := &monitoringv1.PrometheusRule{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "stateless-prometheus-rule",
+						Namespace: namespace,
+						Labels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+							"operator.thanos.io/tenant":          "stateless_tenant",
+							"stateless":                          "true",
+						},
+					},
+					Spec: monitoringv1.PrometheusRuleSpec{
+						Groups: []monitoringv1.RuleGroup{
+							{
+								Name: "example-rule",
+								Rules: []monitoringv1.Rule{
+									{
+										Record: "example_stateless_rule",
+										Expr:   intstr.FromString("sum(test_metric)"),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				err := c.Create(context.Background(), promRule, &client.CreateOptions{})
+				Expect(err).To(BeNil())
+
+				routerLabels := map[string]string{
+					manifests.ComponentLabel: receive.RouterComponentName,
+					manifests.OwnerLabel:     receiveName,
+				}
+				header := map[string]string{
+					"THANOS-TENANT": "stateless_tenant",
+				}
+				Eventually(func() error {
+					return utils.DoRemoteWriteRequest(c, utils.StatelessRemoteWriteRequest(), namespace, routerLabels, header, receive.RemoteWritePort)
+				}, time.Minute*1, time.Second*1).Should(Succeed())
+			})
+
+			It("should allow querying of evaluated rules", func() {
+				cancelFn, err := utils.SetupQueryPortForward(c, namespace)
+				Expect(err).To(BeNil())
+				defer cancelFn()
+
+				Eventually(func() error {
+					resp, err := utils.QueryPrometheus(`example_stateless_rule{tenant_id="stateless_tenant"}`)
+					if err != nil {
+						return err
+					}
+					if len(resp.Data.Result) == 0 {
+						return fmt.Errorf("no results found for test_metric")
+					}
+					return nil
+				}, time.Minute*3, time.Second*5).Should(Succeed())
 			})
 		})
 	})

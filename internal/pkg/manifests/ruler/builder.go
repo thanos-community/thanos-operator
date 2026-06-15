@@ -44,7 +44,7 @@ type Options struct {
 	manifests.Options
 	Endpoints           []Endpoint
 	RuleFiles           []corev1.ConfigMapKeySelector
-	ObjStoreSecret      corev1.SecretKeySelector
+	ObjStoreSecret      *corev1.SecretKeySelector
 	Retention           manifests.Duration
 	AlertmanagerURL     string
 	ExternalLabels      map[string]string
@@ -52,6 +52,7 @@ type Options struct {
 	StorageConfig       manifests.StorageConfig
 	EvaluationInterval  manifests.Duration
 	ConfigReloaderImage string
+	DiscoveryInfos      DiscoveryInfos
 }
 
 // Endpoint represents a single QueryAPI DNS formatted address.
@@ -60,6 +61,28 @@ type Endpoint struct {
 	ServiceName string
 	Namespace   string
 	Port        int32
+}
+
+type DiscoveryInfos struct {
+	ServiceEndpoints []Endpoint
+	Tenants          []string
+	TenantIdentifier string
+}
+
+type remoteWrite struct {
+	URL            string            `yaml:"url"`
+	Headers        map[string]string `yaml:"headers,omitempty"`
+	RelabelConfigs []relabelConfig   `yaml:"write_relabel_configs,omitempty"` //nolint
+}
+
+type remoteWriteConfig struct {
+	RemoteWrite []remoteWrite `yaml:"remote_write"` //nolint
+}
+
+type relabelConfig struct {
+	SourceLabels []string `yaml:"source_labels"` //nolint
+	Regex        string   `yaml:"regex"`
+	Action       string   `yaml:"action"`
 }
 
 func (opts Options) Build() []client.Object {
@@ -71,6 +94,10 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newRulerStatefulSet(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newRulerService(opts, selectorLabels, objectMetaLabels))
+
+	if opts.ObjStoreSecret == nil {
+		objs = append(objs, newRulerSecret(opts, objectMetaLabels))
+	}
 
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
@@ -202,18 +229,6 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					},
 				},
 			},
-			{
-				Name: rulerObjectStoreEnvVarName,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: opts.ObjStoreSecret.Name,
-						},
-						Key:      opts.ObjStoreSecret.Key,
-						Optional: ptr.To(false),
-					},
-				},
-			},
 		},
 		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
@@ -262,6 +277,41 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: ruleFile.Name,
+					},
+				},
+			},
+		})
+	}
+
+	if opts.ObjStoreSecret != nil {
+		rulerContainer.Env = append(rulerContainer.Env, corev1.EnvVar{
+			Name: rulerObjectStoreEnvVarName,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.ObjStoreSecret.Name,
+					},
+					Key:      opts.ObjStoreSecret.Key,
+					Optional: ptr.To(false),
+				},
+			},
+		})
+	} else {
+		rulerContainer.VolumeMounts = append(rulerContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      remoteWriteVolumeName,
+			MountPath: remoteWriteVolumePath,
+		})
+
+		volumes = append(volumes, corev1.Volume{
+			Name: remoteWriteVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: opts.GetGeneratedResourceName(),
+					Items: []corev1.KeyToPath{
+						{
+							Key:  remoteWriteYAML,
+							Path: remoteWriteYAML,
+						},
 					},
 				},
 			},
@@ -389,17 +439,101 @@ func newRulerService(opts Options, selectorLabels, objectMetaLabels map[string]s
 	}
 }
 
+const (
+	remoteWriteYAML  = "remote-write.yaml"
+	defaultHeaderKey = "THANOS-TENANT"
+
+	GeneratedRemoteWriteSecretLabel = "operator.thanos.io/generated-remote-write-secret"
+	GeneratedRemoteWriteSecretValue = "true"
+
+	remoteWriteVolumeName = "remote-write"
+	remoteWriteVolumePath = "/etc/thanos/remote-write"
+
+	defaultRelabelAction = "keep"
+)
+
+func NewRulerSecret(opts Options) *corev1.Secret {
+	objectMetaLabels := GetLabels(opts)
+	return newRulerSecret(opts, objectMetaLabels)
+}
+
+func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
+	rwConfig := opts.DiscoveryInfos.toRemoteWrite()
+	stringData, _ := yaml.Marshal(rwConfig)
+
+	additionalLabels := map[string]string{
+		GeneratedRemoteWriteSecretLabel: GeneratedRemoteWriteSecretValue,
+	}
+
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        opts.GetGeneratedResourceName(),
+			Namespace:   opts.Namespace,
+			Labels:      manifests.MergeMaps(objectMetaLabels, additionalLabels),
+			Annotations: opts.Annotations,
+		},
+		StringData: map[string]string{
+			remoteWriteYAML: string(stringData),
+		},
+	}
+}
+
+func (e Endpoint) toURL() string {
+	return fmt.Sprintf("http://%s.%s.svc:%d/api/v1/receive", e.ServiceName, e.Namespace, e.Port)
+}
+
+func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
+	config := make([]remoteWrite, 0, len(di.ServiceEndpoints))
+
+	for _, endpoint := range di.ServiceEndpoints {
+		rw := remoteWrite{
+			URL: endpoint.toURL(),
+		}
+		if len(di.Tenants) == 0 {
+			config = append(config, rw)
+		} else {
+			for _, tenant := range di.Tenants {
+				rw.Headers = map[string]string{
+					defaultHeaderKey: tenant,
+				}
+				rw.RelabelConfigs = []relabelConfig{
+					{
+						SourceLabels: []string{di.TenantIdentifier},
+						Regex:        tenant,
+						Action:       defaultRelabelAction,
+					},
+				}
+				config = append(config, rw)
+			}
+		}
+
+	}
+
+	return remoteWriteConfig{
+		RemoteWrite: config,
+	}
+}
+
 func rulerArgs(opts Options) []string {
 	args := []string{"rule"}
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
-		fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)),
 		fmt.Sprintf("--data-dir=%s", dataVolumeMountPath),
-		fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
 		fmt.Sprintf("--alertmanagers.url=%s", opts.AlertmanagerURL),
 	)
+
+	if opts.ObjStoreSecret != nil {
+		args = append(args, fmt.Sprintf("--objstore.config=$(%s)", rulerObjectStoreEnvVarName),
+			fmt.Sprintf("--tsdb.retention=%s", string(opts.Retention)))
+	} else {
+		args = append(args, fmt.Sprintf("--remote-write.config-file=%s/%s", remoteWriteVolumePath, remoteWriteYAML))
+	}
 
 	if opts.EvaluationInterval != "" {
 		args = append(args, fmt.Sprintf("--eval-interval=%s", string(opts.EvaluationInterval)))
@@ -444,6 +578,9 @@ func (opts Options) GetSelectorLabels() map[string]string {
 
 func GetLabels(opts Options) map[string]string {
 	lbls := manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
+	if opts.ObjStoreSecret == nil {
+		return lbls
+	}
 	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
 }
 

@@ -30,6 +30,9 @@ const (
 	DefaultQueryAPILabel = "operator.thanos.io/query-api"
 	DefaultQueryAPIValue = "true"
 
+	DefaultRemoteWriteAPILabel = "operator.thanos.io/remote-write-api"
+	DefaultRemoteWriteAPIValue = "true"
+
 	// DefaultPrometheusRuleLabel is the default label key for PrometheusRule CRDs
 	DefaultPrometheusRuleLabel = "operator.thanos.io/prometheus-rule"
 	// DefaultPrometheusRuleValue is the default label value for PrometheusRule CRDs

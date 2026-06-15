@@ -55,7 +55,7 @@ func TestBuildRuler(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -128,7 +128,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -181,7 +181,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -239,7 +239,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -286,7 +286,7 @@ func TestNewRulerStatefulSet(t *testing.T) {
 						Key: "rules.yaml",
 					},
 				},
-				ObjStoreSecret: corev1.SecretKeySelector{
+				ObjStoreSecret: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
@@ -344,7 +344,7 @@ func TestNewRulerService(t *testing.T) {
 				Key: "rules.yaml",
 			},
 		},
-		ObjStoreSecret: corev1.SecretKeySelector{
+		ObjStoreSecret: &corev1.SecretKeySelector{
 			LocalObjectReference: corev1.LocalObjectReference{
 				Name: "test-secret",
 			},
@@ -722,7 +722,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				RuleFiles: []corev1.ConfigMapKeySelector{
 					{LocalObjectReference: corev1.LocalObjectReference{Name: "test-rules"}, Key: "rules.yaml"},
 				},
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -740,7 +740,7 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				},
 				Endpoints:           []Endpoint{{ServiceName: "test-query", Namespace: "ns", Port: 19101}},
 				RuleFiles:           []corev1.ConfigMapKeySelector{}, // Empty rule files
-				ObjStoreSecret:      corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
+				ObjStoreSecret:      &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"}, Key: "thanos.yaml"},
 				Retention:           "15d",
 				AlertmanagerURL:     "http://test-alertmanager.com:9093",
 				ConfigReloaderImage: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0",
@@ -775,6 +775,106 @@ func TestStatefulSetWithConfigReloader(t *testing.T) {
 				t.Fatalf("failed to marshal statefulset to YAML: %v", err)
 			}
 			golden.Assert(t, string(yamlBytes), tc.golden)
+		})
+	}
+}
+
+func TestNewRulerSecret(t *testing.T) {
+	tests := []struct {
+		name   string
+		opts   Options
+		golden string
+	}{
+		{
+			name: "single endpoint, no tenancy",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-query",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+					},
+				},
+			},
+			golden: "secret-single-endpoint-no-tenancy.golden.yaml",
+		},
+		{
+			name: "single tenant, single endpoint",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-receive",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+					},
+					Tenants: []string{
+						"test-tenant",
+					},
+					TenantIdentifier: "tenant-id",
+				},
+			},
+			golden: "secret-single_tenant-single_endpoint.golden.yaml",
+		},
+		{
+			name: "multi tenant, multi endpoint",
+			opts: Options{
+				Options: manifests.Options{
+					Namespace: "ns",
+					Owner:     "test-ruler",
+					Labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				DiscoveryInfos: DiscoveryInfos{
+					ServiceEndpoints: []Endpoint{
+						{
+							ServiceName: "test-receive-one",
+							Namespace:   "ns",
+							Port:        19101,
+						},
+						{
+							ServiceName: "test-receive-two",
+							Namespace:   "ns",
+							Port:        19102,
+						},
+					},
+					Tenants: []string{
+						"test-tenant-one",
+						"test-tenant-two",
+					},
+					TenantIdentifier: "tenant-id",
+				},
+			},
+			golden: "secret-multi_tenant-multi_endpoint.golden.yaml",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewRulerSecret(tt.opts)
+
+			yamlBytes, err := yaml.Marshal(s)
+			if err != nil {
+				t.Fatalf("failed to marshal secret to YAML: %v", err)
+			}
+			golden.Assert(t, string(yamlBytes), tt.golden)
 		})
 	}
 }

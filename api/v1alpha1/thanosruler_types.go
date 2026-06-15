@@ -93,12 +93,15 @@ type RuleTenancyConfig struct {
 // +kubebuilder:validation:XValidation:rule="self.type == 'Stateful' ? has(self.stateful) : true", message="stateful config required when type is Stateful"
 type RulerMode struct {
 	// Type determines the mode of operation for the Ruler.
-	// +kubebuilder:default="Stateful"
-	// +kubebuilder:validation:Enum=Stateful
+	// +kubebuilder:default="Stateless"
+	// +kubebuilder:validation:Enum=Stateful;Stateless
 	Type string `json:"type"`
 	// Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
 	// +kubebuilder:validation:Optional
 	Stateful *StatefulSpec `json:"stateful,omitempty"`
+	// Stateless configures Thanos Ruler in Stateless mode.
+	// See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
+	Stateless *StatelessSpec `json:"stateless,omitempty"`
 }
 
 type StatefulSpec struct {
@@ -113,6 +116,16 @@ type StatefulSpec struct {
 	// +kubebuilder:default={rule_replica: "$(NAME)"}
 	// +kubebuilder:validation:Required
 	ExternalLabels ExternalLabels `json:"externalLabels,omitempty"`
+}
+
+type StatelessSpec struct {
+	// LabelSelector discovers remote write endpoints that Ruler will write metrics to within the same namespace.
+	// If multiple services are discovered, the results will be written to each service.
+	// Values provided here will be appended to the defaults which are:
+	// operator.thanos.io/remote-write-api: "true", "app.kubernetes.io/part-of": "thanos"
+	// +kubebuilder:default= {matchLabels:{"operator.thanos.io/remote-write-api": "true", "app.kubernetes.io/part-of": "thanos"}}
+	// +kubebuilder:validation:Optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 }
 
 // ThanosRulerStatus defines the observed state of ThanosRuler

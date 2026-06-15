@@ -659,6 +659,7 @@ func (opts RouterOptions) GetSelectorLabels() map[string]string {
 
 func GetRouterLabels(opts RouterOptions) map[string]string {
 	l := opts.GetSelectorLabels()
+	l[manifests.DefaultRemoteWriteAPILabel] = manifests.DefaultRemoteWriteAPIValue
 	return manifests.MergeMaps(opts.Labels, l)
 }
 

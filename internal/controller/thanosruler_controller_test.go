@@ -887,5 +887,184 @@ config:
 			})
 		})
 
+		It("should enable stateless mode", func() {
+			if os.Getenv("EXCLUDE_RULER") == skipValue {
+				Skip("Skipping ThanosRuler controller tests")
+			}
+			resource := &monitoringthanosiov1alpha1.ThanosRuler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosRulerSpec{
+					Replicas:     1,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
+					RulerMode: monitoringthanosiov1alpha1.RulerMode{
+						Type:      "Stateless",
+						Stateless: &monitoringthanosiov1alpha1.StatelessSpec{},
+					},
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: "1Gi",
+					},
+					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
+						TenantSpecifierLabel: ptr.To(defaultTenantSpecifier),
+					},
+					RuleConfigSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+						},
+					},
+					AlertmanagerURL: "http://alertmanager.com:9093",
+				},
+			}
+
+			receiveSvcName := "test-receive"
+			querySvcName := "test-query"
+			cfgmapName := "test-config"
+
+			By("setting up required resources", func() {
+				queryService := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      querySvcName,
+						Namespace: ns,
+						Labels:    requiredQueryServiceLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "grpc",
+								Port:       10901,
+								TargetPort: intstr.FromInt32(10901),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), queryService)).Should(Succeed())
+				DeferCleanup(func() error {
+					return k8sClient.Delete(context.Background(), queryService)
+				})
+
+				receiveSvc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      receiveSvcName,
+						Namespace: ns,
+						Labels:    defaultRemoteWriteLabels,
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "remote-write",
+								Port:       19291,
+								TargetPort: intstr.IntOrString{IntVal: 19291},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), receiveSvc)).Should(Succeed())
+				DeferCleanup(func() error {
+					return k8sClient.Delete(context.Background(), receiveSvc)
+				})
+
+				statelessRuleLabels := map[string]string{
+					manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
+					defaultTenantSpecifier:               "test-tenant",
+				}
+
+				cfgmap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      cfgmapName,
+						Namespace: ns,
+						Labels:    statelessRuleLabels,
+					},
+					Data: map[string]string{
+						"test-rules.yaml": `groups:
+- name: test
+  rules:
+  - alert: TestAlert
+    expr: up == 0
+`,
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), cfgmap)).Should(Succeed())
+				DeferCleanup(func() error {
+					return k8sClient.Delete(context.Background(), cfgmap)
+				})
+
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet().WithSecret()
+				EventuallyWithOffset(1, func() bool {
+					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
+				}, time.Minute, time.Second*2).Should(BeTrue())
+
+			})
+
+			By("verify remote write Secret", func() {
+				arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
+				EventuallyWithOffset(1, func() bool {
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Second*30, time.Second*2).Should(BeTrue())
+
+				EventuallyWithOffset(0, func() bool {
+					secret := &corev1.Secret{}
+					if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, secret); err != nil {
+						return false
+					}
+					if _, exists := secret.Data["remote-write.yaml"]; !exists {
+						return false
+					}
+
+					expectedContent := `remote_write:
+- url: http://test-receive.test-ruler.svc:19291/api/v1/receive
+  headers:
+    THANOS-TENANT: test-tenant
+  write_relabel_configs:
+  - source_labels:
+    - tenant_id
+    regex: test-tenant
+    action: keep
+`
+
+					return string(secret.Data["remote-write.yaml"]) == expectedContent
+				}, time.Minute, time.Second*5).Should(BeTrue())
+			})
+
+			By("switching to stateful mode", func() {
+				Eventually(func() bool {
+					existingRuler := &monitoringthanosiov1alpha1.ThanosRuler{}
+					if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: resourceName}, existingRuler); err != nil {
+						return false
+					}
+					existingRuler.Spec.RulerMode.Stateless = nil
+					existingRuler.Spec.RulerMode.Stateful = &monitoringthanosiov1alpha1.StatefulSpec{
+						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "thanos-objstore",
+							},
+							Key: "thanos.yaml",
+						},
+					}
+					if err := k8sClient.Update(ctx, existingRuler); err != nil {
+						return false
+					}
+					return true
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
+					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				EventuallyWithOffset(1, func() bool {
+					arg := "--objstore.config=$(OBJSTORE_CONFIG)"
+					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+				}, time.Minute, time.Second*5).Should(BeTrue())
+
+				Eventually(func() bool {
+					secret := &corev1.Secret{}
+					err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, secret)
+					return err != nil
+				}, time.Minute, time.Second*5).Should(BeTrue())
+			})
+		})
 	})
 })

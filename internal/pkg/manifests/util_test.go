@@ -92,35 +92,114 @@ func TestOptionalToString(t *testing.T) {
 	}
 }
 
-func TestIsGrpcServiceWithLabels(t *testing.T) {
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"app": "thanos-query",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: "grpc",
-					Port: 9090,
+func TestCheckServicePort(t *testing.T) {
+	tests := []struct {
+		name           string
+		svc            *corev1.Service
+		requiredLabels map[string]string
+		portName       string
+		expected       bool
+	}{
+		{
+			name: "valid grpc service",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "thanos-query",
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "grpc",
+							Port: 9090,
+						},
+					},
 				},
 			},
+			requiredLabels: map[string]string{"foo": "bar"},
+			portName:       "grpc",
+			expected:       true,
+		},
+		{
+			name: "grpc service without require labels",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "thanos-query",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "grpc",
+							Port: 9090,
+						},
+					},
+				},
+			},
+			requiredLabels: map[string]string{"foo": "bar"},
+			portName:       "grpc",
+			expected:       false,
+		},
+		{
+			name: "valid remote-write service",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "thanos-receive",
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 9090,
+						},
+						{
+							Name: "remote-write",
+							Port: 19291,
+						},
+					},
+				},
+			},
+			requiredLabels: map[string]string{"foo": "bar"},
+			portName:       "remote-write",
+			expected:       true,
+		},
+		{
+			name: "remote-write service without port",
+			svc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "thanos-receive",
+						"foo": "bar",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name: "http",
+							Port: 9090,
+						},
+					},
+				},
+			},
+			requiredLabels: map[string]string{"foo": "bar"},
+			expected:       false,
 		},
 	}
 
-	// Test for missing required labels
-	if _, ok := IsGrpcServiceWithLabels(svc, map[string]string{"app": "thanos-query", "env": "prod"}); ok {
-		t.Errorf("expected false, got true")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ok := CheckServicePort(tt.svc, tt.requiredLabels, tt.portName)
 
-	// Test for valid service
-	port, ok := IsGrpcServiceWithLabels(svc, map[string]string{"app": "thanos-query"})
-	if !ok {
-		t.Errorf("expected true, got false")
-	}
-	if port != 9090 {
-		t.Errorf("expected port 9090, got %d", port)
+			if ok != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, ok)
+			}
+		})
 	}
 }
 
