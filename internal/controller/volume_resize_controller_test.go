@@ -54,7 +54,7 @@ func TestVolumeResizeReconciler_Reconcile(t *testing.T) {
 		validateFunc func(t *testing.T, fakeClient client.Client)
 	}{
 		{
-			name: "should resize PVC when StatefulSet has storage annotation",
+			name: "should resize PVC and orphan StatefulSet when storage annotation requires expansion",
 			objects: []runtime.Object{
 				&appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
@@ -112,6 +112,16 @@ func TestVolumeResizeReconciler_Reconcile(t *testing.T) {
 				actualSize := pvc.Spec.Resources.Requests[corev1.ResourceStorage]
 				assert.True(t, expectedSize.Equal(actualSize),
 					"Expected PVC size %s, got %s", expectedSize.String(), actualSize.String())
+
+				// After reconciliation, the StatefulSet should be deleted (orphaned)
+				// since needsRecreation was triggered by the PVC resize
+				sts := &appsv1.StatefulSet{}
+				err = fakeClient.Get(context.Background(), types.NamespacedName{
+					Name:      "test-store",
+					Namespace: "test-ns",
+				}, sts)
+				assert.Error(t, err, "StatefulSet should be deleted after PVC resize")
+				assert.Contains(t, err.Error(), "not found", "Expected 'not found' error when StatefulSet is deleted")
 			},
 		},
 		{
@@ -248,3 +258,4 @@ func TestParseStorageSize(t *testing.T) {
 		})
 	}
 }
+
