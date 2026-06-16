@@ -18,6 +18,7 @@ Feature gates allow you to:
 | [PrometheusRule](#prometheusrule-feature)               | `prometheus-rule`    | Experimental | Automatic discovery and mounting of PrometheusRule objects        |
 | [OpenTelemetry Sidecar](#opentelemetry-sidecar-feature) | `otel-sidecar`       | Experimental | OpenTelemetry collector sidecar injection for distributed tracing |
 | [KubeResourceSync](#kuberesourcesync-feature)           | `kube-resource-sync` | Experimental | Immediate ConfigMap/Secret synchronization via sidecar            |
+| [Volume Resize](#volume-resize-feature)                 | `volume-resize`      | Experimental | Automatic PVC resizing for Thanos component storage expansion     |
 
 ## Enabling Features
 
@@ -33,7 +34,8 @@ Enable features using the `--enable-feature` flag when starting the operator:
 ./thanos-operator \
   --enable-feature service-monitor \
   --enable-feature prometheus-rule \
-  --enable-feature otel-sidecar
+  --enable-feature otel-sidecar \
+  --enable-feature volume-resize
 ```
 
 ## ServiceMonitor Feature
@@ -284,6 +286,73 @@ The operator exposes metrics about enabled feature gates:
 # Check which features are enabled
 thanos_operator_feature_gates_info{feature="service-monitor"} == 1
 ```
+
+## Volume Resize Feature
+
+**Flag**: `volume-resize`
+
+### What It Achieves
+
+Enables automatic PVC (PersistentVolumeClaim) resizing for Thanos component StatefulSets when storage expansion is needed. This feature allows you to resize storage volumes without manual intervention, providing seamless storage scaling for Thanos components.
+
+### How It Works
+
+The volume resize controller watches for StatefulSets managed by the Thanos Operator and automatically resizes associated PVCs when a storage size annotation indicates a larger size is needed. After successful resize, the StatefulSet is orphaned and recreated to pick up the new volume sizes.
+
+### Resize Process
+
+When the feature is enabled, the controller performs the following steps:
+
+1. **StatefulSet Discovery**: Identifies StatefulSets managed by the Thanos Operator
+2. **Annotation Processing**: Reads the `operator.thanos.io/storage-size` annotation from the StatefulSet
+3. **PVC Comparison**: Compares the requested size with current PVC storage size
+4. **Volume Expansion**: If requested size is larger, updates the PVC storage request
+5. **StatefulSet Recreation**: Orphans and deletes the StatefulSet so it can be recreated with new volume sizes
+
+### Supported Components
+
+The volume resize feature works with all Thanos components that use StatefulSets:
+
+- **ThanosStore**: Storage gateway persistent volumes
+- **ThanosCompact**: Compactor working directory and metadata storage
+- **ThanosRuler**: Rule evaluation state and WAL storage
+- **ThanosReceive**: Ingester TSDB storage
+
+### Storage Class Requirements
+
+The underlying StorageClass must support volume expansion:
+
+```yaml
+allowVolumeExpansion: true  # Required in StorageClass
+```
+
+### Monitoring
+
+The controller exposes metrics for monitoring resize operations:
+
+```promql
+# Total resize attempts
+thanos_operator_volume_resize_attempts_total{statefulset="thanos-store"}
+
+# Resize failures  
+thanos_operator_volume_resize_failures_total{statefulset="thanos-store"}
+```
+
+### Limitations
+
+- **Expansion Only**: Volumes can only be expanded, not shrunk
+- **StorageClass Support**: Requires `allowVolumeExpansion: true` in the StorageClass
+- **Downtime**: StatefulSet recreation causes brief downtime during resize
+- **Filesystem Expansion**: Some filesystems may require manual expansion after PVC resize
+
+### Use Cases
+
+- **Growing Data**: Expanding storage as Thanos data retention grows
+- **Performance Scaling**: Increasing volume size for higher IOPS requirements
+- **Capacity Planning**: Proactive storage expansion based on usage forecasts
+- **Emergency Expansion**: Quick storage increases during unexpected data growth
+
+---
 
 ## See Also
 
