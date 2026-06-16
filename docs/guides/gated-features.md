@@ -342,15 +342,6 @@ thanos_operator_volume_resize_failures_total{statefulset="thanos-store"}
 
 - **Expansion Only**: Volumes can only be expanded, not shrunk
 - **StorageClass Support**: Requires `allowVolumeExpansion: true` in the StorageClass
-- **Downtime**: StatefulSet recreation causes brief downtime during resize
-- **Filesystem Expansion**: Some filesystems may require manual expansion after PVC resize
-
-### Use Cases
-
-- **Growing Data**: Expanding storage as Thanos data retention grows
-- **Performance Scaling**: Increasing volume size for higher IOPS requirements
-- **Capacity Planning**: Proactive storage expansion based on usage forecasts
-- **Emergency Expansion**: Quick storage increases during unexpected data growth
 
 ---
 
