@@ -38,6 +38,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -240,7 +241,7 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name: hashringName,
 									StorageConfiguration: v1alpha1.StorageConfiguration{
-										Size: "100Mi",
+										Size: resourceapi.MustParse("100Mi"),
 									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
@@ -249,7 +250,7 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name: hashringTwoName,
 									StorageConfiguration: v1alpha1.StorageConfiguration{
-										Size: "100Mi",
+										Size: resourceapi.MustParse("100Mi"),
 									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
@@ -408,7 +409,7 @@ var _ = Describe("controller", Ordered, func() {
 								{
 									Name: hashringName,
 									StorageConfiguration: v1alpha1.StorageConfiguration{
-										Size: "100Mi",
+										Size: resourceapi.MustParse("100Mi"),
 									},
 									CommonFields: v1alpha1.CommonFields{
 										Version: getThanosVersion(),
@@ -677,7 +678,7 @@ var _ = Describe("controller", Ordered, func() {
 					Version: getThanosVersion(),
 				},
 				StorageConfiguration: v1alpha1.StorageConfiguration{
-					Size: "100Mi",
+					Size: resourceapi.MustParse("100Mi"),
 				},
 				RuleConfigSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -841,7 +842,7 @@ var _ = Describe("controller", Ordered, func() {
 						},
 						Replicas: 1,
 						StorageConfiguration: v1alpha1.StorageConfiguration{
-							Size: "1Gi",
+							Size: resourceapi.MustParse("1Gi"),
 						},
 						RulerMode: v1alpha1.RulerMode{
 							Type:      "Stateless",
@@ -947,7 +948,7 @@ var _ = Describe("controller", Ordered, func() {
 							Shards: 2,
 						},
 						StorageConfiguration: v1alpha1.StorageConfiguration{
-							Size: "100Mi",
+							Size: resourceapi.MustParse("100Mi"),
 						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{
@@ -994,7 +995,7 @@ var _ = Describe("controller", Ordered, func() {
 							Version: getThanosVersion(),
 						},
 						StorageConfiguration: v1alpha1.StorageConfiguration{
-							Size: "100Mi",
+							Size: resourceapi.MustParse("100Mi"),
 						},
 						ObjectStorageConfig: v1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{

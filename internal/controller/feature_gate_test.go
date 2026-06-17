@@ -15,6 +15,7 @@ import (
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
@@ -95,7 +96,7 @@ config:
 						},
 					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resource.MustParse("1Gi"),
 					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{
@@ -198,7 +199,7 @@ config:
 								},
 								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-									Size: "100Mi",
+									Size: resource.MustParse("100Mi"),
 								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
@@ -261,7 +262,7 @@ config:
 					Replicas:     2,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resource.MustParse("1Gi"),
 					},
 					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
@@ -327,7 +328,7 @@ config:
 							Shards: 3,
 						},
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-							Size: "1Gi",
+							Size: resource.MustParse("1Gi"),
 						},
 						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 							LocalObjectReference: corev1.LocalObjectReference{

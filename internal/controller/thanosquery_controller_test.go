@@ -34,6 +34,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -230,8 +231,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					CompressResponses: true,
 					QueryRangeResponseCacheConfig: &monitoringthanosiov1alpha1.CacheConfig{
 						InMemoryCacheConfig: &monitoringthanosiov1alpha1.InMemoryCacheConfig{
-							MaxItemSize: ptr.To(monitoringthanosiov1alpha1.StorageSize("1Mi")),
-							MaxSize:     ptr.To(monitoringthanosiov1alpha1.StorageSize("1Gi")),
+							MaxItemSize: ptr.To(resourceapi.MustParse("1Mi")),
+							MaxSize:     ptr.To(resourceapi.MustParse("1Gi")),
 						},
 						ExternalCacheConfig: nil,
 					},

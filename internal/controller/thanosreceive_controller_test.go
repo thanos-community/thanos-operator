@@ -34,6 +34,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -136,7 +137,7 @@ config:
 								},
 								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-									Size: "100Mi",
+									Size: resourceapi.MustParse("100Mi"),
 								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									Tenants: []string{"test-tenant"},
@@ -165,7 +166,7 @@ config:
 						},
 						Name: hashringName,
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-							Size: "100Mi",
+							Size: resourceapi.MustParse("100Mi"),
 						},
 						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
@@ -225,7 +226,7 @@ config:
 								},
 								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-									Size: "100Mi",
+									Size: resourceapi.MustParse("100Mi"),
 								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
@@ -239,7 +240,7 @@ config:
 								},
 								Name: "test-hashmod-hashring",
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-									Size: "200Mi",
+									Size: resourceapi.MustParse("200Mi"),
 								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",
@@ -552,7 +553,7 @@ config:
 						},
 						Name: updatedHashringName,
 						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-							Size: "100Mi",
+							Size: resourceapi.MustParse("100Mi"),
 						},
 						TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 							Tenants: []string{"test-tenant"},
@@ -640,7 +641,7 @@ config:
 								},
 								Name: hashringName,
 								StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-									Size: "100Mi",
+									Size: resourceapi.MustParse("100Mi"),
 								},
 								TenancyConfig: &monitoringthanosiov1alpha1.TenancyConfig{
 									TenantMatcherType: "exact",

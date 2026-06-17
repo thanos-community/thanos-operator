@@ -32,6 +32,7 @@ import (
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -107,7 +108,7 @@ config:
 						Annotations: map[string]string{"ruler-spec": "annotation"},
 					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
@@ -411,7 +412,7 @@ config:
 					Replicas:     1,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
@@ -583,7 +584,7 @@ config:
 					Replicas:     1,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
@@ -729,7 +730,7 @@ config:
 					Replicas:     1,
 					CommonFields: monitoringthanosiov1alpha1.CommonFields{},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					RulerMode: monitoringthanosiov1alpha1.RulerMode{
 						Type: "Stateful",
@@ -905,7 +906,7 @@ config:
 						Stateless: &monitoringthanosiov1alpha1.StatelessSpec{},
 					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
 						TenantSpecifierLabel: ptr.To(defaultTenantSpecifier),
