@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestAdditionalToOpts(t *testing.T) {
