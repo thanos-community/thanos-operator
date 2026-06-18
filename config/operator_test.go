@@ -38,6 +38,11 @@ func TestControllerManagerDeployment(t *testing.T) {
 			golden: "deployment-with-features-helper.golden.yaml",
 			opts:   []DeploymentOption{WithFeatures("service-monitor", "prometheus-rule")},
 		},
+		{
+			name:   "deployment with volume resize enabled",
+			golden: "deployment-volume-resize.golden.yaml",
+			opts:   []DeploymentOption{WithVolumeResize()},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			deployment := ControllerManagerDeployment(tc.opts...)

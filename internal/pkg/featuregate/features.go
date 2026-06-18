@@ -22,6 +22,9 @@ const (
 	// KubeResourceSync enables the kube-resource-sync sidecar for immediate ConfigMap/Secret synchronization.
 	// See https://github.com/philipgough/kube-resource-sync
 	KubeResourceSync = "kube-resource-sync"
+
+	// VolumeResize enables the volume resize controller for automatic PVC resizing.
+	VolumeResize = "volume-resize"
 )
 
 // AllFeatures returns a slice of all available feature flag names.
@@ -32,6 +35,7 @@ func AllFeatures() []string {
 		PrometheusRule,
 		KubeResourceSync,
 		OtelSidecar,
+		VolumeResize,
 	}
 }
 
@@ -58,6 +62,8 @@ type Config struct {
 	EnableKubeResourceSync bool
 	// KubeResourceSyncImage specifies the image to use for the kube-resource-sync sidecar.
 	KubeResourceSyncImage string
+	// EnableVolumeResize enables the volume resize controller.
+	EnableVolumeResize bool
 }
 
 // ServiceMonitorEnabled returns true if ServiceMonitor management is enabled.
@@ -80,6 +86,11 @@ func (c Config) KubeResourceSyncEnabled() bool {
 	return c.EnableKubeResourceSync
 }
 
+// VolumeResizeEnabled returns true if volume resize controller is enabled.
+func (c Config) VolumeResizeEnabled() bool {
+	return c.EnableVolumeResize
+}
+
 // GetKubeResourceSyncImage returns the image used for the kube-resource-sync sidecar.
 func (c Config) GetKubeResourceSyncImage() string {
 	return c.KubeResourceSyncImage
@@ -92,6 +103,7 @@ func (f *Flag) ToFeatureGate() Config {
 		EnablePrometheusRuleDiscovery: f.EnablesPrometheusRule(),
 		EnableOtelSidecar:             f.EnablesOtelSidecar(),
 		EnableKubeResourceSync:        f.EnablesKubeResourceSync(),
+		EnableVolumeResize:            f.EnablesVolumeResize(),
 	}
 }
 

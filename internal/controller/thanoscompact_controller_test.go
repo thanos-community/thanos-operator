@@ -185,8 +185,9 @@ config:
 					objs = append(objs, &corev1.ServiceAccount{}, &appsv1.StatefulSet{}, &corev1.Service{})
 
 					expectedAnnotations := map[string]string{
-						"compact-meta": "annotation",
-						"compact-spec": "annotation",
+						"compact-meta":                  "annotation",
+						"compact-spec":                  "annotation",
+						manifests.StorageSizeAnnotation: "1Gi",
 					}
 
 					for _, shard := range []string{shardOne, shardTwo} {

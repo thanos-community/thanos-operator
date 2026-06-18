@@ -311,6 +311,17 @@ func WithOtelSidecar() DeploymentOption {
 	}
 }
 
+// WithVolumeResize enables the volume resize controller feature.
+// When enabled, the controller will automatically monitor StatefulSets
+// created by the thanos-operator and resize PersistentVolumeClaims when
+// the storage annotation indicates a size increase. The controller will
+// orphan and recreate StatefulSets when necessary to apply storage changes.
+func WithVolumeResize() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.featureGate.EnableVolumeResize = true
+	}
+}
+
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
 //
@@ -319,10 +330,11 @@ func WithOtelSidecar() DeploymentOption {
 //   - "prometheus-rule": Enables PrometheusRule discovery
 //   - "kube-resource-sync": Enables kube-resource-sync sidecar
 //   - "otel-sidecar": Enables OpenTelemetry sidecar injection
+//   - "volume-resize": Enables volume resize controller
 //
 // Example:
 //
-//	WithFeatures("service-monitor", "prometheus-rule", "kube-resource-sync", "otel-sidecar")
+//	WithFeatures("service-monitor", "prometheus-rule", "kube-resource-sync", "otel-sidecar", "volume-resize")
 func WithFeatures(features ...string) DeploymentOption {
 	return func(c *deploymentConfig) {
 		for _, feature := range features {
@@ -335,6 +347,8 @@ func WithFeatures(features ...string) DeploymentOption {
 				c.featureGate.EnableOtelSidecar = true
 			case featuregate.KubeResourceSync:
 				c.featureGate.EnableKubeResourceSync = true
+			case featuregate.VolumeResize:
+				c.featureGate.EnableVolumeResize = true
 			}
 		}
 	}
@@ -470,6 +484,9 @@ func buildManagerArgs(featureGate featuregate.Config) []string {
 	}
 	if featureGate.EnableOtelSidecar {
 		args = append(args, "--enable-feature="+featuregate.OtelSidecar)
+	}
+	if featureGate.EnableVolumeResize {
+		args = append(args, "--enable-feature="+featuregate.VolumeResize)
 	}
 
 	return args

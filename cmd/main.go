@@ -349,6 +349,9 @@ func main() {
 		}
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
+	if featureGateConfig.VolumeResizeEnabled() {
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.VolumeResize).Set(1)
+	}
 
 	configReloaderImage := defaultConfigReloaderImage
 	if image, ok := os.LookupEnv("CONFIG_RELOADER_IMAGE"); ok {
@@ -420,6 +423,18 @@ func main() {
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ObjectStatus")
 		os.Exit(1)
+	}
+
+	if featureGateConfig.VolumeResizeEnabled() {
+		if err = controller.NewVolumeResizeReconciler(
+			buildConfig("volume-resize"),
+			mgr.GetClient(),
+			mgr.GetScheme(),
+		).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "VolumeResize")
+			os.Exit(1)
+		}
+		setupLog.Info("VolumeResize controller enabled")
 	}
 
 	//+kubebuilder:scaffold:builder
