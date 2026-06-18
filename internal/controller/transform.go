@@ -499,6 +499,8 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 		Ports:        in.Ports,
 		Env:          in.Env,
 		ServicePorts: in.ServicePorts,
+		ConfigMaps:   in.ConfigMaps,
+		Secrets:      in.Secrets,
 	}
 }
 
