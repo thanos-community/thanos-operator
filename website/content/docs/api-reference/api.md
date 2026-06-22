@@ -712,9 +712,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _string_ | Type determines the mode of operation for the Ruler. | Stateless | Enum: [Stateful Stateless] <br /> |
+| `type` _string_ | Type determines the mode of operation for the Ruler. | Stateful | Enum: [Stateful Stateless] <br /> |
 | `stateful` _[StatefulSpec](#statefulspec)_ | Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage. |  | Optional: \{\} <br /> |
-| `stateless` _[StatelessSpec](#statelessspec)_ | Stateless configures Thanos Ruler in Stateless mode.<br />See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write |  |  |
+| `stateless` _[StatelessSpec](#statelessspec)_ | Stateless configures Thanos Ruler in Stateless mode.<br />See: https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write |  | Optional: \{\} <br /> |
 
 
 #### ShardingConfig
