@@ -5124,7 +5124,7 @@ spec:
                   stateless:
                     description: |-
                       Stateless configures Thanos Ruler in Stateless mode.
-                      See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
+                      See: https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
                     properties:
                       labelSelector:
                         default:
@@ -5182,7 +5182,7 @@ spec:
                         x-kubernetes-map-type: atomic
                     type: object
                   type:
-                    default: Stateless
+                    default: Stateful
                     description: Type determines the mode of operation for the Ruler.
                     enum:
                     - Stateful
@@ -5194,6 +5194,8 @@ spec:
                 x-kubernetes-validations:
                 - message: stateful config required when type is Stateful
                   rule: 'self.type == ''Stateful'' ? has(self.stateful) : true'
+                - message: stateless config required when type is Stateless
+                  rule: 'self.type == ''Stateless'' ? has(self.stateless) : true'
               secrets:
                 description: |-
                   Secrets defines a list of Secrets in the same namespace as the Thanos components, which shall be mounted into the Thanos Pods.
