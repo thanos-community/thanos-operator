@@ -1035,6 +1035,7 @@ config:
 					if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: resourceName}, existingRuler); err != nil {
 						return false
 					}
+					existingRuler.Spec.RulerMode.Type = "Stateful"
 					existingRuler.Spec.RulerMode.Stateless = nil
 					existingRuler.Spec.RulerMode.Stateful = &monitoringthanosiov1alpha1.StatefulSpec{
 						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{

@@ -91,16 +91,18 @@ type RuleTenancyConfig struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="self.type == 'Stateful' ? has(self.stateful) : true", message="stateful config required when type is Stateful"
+// +kubebuilder:validation:XValidation:rule="self.type == 'Stateless' ? has(self.stateless) : true", message="stateless config required when type is Stateless"
 type RulerMode struct {
 	// Type determines the mode of operation for the Ruler.
-	// +kubebuilder:default="Stateless"
+	// +kubebuilder:default="Stateful"
 	// +kubebuilder:validation:Enum=Stateful;Stateless
 	Type string `json:"type"`
 	// Stateful configures Thanos Ruler to write directly to disk and upload generated blocks to object storage.
 	// +kubebuilder:validation:Optional
 	Stateful *StatefulSpec `json:"stateful,omitempty"`
 	// Stateless configures Thanos Ruler in Stateless mode.
-	// See https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
+	// See: https://thanos.io/tip/components/rule.md/#stateless-ruler-via-remote-write
+	// +kubebuilder:validation:Optional
 	Stateless *StatelessSpec `json:"stateless,omitempty"`
 }
 
