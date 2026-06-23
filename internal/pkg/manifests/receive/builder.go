@@ -89,6 +89,7 @@ type RouterOptions struct {
 	ExternalLabels      map[string]string
 	HashringConfig      string
 	ReplicationProtocol string
+	LimitsConfig        *corev1.ConfigMapKeySelector
 	FeatureGateConfig   *FeatureGateConfig
 }
 
@@ -451,6 +452,8 @@ func newService(name, namespace string, selectorLabels, objectMetaLabels map[str
 const (
 	hashringVolumeName            = "hashring-config"
 	hashringMountPath             = "/var/lib/thanos-receive"
+	limitsVolumeName              = "limits-config"
+	limitsMountPath               = "/etc/thanos/limits"
 	kubeResourceSyncContainerName = "kube-resource-sync"
 )
 
@@ -585,6 +588,10 @@ func routerArgsFrom(opts RouterOptions) []string {
 		args = append(args, fmt.Sprintf("--receive.replication-protocol=%s", opts.ReplicationProtocol))
 	}
 
+	if opts.LimitsConfig != nil {
+		args = append(args, fmt.Sprintf("--receive.limits-config-file=%s/%s", limitsMountPath, opts.LimitsConfig.Key))
+	}
+
 	return manifests.PruneEmptyArgs(args)
 }
 
@@ -672,21 +679,19 @@ func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceM
 
 // buildRouterVolumes builds the volumes for the router pod
 func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
+	volumes := []corev1.Volume{}
+
 	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
 		// When KubeResourceSync is enabled, use EmptyDir and let the sidecar sync from ConfigMap
-		return []corev1.Volume{
-			{
-				Name: hashringVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
+		volumes = append(volumes, corev1.Volume{
+			Name: hashringVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
-		}
-	}
-
-	// Default behavior: mount ConfigMap directly
-	return []corev1.Volume{
-		{
+		})
+	} else {
+		// Default behavior: mount ConfigMap directly
+		volumes = append(volumes, corev1.Volume{
 			Name: hashringVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -696,8 +701,24 @@ func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
 					DefaultMode: ptr.To(int32(420)),
 				},
 			},
-		},
+		})
 	}
+
+	if opts.LimitsConfig != nil {
+		volumes = append(volumes, corev1.Volume{
+			Name: limitsVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: opts.LimitsConfig.Name,
+					},
+					DefaultMode: ptr.To(int32(420)),
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
 // buildRouterContainers builds the containers for the router pod
@@ -724,6 +745,20 @@ func buildRouterInitContainers(opts RouterOptions) []corev1.Container {
 
 // buildThanosRouterContainer builds the main Thanos router container
 func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      hashringVolumeName,
+			MountPath: hashringMountPath,
+		},
+	}
+
+	if opts.LimitsConfig != nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      limitsVolumeName,
+			MountPath: limitsMountPath,
+		})
+	}
+
 	return corev1.Container{
 		Image:           opts.GetContainerImage(),
 		Name:            RouterComponentName,
@@ -783,12 +818,7 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 				},
 			},
 		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      hashringVolumeName,
-				MountPath: hashringMountPath,
-			},
-		},
+		VolumeMounts: volumeMounts,
 		Ports: []corev1.ContainerPort{
 			{
 				ContainerPort: GRPCPort,
