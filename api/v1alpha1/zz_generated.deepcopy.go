@@ -1629,6 +1629,11 @@ func (in *ThanosStoreSpec) DeepCopyInto(out *ThanosStoreSpec) {
 		*out = new(BlockConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DownloadedBytesLimit != nil {
+		in, out := &in.DownloadedBytesLimit, &out.DownloadedBytesLimit
+		*out = new(uint64)
+		**out = **in
+	}
 	if in.Paused != nil {
 		in, out := &in.Paused, &out.Paused
 		*out = new(bool)
