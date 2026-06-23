@@ -893,6 +893,7 @@ StoreLimitsOptions is the configuration for the store API limits options.
 
 _Appears in:_
 - [IngesterHashringSpec](#ingesterhashringspec)
+- [ThanosQuerySpec](#thanosqueryspec)
 - [ThanosStoreSpec](#thanosstorespec)
 
 | Field | Description | Default | Validation |
@@ -1151,6 +1152,7 @@ _Appears in:_
 | `webConfig` _[WebConfig](#webconfig)_ | WebConfig is the configuration for the Query UI and API web options. |  | Optional: \{\} <br /> |
 | `grpcProxyStrategy` _string_ | GRPCProxyStrategy is the strategy to use when proxying Series requests to leaf nodes. | eager | Enum: [eager lazy] <br /> |
 | `queryFrontend` _[QueryFrontendSpec](#queryfrontendspec)_ | QueryFrontend is the configuration for the Query Frontend<br />If you specify this, the operator will create a Query Frontend in front of your query deployment. |  | Optional: \{\} <br /> |
+| `storeLimitsOptions` _[StoreLimitsOptions](#storelimitsoptions)_ | StoreLimitsOptions allows configuration of the store API limits. |  | Optional: \{\} <br /> |
 | `paused` _boolean_ | When a resource is paused, no actions except for deletion<br />will be performed on the underlying objects. |  | Optional: \{\} <br /> |
 | `additionalArgs` _string array_ | Additional arguments to pass to the Thanos components.<br />An additional argument will override an existing argument provided by the operator if there is a conflict. |  | Optional: \{\} <br /> |
 | `additionalContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#container-v1-core) array_ | Additional containers to add to the Thanos components. |  | Optional: \{\} <br /> |

@@ -16451,6 +16451,25 @@ spec:
                         type: string
                     type: object
                 type: object
+              storeLimitsOptions:
+                description: StoreLimitsOptions allows configuration of the store
+                  API limits.
+                properties:
+                  storeLimitsRequestSamples:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSamples is the maximum samples allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                  storeLimitsRequestSeries:
+                    default: 0
+                    description: |-
+                      StoreLimitsRequestSeries is the maximum series allowed for a single StoreAPI Series request.
+                      0 means no limit.
+                    format: int64
+                    type: integer
+                type: object
               telemetryQuantiles:
                 description: TelemetryQuantiles is the configuration for the request
                   telemetry quantiles.
