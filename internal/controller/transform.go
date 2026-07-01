@@ -11,6 +11,7 @@ import (
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -567,10 +568,9 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 }
 
 // addStorageSizeAnnotation adds a storage size annotation to the provided options based on the storage configuration
-func addStorageSizeAnnotation(opts *manifests.Options, storageSize v1alpha1.StorageSize) {
+func addStorageSizeAnnotation(opts *manifests.Options, storageSize resource.Quantity) {
 	if opts.Annotations == nil {
 		opts.Annotations = make(map[string]string)
 	}
-	quantity := storageSize.ToResourceQuantity()
-	opts.Annotations[manifests.StorageSizeAnnotation] = quantity.String()
+	opts.Annotations[manifests.StorageSizeAnnotation] = storageSize.String()
 }
