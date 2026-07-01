@@ -344,8 +344,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `maxSize` _[StorageSize](#storagesize)_ |  |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br /> |
-| `maxItemSize` _[StorageSize](#storagesize)_ |  |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br /> |
+| `maxSize` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#quantity-resource-api)_ |  |  |  |
+| `maxItemSize` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#quantity-resource-api)_ |  |  |  |
 
 
 #### IndexHeaderConfig
@@ -854,23 +854,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `size` _[StorageSize](#storagesize)_ | Size is the size of the PV storage to be used by a Thanos component. |  | Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$` <br />Required: \{\} <br /> |
+| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#quantity-resource-api)_ | Size is the size of the PV storage to be used by a Thanos component. |  | Required: \{\} <br /> |
 | `storageClass` _string_ | StorageClass is the name of the storage class to be used.<br />If not specified, it will use the default storage class. |  | MaxLength: 253 <br />Optional: \{\} <br /> |
-
-
-#### StorageSize
-
-_Underlying type:_ _string_
-
-StorageSize is the size of the PV storage to be used by a Thanos component.
-
-_Validation:_
-- Pattern: `^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
-
-_Appears in:_
-- [InMemoryCacheConfig](#inmemorycacheconfig)
-- [StorageConfiguration](#storageconfiguration)
-
 
 
 #### StoreLimitsOptions

@@ -31,8 +31,8 @@ type CacheConfig struct {
 
 // InMemoryCacheConfig is the configuration for the in-memory cache.
 type InMemoryCacheConfig struct {
-	MaxSize     *StorageSize `json:"maxSize,omitempty"`
-	MaxItemSize *StorageSize `json:"maxItemSize,omitempty"`
+	MaxSize     *resource.Quantity `json:"maxSize,omitempty"`
+	MaxItemSize *resource.Quantity `json:"maxItemSize,omitempty"`
 }
 
 // ExternalLabels are the labels to add to the metrics.
@@ -46,7 +46,7 @@ type ExternalLabels map[string]string
 type StorageConfiguration struct {
 	// Size is the size of the PV storage to be used by a Thanos component.
 	// +kubebuilder:validation:Required
-	Size StorageSize `json:"size"`
+	Size resource.Quantity `json:"size"`
 	// StorageClass is the name of the storage class to be used.
 	// If not specified, it will use the default storage class.
 	// +kubebuilder:validation:Optional
@@ -54,11 +54,6 @@ type StorageConfiguration struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="storageClass is immutable"
 	StorageClass *string `json:"storageClass,omitempty"`
 }
-
-// StorageSize is the size of the PV storage to be used by a Thanos component.
-// +kubebuilder:validation:Required
-// +kubebuilder:validation:Pattern=`^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$`
-type StorageSize string
 
 // TSDBConfig specifies configuration for any particular Thanos TSDB.
 // NOTE: Some of these options will not exist for all components, in which case, even if specified can be ignored.
@@ -261,11 +256,6 @@ func (osc *ObjectStorageConfig) ToSecretKeySelector() corev1.SecretKeySelector {
 		Key:                  osc.Key,
 		Optional:             ptr.To(false),
 	}
-}
-
-// ToResourceQuantity converts a StorageSize to a resource.Quantity.
-func (s StorageSize) ToResourceQuantity() resource.Quantity {
-	return resource.MustParse(string(s))
 }
 
 // StoreLimitsOptions is the configuration for the store API limits options.

@@ -31,6 +31,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -115,7 +116,7 @@ config:
 						Shards: 3,
 					},
 					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-						Size: "1Gi",
+						Size: resourceapi.MustParse("1Gi"),
 					},
 					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
 						LocalObjectReference: corev1.LocalObjectReference{

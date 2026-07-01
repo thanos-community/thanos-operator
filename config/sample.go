@@ -2,6 +2,7 @@ package config
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -84,7 +85,7 @@ func SampleCR(crd CRD) any {
 					Shards: 2,
 				},
 				StorageConfiguration: thanosv1alpha1.StorageConfiguration{
-					Size: "1Gi",
+					Size: resource.MustParse("1Gi"),
 				},
 				IgnoreDeletionMarksDelay: "24h",
 			},
@@ -111,7 +112,7 @@ func SampleCR(crd CRD) any {
 						{
 							Name: "blue",
 							StorageConfiguration: thanosv1alpha1.StorageConfiguration{
-								Size: "100Mi",
+								Size: resource.MustParse("100Mi"),
 							},
 							TSDBConfig: thanosv1alpha1.TSDBConfig{
 								Retention: "2h",
@@ -127,7 +128,7 @@ func SampleCR(crd CRD) any {
 						{
 							Name: "green",
 							StorageConfiguration: thanosv1alpha1.StorageConfiguration{
-								Size: "100Mi",
+								Size: resource.MustParse("100Mi"),
 							},
 							TSDBConfig: thanosv1alpha1.TSDBConfig{
 								Retention: "2h",
@@ -167,7 +168,7 @@ func SampleCR(crd CRD) any {
 			},
 			Spec: thanosv1alpha1.ThanosCompactSpec{
 				StorageConfiguration: thanosv1alpha1.StorageConfiguration{
-					Size: "100Mi",
+					Size: resource.MustParse("100Mi"),
 				},
 				ShardingConfig: []thanosv1alpha1.ShardingConfig{
 					{
@@ -238,7 +239,7 @@ func SampleCR(crd CRD) any {
 				AlertmanagerURL:    "http://alertmanager.example.com:9093",
 				EvaluationInterval: "1m",
 				StorageConfiguration: thanosv1alpha1.StorageConfiguration{
-					Size: "1Gi",
+					Size: resource.MustParse("1Gi"),
 				},
 			},
 		}

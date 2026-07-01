@@ -11,6 +11,7 @@ import (
 	manifestruler "github.com/thanos-community/thanos-operator/internal/pkg/manifests/ruler"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,7 +138,7 @@ func rulerV1Alpha1ToOptions(in rulerV1Alpha1TransformInput) manifestruler.Option
 		AlertmanagerURL: in.CRD.Spec.AlertmanagerURL,
 		AlertLabelDrop:  in.CRD.Spec.AlertLabelDrop,
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size,
 			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
 		EvaluationInterval:  manifests.Duration(in.CRD.Spec.EvaluationInterval),
@@ -191,7 +192,7 @@ func receiverV1Alpha1ToIngesterOptions(in receiverV1Alpha1ToIngesterTransformInp
 		AsyncForwardWorkerCount:  manifests.OptionalToString(in.Spec.AsyncForwardWorkerCount),
 		TooFarInFutureTimeWindow: manifests.Duration(manifests.OptionalToString(in.Spec.TooFarInFutureTimeWindow)),
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageSize:      in.Spec.StorageConfiguration.Size,
 			StorageClassName: in.Spec.StorageConfiguration.StorageClass,
 		},
 		ExternalLabels: in.Spec.ExternalLabels,
@@ -294,7 +295,7 @@ func storeV1Alpha1ToOptions(in storeV1Alpha1TransformInput) manifestsstore.Optio
 		IndexHeaderOptions:       indexHeaderOpts,
 		BlockConfigOptions:       blockConfigOpts,
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size,
 			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
 		Options: opts,
@@ -398,7 +399,7 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 		Downsampling: downsamplingConfig(),
 		DebugConfig:  debugConfig(),
 		StorageConfig: manifests.StorageConfig{
-			StorageSize:      in.CRD.Spec.StorageConfiguration.Size.ToResourceQuantity(),
+			StorageSize:      in.CRD.Spec.StorageConfiguration.Size,
 			StorageClassName: in.CRD.Spec.StorageConfiguration.StorageClass,
 		},
 		ObjStoreSecret: in.CRD.Spec.ObjectStorageConfig.ToSecretKeySelector(),
@@ -548,10 +549,10 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 	if config.InMemoryCacheConfig != nil {
 		var maxSize, maxItemSize string
 		if config.InMemoryCacheConfig.MaxSize != nil {
-			maxSize = string(*config.InMemoryCacheConfig.MaxSize)
+			maxSize = config.InMemoryCacheConfig.MaxSize.String()
 		}
 		if config.InMemoryCacheConfig.MaxItemSize != nil {
-			maxItemSize = string(*config.InMemoryCacheConfig.MaxItemSize)
+			maxItemSize = config.InMemoryCacheConfig.MaxItemSize.String()
 		}
 		if maxSize != "" || maxItemSize != "" {
 			toInMemoryCacheConfig = &manifests.InMemoryCacheConfig{
@@ -567,10 +568,9 @@ func toManifestCacheConfig(config *v1alpha1.CacheConfig) manifests.CacheConfig {
 }
 
 // addStorageSizeAnnotation adds a storage size annotation to the provided options based on the storage configuration
-func addStorageSizeAnnotation(opts *manifests.Options, storageSize v1alpha1.StorageSize) {
+func addStorageSizeAnnotation(opts *manifests.Options, storageSize resource.Quantity) {
 	if opts.Annotations == nil {
 		opts.Annotations = make(map[string]string)
 	}
-	quantity := storageSize.ToResourceQuantity()
-	opts.Annotations[manifests.StorageSizeAnnotation] = quantity.String()
+	opts.Annotations[manifests.StorageSizeAnnotation] = storageSize.String()
 }
