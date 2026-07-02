@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // HashringPolicy defines the policy for how the hashring is built and maintained at runtime.
@@ -247,5 +248,8 @@ type ThanosReceiveList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ThanosReceive{}, &ThanosReceiveList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(GroupVersion, &ThanosReceive{}, &ThanosReceiveList{})
+		return nil
+	})
 }

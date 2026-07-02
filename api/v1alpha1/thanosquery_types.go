@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // ThanosQuerySpec defines the desired state of ThanosQuery
@@ -182,5 +183,8 @@ type ThanosQueryList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ThanosQuery{}, &ThanosQueryList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(GroupVersion, &ThanosQuery{}, &ThanosQueryList{})
+		return nil
+	})
 }

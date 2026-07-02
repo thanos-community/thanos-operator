@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
-	slices0 "slices"
+	"slices"
 
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/strings/slices"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -100,7 +99,7 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 // IsFeatureGated returns true if the given object is feature gated.
 func (h *handler) IsFeatureGated(obj client.Object) bool {
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	return slices0.Contains(h.gatedGVK, gvk)
+	return slices.Contains(h.gatedGVK, gvk)
 }
 
 // DeleteResource if they exist in the Kubernetes cluster.

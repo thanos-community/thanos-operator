@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // ThanosCompactSpec defines the desired state of ThanosCompact
@@ -227,5 +228,8 @@ type ThanosCompactList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&ThanosCompact{}, &ThanosCompactList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(GroupVersion, &ThanosCompact{}, &ThanosCompactList{})
+		return nil
+	})
 }
