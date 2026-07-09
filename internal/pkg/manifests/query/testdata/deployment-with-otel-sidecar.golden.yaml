@@ -74,7 +74,7 @@ spec:
             client_type: http
             endpoint: localhost:4318
             insecure: true
-        image: some-custom-image:v0.39.0
+        image: some-custom-image:v0.42.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 4

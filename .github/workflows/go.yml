@@ -60,8 +60,8 @@ jobs:
       matrix:
         kind-image: ['kindest/node:v1.34.0']
         thanos-version:
-          - v0.39.0
-          - v0.40.1
+          - v0.41.0
+          - v0.42.0
     steps:
       - uses: actions/checkout@v7
         with:

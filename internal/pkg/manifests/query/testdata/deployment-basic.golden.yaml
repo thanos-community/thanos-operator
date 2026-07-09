@@ -67,7 +67,7 @@ spec:
         - --query.auto-downsampling
         - --query.promql-engine=thanos
         - --query.max-concurrent=20
-        image: some-custom-image:v0.39.0
+        image: some-custom-image:v0.42.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 4

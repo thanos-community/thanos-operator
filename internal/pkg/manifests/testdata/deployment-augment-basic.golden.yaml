@@ -17,7 +17,7 @@ spec:
       - args:
         - query
         - --log.level=info
-        image: quay.io/thanos/thanos:v0.39.0
+        image: quay.io/thanos/thanos:v0.42.0
         name: thanos
         resources:
           limits:

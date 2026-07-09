@@ -50,7 +50,7 @@ spec:
         - --labels.max-retries-per-request=3
         - --cache-compression-type=snappy
         - --query-frontend.compress-responses
-        image: some-custom-image:v0.39.0
+        image: some-custom-image:v0.42.0
         livenessProbe:
           httpGet:
             path: /-/healthy
