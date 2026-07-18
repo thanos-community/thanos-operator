@@ -163,6 +163,20 @@ type IngesterHashringSpec struct {
 	// +kubebuilder:default="ketama"
 	// +kubebuilder:validation:Enum=ketama;hashmod
 	HashingAlgorithm *string `json:"hashingAlgorithm,omitempty"`
+	// StandbyFor indicates this hashring is a standby for the named primary hashring.
+	// Traffic only routes here when the primary is removed from the router config due to health issues.
+	// The standby hashring name must sort alphabetically after the primary hashring name.
+	// +kubebuilder:validation:Optional
+	StandbyFor *string `json:"standbyFor,omitempty"`
+	// MaxUnavailableReplicas is the maximum number of replicas that can be unavailable
+	// before the hashring is considered unhealthy for failover purposes.
+	// Only meaningful on a primary hashring that has a standby configured.
+	// When ready endpoints drop below (replicas - maxUnavailableReplicas), the primary
+	// is removed from the router config and traffic fails over to the standby.
+	// Defaults to 0, meaning any single missing replica triggers failover.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Optional
+	MaxUnavailableReplicas *int32 `json:"maxUnavailableReplicas,omitempty"`
 }
 
 // TenancyConfig is the configuration for the tenancy options.
@@ -195,6 +209,12 @@ type TenancyConfig struct {
 
 // ThanosReceiveSpec defines the desired state of ThanosReceive
 // +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor )", message=" Ingester replicas must be greater than or equal to the Router replicas"
+// CEL cost too high for rules with nested all/exists on hashrings (maxItems=100 makes them O(n^2)).
+// These invariants are enforced in buildFailoverRelationships() in the controller instead.
+// +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || h.name > h.standbyFor)",message="standby hashring name must sort alphabetically after the primary hashring name"
+// // +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || self.ingesterSpec.hashrings.exists(p, p.name == h.standbyFor))",message="standbyFor must reference an existing hashring name"
+// // +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || !self.ingesterSpec.hashrings.exists(s, has(s.standbyFor) && s.standbyFor == h.standbyFor && s.name != h.name))",message="a primary hashring can have at most one standby"
+// // +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || !self.ingesterSpec.hashrings.exists(s, has(s.standbyFor) && s.standbyFor == h.name))",message="a standby hashring cannot itself be a primary for another standby"
 type ThanosReceiveSpec struct {
 	// Router is the configuration for the router.
 	// +kubebuilder:validation:Required

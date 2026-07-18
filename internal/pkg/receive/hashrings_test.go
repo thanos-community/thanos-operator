@@ -367,7 +367,7 @@ func TestDynamicMergeEmptyPreviousState(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := DynamicMerge(previousState, desiredState, replicationFactor)
+	result := DynamicMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -401,7 +401,7 @@ func TestDynamicMergeReplicationFactorMet(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := DynamicMerge(previousState, desiredState, replicationFactor)
+	result := DynamicMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -434,7 +434,7 @@ func TestDynamicMergeShouldRestorePreviousState(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := DynamicMerge(previousState, desiredState, replicationFactor)
+	result := DynamicMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -472,7 +472,7 @@ func TestDynamicMergeShouldAllowMissingMember(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := DynamicMerge(previousState, desiredState, replicationFactor)
+	result := DynamicMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -505,7 +505,7 @@ func TestDynamicMergeDesiredStateNotMet(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := DynamicMerge(previousState, desiredState, replicationFactor)
+	result := DynamicMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -579,7 +579,7 @@ func TestStaticMergeEmptyPreviousState(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -608,7 +608,7 @@ func TestStaticMergeEmptyPreviousStateNotReady(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 0 {
 		t.Errorf("expected 0 hashring, got %d", len(result))
 	}
@@ -639,7 +639,7 @@ func TestStaticMergeReplicationFactorMet(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -677,7 +677,7 @@ func TestStaticMergeReplicationFactorMetScaleUpNotReady(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -719,7 +719,7 @@ func TestStaticMergeReplicationFactorMetScaleDown(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -756,7 +756,7 @@ func TestStaticMergeShouldRestorePreviousState(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
@@ -789,11 +789,214 @@ func TestStaticMergeDesiredStateNotMet(t *testing.T) {
 	}
 	replicationFactor := 3
 
-	result := StaticMerge(previousState, desiredState, replicationFactor)
+	result := StaticMerge(previousState, desiredState, replicationFactor, nil)
 	if len(result) != 1 {
 		t.Errorf("expected 1 hashring, got %d", len(result))
 	}
 	if result[0].Name != hashringName {
 		t.Errorf("expected hashring name 'hashring1', got '%s'", result[0].Name)
+	}
+}
+
+const (
+	primaryName = "database"
+	standbyName = "database-standby"
+)
+
+func newFailoverRelationships(maxUnavailable int) *FailoverRelationships {
+	return &FailoverRelationships{
+		PrimaryToStandby: map[string]string{primaryName: standbyName},
+		StandbyToPrimary: map[string]string{standbyName: primaryName},
+		MaxUnavailable:   map[string]int{primaryName: maxUnavailable},
+	}
+}
+
+func TestDynamicMergeFailoverPrimaryHealthy(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := DynamicMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings, got %d", len(result))
+	}
+	if result[0].Name != primaryName {
+		t.Errorf("expected first hashring %q, got %q", primaryName, result[0].Name)
+	}
+	if result[1].Name != standbyName {
+		t.Errorf("expected second hashring %q, got %q", standbyName, result[1].Name)
+	}
+}
+
+func TestDynamicMergeFailoverPrimaryUnhealthy(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := DynamicMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 1 {
+		t.Fatalf("expected 1 hashring (standby only), got %d", len(result))
+	}
+	if result[0].Name != standbyName {
+		t.Errorf("expected remaining hashring %q, got %q", standbyName, result[0].Name)
+	}
+}
+
+func TestDynamicMergeFailoverPrimaryRecovery(t *testing.T) {
+	previousState := Hashrings{
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := DynamicMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings after recovery, got %d", len(result))
+	}
+	if result[0].Name != primaryName {
+		t.Errorf("expected first hashring %q, got %q", primaryName, result[0].Name)
+	}
+}
+
+func TestDynamicMergeFailoverNilRelationships(t *testing.T) {
+	previousState := Hashrings{
+		{Name: hashringName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+	}
+	desiredState := HashringState{
+		hashringName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}}}},
+	}
+
+	result := DynamicMerge(previousState, desiredState, 3, nil)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 hashring (preserved previous state), got %d", len(result))
+	}
+	if !reflect.DeepEqual(result[0].Endpoints, previousState[0].Endpoints) {
+		t.Errorf("expected previous state endpoints to be preserved")
+	}
+}
+
+func TestDynamicMergeFailoverMaxUnavailableThreshold(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	// maxUnavailable=1: 2 ready >= (3-1)=2, so primary is above threshold and stays
+	result := DynamicMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings (primary above threshold), got %d", len(result))
+	}
+
+	// maxUnavailable=0: 2 ready < (3-0)=3, primary is below threshold and removed
+	result = DynamicMerge(previousState, desiredState, 3, newFailoverRelationships(0))
+	if len(result) != 1 {
+		t.Fatalf("expected 1 hashring (primary below threshold), got %d", len(result))
+	}
+	if result[0].Name != standbyName {
+		t.Errorf("expected remaining hashring %q, got %q", standbyName, result[0].Name)
+	}
+}
+
+func TestStaticMergeFailoverPrimaryHealthy(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := StaticMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings, got %d", len(result))
+	}
+	if result[0].Name != primaryName {
+		t.Errorf("expected first hashring %q, got %q", primaryName, result[0].Name)
+	}
+	if result[1].Name != standbyName {
+		t.Errorf("expected second hashring %q, got %q", standbyName, result[1].Name)
+	}
+}
+
+func TestStaticMergeFailoverPrimaryUnhealthy(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := StaticMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 1 {
+		t.Fatalf("expected 1 hashring (standby only), got %d", len(result))
+	}
+	if result[0].Name != standbyName {
+		t.Errorf("expected remaining hashring %q, got %q", standbyName, result[0].Name)
+	}
+}
+
+func TestStaticMergeFailoverPrimaryRecovery(t *testing.T) {
+	previousState := Hashrings{
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	result := StaticMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings after recovery, got %d", len(result))
+	}
+	if result[0].Name != primaryName {
+		t.Errorf("expected first hashring %q, got %q", primaryName, result[0].Name)
+	}
+}
+
+func TestStaticMergeFailoverMaxUnavailableThreshold(t *testing.T) {
+	previousState := Hashrings{
+		{Name: primaryName, Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}, {Address: "ep3"}}},
+		{Name: standbyName, Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}},
+	}
+	desiredState := HashringState{
+		primaryName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "ep1"}, {Address: "ep2"}}}},
+		standbyName: {DesiredReplicas: 3, Config: HashringConfig{Endpoints: []Endpoint{{Address: "sb1"}, {Address: "sb2"}, {Address: "sb3"}}}},
+	}
+
+	// maxUnavailable=1: 2 ready >= (3-1)=2, primary above threshold — but StaticMerge requires
+	// all desiredReplicas ready, so primary fails the healthy check and hits the failover path.
+	// At the failover check: 2 ready >= minReady(2), so primary is NOT removed.
+	// It falls through to preserve previous state.
+	result := StaticMerge(previousState, desiredState, 3, newFailoverRelationships(1))
+	if len(result) != 2 {
+		t.Fatalf("expected 2 hashrings (primary preserved via previous state), got %d", len(result))
+	}
+
+	// maxUnavailable=0: 2 ready < (3-0)=3, primary is below threshold and removed
+	result = StaticMerge(previousState, desiredState, 3, newFailoverRelationships(0))
+	if len(result) != 1 {
+		t.Fatalf("expected 1 hashring (primary below threshold), got %d", len(result))
+	}
+	if result[0].Name != standbyName {
+		t.Errorf("expected remaining hashring %q, got %q", standbyName, result[0].Name)
 	}
 }

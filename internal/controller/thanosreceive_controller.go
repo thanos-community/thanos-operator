@@ -319,11 +319,16 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 		}
 	}
 
+	failover, err := buildFailoverRelationships(receiver)
+	if err != nil {
+		return nil, fmt.Errorf("invalid failover configuration: %w", err)
+	}
+
 	var out receive.Hashrings
 	if receiver.Spec.Router.HashringPolicy != nil && *receiver.Spec.Router.HashringPolicy == monitoringthanosiov1alpha1.HashringPolicyStatic {
-		out = receive.StaticMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor))
+		out = receive.StaticMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor), failover)
 	} else {
-		out = receive.DynamicMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor))
+		out = receive.DynamicMerge(currentHashringState, fetchedReadyState, int(receiver.Spec.Router.ReplicationFactor), failover)
 	}
 
 	if len(out) == 0 {
@@ -343,6 +348,54 @@ func (r *ThanosReceiveReconciler) buildHashringConfig(ctx context.Context, recei
 	r.metrics.HashringHash.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(receive.HashAsMetricValue(b))
 	r.metrics.HashringsConfigured.WithLabelValues(receiver.GetName(), receiver.GetNamespace()).Set(float64(len(out)))
 	return b, nil
+}
+
+func buildFailoverRelationships(receiver monitoringthanosiov1alpha1.ThanosReceive) (*receive.FailoverRelationships, error) {
+	hashringNames := make(map[string]struct{}, len(receiver.Spec.Ingester.Hashrings))
+	for _, h := range receiver.Spec.Ingester.Hashrings {
+		hashringNames[h.Name] = struct{}{}
+	}
+
+	primaryToStandby := make(map[string]string)
+	standbyToPrimary := make(map[string]string)
+	maxUnavailable := make(map[string]int)
+
+	for _, h := range receiver.Spec.Ingester.Hashrings {
+		if h.StandbyFor == nil {
+			continue
+		}
+		primaryName := *h.StandbyFor
+		if _, ok := hashringNames[primaryName]; !ok {
+			return nil, fmt.Errorf("hashring %q has standbyFor %q which does not exist", h.Name, primaryName)
+		}
+		if existing, ok := primaryToStandby[primaryName]; ok {
+			return nil, fmt.Errorf("primary hashring %q has multiple standbys: %q and %q", primaryName, existing, h.Name)
+		}
+		if _, ok := standbyToPrimary[primaryName]; ok {
+			return nil, fmt.Errorf("hashring %q is a standby and cannot be a primary for %q", primaryName, h.Name)
+		}
+		primaryToStandby[primaryName] = h.Name
+		standbyToPrimary[h.Name] = primaryName
+	}
+
+	if len(primaryToStandby) == 0 {
+		return nil, nil
+	}
+
+	for _, h := range receiver.Spec.Ingester.Hashrings {
+		if _, ok := primaryToStandby[h.Name]; !ok {
+			continue
+		}
+		if h.MaxUnavailableReplicas != nil {
+			maxUnavailable[h.Name] = int(*h.MaxUnavailableReplicas)
+		}
+	}
+
+	return &receive.FailoverRelationships{
+		PrimaryToStandby: primaryToStandby,
+		StandbyToPrimary: standbyToPrimary,
+		MaxUnavailable:   maxUnavailable,
+	}, nil
 }
 
 func (r *ThanosReceiveReconciler) handleDeletionTimestamp(receiveHashring *monitoringthanosiov1alpha1.ThanosReceive) (ctrl.Result, error) {

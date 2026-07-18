@@ -171,11 +171,36 @@ func EndpointSliceListToEndpoints(converter EndpointConverter, eps discoveryv1.E
 	return slices.Compact(endpoints)
 }
 
+// FailoverRelationships describes failover pairings between primary and standby hashrings.
+type FailoverRelationships struct {
+	// PrimaryToStandby maps primary hashring name to its standby hashring name.
+	PrimaryToStandby map[string]string
+	// StandbyToPrimary maps standby hashring name to its primary hashring name.
+	StandbyToPrimary map[string]string
+	// MaxUnavailable maps primary hashring name to the max unavailable replicas threshold.
+	MaxUnavailable map[string]int
+}
+
+func (f *FailoverRelationships) isPrimaryWithStandby(name string) bool {
+	if f == nil {
+		return false
+	}
+	_, ok := f.PrimaryToStandby[name]
+	return ok
+}
+
+func (f *FailoverRelationships) maxUnavailable(name string) int {
+	if f == nil {
+		return 0
+	}
+	return f.MaxUnavailable[name]
+}
+
 // DynamicMerge merges the previous state of hashrings with the desired state.
 // It ensures that the hashrings are in the desired state and that the replication factor is met.
 // If the previous state is empty, it will only add hashrings that have all members ready.
 // It allows for a single missing member to account for voluntary disruptions.
-func DynamicMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int) Hashrings {
+func DynamicMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int, failover *FailoverRelationships) Hashrings {
 	var mergedState Hashrings
 	if isEmptyHashring(previousState) {
 		return handleUnseenHashrings(fetchedReadyState)
@@ -188,6 +213,14 @@ func DynamicMerge(previousState Hashrings, fetchedReadyState HashringState, repl
 		if len(v.Config.Endpoints) >= replicationFactor && len(v.Config.Endpoints) >= v.DesiredReplicas-1 {
 			mergedState = append(mergedState, metaToHashring(k, v))
 			continue
+		}
+		// if this is a primary with a standby configured, check the failover threshold.
+		// when below threshold, skip this hashring entirely so the standby catches traffic.
+		if failover.isPrimaryWithStandby(k) {
+			minReady := v.DesiredReplicas - failover.maxUnavailable(k)
+			if len(v.Config.Endpoints) < minReady {
+				continue
+			}
 		}
 		// otherwise we look for previous state and merge if it exists
 		// this means that if the hashring is having issues, we don't interfere with it
@@ -205,7 +238,7 @@ func DynamicMerge(previousState Hashrings, fetchedReadyState HashringState, repl
 	return mergedState
 }
 
-func StaticMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int) Hashrings {
+func StaticMerge(previousState Hashrings, fetchedReadyState HashringState, replicationFactor int, failover *FailoverRelationships) Hashrings {
 	var mergedState Hashrings
 	if isEmptyHashring(previousState) {
 		return handleUnseenHashrings(fetchedReadyState)
@@ -216,6 +249,14 @@ func StaticMerge(previousState Hashrings, fetchedReadyState HashringState, repli
 			v.Config.Endpoints = trimTo(v.Config.Endpoints, v.DesiredReplicas)
 			mergedState = append(mergedState, metaToHashring(k, v))
 			continue
+		}
+		// if this is a primary with a standby configured, check the failover threshold.
+		// when below threshold, skip this hashring entirely so the standby catches traffic.
+		if failover.isPrimaryWithStandby(k) {
+			minReady := v.DesiredReplicas - failover.maxUnavailable(k)
+			if len(v.Config.Endpoints) < minReady {
+				continue
+			}
 		}
 		// otherwise we look for previous state and merge if it exists
 		// this means that if the hashring is having issues, we don't interfere with its
