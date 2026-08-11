@@ -144,7 +144,7 @@ Thanos Operator automatically creates ServiceMonitor resources when Prometheus O
 
 ```yaml
 # Example ServiceMonitor that works with both operators
-apiVersion: monitoring.coreos.com/v1
+apiVersion: montioring.rhobs/v1
 kind: ServiceMonitor
 metadata:
   name: thanos-components

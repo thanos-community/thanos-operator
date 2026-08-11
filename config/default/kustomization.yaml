@@ -68,7 +68,7 @@ patches:
 #         create: true
 #     - select: # Uncomment the following to set the Service name for TLS config in Prometheus ServiceMonitor
 #         kind: ServiceMonitor
-#         group: monitoring.coreos.com
+#         group: montioring.rhobs
 #         version: v1
 #         name: controller-manager-metrics-monitor
 #       fieldPaths:
@@ -98,7 +98,7 @@ patches:
 #         create: true
 #     - select: # Uncomment the following to set the Service namespace for TLS in Prometheus ServiceMonitor
 #         kind: ServiceMonitor
-#         group: monitoring.coreos.com
+#         group: montioring.rhobs
 #         version: v1
 #         name: controller-manager-metrics-monitor
 #       fieldPaths:

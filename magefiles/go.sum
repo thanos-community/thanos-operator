@@ -315,8 +315,6 @@ github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0 h1:eKVckm/elKIvnNKQAO9WXxBOudphxpkZmT9+bevtvDo=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0/go.mod h1:IJwk1oNs212afqGbNnE84GAB95OHtJR/BuI1rKESiYk=
 github.com/prometheus/client_golang v1.23.2 h1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=
 github.com/prometheus/client_golang v1.23.2/go.mod h1:Tb1a6LWHB3/SPIzCoaDXI4I8UHKeFTEQ1YCr+0Gyqmg=
 github.com/prometheus/client_golang/exp v0.0.0-20251212205219-7ba246a648ca h1:BOxmsLoL2ymn8lXJtorca7N/m+2vDQUDoEtPjf0iAxA=
@@ -335,6 +333,8 @@ github.com/prometheus/sigv4 v0.3.0 h1:QIG7nTbu0JTnNidGI1Uwl5AGVIChWUACxn2B/BQ1km
 github.com/prometheus/sigv4 v0.3.0/go.mod h1:fKtFYDus2M43CWKMNtGvFNHGXnAJJEGZbiYCmVp/F8I=
 github.com/puzpuzpuz/xsync/v3 v3.5.1 h1:GJYJZwO6IdxN/IKbneznS6yPkVC+c3zyY/j19c++5Fg=
 github.com/puzpuzpuz/xsync/v3 v3.5.1/go.mod h1:VjzYrABPabuM4KyBh1Ftq6u8nhwY5tBPKP9jpmh0nnA=
+github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring v0.89.0-rhobs1 h1:e2ZFNrG7m7YE7SQCI0Ic/6rhEH8NCBEylA6+kpJQLWg=
+github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring v0.89.0-rhobs1/go.mod h1:n3FXshd/fzRA5gzdmNQFI2td0KZ5GRj5RRZghYPNHvw=
 github.com/rodaine/hclencoder v0.0.1 h1:1jK2rGFxSDT1eU9oVjK4ewrIhMWTcc0yCfZMiN6xRJM=
 github.com/rodaine/hclencoder v0.0.1/go.mod h1:XKt85p0Ifyt0pr1KVeB3eL+dUFAKa+IA637lLahBcOQ=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=

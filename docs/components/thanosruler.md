@@ -21,7 +21,7 @@ Stateful mode deploys Thanos Ruler with its own persistent TSDB. This mode is de
 
 ### Rule Discovery
 
-The controller discovers `ConfigMaps` and optionally [`PrometheusRule`](https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule) objects. Discovery is based on label selectors and configured via the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) `ruleConfigSelector` field.
+The controller discovers `ConfigMaps` and optionally [`PrometheusRule`](https://prometheus-operator.dev/docs/api-reference/api/#montioring.rhobs/v1.PrometheusRule) objects. Discovery is based on label selectors and configured via the [`ThanosRuler` spec](https://thanos-operator.dev/docs/api-reference/api.md/#thanosrulerspec) `ruleConfigSelector` field.
 
 Once discovered, these resources are written to one or more `ConfigMaps` owned by the `ThanosRuler` instance.
 

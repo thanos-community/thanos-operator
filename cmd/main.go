@@ -30,12 +30,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	versioncollector "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/common/promslog"
 	psflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
+	monitoringv1 "github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring/v1"
 	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"

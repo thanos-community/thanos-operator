@@ -280,7 +280,7 @@ subjects:
   name: prometheus
   namespace: default
 ---
-apiVersion: monitoring.coreos.com/v1
+apiVersion: montioring.rhobs/v1
 kind: Prometheus
 metadata:
   name: prometheus-dev
@@ -485,7 +485,7 @@ spec:
 // configurePrometheusRules creates a PrometheusRule object with basic alerts
 func configurePrometheusRules() error {
 	content := `
-apiVersion: monitoring.coreos.com/v1
+apiVersion: montioring.rhobs/v1
 kind: PrometheusRule
 metadata:
   name: thanos-operator-alerts
@@ -716,7 +716,7 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
 ---
-apiVersion: monitoring.coreos.com/v1
+apiVersion: montioring.rhobs/v1
 kind: ServiceMonitor
 metadata:
   name: kube-state-metrics

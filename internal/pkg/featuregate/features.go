@@ -8,11 +8,11 @@ import (
 // These follow Prometheus convention of kebab-case feature names.
 const (
 	// ServiceMonitor enables management of ServiceMonitor objects.
-	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.ServiceMonitor
+	// See https://prometheus-operator.dev/docs/api-reference/api/#montioring.rhobs/v1.ServiceMonitor
 	ServiceMonitor = "service-monitor"
 
 	// PrometheusRule enables discovery of PrometheusRule objects to set on Thanos Ruler.
-	// See https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.PrometheusRule
+	// See https://prometheus-operator.dev/docs/api-reference/api/#montioring.rhobs/v1.PrometheusRule
 	PrometheusRule = "prometheus-rule"
 
 	// OtelSidecar enables OpenTelemetry collector sidecar injection for Thanos components.
@@ -112,14 +112,14 @@ func (c Config) ToGVK() []schema.GroupVersionKind {
 	var gvk []schema.GroupVersionKind
 	if !c.EnableServiceMonitor {
 		gvk = append(gvk, schema.GroupVersionKind{
-			Group:   "monitoring.coreos.com",
+			Group:   "montioring.rhobs",
 			Version: "v1",
 			Kind:    "ServiceMonitor",
 		})
 	}
 	if !c.EnablePrometheusRuleDiscovery {
 		gvk = append(gvk, schema.GroupVersionKind{
-			Group:   "monitoring.coreos.com",
+			Group:   "montioring.rhobs",
 			Version: "v1",
 			Kind:    "PrometheusRule",
 		})

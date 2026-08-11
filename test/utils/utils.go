@@ -33,11 +33,11 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 
 	"github.com/golang/snappy"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	pconf "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/prometheus/prometheus/util/fmtutil"
+	monitoringv1 "github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 

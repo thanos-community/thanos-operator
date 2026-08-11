@@ -39701,26 +39701,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - prometheusrules
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - monitoring.thanos.io
   resources:
   - thanoscompacts
@@ -39758,6 +39738,26 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - montioring.rhobs
+  resources:
+  - prometheusrules
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - montioring.rhobs
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - policy
   resources:
@@ -40291,7 +40291,7 @@ spec:
       terminationGracePeriodSeconds: 10
 status: {}
 ---
-apiVersion: monitoring.coreos.com/v1
+apiVersion: monitoring.rhobs/v1
 kind: ServiceMonitor
 metadata:
   labels:

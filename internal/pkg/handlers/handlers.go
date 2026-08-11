@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/go-logr/logr"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1 "github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 

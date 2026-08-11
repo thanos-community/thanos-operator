@@ -378,8 +378,6 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus-community/prom-label-proxy v0.12.1 h1:vJ6tGz4NMge140Ua3T/zh3HO0CA3bmnCsfkWK/cujG0=
 github.com/prometheus-community/prom-label-proxy v0.12.1/go.mod h1:/tZNtOMcbPbE1VFcY8b48mPqT1bb2jVpXx2WdjjM8TY=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0 h1:eKVckm/elKIvnNKQAO9WXxBOudphxpkZmT9+bevtvDo=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.88.0/go.mod h1:IJwk1oNs212afqGbNnE84GAB95OHtJR/BuI1rKESiYk=
 github.com/prometheus/alertmanager v0.28.1 h1:BK5pCoAtaKg01BYRUJhEDV1tqJMEtYBGzPw8QdvnnvA=
 github.com/prometheus/alertmanager v0.28.1/go.mod h1:0StpPUDDHi1VXeM7p2yYfeZgLVi/PPlt39vo9LQUHxM=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
@@ -411,6 +409,8 @@ github.com/prometheus/sigv4 v0.3.0 h1:QIG7nTbu0JTnNidGI1Uwl5AGVIChWUACxn2B/BQ1km
 github.com/prometheus/sigv4 v0.3.0/go.mod h1:fKtFYDus2M43CWKMNtGvFNHGXnAJJEGZbiYCmVp/F8I=
 github.com/puzpuzpuz/xsync/v3 v3.5.1 h1:GJYJZwO6IdxN/IKbneznS6yPkVC+c3zyY/j19c++5Fg=
 github.com/puzpuzpuz/xsync/v3 v3.5.1/go.mod h1:VjzYrABPabuM4KyBh1Ftq6u8nhwY5tBPKP9jpmh0nnA=
+github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring v0.89.0-rhobs1 h1:e2ZFNrG7m7YE7SQCI0Ic/6rhEH8NCBEylA6+kpJQLWg=
+github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring v0.89.0-rhobs1/go.mod h1:n3FXshd/fzRA5gzdmNQFI2td0KZ5GRj5RRZghYPNHvw=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=

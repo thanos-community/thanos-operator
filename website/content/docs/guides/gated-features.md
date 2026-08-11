@@ -95,7 +95,7 @@ spec:
 ### PrometheusRule Example
 
 ```yaml
-apiVersion: monitoring.coreos.com/v1
+apiVersion: montioring.rhobs/v1
 kind: PrometheusRule
 metadata:
   name: thanos-alerts

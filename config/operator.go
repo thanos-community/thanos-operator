@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	monitoringv1 "github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 
@@ -151,7 +151,7 @@ func ManagerServiceAccount() *corev1.ServiceAccount {
 func ControllerManagerServiceMonitor() *monitoringv1.ServiceMonitor {
 	return &monitoringv1.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "monitoring.coreos.com/v1",
+			APIVersion: "monitoring.rhobs/v1",
 			Kind:       "ServiceMonitor",
 		},
 		ObjectMeta: metav1.ObjectMeta{
