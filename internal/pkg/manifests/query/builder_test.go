@@ -336,3 +336,47 @@ func TestBuildQueryGolden(t *testing.T) {
 		})
 	}
 }
+
+func TestQueryArgsEndpoints(t *testing.T) {
+	opts := Options{
+		Options: manifests.Options{
+			Owner:     "test-owner",
+			Namespace: "ns",
+		},
+		Endpoints: []Endpoint{
+			{ServiceName: "store", Namespace: "ns", Type: manifests.RegularLabel, Port: 10901},
+			{ServiceName: "store-strict", Namespace: "ns", Type: manifests.StrictLabel, Port: 10901},
+			{ServiceName: "store-group", Namespace: "ns", Type: manifests.GroupLabel, Port: 10901},
+			{ServiceName: "store-group-strict", Namespace: "ns", Type: manifests.GroupStrictLabel, Port: 10901},
+		},
+	}
+
+	args := queryArgs(opts)
+
+	// Non-strict endpoint groups must use a DNS SD prefix so gRPC resolves the
+	// individual replica IPs behind the headless service and load-balances
+	// round-robin across them. Without the prefix Thanos treats the value as a
+	// single static address and cannot balance across HA replicas.
+	//
+	// Strict endpoints (including strict groups) must NOT use a DNS SD prefix:
+	// Thanos rejects dynamically-resolved addresses in strict mode at startup,
+	// so they stay static addresses.
+	want := []string{
+		"--endpoint=dnssrv+_grpc._tcp.store.ns.svc",
+		"--endpoint-strict=store-strict.ns.svc:10901",
+		"--endpoint-group=dnssrv+_grpc._tcp.store-group.ns.svc",
+		"--endpoint-group-strict=store-group-strict.ns.svc:10901",
+	}
+	for _, w := range want {
+		assert.Assert(t, contains(args, w), "expected args to contain %q, got %v", w, args)
+	}
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
+}

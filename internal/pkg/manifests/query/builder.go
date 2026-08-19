@@ -299,10 +299,19 @@ func queryArgs(opts Options) []string {
 			// TODO(saswatamcode): For regular probably use SD file.
 			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
 		case manifests.StrictLabel:
-			args = append(args, fmt.Sprintf("--endpoint-strict=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
+			// Strict endpoints must NOT use a DNS SD prefix: Thanos rejects
+			// dynamically-resolved addresses in strict mode at startup.
+			args = append(args, fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		case manifests.GroupLabel:
-			args = append(args, fmt.Sprintf("--endpoint-group=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
+			// Use a DNS SD prefix so gRPC resolves the individual replica IPs
+			// behind the headless service and load-balances round-robin across
+			// them. Without a prefix Thanos treats the value as a single static
+			// address and cannot balance across HA replicas.
+			args = append(args, fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
 		case manifests.GroupStrictLabel:
+			// Strict endpoints must NOT use a DNS SD prefix: Thanos rejects
+			// dynamically-resolved addresses in strict mode at startup. This
+			// stays a static address and therefore does not DNS-load-balance.
 			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
 		default:
 			panic("unknown endpoint type")
