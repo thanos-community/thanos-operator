@@ -203,7 +203,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 							deployment.Spec.Template.Spec.Containers[0].Args)
 					}
 
-					arg := fmt.Sprintf("--endpoint-strict=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
+					arg := fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", receiveSvcName, ns, receive.GRPCPort)
 					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, arg) == false {
 						return fmt.Errorf("expected arg %q", arg)
 					}
