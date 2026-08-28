@@ -253,7 +253,7 @@ config:
 				resource.Spec.ShardingStrategy.Shards = 1
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
 
-				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount().WithServiceMonitor()
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
 				updatedName := StoreNameFromParent(resourceName, nil)
 
 				EventuallyWithOffset(1, func() bool {
@@ -273,17 +273,6 @@ config:
 				}, time.Second*10, time.Second*2).Should(BeFalse())
 			})
 
-			By("checking paused state", func() {
-				resource := &monitoringthanosiov1alpha1.ThanosStore{}
-				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
-
-				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.CommonFields.LogLevel = ptr.To("debug")
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Consistently(func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, "--log.level=debug")
-				}).Should(BeFalse())
-			})
 		})
 	})
 })

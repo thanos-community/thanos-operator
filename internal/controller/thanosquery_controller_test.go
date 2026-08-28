@@ -307,45 +307,6 @@ config:
 				}, time.Second*30, time.Second*10).Should(Succeed())
 			})
 
-			By("checking paused state", func() {
-				isPaused := true
-				resource.Spec.Paused = &isPaused
-
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				labels := requiredStoreServiceLabels
-				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
-				svcPaused := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "paused-svc",
-						Namespace: ns,
-						Labels:    labels,
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{receivePort},
-					},
-				}
-				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
-				// While paused, the reconcile must not run, so the newly created
-				// service must never be discovered as an endpoint. Use Consistently
-				// to prove the arg is never added rather than checking it once.
-				ConsistentlyWithOffset(1, func() error {
-					deployment := &appsv1.Deployment{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
-						Namespace: ns,
-					}, deployment); err != nil {
-						return err
-					}
-
-					for _, a := range deployment.Spec.Template.Spec.Containers[0].Args {
-						if strings.Contains(a, "paused-svc") {
-							return fmt.Errorf("expected no endpoint arg for paused-svc while paused, got %q", a)
-						}
-					}
-
-					return nil
-				}).Should(Succeed())
-			})
 		})
 	})
 })

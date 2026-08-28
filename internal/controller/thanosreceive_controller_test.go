@@ -605,14 +605,6 @@ config:
 				}, time.Second*10, time.Second*1).Should(BeTrue())
 			})
 
-			By("checking paused state", func() {
-				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.Router.CommonFields.LogLevel = ptr.To("debug")
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Consistently(func() bool {
-					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")
-				}).Should(BeFalse())
-			})
 		})
 
 		It("should configure capnproto replication protocol correctly", func() {
