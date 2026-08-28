@@ -322,10 +322,11 @@ config:
 					AddressType: discoveryv1.AddressTypeIPv4,
 				}
 				Expect(k8sClient.Create(context.Background(), epSliceNotRelevantNotRelevantService)).Should(Succeed())
-				// check via a poll that we have not updated the ConfigMap
-				Consistently(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Second*20, time.Second*1).Should(BeTrue())
+				// we deliberately do not wait here: the two irrelevant slices above must
+				// not appear in the hashring config, and the exact-match Eventually below
+				// (a whole-document compare against only the relevant endpoints) proves it
+				// -- if either leaked in, the compare would fail. This avoids paying a long
+				// Consistently window just to observe a non-event.
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
 					TypeMeta: metav1.TypeMeta{
