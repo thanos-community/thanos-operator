@@ -157,14 +157,14 @@ config:
 				for _, shard := range []string{shardOne, shardTwo} {
 					EventuallyWithOffset(1, func() bool {
 						return verifier.Verify(k8sClient, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 
 				for _, shard := range []string{shardOne, shardTwo} {
 					EventuallyWithOffset(1, func() bool {
 						return utils.VerifyStatefulSetReplicas(
 							k8sClient, 1, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 			})
 
@@ -185,7 +185,7 @@ config:
 						}
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos compact", func() {
@@ -195,7 +195,7 @@ config:
   source_labels: ["tenant_id"]
   regex: someone`
 					return utils.VerifyStatefulSetArgs(k8sClient, shardOne, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					args := `--selector.relabel-config=
@@ -203,7 +203,7 @@ config:
   source_labels: ["tenant_id"]
   regex: anyone-else`
 					return utils.VerifyStatefulSetArgs(k8sClient, shardTwo, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("checking additional container", func() {
@@ -217,7 +217,7 @@ config:
 					}
 
 					return len(statefulSet.Spec.Template.Spec.Containers) == 2
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
@@ -232,12 +232,12 @@ config:
 						}
 					}
 					return false
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 					return verifier.Verify(k8sClient, name, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 		})
 
@@ -299,7 +299,7 @@ config:
 					return sc.FSGroup != nil && *sc.FSGroup == customFSGroup &&
 						sc.RunAsUser != nil && *sc.RunAsUser == customRunAsUser &&
 						sc.RunAsGroup != nil && *sc.RunAsGroup == customRunAsGroup
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 			})
 
 			By("cleaning up the SecurityContext test resource", func() {

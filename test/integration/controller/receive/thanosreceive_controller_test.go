@@ -257,10 +257,10 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, hashmodIngesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying thanos receive ingestor annotations are merged correctly", func() {
@@ -280,7 +280,7 @@ config:
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -414,7 +414,7 @@ config:
 				expect = strings.ReplaceAll(expect, ".treceive.svc", "."+ns+".svc")
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying hashmod hashring configuration", func() {
@@ -529,14 +529,14 @@ config:
 				expectWithHashmod = strings.ReplaceAll(expectWithHashmod, ".treceive.svc", "."+ns+".svc")
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("creating the additional container for ingesters", func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
@@ -560,18 +560,18 @@ config:
 				updatedIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedIngesterName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, ingesterName, ns)
-				}, time.Minute, time.Second*2).Should(BeFalse())
+				}, time.Minute).Should(BeFalse())
 			})
 
 			By("creating the router components", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, routerName, ns)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying thanos receive router annotations are merged correctly", func() {
@@ -589,14 +589,14 @@ config:
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("creating the additional container for router", func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(
 						k8sClient, routerName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 		})
@@ -645,14 +645,14 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("creating router components", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, routerName, ns)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("reacting to capnproto endpoint creation and updating the ConfigMap with capnproto_address", func() {
@@ -742,21 +742,21 @@ config:
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying that router container has capnproto arguments", func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(
 						k8sClient, routerName, ns, 0, "--receive.replication-protocol=capnproto")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("verifying that ingester containers have capnproto arguments", func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 		})
 	})

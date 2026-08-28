@@ -131,13 +131,13 @@ config:
 				for _, shard := range []string{firstShard, secondShard, thirdShard} {
 					EventuallyWithOffset(1, func() bool {
 						return verifier.Verify(k8sClient, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, secondShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("verifying store annotations", func() {
@@ -158,7 +158,7 @@ config:
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos store", func() {
@@ -172,7 +172,7 @@ config:
   source_labels: ["shard"]
   regex: 0`
 					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("checking additional container", func() {
@@ -186,7 +186,7 @@ config:
 					}
 
 					return len(statefulSet.Spec.Template.Spec.Containers) == 2
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("setting custom caches on thanos store", func() {
@@ -235,7 +235,7 @@ config:
 					}
 
 					return true
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
@@ -247,19 +247,19 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, firstShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, secondShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, thirdShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 			})
 
 		})

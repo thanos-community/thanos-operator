@@ -109,7 +109,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("setting endpoints on the thanos query", func() {
@@ -128,7 +128,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying query annotations", func() {
@@ -145,7 +145,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
@@ -205,7 +205,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 
 					return nil
 
-				}, time.Minute*1, time.Second*10).Should(Succeed())
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("setting up the thanos query with query frontend", func() {
@@ -237,7 +237,7 @@ var _ = Describe("ThanosQuery Controller", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("verifying the query frontend deployment configuration", func() {
@@ -264,7 +264,7 @@ config:
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("verifying query frontend annotations", func() {
@@ -282,7 +282,7 @@ config:
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("verifying query frontend is linked to query service", func() {
@@ -292,7 +292,7 @@ config:
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}
 					return nil
-				}, time.Second*30, time.Second*10).Should(Succeed())
+				}, time.Second*30).Should(Succeed())
 			})
 
 		})

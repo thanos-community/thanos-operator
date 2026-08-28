@@ -157,21 +157,21 @@ config:
 				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, controller.RulerNameFromParent(resourceName), ns)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, controller.RulerNameFromParent(resourceName), ns)
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", "my-query", ns)
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("verifying ruler annotations", func() {
@@ -190,7 +190,7 @@ config:
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("updating with new rule file", func() {
@@ -222,7 +222,7 @@ config:
 					// When RuleTenancyConfig is enabled, user ConfigMaps are processed and bucketed
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/my-rules-my-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 		})
@@ -329,7 +329,7 @@ config:
   - alert: ServiceDown
     expr: up{tenant_id="tenant-x"} == 0
 `)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("creating another user ConfigMap with different tenant", func() {
@@ -369,7 +369,7 @@ config:
   - alert: DatabaseConnectionHigh
     expr: db_connections{tenant_id="tenant-y"} > 100
 `)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 		})
 
@@ -459,13 +459,13 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
 					return utils.VerifyConfigMapExists(k8sClient, cfgmapName, ns)
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 
 				// Verify the rule file is referenced in StatefulSet args
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("deleting user ConfigMap", func() {
@@ -481,7 +481,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
 					return !utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 		})
 
@@ -592,7 +592,7 @@ config:
 				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet().WithSecret()
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, controller.RulerNameFromParent(resourceName), ns)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 
 			})
 
@@ -600,7 +600,7 @@ config:
 				arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 
 				EventuallyWithOffset(0, func() bool {
 					secret := &corev1.Secret{}
@@ -623,7 +623,7 @@ config:
 `, receiveSvcName, ns)
 
 					return string(secret.Data["remote-write.yaml"]) == expectedContent
-				}, time.Minute, time.Second*5).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("switching to stateful mode", func() {
@@ -646,23 +646,23 @@ config:
 						return false
 					}
 					return true
-				}, time.Minute, time.Second*5).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
 					return !utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*5).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--objstore.config=$(OBJSTORE_CONFIG)"
 					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
-				}, time.Minute, time.Second*5).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 
 				Eventually(func() bool {
 					secret := &corev1.Secret{}
 					err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: controller.RulerNameFromParent(resourceName)}, secret)
 					return err != nil
-				}, time.Minute, time.Second*5).Should(BeTrue())
+				}, time.Minute).Should(BeTrue())
 			})
 		})
 	})

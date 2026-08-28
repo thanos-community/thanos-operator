@@ -40,10 +40,13 @@ type Env struct {
 // the shared Gomega polling defaults. binaryAssetsDir may be empty, in which case
 // envtest falls back to KUBEBUILDER_ASSETS or its default lookup.
 func Start(binaryAssetsDir string, crdPaths ...string) (*Env, error) {
+	// Keep timeouts generous (CI reconciles can lag) but poll often: the
+	// reconcilers are watch-driven with no requeue on these paths, so readiness
+	// lands well under a second and a tight interval just removes dead air.
 	gomega.SetDefaultEventuallyTimeout(time.Minute)
-	gomega.SetDefaultEventuallyPollingInterval(time.Second)
+	gomega.SetDefaultEventuallyPollingInterval(time.Millisecond * 200)
 	gomega.SetDefaultConsistentlyDuration(time.Second * 10)
-	gomega.SetDefaultConsistentlyPollingInterval(time.Second)
+	gomega.SetDefaultConsistentlyPollingInterval(time.Millisecond * 200)
 
 	te := &envtest.Environment{
 		CRDDirectoryPaths:     crdPaths,
