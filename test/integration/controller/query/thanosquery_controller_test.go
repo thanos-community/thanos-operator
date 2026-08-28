@@ -19,7 +19,6 @@ package query
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -74,9 +73,6 @@ var _ = Describe("ThanosQuery Controller", func() {
 		})
 
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_QUERY") == skipValue {
-				Skip("Skipping ThanosQuery controller tests")
-			}
 			name := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{
 				ObjectMeta: metav1.ObjectMeta{

@@ -19,7 +19,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -78,9 +77,6 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_STORE") == skipValue {
-				Skip("Skipping ThanosStore controller tests")
-			}
 			firstShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(0)))
 			secondShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(1)))
 			thirdShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(2)))

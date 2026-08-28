@@ -42,10 +42,6 @@ var (
 	cancel    context.CancelFunc
 )
 
-// skipValue matches the EXCLUDE_* env-var opt-out convention the specs use to skip
-// this controller's tests.
-const skipValue = "true"
-
 func TestThanosStore(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ThanosStore Controller Suite")

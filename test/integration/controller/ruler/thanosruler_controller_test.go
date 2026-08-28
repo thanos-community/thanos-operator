@@ -19,7 +19,6 @@ package ruler
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -78,9 +77,6 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_RULER") == skipValue {
-				Skip("Skipping ThanosRuler controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -228,9 +224,6 @@ config:
 		})
 
 		It("should enforce tenancy for user-provided ConfigMaps", func() {
-			if os.Getenv("EXCLUDE_RULER") == skipValue {
-				Skip("Skipping ThanosRuler controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -374,9 +367,6 @@ config:
 		})
 
 		It("should cleanup generated ConfigMaps when user ConfigMap is deleted", func() {
-			if os.Getenv("EXCLUDE_RULER") == skipValue {
-				Skip("Skipping ThanosRuler controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -486,9 +476,6 @@ config:
 		})
 
 		It("should enable stateless mode", func() {
-			if os.Getenv("EXCLUDE_RULER") == skipValue {
-				Skip("Skipping ThanosRuler controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosRuler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,

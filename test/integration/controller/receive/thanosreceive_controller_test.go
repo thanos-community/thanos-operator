@@ -19,7 +19,6 @@ package receive
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -99,9 +98,6 @@ config:
 		})
 
 		It("should error when the spec is invalid due to CEL rules", func() {
-			if os.Getenv("EXCLUDE_RECEIVE") == skipValue {
-				Skip("Skipping ThanosReceive controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosReceive{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,

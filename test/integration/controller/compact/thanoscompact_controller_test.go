@@ -19,7 +19,6 @@ package compact
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -89,9 +88,6 @@ config:
 		})
 
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
-				Skip("Skipping ThanosCompact controller tests")
-			}
 
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{
 				ObjectMeta: metav1.ObjectMeta{
@@ -242,9 +238,6 @@ config:
 		})
 
 		It("should reconcile with custom SecurityContext", func() {
-			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
-				Skip("Skipping ThanosCompact controller tests")
-			}
 
 			// Use a different resource name to avoid interference from previous test cleanup
 			securityContextResourceName := "test-compact-security-context"
