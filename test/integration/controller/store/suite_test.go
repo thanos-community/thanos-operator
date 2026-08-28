@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package controller holds the core cross-controller envtest suite. Unlike the
-// isolated behavioral suites (feature gates, PDB, pause), which each boot a manager
-// with a specific configuration, this suite runs all five controllers on a single
-// shared manager -- the cross-controller service discovery and watch coupling
-// exercised here is the integration coverage. It is black-box: it lives outside
-// internal/controller and drives the controllers through their public surface only.
-package controller
+// Package store runs the ThanosStore controller's envtest specs in their own test
+// binary. Every controller suite boots suite.Setup, which registers all five
+// reconcilers on one manager (so the "all controllers coexist on one manager"
+// coverage is retained), then exercises only this controller's specs. Splitting
+// per controller lets the suites run as parallel binaries under go test and keeps
+// one controller's failure from aborting the others.
+package store
 
 import (
 	"context"
@@ -33,11 +33,7 @@ import (
 	"github.com/thanos-community/thanos-operator/test/integration/suite"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	//+kubebuilder:scaffold:imports
 )
-
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
 	k8sClient client.Client
@@ -46,30 +42,22 @@ var (
 	cancel    context.CancelFunc
 )
 
-// skipValue matches the EXCLUDE_* env-var opt-out convention the specs use to skip a
-// controller's tests.
+// skipValue matches the EXCLUDE_* env-var opt-out convention the specs use to skip
+// this controller's tests.
 const skipValue = "true"
 
-func TestControllers(t *testing.T) {
+func TestThanosStore(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Core Controller Suite")
+	RunSpecs(t, "ThanosStore Controller Suite")
 }
 
 var _ = BeforeSuite(func() {
-	By("bootstrapping test environment")
-	// suite.Setup registers all five controllers on one manager with the
-	// operator's default configuration (all feature gates off) -- the gated
-	// behaviors are covered by the matching suites under test/integration.
 	env, ctx, cancel = suite.Setup(featuregate.Config{})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
-
-	//+kubebuilder:scaffold:scheme
 })
 
 var _ = AfterSuite(func() {
 	cancel()
-	By("tearing down the test environment")
 	Expect(env.Stop()).To(Succeed())
 })
