@@ -130,8 +130,8 @@ var _ = Describe("PrometheusRule feature gate", func() {
 			return utils.VerifyStatefulSetArgs(k8sClient, ss, ns, 0, arg)
 		}).Should(BeTrue())
 
-		Eventually(func() bool {
-			return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "test-promrule.yaml",
+		Eventually(func() error {
+			return utils.ConfigMapDataMatches(k8sClient, cfgmapName, ns, "test-promrule.yaml",
 				`groups:
 - labels:
     tenant: test
@@ -142,7 +142,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
     labels:
       severity: page
 `)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 	})
 
 	It("enforces tenancy across PrometheusRules from different tenants", func() {
@@ -178,8 +178,8 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		})
 		Expect(k8sClient.Create(ctx, tenantA)).Should(Succeed())
 
-		Eventually(func() bool {
-			return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "tenant-a-rule.yaml",
+		Eventually(func() error {
+			return utils.ConfigMapDataMatches(k8sClient, cfgmapName, ns, "tenant-a-rule.yaml",
 				`groups:
 - labels:
     tenant_id: team-a
@@ -192,7 +192,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
   - expr: rate(http_requests_total{job="app",tenant_id="team-a"}[5m])
     record: app:requests:rate5m
 `)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		tenantB := alertRule("tenant-b-rule", ns, map[string]string{
 			manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
@@ -206,8 +206,8 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		})
 		Expect(k8sClient.Create(ctx, tenantB)).Should(Succeed())
 
-		Eventually(func() bool {
-			return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "tenant-b-rule.yaml",
+		Eventually(func() error {
+			return utils.ConfigMapDataMatches(k8sClient, cfgmapName, ns, "tenant-b-rule.yaml",
 				`groups:
 - labels:
     tenant_id: team-b
@@ -218,7 +218,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
     labels:
       severity: critical
 `)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 	})
 
 	It("re-filters PrometheusRules when a custom selector label is added", func() {

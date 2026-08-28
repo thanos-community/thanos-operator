@@ -318,9 +318,9 @@ config:
 				})
 
 				// Verify generated ConfigMap has tenant labels enforced
-				EventuallyWithOffset(1, func() bool {
+				EventuallyWithOffset(1, func() error {
 					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
-					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "user-rules-tenant-x-rules.yaml",
+					return utils.ConfigMapDataMatches(k8sClient, cfgmapName, ns, "user-rules-tenant-x-rules.yaml",
 						`groups:
 - labels:
     tenant_id: tenant-x
@@ -329,7 +329,7 @@ config:
   - alert: ServiceDown
     expr: up{tenant_id="tenant-x"} == 0
 `)
-				}, time.Minute).Should(BeTrue())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("creating another user ConfigMap with different tenant", func() {
@@ -358,9 +358,9 @@ config:
 				})
 
 				// Verify the second tenant's ConfigMap is also processed correctly
-				EventuallyWithOffset(1, func() bool {
+				EventuallyWithOffset(1, func() error {
 					cfgmapName := fmt.Sprintf("%s-usercfgmap-0", resourceName)
-					return utils.VerifyConfigMapContents(k8sClient, cfgmapName, ns, "user-rules-tenant-y-rules.yaml",
+					return utils.ConfigMapDataMatches(k8sClient, cfgmapName, ns, "user-rules-tenant-y-rules.yaml",
 						`groups:
 - labels:
     tenant_id: tenant-y
@@ -369,7 +369,7 @@ config:
   - alert: DatabaseConnectionHigh
     expr: db_connections{tenant_id="tenant-y"} > 100
 `)
-				}, time.Minute).Should(BeTrue())
+				}, time.Minute).Should(Succeed())
 			})
 		})
 

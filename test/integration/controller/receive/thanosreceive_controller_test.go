@@ -412,9 +412,9 @@ config:
 				// the template uses "treceive" as the namespace placeholder; the real
 				// namespace is generated per spec, so substitute it before comparing
 				expect = strings.ReplaceAll(expect, ".treceive.svc", "."+ns+".svc")
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
-				}, time.Minute*1).Should(BeTrue())
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("verifying hashmod hashring configuration", func() {
@@ -527,9 +527,9 @@ config:
     }
 ]`, hashmodIngesterName, hashmodIngesterName, hashmodIngesterName, svcName, svcName, svcName)
 				expectWithHashmod = strings.ReplaceAll(expectWithHashmod, ".treceive.svc", "."+ns+".svc")
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
-				}, time.Minute*1).Should(BeTrue())
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("creating the additional container for ingesters", func() {
@@ -740,9 +740,9 @@ config:
 ]`, svcName, svcName, svcName, svcName, svcName, svcName)
 				expectCapnProto = strings.ReplaceAll(expectCapnProto, ".treceive.svc", "."+ns+".svc")
 
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
-				}, time.Minute*1).Should(BeTrue())
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("verifying that router container has capnproto arguments", func() {
