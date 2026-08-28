@@ -56,8 +56,8 @@ var (
 	}.GetGeneratedResourceName()
 )
 
-var _ = Describe("Paused reconciliation", Ordered, func() {
-	BeforeAll(func() {
+var _ = Describe("Paused reconciliation", func() {
+	BeforeEach(func() {
 		Expect(k8sClient.Create(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: ns},
 		})).Should(Succeed())
