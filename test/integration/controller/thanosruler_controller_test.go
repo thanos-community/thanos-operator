@@ -27,6 +27,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -147,7 +149,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-query",
 						Namespace: ns,
-						Labels:    requiredQueryServiceLabels,
+						Labels:    controller.RequiredQueryServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -168,21 +170,21 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet()
 				EventuallyWithOffset(1, func() bool {
-					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
+					return verifier.Verify(k8sClient, controller.RulerNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, "--label=rule_replica=\"$(NAME)\"")
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
-						k8sClient, 2, RulerNameFromParent(resourceName), ns)
+						k8sClient, 2, controller.RulerNameFromParent(resourceName), ns)
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", "my-query", ns)
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -197,7 +199,7 @@ config:
 						manifests.StorageSizeAnnotation: "1Gi",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, RulerNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.RulerNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 
@@ -210,7 +212,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-rules",
 						Namespace: ns,
-						Labels:    defaultRuleLabels,
+						Labels:    controller.DefaultRuleLabels,
 					},
 					Data: map[string]string{
 						"my-rules.yaml": `groups:
@@ -233,7 +235,7 @@ config:
 				EventuallyWithOffset(1, func() bool {
 					// When RuleTenancyConfig is enabled, user ConfigMaps are processed and bucketed
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/my-rules-my-rules.yaml"
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -284,7 +286,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      svcName,
 						Namespace: ns,
-						Labels:    requiredQueryServiceLabels,
+						Labels:    controller.RequiredQueryServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -428,7 +430,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      svcName,
 						Namespace: ns,
-						Labels:    requiredQueryServiceLabels,
+						Labels:    controller.RequiredQueryServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -454,7 +456,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      userConfigMapName,
 						Namespace: ns,
-						Labels:    defaultRuleLabels,
+						Labels:    controller.DefaultRuleLabels,
 					},
 					Data: map[string]string{
 						"test-rules.yaml": `groups:
@@ -476,7 +478,7 @@ config:
 				// Verify the rule file is referenced in StatefulSet args
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -492,7 +494,7 @@ config:
 				// Verify that the generated ConfigMap no longer contains the deleted rule
 				EventuallyWithOffset(1, func() bool {
 					arg := "--rule-file=/etc/thanos/rules/" + resource.GetName() + "-usercfgmap-0/cleanup-test-rules-test-rules.yaml"
-					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return !utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 		})
@@ -517,7 +519,7 @@ config:
 						Size: resourceapi.MustParse("1Gi"),
 					},
 					RuleTenancyConfig: &monitoringthanosiov1alpha1.RuleTenancyConfig{
-						TenantSpecifierLabel: ptr.To(defaultTenantSpecifier),
+						TenantSpecifierLabel: ptr.To(controller.DefaultTenantSpecifier),
 					},
 					RuleConfigSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -537,7 +539,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      querySvcName,
 						Namespace: ns,
-						Labels:    requiredQueryServiceLabels,
+						Labels:    controller.RequiredQueryServiceLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -558,7 +560,7 @@ config:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels:    defaultRemoteWriteLabels,
+						Labels:    controller.DefaultRemoteWriteLabels,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -577,7 +579,7 @@ config:
 
 				statelessRuleLabels := map[string]string{
 					manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
-					defaultTenantSpecifier:               "test-tenant",
+					controller.DefaultTenantSpecifier:    "test-tenant",
 				}
 
 				cfgmap := &corev1.ConfigMap{
@@ -603,7 +605,7 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithServiceAccount().WithService().WithStatefulSet().WithSecret()
 				EventuallyWithOffset(1, func() bool {
-					return verifier.Verify(k8sClient, RulerNameFromParent(resourceName), ns)
+					return verifier.Verify(k8sClient, controller.RulerNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 
 			})
@@ -611,12 +613,12 @@ config:
 			By("verify remote write Secret", func() {
 				arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
 				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Second*30, time.Second*2).Should(BeTrue())
 
 				EventuallyWithOffset(0, func() bool {
 					secret := &corev1.Secret{}
-					if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, secret); err != nil {
+					if err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: controller.RulerNameFromParent(resourceName)}, secret); err != nil {
 						return false
 					}
 					if _, exists := secret.Data["remote-write.yaml"]; !exists {
@@ -662,17 +664,17 @@ config:
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--remote-write.config-file=/etc/thanos/remote-write/remote-write.yaml"
-					return !utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return !utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*5).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					arg := "--objstore.config=$(OBJSTORE_CONFIG)"
-					return utils.VerifyStatefulSetArgs(k8sClient, RulerNameFromParent(resourceName), ns, 0, arg)
+					return utils.VerifyStatefulSetArgs(k8sClient, controller.RulerNameFromParent(resourceName), ns, 0, arg)
 				}, time.Minute, time.Second*5).Should(BeTrue())
 
 				Eventually(func() bool {
 					secret := &corev1.Secret{}
-					err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: RulerNameFromParent(resourceName)}, secret)
+					err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: controller.RulerNameFromParent(resourceName)}, secret)
 					return err != nil
 				}, time.Minute, time.Second*5).Should(BeTrue())
 			})

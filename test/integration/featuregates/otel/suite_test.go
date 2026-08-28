@@ -8,8 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
-	"github.com/thanos-community/thanos-operator/test/integration"
-	"github.com/thanos-community/thanos-operator/test/integration/testenv"
+	"github.com/thanos-community/thanos-operator/test/integration/suite"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,7 +22,7 @@ import (
 
 var (
 	k8sClient client.Client
-	env       *testenv.Env
+	env       *suite.Env
 	ctx       context.Context
 	cancel    context.CancelFunc
 )
@@ -34,7 +33,7 @@ func TestOtelSidecar(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	env, ctx, cancel = integration.Setup(featuregate.Config{EnableOtelSidecar: true})
+	env, ctx, cancel = suite.Setup(featuregate.Config{EnableOtelSidecar: true})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
 })

@@ -57,23 +57,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var requiredQueryServiceLabels = map[string]string{
+// RequiredQueryServiceLabels is the minimum label set a Service must carry to be
+// discovered by the ruler as a query API endpoint.
+var RequiredQueryServiceLabels = map[string]string{
 	manifests.DefaultQueryAPILabel: manifests.DefaultQueryAPIValue,
 	manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 }
 
-var defaultRemoteWriteLabels = map[string]string{
+// DefaultRemoteWriteLabels is the minimum label set a Service must carry to be
+// discovered by the stateless ruler as a remote-write endpoint.
+var DefaultRemoteWriteLabels = map[string]string{
 	manifests.DefaultRemoteWriteAPILabel: manifests.DefaultRemoteWriteAPIValue,
 	manifests.PartOfLabel:                manifests.DefaultPartOfLabel,
 }
 
-var defaultRuleLabels = map[string]string{
+// DefaultRuleLabels is the label set the ruler uses to discover PrometheusRule and
+// rule ConfigMap objects.
+var DefaultRuleLabels = map[string]string{
 	manifests.DefaultPrometheusRuleLabel: manifests.DefaultPrometheusRuleValue,
 }
 
 const (
 	defaultTenantIdentifier string = "tenant_id"
-	defaultTenantSpecifier  string = "operator.thanos.io/tenant"
+	// DefaultTenantSpecifier is the label key the ruler injects to carry the tenant.
+	DefaultTenantSpecifier string = "operator.thanos.io/tenant"
 )
 
 // ThanosRulerReconciler reconciles a ThanosRuler object
@@ -290,7 +297,7 @@ func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.
 func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.QueryLabelSelector, requiredQueryServiceLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.QueryLabelSelector, RequiredQueryServiceLabels)
 	if err != nil {
 		return []manifestruler.Endpoint{}, err
 	}
@@ -309,7 +316,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 
 	endpoints := make([]manifestruler.Endpoint, len(services.Items))
 	for i, svc := range services.Items {
-		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredQueryServiceLabels)
+		port, ok := manifests.IsGrpcServiceWithLabels(&svc, RequiredQueryServiceLabels)
 		if !ok {
 			r.logger.Info("service is not a gRPC service", "service", svc.GetName())
 			continue
@@ -328,7 +335,7 @@ func (r *ThanosRulerReconciler) getQueryAPIServiceEndpoints(ctx context.Context,
 }
 
 func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) ([]manifestruler.Endpoint, error) {
-	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, defaultRemoteWriteLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, DefaultRemoteWriteLabels)
 	if err != nil {
 		return []manifestruler.Endpoint{}, err
 	}
@@ -347,7 +354,7 @@ func (r *ThanosRulerReconciler) getReceiveServiceEndpoints(ctx context.Context, 
 
 	endpoints := make([]manifestruler.Endpoint, 0, len(services.Items))
 	for _, svc := range services.Items {
-		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, defaultRemoteWriteLabels)
+		port, ok := manifests.IsRemoteWriteServiceWithLabels(&svc, DefaultRemoteWriteLabels)
 		if !ok {
 			r.logger.Info("service is not a remote write service", "service", svc.GetName())
 			continue
@@ -396,7 +403,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 		return result, fmt.Errorf("no prometheus rule selector specified")
 	}
 
-	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, DefaultRuleLabels)
 	if err != nil {
 		return result, err
 	}
@@ -467,7 +474,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			if ruler.Spec.RuleTenancyConfig != nil {
 				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 				if tenantValueLabel == nil {
-					tenantValueLabel = ptr.To(defaultTenantSpecifier)
+					tenantValueLabel = ptr.To(DefaultTenantSpecifier)
 				}
 				tvl := *tenantValueLabel
 				value, exists := cfgmap.Labels[tvl]
@@ -532,7 +539,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		return result, fmt.Errorf("no prometheus rule selector specified")
 	}
 
-	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+	labelSelector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, DefaultRuleLabels)
 	if err != nil {
 		return result, fmt.Errorf("failed to build PrometheusRule label selector: %w", err)
 	}
@@ -573,7 +580,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		if ruler.Spec.RuleTenancyConfig != nil {
 			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 			if tenantValueLabel == nil {
-				tenantValueLabel = ptr.To(defaultTenantSpecifier)
+				tenantValueLabel = ptr.To(DefaultTenantSpecifier)
 			}
 			tvl := *tenantValueLabel
 			value, exists := rule.Labels[tvl]
@@ -630,13 +637,13 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	queryServiceLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: requiredQueryServiceLabels,
+		MatchLabels: RequiredQueryServiceLabels,
 	})
 	if err != nil {
 		return err
 	}
 	receiveServiceLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: defaultRemoteWriteLabels,
+		MatchLabels: DefaultRemoteWriteLabels,
 	})
 	if err != nil {
 		return err
@@ -649,7 +656,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	svcPredicate := predicate.Or(querySvcOnLabelChangePredicate, querySvcOnGenChangePredicate, receiveSvcOnLabelChangePredicate, receiveSvcOnGenChangePredicate)
 
 	configMapPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: defaultRuleLabels,
+		MatchLabels: DefaultRuleLabels,
 	})
 	if err != nil {
 		return err
@@ -711,7 +718,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			querySelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.QueryLabelSelector, requiredQueryServiceLabels)
+			querySelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.QueryLabelSelector, RequiredQueryServiceLabels)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler query label selector", "ruler", ruler.GetName())
 				continue
@@ -727,7 +734,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 			}
 
 			if ruler.Spec.RulerMode.Stateless != nil {
-				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, defaultRemoteWriteLabels)
+				receiveSelector, err := manifests.BuildLabelSelectorFrom(ruler.Spec.RulerMode.Stateless.LabelSelector, DefaultRemoteWriteLabels)
 				if err != nil {
 					r.logger.Error(err, "failed to build label selector from stateless ruler label selector", "ruler", ruler.GetName())
 					continue
@@ -752,7 +759,7 @@ func (r *ThanosRulerReconciler) enqueueForService() handler.EventHandler {
 // that matches the Service.
 func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if !manifests.HasRequiredLabels(obj, defaultRuleLabels) {
+		if !manifests.HasRequiredLabels(obj, DefaultRuleLabels) {
 			return []reconcile.Request{}
 		}
 
@@ -769,7 +776,7 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 
 		requests := []reconcile.Request{}
 		for _, ruler := range rulers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, defaultRuleLabels)
+			selector, err := manifests.BuildLabelSelectorFrom(&ruler.Spec.RuleConfigSelector, DefaultRuleLabels)
 			if err != nil {
 				r.logger.Error(err, "failed to build label selector from ruler rule config selector", "ruler", ruler.GetName())
 				continue
@@ -791,12 +798,12 @@ func (r *ThanosRulerReconciler) enqueueForConfigMap() handler.EventHandler {
 
 // isQueueableQueryService returns true if the Service is a QueryAPI service that is part of a 'thanos' and has a gRPC port.
 func (r *ThanosRulerReconciler) isQueueableQueryService(obj client.Object) bool {
-	_, isGRPCSvc := manifests.IsGrpcServiceWithLabels(obj, requiredQueryServiceLabels)
+	_, isGRPCSvc := manifests.IsGrpcServiceWithLabels(obj, RequiredQueryServiceLabels)
 	return isGRPCSvc
 }
 
 func (r *ThanosRulerReconciler) isQueueableReceiveService(obj client.Object) bool {
-	_, isRemoteWriteSvc := manifests.IsRemoteWriteServiceWithLabels(obj, defaultRemoteWriteLabels)
+	_, isRemoteWriteSvc := manifests.IsRemoteWriteServiceWithLabels(obj, DefaultRemoteWriteLabels)
 	return isRemoteWriteSvc
 }
 
@@ -938,7 +945,7 @@ func (r *ThanosRulerReconciler) createBucketedRuleConfigMaps(
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmName,
 				Namespace: ruler.Namespace,
-				Labels:    manifests.MergeMaps(manifests.MergeMaps(ruler.Spec.RuleConfigSelector.MatchLabels, defaultRuleLabels), additionalLabels),
+				Labels:    manifests.MergeMaps(manifests.MergeMaps(ruler.Spec.RuleConfigSelector.MatchLabels, DefaultRuleLabels), additionalLabels),
 				OwnerReferences: []metav1.OwnerReference{
 					{
 						APIVersion: ruler.APIVersion,

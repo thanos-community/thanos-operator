@@ -26,6 +26,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -92,9 +94,9 @@ config:
 			if os.Getenv("EXCLUDE_STORE") == skipValue {
 				Skip("Skipping ThanosStore controller tests")
 			}
-			firstShard := StoreNameFromParent(resourceName, ptr.To(int32(0)))
-			secondShard := StoreNameFromParent(resourceName, ptr.To(int32(1)))
-			thirdShard := StoreNameFromParent(resourceName, ptr.To(int32(2)))
+			firstShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(0)))
+			secondShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(1)))
+			thirdShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(2)))
 			resource := &monitoringthanosiov1alpha1.ThanosStore{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -254,7 +256,7 @@ config:
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
 
 				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
-				updatedName := StoreNameFromParent(resourceName, nil)
+				updatedName := controller.StoreNameFromParent(resourceName, nil)
 
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedName, ns)

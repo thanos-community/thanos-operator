@@ -1,10 +1,4 @@
-// Package testenv provides a shared controller-runtime envtest bootstrap for the
-// controller integration suites. It boots an isolated API server, wires up a
-// manager and client, and applies sane Gomega polling defaults so individual
-// suites don't have to duplicate the setup. Each suite gets its own control
-// plane and its own metrics registry, which keeps suites isolated and lets them
-// run as independent test binaries in parallel.
-package testenv
+package suite
 
 import (
 	"context"

@@ -1,17 +1,20 @@
-// Package integration provides a shared envtest bootstrap for the isolated
-// behavioral suites that live alongside it (feature-gate suites, PodDisruptionBudget,
-// pause, etc.). Each suite runs its own manager with a chosen configuration, which
-// is why they live in separate packages: a feature gate is a reconciler-global
-// setting (set once at construction), not something that can be varied per
-// namespace. Running each configuration in its own test binary also lets the
-// suites run in parallel with each other and with the core ordered suite under
-// `go test`.
+// Package suite provides the shared envtest bootstrap for the controller
+// integration suites. It has two layers: the low-level Env primitive (env.go)
+// boots an isolated API server, manager and client with sane Gomega defaults,
+// and Setup (this file) registers all five controllers on that manager under a
+// chosen feature-gate configuration.
 //
-// These suites cover order-independent behavior only (the presence or absence of
-// a gated artifact, PDB creation/removal off replica count). Cross-controller
-// service discovery and watch coupling remain the concern of the core ordered
-// suite in internal/controller.
-package integration
+// Each suite runs its own manager with its own configuration, which is why they
+// live in separate packages: a feature gate is a reconciler-global setting (set
+// once at construction), not something that can be varied per namespace. Running
+// each configuration in its own test binary also lets the suites run in parallel
+// with each other and with the core ordered suite under `go test`.
+//
+// The isolated behavioral suites (feature gates, PodDisruptionBudget, pause)
+// cover order-independent behavior only. Cross-controller service discovery and
+// watch coupling remain the concern of the core ordered suite under
+// test/integration/controller.
+package suite
 
 import (
 	"context"
@@ -24,7 +27,6 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
-	"github.com/thanos-community/thanos-operator/test/integration/testenv"
 
 	"k8s.io/client-go/tools/events"
 
@@ -43,12 +45,12 @@ const configReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloa
 // The repo root is located by walking up from the caller's working directory to
 // the go.mod, so suites can nest at any depth under test/integration/. Binary
 // assets come from KUBEBUILDER_ASSETS (set by the Makefile test target).
-func Setup(gates featuregate.Config) (*testenv.Env, context.Context, context.CancelFunc) {
+func Setup(gates featuregate.Config) (*Env, context.Context, context.CancelFunc) {
 	logf.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel := context.WithCancel(context.Background())
 
 	root := repoRoot()
-	env, err := testenv.Start(
+	env, err := Start(
 		"",
 		filepath.Join(root, "config", "crd", "bases"),
 		filepath.Join(root, "test", "configs", "service-monitor.yaml"),

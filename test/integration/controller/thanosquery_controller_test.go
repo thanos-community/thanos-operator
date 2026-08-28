@@ -28,9 +28,12 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -130,7 +133,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels:    requiredStoreServiceLabels,
+						Labels:    manifestsstore.GetRequiredStoreServiceLabel(),
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{receivePort},
@@ -153,7 +156,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						"conflict": "discarded",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.QueryNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
@@ -161,7 +164,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
-				labels := requiredStoreServiceLabels
+				labels := manifestsstore.GetRequiredStoreServiceLabel()
 				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
 
 				svc := &corev1.Service{
@@ -248,7 +251,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
-					return verifier.Verify(k8sClient, QueryFrontendNameFromParent(resourceName), ns)
+					return verifier.Verify(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns)
 				}, time.Minute, time.Second*2).Should(BeTrue())
 			})
 
@@ -270,7 +273,7 @@ config:
 					}
 
 					for _, expectedArg := range expectedArgs {
-						if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
+						if !utils.VerifyDeploymentArgs(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 							return fmt.Errorf("expected arg %q not found", expectedArg)
 						}
 					}
@@ -290,7 +293,7 @@ config:
 						"conflict": "overwritten",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
@@ -300,7 +303,7 @@ config:
 			By("verifying query frontend is linked to query service", func() {
 				EventuallyWithOffset(1, func() error {
 					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:9090", name, ns)
-					if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
+					if !utils.VerifyDeploymentArgs(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}
 					return nil

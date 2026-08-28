@@ -27,6 +27,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
@@ -61,9 +63,9 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 			Namespace: ns,
 		}
 
-		routerName := ReceiveRouterNameFromParent(resourceName)
-		ingesterName := ReceiveIngesterNameFromParent(resourceName, hashringName)
-		hashmodIngesterName := ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
+		routerName := controller.ReceiveRouterNameFromParent(resourceName)
+		ingesterName := controller.ReceiveIngesterNameFromParent(resourceName, hashringName)
+		hashmodIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
 
 		BeforeAll(func() {
 			By("creating the namespace")
@@ -286,7 +288,7 @@ config:
 						manifests.StorageSizeAnnotation: "100Mi",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 
@@ -563,7 +565,7 @@ config:
 				}
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
-				updatedIngesterName := ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
+				updatedIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedIngesterName, ns)
 				}, time.Second*10, time.Second*2).Should(BeTrue())
@@ -591,7 +593,7 @@ config:
 						"conflict": "router-override",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
