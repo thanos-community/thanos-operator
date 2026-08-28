@@ -37,6 +37,21 @@ import (
 
 const configReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 
+// Option tweaks how Setup wires the controllers.
+type Option func(*options)
+
+type options struct {
+	enableConditionUpdates bool
+}
+
+// WithConditionUpdates keeps the status-condition writes enabled instead of
+// disabling them. Most suites do not care about status and turn it off to avoid
+// the extra writes, but the pause suite relies on Status.Paused as its signal
+// that a reconcile ran and took the paused branch.
+func WithConditionUpdates() Option {
+	return func(o *options) { o.enableConditionUpdates = true }
+}
+
 // Setup boots an envtest control plane with all five controllers registered under
 // the given feature-gate configuration, starts the manager, and returns the
 // running env plus the context/cancel that stops it. Intended to be called from a
@@ -45,7 +60,11 @@ const configReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloa
 // The repo root is located by walking up from the caller's working directory to
 // the go.mod, so suites can nest at any depth under test/integration/. Binary
 // assets come from KUBEBUILDER_ASSETS (set by the Makefile test target).
-func Setup(gates featuregate.Config) (*Env, context.Context, context.CancelFunc) {
+func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, context.CancelFunc) {
+	var o options
+	for _, apply := range opts {
+		apply(&o)
+	}
 	logf.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -71,25 +90,33 @@ func Setup(gates featuregate.Config) (*Env, context.Context, context.CancelFunc)
 		}
 	}
 
-	gomega.Expect(controller.NewThanosReceiveReconciler(
-		buildConfig("receive"), env.Manager.GetClient(), env.Manager.GetScheme(),
-	).DisableConditionUpdate().SetupWithManager(env.Manager)).To(gomega.Succeed())
+	receive := controller.NewThanosReceiveReconciler(
+		buildConfig("receive"), env.Manager.GetClient(), env.Manager.GetScheme())
+	query := controller.NewThanosQueryReconciler(
+		buildConfig("query"), env.Manager.GetClient(), env.Manager.GetScheme())
+	store := controller.NewThanosStoreReconciler(
+		buildConfig("store"), env.Manager.GetClient(), env.Manager.GetScheme())
+	ruler := controller.NewThanosRulerReconciler(
+		buildConfig("ruler"), configReloaderImage, env.Manager.GetClient(), env.Manager.GetScheme())
+	compact := controller.NewThanosCompactReconciler(
+		buildConfig("compact"), env.Manager.GetClient(), env.Manager.GetScheme())
 
-	gomega.Expect(controller.NewThanosQueryReconciler(
-		buildConfig("query"), env.Manager.GetClient(), env.Manager.GetScheme(),
-	).DisableConditionUpdate().SetupWithManager(env.Manager)).To(gomega.Succeed())
+	// Status conditions are noise for most suites, so default to off. The pause
+	// suite opts back in because Status.Paused is how it observes that a paused
+	// reconcile actually ran.
+	if !o.enableConditionUpdates {
+		receive = receive.DisableConditionUpdate()
+		query = query.DisableConditionUpdate()
+		store = store.DisableConditionUpdate()
+		ruler = ruler.DisableConditionUpdate()
+		compact = compact.DisableConditionUpdate()
+	}
 
-	gomega.Expect(controller.NewThanosStoreReconciler(
-		buildConfig("store"), env.Manager.GetClient(), env.Manager.GetScheme(),
-	).DisableConditionUpdate().SetupWithManager(env.Manager)).To(gomega.Succeed())
-
-	gomega.Expect(controller.NewThanosRulerReconciler(
-		buildConfig("ruler"), configReloaderImage, env.Manager.GetClient(), env.Manager.GetScheme(),
-	).DisableConditionUpdate().SetupWithManager(env.Manager)).To(gomega.Succeed())
-
-	gomega.Expect(controller.NewThanosCompactReconciler(
-		buildConfig("compact"), env.Manager.GetClient(), env.Manager.GetScheme(),
-	).DisableConditionUpdate().SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(receive.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(query.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(store.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(ruler.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(compact.SetupWithManager(env.Manager)).To(gomega.Succeed())
 
 	env.StartManager(ctx)
 	return env, ctx, cancel

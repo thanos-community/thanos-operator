@@ -17,11 +17,12 @@ import (
 // per-reconciler (it never touches the cross-controller watches), so it is
 // order-independent and lives here rather than in the core ordered suite. All
 // five components share one namespace: they are created, allowed to reconcile,
-// then paused together and mutated, and a single Consistently window proves none
-// of them reconciled the change. That collapses what used to be five separate
-// per-controller Consistently waits into one, and covers Compact and Ruler,
-// which had no pause coverage before. Pause is not feature gated, so the suite
-// runs with the operator default (all gates off).
+// then paused together and mutated. Each reconciler writes Status.Paused only
+// from the paused branch, so once every CR reports it we know every controller
+// reconciled the pause+mutation update and skipped it, and we can assert the
+// mutation never reached any workload. That covers Compact and Ruler, which had
+// no pause coverage before. Pause is not feature gated, so the suite runs with
+// the operator default (all gates off).
 
 var (
 	k8sClient client.Client
@@ -36,7 +37,9 @@ func TestPause(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	env, ctx, cancel = suite.Setup(featuregate.Config{})
+	// Enable status conditions so specs can watch Status.Paused as the signal
+	// that a paused reconcile ran.
+	env, ctx, cancel = suite.Setup(featuregate.Config{}, suite.WithConditionUpdates())
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
 })

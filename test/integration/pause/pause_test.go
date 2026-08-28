@@ -160,8 +160,8 @@ var _ = Describe("Paused reconciliation", func() {
 		})).Should(Succeed())
 
 		// Every workload must exist (and, being freshly created, must not carry
-		// the debug arg) before we pause, so the Consistently below has a real
-		// baseline to hold against.
+		// the debug arg) before we pause, so the absence check afterwards has a
+		// real baseline to hold against.
 		Eventually(func(g Gomega) {
 			g.Expect(utils.VerifyDeploymentExists(k8sClient, queryWorkload, ns)).To(BeTrue())
 			g.Expect(utils.VerifyDeploymentExists(k8sClient, routerWorkload, ns)).To(BeTrue())
@@ -176,15 +176,41 @@ var _ = Describe("Paused reconciliation", func() {
 		By("pausing every component and mutating its log level in the same update")
 		pauseAndSetDebug()
 
-		By("verifying no workload ever reconciles the change (one shared window)")
-		Consistently(func(g Gomega) {
-			g.Expect(utils.VerifyDeploymentArgs(k8sClient, queryWorkload, ns, 0, debugArg)).To(BeFalse())
-			g.Expect(utils.VerifyDeploymentArgs(k8sClient, routerWorkload, ns, 0, debugArg)).To(BeFalse())
-			g.Expect(utils.VerifyStatefulSetArgs(k8sClient, ingesterWorkload, ns, 0, debugArg)).To(BeFalse())
-			g.Expect(utils.VerifyStatefulSetArgs(k8sClient, storeWorkload, ns, 0, debugArg)).To(BeFalse())
-			g.Expect(utils.VerifyStatefulSetArgs(k8sClient, rulerWorkload, ns, 0, debugArg)).To(BeFalse())
-			g.Expect(utils.VerifyStatefulSetArgs(k8sClient, compactWorkload, ns, 0, debugArg)).To(BeFalse())
+		// Each controller reports Status.Paused only from the paused branch, which
+		// it can only reach by reconciling the update that carried the pause -- the
+		// same update that carried the debug mutation. So once every CR shows it, we
+		// know every controller has seen and skipped the change, and we can assert
+		// its absence directly instead of holding a fixed Consistently window open.
+		By("waiting until every controller has observed the pause")
+		Eventually(func(g Gomega) {
+			query := &monitoringthanosiov1alpha1.ThanosQuery{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: queryName, Namespace: ns}, query)).To(Succeed())
+			g.Expect(query.Status.Paused).To(HaveValue(BeTrue()))
+
+			receive := &monitoringthanosiov1alpha1.ThanosReceive{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: receiveName, Namespace: ns}, receive)).To(Succeed())
+			g.Expect(receive.Status.Paused).To(HaveValue(BeTrue()))
+
+			store := &monitoringthanosiov1alpha1.ThanosStore{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: storeName, Namespace: ns}, store)).To(Succeed())
+			g.Expect(store.Status.Paused).To(HaveValue(BeTrue()))
+
+			ruler := &monitoringthanosiov1alpha1.ThanosRuler{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: rulerName, Namespace: ns}, ruler)).To(Succeed())
+			g.Expect(ruler.Status.Paused).To(HaveValue(BeTrue()))
+
+			compact := &monitoringthanosiov1alpha1.ThanosCompact{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: compactName, Namespace: ns}, compact)).To(Succeed())
+			g.Expect(compact.Status.Paused).To(HaveValue(BeTrue()))
 		}).Should(Succeed())
+
+		By("verifying no workload picked up the change")
+		Expect(utils.VerifyDeploymentArgs(k8sClient, queryWorkload, ns, 0, debugArg)).To(BeFalse())
+		Expect(utils.VerifyDeploymentArgs(k8sClient, routerWorkload, ns, 0, debugArg)).To(BeFalse())
+		Expect(utils.VerifyStatefulSetArgs(k8sClient, ingesterWorkload, ns, 0, debugArg)).To(BeFalse())
+		Expect(utils.VerifyStatefulSetArgs(k8sClient, storeWorkload, ns, 0, debugArg)).To(BeFalse())
+		Expect(utils.VerifyStatefulSetArgs(k8sClient, rulerWorkload, ns, 0, debugArg)).To(BeFalse())
+		Expect(utils.VerifyStatefulSetArgs(k8sClient, compactWorkload, ns, 0, debugArg)).To(BeFalse())
 	})
 })
 
