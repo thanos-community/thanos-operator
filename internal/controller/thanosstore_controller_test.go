@@ -282,7 +282,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Consistently(func() bool {
 					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, "--log.level=debug")
-				}, time.Second*5, time.Second).Should(BeFalse())
+				}).Should(BeFalse())
 			})
 		})
 	})

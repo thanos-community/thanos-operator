@@ -611,7 +611,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Consistently(func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")
-				}, time.Second*5, time.Second).Should(BeFalse())
+				}).Should(BeFalse())
 			})
 		})
 

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -197,10 +198,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						return err
 					}
 
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
-						return fmt.Errorf("expected 13 args, got %d: %v",
-							len(deployment.Spec.Template.Spec.Containers[0].Args),
-							deployment.Spec.Template.Spec.Containers[0].Args)
+					// The service labelled app=nginx must be ignored by the event
+					// handler and must not produce an endpoint arg.
+					for _, a := range deployment.Spec.Template.Spec.Containers[0].Args {
+						if strings.Contains(a, "some-svc-to-ignore-at-event-handler") {
+							return fmt.Errorf("expected ignored service to produce no endpoint arg, got %q", a)
+						}
 					}
 
 					arg := fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", receiveSvcName, ns, receive.GRPCPort)
@@ -322,7 +325,10 @@ config:
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
-				EventuallyWithOffset(1, func() error {
+				// While paused, the reconcile must not run, so the newly created
+				// service must never be discovered as an endpoint. Use Consistently
+				// to prove the arg is never added rather than checking it once.
+				ConsistentlyWithOffset(1, func() error {
 					deployment := &appsv1.Deployment{}
 					if err := k8sClient.Get(ctx, types.NamespacedName{
 						Name:      name,
@@ -331,15 +337,14 @@ config:
 						return err
 					}
 
-					// If not paused would end up with 14 args.
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
-						return fmt.Errorf("expected 13 args, got %d: %v",
-							len(deployment.Spec.Template.Spec.Containers[0].Args),
-							deployment.Spec.Template.Spec.Containers[0].Args)
+					for _, a := range deployment.Spec.Template.Spec.Containers[0].Args {
+						if strings.Contains(a, "paused-svc") {
+							return fmt.Errorf("expected no endpoint arg for paused-svc while paused, got %q", a)
+						}
 					}
 
 					return nil
-				}, time.Second*10, time.Second*10).Should(Succeed())
+				}).Should(Succeed())
 			})
 		})
 	})

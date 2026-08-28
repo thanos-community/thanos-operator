@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -69,6 +70,15 @@ func TestControllers(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	ctx, cancel = context.WithCancel(context.TODO())
+
+	// Sane global defaults for async assertions so individual specs don't need to
+	// hand-tune timeouts. Reconciles under CI load can be slow, so give Eventually
+	// a generous window with a steady poll, and keep Consistently long enough to
+	// catch a resource that should never change (e.g. paused reconciles).
+	SetDefaultEventuallyTimeout(time.Minute)
+	SetDefaultEventuallyPollingInterval(time.Second)
+	SetDefaultConsistentlyDuration(time.Second * 10)
+	SetDefaultConsistentlyPollingInterval(time.Second)
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{

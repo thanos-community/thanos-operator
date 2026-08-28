@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -116,7 +115,7 @@ config:
 						}
 					}
 					return false
-				}, time.Second*2).Should(BeTrue())
+				}).Should(BeTrue())
 
 			})
 
@@ -146,13 +145,13 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, name, ns)
-				}, time.Second*2).Should(BeTrue())
+				}).Should(BeTrue())
 			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-				}, time.Second*2).Should(BeTrue())
+				}).Should(BeTrue())
 			})
 
 			By("removing PDB when scaled to 1", func() {
@@ -160,7 +159,7 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-				}, time.Second*2).Should(BeFalse())
+				}).Should(BeFalse())
 			})
 		})
 	})
@@ -218,7 +217,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyServiceMonitorExists(k8sClient, workload, ns)
-					}, time.Second*2).Should(BeTrue())
+					}).Should(BeTrue())
 				}
 			})
 
@@ -226,7 +225,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
-					}, time.Second*2).Should(BeTrue())
+					}).Should(BeTrue())
 				}
 			})
 
@@ -240,7 +239,7 @@ config:
 				for _, workload := range workloads {
 					Eventually(func() bool {
 						return utils.VerifyPodDisruptionBudgetExists(k8sClient, workload, ns)
-					}, time.Second*2).Should(BeFalse())
+					}).Should(BeFalse())
 				}
 			})
 		})
@@ -288,13 +287,13 @@ config:
 			By("creating the service monitor when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyServiceMonitorExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}, time.Second*2).Should(BeTrue())
+				}).Should(BeTrue())
 			})
 
 			By("creating the PDB when enabled", func() {
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}, time.Second*2).Should(BeTrue())
+				}).Should(BeTrue())
 			})
 
 			By("removing PDB when scaled to 1", func() {
@@ -302,64 +301,64 @@ config:
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return utils.VerifyPodDisruptionBudgetExists(k8sClient, RulerNameFromParent(rulerResourceName), ns)
-				}, time.Second*2).Should(BeFalse())
+				}).Should(BeFalse())
 			})
 		})
+	})
 
-		Context("When reconciling a ThanosStore", func() {
-			storeResourceName := resourceName
-			It("should reconcile correctly", func() {
-				if os.Getenv("EXCLUDE_STORE") == skipValue {
-					Skip("Skipping ThanosStore controller tests")
-				}
-				firstShard := StoreNameFromParent(storeResourceName, ptr.To(int32(0)))
-				resource := &monitoringthanosiov1alpha1.ThanosStore{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      storeResourceName,
-						Namespace: ns,
+	Context("When reconciling a ThanosStore", func() {
+		storeResourceName := resourceName
+		It("should reconcile correctly", func() {
+			if os.Getenv("EXCLUDE_STORE") == skipValue {
+				Skip("Skipping ThanosStore controller tests")
+			}
+			firstShard := StoreNameFromParent(storeResourceName, ptr.To(int32(0)))
+			resource := &monitoringthanosiov1alpha1.ThanosStore{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      storeResourceName,
+					Namespace: ns,
+				},
+				Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
+					Replicas: 2,
+					CommonFields: monitoringthanosiov1alpha1.CommonFields{
+						Labels: map[string]string{"some-label": "xyz"},
 					},
-					Spec: monitoringthanosiov1alpha1.ThanosStoreSpec{
-						Replicas: 2,
-						CommonFields: monitoringthanosiov1alpha1.CommonFields{
-							Labels: map[string]string{"some-label": "xyz"},
-						},
-						ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
-							Type:   monitoringthanosiov1alpha1.Block,
-							Shards: 3,
-						},
-						StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
-							Size: resource.MustParse("1Gi"),
-						},
-						ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "thanos-objstore",
-							},
-							Key: "thanos.yaml",
-						},
+					ShardingStrategy: monitoringthanosiov1alpha1.ShardingStrategy{
+						Type:   monitoringthanosiov1alpha1.Block,
+						Shards: 3,
 					},
-				}
-				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+					StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+						Size: resource.MustParse("1Gi"),
+					},
+					ObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "thanos-objstore",
+						},
+						Key: "thanos.yaml",
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 
-				By("creating the service monitor when enabled", func() {
-					Eventually(func() bool {
-						return utils.VerifyServiceMonitorExists(k8sClient, firstShard, ns)
-					}, time.Second*2).Should(BeTrue())
-				})
+			By("creating the service monitor when enabled", func() {
+				Eventually(func() bool {
+					return utils.VerifyServiceMonitorExists(k8sClient, firstShard, ns)
+				}).Should(BeTrue())
+			})
 
-				By("creating the PDB when enabled", func() {
-					Eventually(func() bool {
-						return utils.VerifyPodDisruptionBudgetExists(k8sClient, firstShard, ns)
-					}, time.Second*2).Should(BeTrue())
-				})
+			By("creating the PDB when enabled", func() {
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, firstShard, ns)
+				}).Should(BeTrue())
+			})
 
-				By("removing PDB when scaled to 1", func() {
-					name := StoreNameFromParent(storeResourceName, nil)
-					resource.Spec.Replicas = 1
-					Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-					Eventually(func() bool {
-						return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
-					}, time.Second*2).Should(BeFalse())
-				})
+			By("removing PDB when scaled to 1", func() {
+				name := StoreNameFromParent(storeResourceName, nil)
+				resource.Spec.Replicas = 1
+				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
+				Eventually(func() bool {
+					return utils.VerifyPodDisruptionBudgetExists(k8sClient, name, ns)
+				}).Should(BeFalse())
 			})
 		})
 	})
