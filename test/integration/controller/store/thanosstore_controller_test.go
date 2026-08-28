@@ -40,27 +40,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosStore Controller", Ordered, func() {
+var _ = Describe("ThanosStore Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			resourceName = "test-resource"
-			ns           = "test"
-		)
+		const resourceName = "test-resource"
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
-		BeforeAll(func() {
-			By("creating the namespace and objstore secret")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace and objstore secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "thanos-store-test-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 
 			Expect(k8sClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -79,15 +75,6 @@ config:
 `,
 				},
 			})).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosStore{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosStore")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 
 		It("should reconcile correctly", func() {

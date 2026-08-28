@@ -35,33 +35,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosRuler Controller", Ordered, func() {
+var _ = Describe("ThanosRuler Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			resourceName = "test-resource"
-			ns           = "test-ruler"
-		)
+		const resourceName = "test-resource"
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
-		BeforeAll(func() {
-			By("creating the namespace and objstore secret")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace and objstore secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "test-ruler-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 
 			Expect(k8sClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -80,15 +75,6 @@ config:
 `,
 				},
 			})).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosRuler{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosRuler")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 
 		It("should reconcile correctly", func() {
@@ -625,8 +611,8 @@ config:
 						return false
 					}
 
-					expectedContent := `remote_write:
-- url: http://test-receive.test-ruler.svc:19291/api/v1/receive
+					expectedContent := fmt.Sprintf(`remote_write:
+- url: http://%s.%s.svc:19291/api/v1/receive
   headers:
     THANOS-TENANT: test-tenant
   write_relabel_configs:
@@ -634,7 +620,7 @@ config:
     - tenant_id
     regex: test-tenant
     action: keep
-`
+`, receiveSvcName, ns)
 
 					return string(secret.Data["remote-write.yaml"]) == expectedContent
 				}, time.Minute, time.Second*5).Should(BeTrue())

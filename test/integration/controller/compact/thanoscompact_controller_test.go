@@ -40,19 +40,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosCompact Controller", Ordered, func() {
+var _ = Describe("ThanosCompact Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			ns           = "thanos-compact-test"
-			resourceName = "test-compact-resource"
-		)
+		const resourceName = "test-compact-resource"
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
 		shardOne := compact.Options{
 			Options: manifests.Options{
@@ -65,13 +61,13 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 			},
 			ShardName: ptr.To("anyone-else")}.GetGeneratedResourceName()
 
-		BeforeAll(func() {
-			By("creating the namespace and objstore secret")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace and objstore secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "thanos-compact-test-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 
 			Expect(k8sClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -90,15 +86,6 @@ config:
 `,
 				},
 			})).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosCompact{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			if err == nil {
-				By("Cleanup the specific resource instance ThanosCompact")
-				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-			}
 		})
 
 		It("should reconcile correctly", func() {

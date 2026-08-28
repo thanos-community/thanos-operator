@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,7 +36,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,11 +43,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosReceive Controller", Ordered, func() {
+var _ = Describe("ThanosReceive Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
 			resourceName = "test-resource"
-			ns           = "treceive"
 
 			objStoreSecretName = "test-secret"
 			objStoreSecretKey  = "test-key.yaml"
@@ -58,26 +57,27 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
-
 		routerName := controller.ReceiveRouterNameFromParent(resourceName)
 		ingesterName := controller.ReceiveIngesterNameFromParent(resourceName, hashringName)
 		hashmodIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
 
-		BeforeAll(func() {
-			By("creating the namespace")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
-		})
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
+		var typeNamespacedName types.NamespacedName
 
 		BeforeEach(func() {
-			By("creating the object store secret")
+			By("creating a unique namespace and object store secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "treceive-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
+			typeNamespacedName = types.NamespacedName{
+				Name:      resourceName,
+				Namespace: ns,
+			}
+
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      objStoreSecretName,
@@ -95,20 +95,7 @@ config:
     enable: false`,
 				},
 			}
-
-			err := k8sClient.Create(ctx, secret)
-			if err != nil && !errors.IsAlreadyExists(err) {
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosReceive{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosReceive")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 		})
 
 		It("should error when the spec is invalid due to CEL rules", func() {
@@ -421,6 +408,9 @@ config:
         "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName)
+				// the template uses "treceive" as the namespace placeholder; the real
+				// namespace is generated per spec, so substitute it before comparing
+				expect = strings.ReplaceAll(expect, ".treceive.svc", "."+ns+".svc")
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
@@ -535,6 +525,7 @@ config:
         "external_labels": {}
     }
 ]`, hashmodIngesterName, hashmodIngesterName, hashmodIngesterName, svcName, svcName, svcName)
+				expectWithHashmod = strings.ReplaceAll(expectWithHashmod, ".treceive.svc", "."+ns+".svc")
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
@@ -746,6 +737,7 @@ config:
         "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName, svcName, svcName, svcName)
+				expectCapnProto = strings.ReplaceAll(expectCapnProto, ".treceive.svc", "."+ns+".svc")
 
 				Eventually(func() bool {
 					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
