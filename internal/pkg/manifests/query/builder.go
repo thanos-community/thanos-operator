@@ -149,11 +149,10 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       5,
-			SuccessThreshold:    1,
-			FailureThreshold:    20,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    2,
+			SuccessThreshold: 1,
+			FailureThreshold: 30,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -162,11 +161,10 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Port: intstr.FromInt32(HTTPPort),
 				},
 			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       30,
-			SuccessThreshold:    1,
-			FailureThreshold:    4,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    10,
+			SuccessThreshold: 1,
+			FailureThreshold: 3,
 		},
 		Ports: []corev1.ContainerPort{
 			{
