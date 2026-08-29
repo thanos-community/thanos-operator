@@ -690,6 +690,11 @@ func (in *RouterSpec) DeepCopyInto(out *RouterSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.LimitsConfig != nil {
+		in, out := &in.LimitsConfig, &out.LimitsConfig
+		*out = new(corev1.ConfigMapKeySelector)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Additional.DeepCopyInto(&out.Additional)
 }
 
