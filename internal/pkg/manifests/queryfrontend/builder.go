@@ -143,6 +143,19 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 									},
 								},
 							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/-/ready",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: corev1.URISchemeHTTP,
+									},
+								},
+								TimeoutSeconds:   1,
+								PeriodSeconds:    2,
+								SuccessThreshold: 1,
+								FailureThreshold: 30,
+							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -150,14 +163,10 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
-									},
-								},
+								TimeoutSeconds:   1,
+								PeriodSeconds:    10,
+								SuccessThreshold: 1,
+								FailureThreshold: 3,
 							},
 						},
 					},
