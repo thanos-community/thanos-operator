@@ -256,6 +256,18 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 									},
 								},
 							},
+							StartupProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/-/ready",
+										Port: intstr.FromInt32(HTTPPort),
+									},
+								},
+								TimeoutSeconds:   1,
+								PeriodSeconds:    2,
+								SuccessThreshold: 1,
+								FailureThreshold: 150,
+							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -263,11 +275,10 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-								InitialDelaySeconds: 20,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    15,
+								TimeoutSeconds:   1,
+								PeriodSeconds:    5,
+								SuccessThreshold: 1,
+								FailureThreshold: 3,
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -276,11 +287,10 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-								InitialDelaySeconds: 60,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    8,
+								TimeoutSeconds:   1,
+								PeriodSeconds:    10,
+								SuccessThreshold: 1,
+								FailureThreshold: 3,
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -746,11 +756,10 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 					Port: intstr.FromInt32(HTTPPort),
 				},
 			},
-			InitialDelaySeconds: 5,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       30,
-			SuccessThreshold:    1,
-			FailureThreshold:    8,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    2,
+			SuccessThreshold: 1,
+			FailureThreshold: 30,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -759,11 +768,10 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 					Port: intstr.FromInt32(HTTPPort),
 				},
 			},
-			InitialDelaySeconds: 5,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       30,
-			SuccessThreshold:    1,
-			FailureThreshold:    8,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    10,
+			SuccessThreshold: 1,
+			FailureThreshold: 3,
 		},
 		Env: []corev1.EnvVar{
 			{

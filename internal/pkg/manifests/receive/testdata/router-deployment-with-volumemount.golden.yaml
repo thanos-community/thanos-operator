@@ -73,12 +73,11 @@ spec:
         image: some-custom-image:v0.42.0
         imagePullPolicy: Always
         livenessProbe:
-          failureThreshold: 8
+          failureThreshold: 3
           httpGet:
             path: /-/healthy
             port: 10902
-          initialDelaySeconds: 5
-          periodSeconds: 30
+          periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
         name: thanos-receive-router
@@ -92,12 +91,11 @@ spec:
         - containerPort: 19291
           name: remote-write
         readinessProbe:
-          failureThreshold: 8
+          failureThreshold: 30
           httpGet:
             path: /-/ready
             port: 10902
-          initialDelaySeconds: 5
-          periodSeconds: 30
+          periodSeconds: 2
           successThreshold: 1
           timeoutSeconds: 1
         resources: {}
