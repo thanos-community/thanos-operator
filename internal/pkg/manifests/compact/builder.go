@@ -181,6 +181,18 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 									},
 								},
 							},
+							StartupProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/-/ready",
+										Port: intstr.FromInt32(HTTPPort),
+									},
+								},
+								TimeoutSeconds:   1,
+								PeriodSeconds:    2,
+								SuccessThreshold: 1,
+								FailureThreshold: 150,
+							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -188,11 +200,10 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-								InitialDelaySeconds: 20,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    15,
+								TimeoutSeconds:   1,
+								PeriodSeconds:    5,
+								SuccessThreshold: 1,
+								FailureThreshold: 3,
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -201,11 +212,10 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 										Port: intstr.FromInt32(HTTPPort),
 									},
 								},
-								InitialDelaySeconds: 60,
-								TimeoutSeconds:      1,
-								PeriodSeconds:       30,
-								SuccessThreshold:    1,
-								FailureThreshold:    8,
+								TimeoutSeconds:   1,
+								PeriodSeconds:    10,
+								SuccessThreshold: 1,
+								FailureThreshold: 3,
 							},
 							Env: envVars,
 							VolumeMounts: []corev1.VolumeMount{

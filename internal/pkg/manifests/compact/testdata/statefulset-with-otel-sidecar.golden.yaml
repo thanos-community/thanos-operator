@@ -66,12 +66,11 @@ spec:
         image: some-custom-image:v0.42.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
-          failureThreshold: 8
+          failureThreshold: 3
           httpGet:
             path: /-/healthy
             port: 10902
-          initialDelaySeconds: 60
-          periodSeconds: 30
+          periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
         name: thanos-compact
@@ -79,12 +78,11 @@ spec:
         - containerPort: 10902
           name: http
         readinessProbe:
-          failureThreshold: 15
+          failureThreshold: 3
           httpGet:
             path: /-/ready
             port: 10902
-          initialDelaySeconds: 20
-          periodSeconds: 30
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 1
         resources: {}
@@ -94,6 +92,14 @@ spec:
             drop:
             - ALL
           runAsNonRoot: true
+        startupProbe:
+          failureThreshold: 150
+          httpGet:
+            path: /-/ready
+            port: 10902
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: FallbackToLogsOnError
         volumeMounts:
