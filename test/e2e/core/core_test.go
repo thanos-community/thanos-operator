@@ -307,7 +307,10 @@ var _ = Describe("core", Ordered, func() {
 								ObjectStorageConfig: suite.ObjStoreConfig(),
 							},
 						},
-						AlertmanagerURL: "http://alertmanager.com:9093",
+						// Match the ruler feature suites: without this the CRD default
+						// of 1m makes "query evaluated rules" wait a full eval cycle.
+						EvaluationInterval: v1alpha1.Duration("5s"),
+						AlertmanagerURL:    "http://alertmanager.com:9093",
 					},
 				}
 
