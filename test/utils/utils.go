@@ -497,19 +497,21 @@ func VerifyConfigMapContents(c client.Client, name, namespace, key, expect strin
 }
 
 // StartPortForward initiates a port forwarding connection to a pod on the
-// localhost interface. It returns a closer function that should be invoked to
-// stop the proxy server.
+// localhost interface. It returns the randomly-assigned local port and a closer
+// function that should be invoked to stop the proxy server.
+// A random local port is used so suites running in parallel don't collide on a
+// fixed local port.
 // The function blocks until the port forwarding proxy server is ready to
 // receive connections or the context is canceled.
-func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name, ns string) (func(), error) {
+func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name, ns string) (uint16, func(), error) {
 	conf, err := config.GetConfig()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	roundTripper, upgrader, err := spdy.RoundTripperFor(conf)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", ns, name)
@@ -519,9 +521,10 @@ func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name
 
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
 	out, errOut := new(bytes.Buffer), new(bytes.Buffer)
-	forwarder, err := portforward.New(dialer, []string{port.String()}, stopChan, readyChan, out, errOut)
+	// "0:<remote>" asks the OS for a free local port instead of binding a fixed one.
+	forwarder, err := portforward.New(dialer, []string{"0:" + port.String()}, stopChan, readyChan, out, errOut)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	forwardErr := make(chan error, 1)
@@ -532,16 +535,36 @@ func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name
 		close(forwardErr)
 	}()
 
+	// Don't wait forever: callers pass context.Background(), so without draining
+	// forwardErr (and a timeout) a transient ForwardPorts failure before readiness
+	// would deadlock this select.
+	timeout := time.NewTimer(30 * time.Second)
+	defer timeout.Stop()
+
 	select {
 	case <-readyChan:
-		return func() { close(stopChan) }, nil
+		ports, err := forwarder.GetPorts()
+		if err != nil {
+			close(stopChan)
+			return 0, nil, fmt.Errorf("failed to get forwarded ports for %s/%s: %v", ns, name, err)
+		}
+		if len(ports) == 0 {
+			close(stopChan)
+			return 0, nil, fmt.Errorf("no forwarded ports for %s/%s", ns, name)
+		}
+		return ports[0].Local, func() { close(stopChan) }, nil
+	case err := <-forwardErr:
+		return 0, nil, fmt.Errorf("port-forward to %s/%s failed: %v", ns, name, err)
+	case <-timeout.C:
+		close(stopChan)
+		return 0, nil, fmt.Errorf("timed out waiting for port-forward to %s/%s", ns, name)
 	case <-ctx.Done():
 		var err error
 		select {
 		case err = <-forwardErr:
 		default:
 		}
-		return nil, fmt.Errorf("%v: %v", ctx.Err(), err)
+		return 0, nil, fmt.Errorf("%v: %v", ctx.Err(), err)
 	}
 }
 
@@ -551,8 +574,8 @@ func minioTestData() string {
 }
 
 // RemoteWrite sends a remote write request to the remote write endpoint which is running on localhost.
-func RemoteWrite(req RemoteWriteRequest, roundTripper http.RoundTripper, headers map[string]string) error {
-	url, err := url.Parse("http://localhost:19291/api/v1/receive")
+func RemoteWrite(req RemoteWriteRequest, roundTripper http.RoundTripper, headers map[string]string, port uint16) error {
+	url, err := url.Parse(fmt.Sprintf("http://localhost:%d/api/v1/receive", port))
 	if err != nil {
 		return err
 	}
@@ -663,12 +686,12 @@ func DoRemoteWriteRequest(c client.Client, req RemoteWriteRequest, namespace str
 
 	pod := router.Items[0].Name
 	portIntStr := intstr.IntOrString{IntVal: port}
-	cancelFn, err := StartPortForward(ctx, portIntStr, "https", pod, namespace)
+	localPort, cancelFn, err := StartPortForward(ctx, portIntStr, "https", pod, namespace)
 	if err != nil {
 		return err
 	}
 	defer cancelFn()
-	return RemoteWrite(req, nil, header)
+	return RemoteWrite(req, nil, header, localPort)
 }
 
 func VerifyCfgMapOrSecretEnvVarExists(c client.Client, obj client.Object, name, ns string, containerIndex int, envVarName string, key string, cfgOrSecret string) bool {
@@ -901,8 +924,8 @@ func CreateClusterRoleBinding(c client.Client) error {
 	return nil
 }
 
-func QueryPrometheus(query string) (*PrometheusResponse, error) {
-	url := fmt.Sprintf("http://localhost:9090/api/v1/query?query=%s", query)
+func QueryPrometheus(query string, port uint16) (*PrometheusResponse, error) {
+	url := fmt.Sprintf("http://localhost:%d/api/v1/query?query=%s", port, query)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -954,26 +977,26 @@ func VerifyAnnotations(c client.Client, objs []client.Object, name, namespace st
 	return true
 }
 
-func SetupQueryPortForward(c client.Client, ns string) (context.CancelFunc, error) {
+func SetupQueryPortForward(c client.Client, ns string) (uint16, context.CancelFunc, error) {
 	ctx := context.Background()
 	selector := client.MatchingLabels{
 		manifests.ComponentLabel: "query-layer",
 	}
 	queryPods := &corev1.PodList{}
 	if err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: ns}); err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	if len(queryPods.Items) == 0 {
-		return nil, fmt.Errorf("expected at least one pod found in %s namespace", ns)
+		return 0, nil, fmt.Errorf("expected at least one pod found in %s namespace", ns)
 	}
 
 	pod := queryPods.Items[0].Name
 	port := intstr.IntOrString{IntVal: 9090}
-	cancelFn, err := StartPortForward(ctx, port, "https", pod, ns)
+	localPort, cancelFn, err := StartPortForward(ctx, port, "https", pod, ns)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
-	return cancelFn, nil
+	return localPort, cancelFn, nil
 
 }

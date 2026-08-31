@@ -136,12 +136,12 @@ var _ = Describe("Thanos stateless ruler", Ordered, func() {
 	})
 
 	It("should allow querying of evaluated rules", func() {
-		cancelFn, err := utils.SetupQueryPortForward(c, namespace)
+		localPort, cancelFn, err := utils.SetupQueryPortForward(c, namespace)
 		Expect(err).To(BeNil())
 		defer cancelFn()
 
 		Eventually(func() error {
-			resp, err := utils.QueryPrometheus(`example_stateless_rule{tenant_id="stateless_tenant"}`)
+			resp, err := utils.QueryPrometheus(`example_stateless_rule{tenant_id="stateless_tenant"}`, localPort)
 			if err != nil {
 				return err
 			}

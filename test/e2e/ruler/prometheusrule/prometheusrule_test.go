@@ -141,12 +141,12 @@ var _ = Describe("Thanos Ruler PrometheusRule feature gate", Ordered, func() {
 	})
 
 	It("should evaluate the PrometheusRule-derived rule and allow querying it", func() {
-		cancelFn, err := utils.SetupQueryPortForward(c, namespace)
+		localPort, cancelFn, err := utils.SetupQueryPortForward(c, namespace)
 		Expect(err).To(BeNil())
 		defer cancelFn()
 
 		Eventually(func() error {
-			resp, err := utils.QueryPrometheus("example_pr_rule")
+			resp, err := utils.QueryPrometheus("example_pr_rule", localPort)
 			if err != nil {
 				return err
 			}

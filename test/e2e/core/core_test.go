@@ -254,12 +254,12 @@ var _ = Describe("core", Ordered, func() {
 				Expect(queryPods.Items).NotTo(BeEmpty())
 
 				pod := queryPods.Items[0].Name
-				cancelFn, err := utils.StartPortForward(ctx, intstr.FromInt32(prometheusPort), "https", pod, namespace)
+				localPort, cancelFn, err := utils.StartPortForward(ctx, intstr.FromInt32(prometheusPort), "https", pod, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				defer cancelFn()
 
 				Eventually(func() error {
-					resp, err := utils.QueryPrometheus("test_metric")
+					resp, err := utils.QueryPrometheus("test_metric", localPort)
 					if err != nil {
 						return err
 					}
@@ -369,12 +369,12 @@ var _ = Describe("core", Ordered, func() {
 			})
 
 			It("should allow querying of evaluated rules", func() {
-				cancelFn, err := utils.SetupQueryPortForward(c, namespace)
+				localPort, cancelFn, err := utils.SetupQueryPortForward(c, namespace)
 				Expect(err).NotTo(HaveOccurred())
 				defer cancelFn()
 
 				Eventually(func() error {
-					resp, err := utils.QueryPrometheus(`example_recording_rule`)
+					resp, err := utils.QueryPrometheus(`example_recording_rule`, localPort)
 					if err != nil {
 						return err
 					}
