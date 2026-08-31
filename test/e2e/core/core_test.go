@@ -222,6 +222,12 @@ var _ = Describe("core", Ordered, func() {
 								manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 							},
 						},
+						// Default is 30s. When the ruler pod rolls (e.g. first rule file
+						// added), query only reconnects to the new IP on the next SD tick,
+						// so a low interval keeps the evaluated-rules query fast.
+						Additional: v1alpha1.Additional{
+							Args: []string{"--store.sd-dns-interval=5s"},
+						},
 					},
 				}
 				err := c.Create(context.Background(), cr)
