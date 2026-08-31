@@ -406,6 +406,8 @@ _Appears in:_
 | `tooFarInFutureTimeWindow` _[Duration](#duration)_ | TooFarInFutureTimeWindow is the allowed time window for ingesting samples too far in the future.<br />0s means disabled. | 0s | Optional: \{\} <br />Pattern: `^(-?(0\|(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?)\|([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}(\.[0-9]+)?(Z\|[+-][0-9]\{2\}:[0-9]\{2\})))$` <br /> |
 | `grpcCompression` _[GRPCCompression](#grpccompression)_ | GRPCCompression defines the compression algorithm for gRPC communication. | snappy | Enum: [none snappy] <br />Optional: \{\} <br /> |
 | `hashingAlgorithm` _string_ | HashingAlgorithm defines the hashing algorithm to use for the hashring. | ketama | Enum: [ketama hashmod] <br /> |
+| `standbyFor` _string_ | StandbyFor indicates this hashring is a standby for the named primary hashring.<br />Traffic only routes here when the primary is removed from the router config due to health issues.<br />The standby hashring name must sort alphabetically after the primary hashring name. |  | Optional: \{\} <br /> |
+| `maxUnavailableReplicas` _integer_ | MaxUnavailableReplicas is the maximum number of replicas that can be unavailable<br />before the hashring is considered unhealthy for failover purposes.<br />Only meaningful on a primary hashring that has a standby configured.<br />When ready endpoints drop below (replicas - maxUnavailableReplicas), the primary<br />is removed from the router config and traffic fails over to the standby.<br />Defaults to 0, meaning any single missing replica triggers failover. |  | Minimum: 0 <br />Optional: \{\} <br /> |
 
 
 #### IngesterSpec
@@ -1205,6 +1207,11 @@ ThanosReceiveList contains a list of ThanosReceive
 
 
 ThanosReceiveSpec defines the desired state of ThanosReceive
+CEL cost too high for rules with nested all/exists on hashrings (maxItems=100 makes them O(n^2)).
+These invariants are enforced in buildFailoverRelationships() in the controller instead.
+// +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || self.ingesterSpec.hashrings.exists(p, p.name == h.standbyFor))",message="standbyFor must reference an existing hashring name"
+// +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || !self.ingesterSpec.hashrings.exists(s, has(s.standbyFor) && s.standbyFor == h.standbyFor && s.name != h.name))",message="a primary hashring can have at most one standby"
+// +kubebuilder:validation:XValidation:rule="self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || !self.ingesterSpec.hashrings.exists(s, has(s.standbyFor) && s.standbyFor == h.name))",message="a standby hashring cannot itself be a primary for another standby"
 
 
 

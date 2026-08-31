@@ -180,6 +180,89 @@ config:
 			})
 		})
 
+		It("should validate failover configuration via CEL rules", func() {
+			if os.Getenv("EXCLUDE_RECEIVE") == skipValue {
+				Skip("Skipping ThanosReceive controller tests")
+			}
+
+			By("rejecting standby with name that sorts before primary", func() {
+				resource := &monitoringthanosiov1alpha1.ThanosReceive{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
+						Router: monitoringthanosiov1alpha1.RouterSpec{
+							ReplicationFactor: 1,
+						},
+						Ingester: monitoringthanosiov1alpha1.IngesterSpec{
+							DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+								LocalObjectReference: corev1.LocalObjectReference{Name: objStoreSecretName},
+								Key:                  objStoreSecretKey,
+							},
+							Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
+								{
+									Name:     "primary",
+									Replicas: 1,
+									StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+										Size: resourceapi.MustParse("100Mi"),
+									},
+								},
+								{
+									Name:       "aaa-standby",
+									Replicas:   1,
+									StandbyFor: ptr.To("primary"),
+									StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+										Size: resourceapi.MustParse("100Mi"),
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), resource)).ShouldNot(Succeed())
+			})
+
+			By("accepting a valid failover configuration", func() {
+				resource := &monitoringthanosiov1alpha1.ThanosReceive{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      resourceName,
+						Namespace: ns,
+					},
+					Spec: monitoringthanosiov1alpha1.ThanosReceiveSpec{
+						Router: monitoringthanosiov1alpha1.RouterSpec{
+							ReplicationFactor: 1,
+						},
+						Ingester: monitoringthanosiov1alpha1.IngesterSpec{
+							DefaultObjectStorageConfig: monitoringthanosiov1alpha1.ObjectStorageConfig{
+								LocalObjectReference: corev1.LocalObjectReference{Name: objStoreSecretName},
+								Key:                  objStoreSecretKey,
+							},
+							Hashrings: []monitoringthanosiov1alpha1.IngesterHashringSpec{
+								{
+									Name:                   "primary",
+									Replicas:               3,
+									MaxUnavailableReplicas: ptr.To(int32(1)),
+									StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+										Size: resourceapi.MustParse("100Mi"),
+									},
+								},
+								{
+									Name:       "primary-standby",
+									Replicas:   3,
+									StandbyFor: ptr.To("primary"),
+									StorageConfiguration: monitoringthanosiov1alpha1.StorageConfiguration{
+										Size: resourceapi.MustParse("100Mi"),
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
+			})
+		})
+
 		It("should reconcile correctly", func() {
 			resource := &monitoringthanosiov1alpha1.ThanosReceive{
 				ObjectMeta: metav1.ObjectMeta{

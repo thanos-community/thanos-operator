@@ -4892,6 +4892,17 @@ spec:
                           - warn
                           - error
                           type: string
+                        maxUnavailableReplicas:
+                          description: |-
+                            MaxUnavailableReplicas is the maximum number of replicas that can be unavailable
+                            before the hashring is considered unhealthy for failover purposes.
+                            Only meaningful on a primary hashring that has a standby configured.
+                            When ready endpoints drop below (replicas - maxUnavailableReplicas), the primary
+                            is removed from the router config and traffic fails over to the standby.
+                            Defaults to 0, meaning any single missing replica triggers failover.
+                          format: int32
+                          minimum: 0
+                          type: integer
                         name:
                           description: |-
                             Name is the name of the hashring.
@@ -5249,6 +5260,12 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        standbyFor:
+                          description: |-
+                            StandbyFor indicates this hashring is a standby for the named primary hashring.
+                            Traffic only routes here when the primary is removed from the router config due to health issues.
+                            The standby hashring name must sort alphabetically after the primary hashring name.
+                          type: string
                         storage:
                           description: StorageConfiguration represents the storage
                             to be used by the Thanos Receive StatefulSets.
@@ -11040,6 +11057,10 @@ spec:
                 replicas'
               rule: self.ingesterSpec.hashrings.all(h, h.replicas >= self.routerSpec.replicationFactor
                 )
+            - message: standby hashring name must sort alphabetically after the primary
+                hashring name
+              rule: self.ingesterSpec.hashrings.all(h, !has(h.standbyFor) || h.name
+                > h.standbyFor)
           status:
             description: Status defines the observed state of ThanosReceive
             properties:
