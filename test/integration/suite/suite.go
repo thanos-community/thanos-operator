@@ -72,8 +72,8 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 	env, err := Start(
 		"",
 		filepath.Join(root, "config", "crd", "bases"),
-		filepath.Join(root, "test", "configs", "service-monitor.yaml"),
-		filepath.Join(root, "test", "configs", "prometheus-rule.yaml"),
+		filepath.Join(root, "test", "integration", "configs", "service-monitor.yaml"),
+		filepath.Join(root, "test", "integration", "configs", "prometheus-rule.yaml"),
 	)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
