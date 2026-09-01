@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -175,14 +176,24 @@ func GetNonEmptyLines(output string) []string {
 	return res
 }
 
-// GetProjectDir will return the directory where the project is
+// GetProjectDir returns the repo root by walking up from the working directory
+// until it finds go.mod, so it resolves correctly no matter how deeply nested the
+// caller's package is (e.g. test/e2e/compact) rather than assuming a fixed suffix.
 func GetProjectDir() (string, error) {
-	wd, err := os.Getwd()
+	dir, err := os.Getwd()
 	if err != nil {
-		return wd, err
+		return dir, err
 	}
-	wd = strings.Replace(wd, "/test/e2e", "", -1)
-	return wd, nil
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("could not locate repo root (go.mod) from %s", dir)
+		}
+		dir = parent
+	}
 }
 
 // InstallMinIO installs the object store

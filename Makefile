@@ -203,10 +203,25 @@ test-update-golden: ## Update golden test files.
 	go test ./internal/pkg/manifests/... -update
 	go test ./config/... -update
 
+# Image and cluster used by the e2e suites. Override to test another build/cluster.
+E2E_IMG ?= example.com/thanos-operator:v0.0.1
+KIND_CLUSTER ?= kind
+
 # Utilize Kind or modify the e2e tests to load the image locally, enabling compatibility with other vendors.
+.PHONY: e2e-setup  # One-time cluster bootstrap shared by all e2e suites.
+e2e-setup: install
+	@echo ">> building and loading operator image ${E2E_IMG}"
+	$(MAKE) docker-build IMG=${E2E_IMG}
+	KIND_CLUSTER=${KIND_CLUSTER} go run ./test/e2e/setup -image ${E2E_IMG}
+	@echo ">> deploying operator"
+	$(MAKE) deploy IMG_MAIN=${E2E_IMG}
+	@echo ">> waiting for operator to become available"
+	$(KUBECTL) wait --for=condition=Available deployment -l control-plane=controller-manager \
+		-n thanos-operator-system --timeout=300s
+
 .PHONY: test-e2e  # Run the e2e tests against a Kind k8s instance that is spun up.
-test-e2e:
-	go test -timeout=15m -v ./test/e2e/ -v -ginkgo.v
+test-e2e: e2e-setup
+	go test -timeout=15m ./test/e2e/... -ginkgo.v
 
 define require_clean_work_tree
 	@git update-index -q --ignore-submodules --refresh
