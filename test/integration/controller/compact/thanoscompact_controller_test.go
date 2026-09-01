@@ -14,18 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package compact
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	"github.com/thanos-community/thanos-operator/test/utils"
@@ -39,19 +39,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosCompact Controller", Ordered, func() {
+var _ = Describe("ThanosCompact Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			ns           = "thanos-compact-test"
-			resourceName = "test-compact-resource"
-		)
+		const resourceName = "test-compact-resource"
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
 		shardOne := compact.Options{
 			Options: manifests.Options{
@@ -64,13 +60,13 @@ var _ = Describe("ThanosCompact Controller", Ordered, func() {
 			},
 			ShardName: ptr.To("anyone-else")}.GetGeneratedResourceName()
 
-		BeforeAll(func() {
-			By("creating the namespace and objstore secret")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace and objstore secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "thanos-compact-test-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 
 			Expect(k8sClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -91,19 +87,7 @@ config:
 			})).Should(Succeed())
 		})
 
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosCompact{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			if err == nil {
-				By("Cleanup the specific resource instance ThanosCompact")
-				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-			}
-		})
-
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
-				Skip("Skipping ThanosCompact controller tests")
-			}
 
 			resource := &monitoringthanosiov1alpha1.ThanosCompact{
 				ObjectMeta: metav1.ObjectMeta{
@@ -169,14 +153,14 @@ config:
 				for _, shard := range []string{shardOne, shardTwo} {
 					EventuallyWithOffset(1, func() bool {
 						return verifier.Verify(k8sClient, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 
 				for _, shard := range []string{shardOne, shardTwo} {
 					EventuallyWithOffset(1, func() bool {
 						return utils.VerifyStatefulSetReplicas(
 							k8sClient, 1, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 			})
 
@@ -197,7 +181,7 @@ config:
 						}
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos compact", func() {
@@ -207,7 +191,7 @@ config:
   source_labels: ["tenant_id"]
   regex: someone`
 					return utils.VerifyStatefulSetArgs(k8sClient, shardOne, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					args := `--selector.relabel-config=
@@ -215,7 +199,7 @@ config:
   source_labels: ["tenant_id"]
   regex: anyone-else`
 					return utils.VerifyStatefulSetArgs(k8sClient, shardTwo, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("checking additional container", func() {
@@ -229,7 +213,7 @@ config:
 					}
 
 					return len(statefulSet.Spec.Template.Spec.Containers) == 2
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
@@ -244,19 +228,16 @@ config:
 						}
 					}
 					return false
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					name := compact.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 					return verifier.Verify(k8sClient, name, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 		})
 
 		It("should reconcile with custom SecurityContext", func() {
-			if os.Getenv("EXCLUDE_COMPACT") == skipValue {
-				Skip("Skipping ThanosCompact controller tests")
-			}
 
 			// Use a different resource name to avoid interference from previous test cleanup
 			securityContextResourceName := "test-compact-security-context"
@@ -311,7 +292,7 @@ config:
 					return sc.FSGroup != nil && *sc.FSGroup == customFSGroup &&
 						sc.RunAsUser != nil && *sc.RunAsUser == customRunAsUser &&
 						sc.RunAsGroup != nil && *sc.RunAsGroup == customRunAsGroup
-				}, time.Second*30, time.Second*2).Should(BeTrue())
+				}, time.Second*30).Should(BeTrue())
 			})
 
 			By("cleaning up the SecurityContext test resource", func() {

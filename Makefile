@@ -192,7 +192,11 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate format vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v $$(go list ./... | grep -v /e2e) -coverpkg=./... -coverprofile cover.out
+
+.PHONY: test-integration
+test-integration: manifests generate envtest ## Run the integration (envtest) suite.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./test/integration/...
 
 .PHONY: test-update-golden
 test-update-golden: ## Update golden test files.

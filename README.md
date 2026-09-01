@@ -136,17 +136,10 @@ The following `make` targets are available for testing:
 1. `make test` - Runs unit and integration tests.
 2. `make test-e2e` - Runs e2e tests against a Kubernetes cluster.
 
-When executing integration tests, the following environment variables can be used to skip specific, per-controller tests:
-* EXCLUDE_COMPACT=true
-* EXCLUDE_QUERY=true
-* EXCLUDE_RULER=true
-* EXCLUDE_RECEIVE=true
-* EXCLUDE_STORE=true
-
-As an example, to run only integration tests for ThanosStore, you can run the following command:
+The integration tests are split per controller under `test/integration/controller/<controller>`, with the feature-gate, PDB, and pause suites alongside them. To run a single suite, point `go test` at its package (it needs `KUBEBUILDER_ASSETS` set, the same as `make test` does). For example, to run only the ThanosStore integration tests:
 
 ```bash
-EXCLUDE_COMPACT=true EXCLUDE_QUERY=true EXCLUDE_RULER=true EXCLUDE_RECEIVE=true make test
+go test ./test/integration/controller/store/...
 ```
 
 ### Golden File Testing

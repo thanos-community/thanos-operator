@@ -22,6 +22,9 @@ validators:
   # Causes http stream errors with statuscode 0 sometimes. But is safe to skip.
   - regex: 'slack\.cncf\.io'
     type: 'ignore'
+  # Slack archive links 403 from CI (need auth), but are valid.
+  - regex: 'cloud-native\.slack\.com'
+    type: 'ignore'
   # Too many links in api.md
   - regex: 'kubernetes\.io'
     type: 'ignore'

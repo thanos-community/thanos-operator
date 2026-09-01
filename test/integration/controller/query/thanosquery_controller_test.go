@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package query
 
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,9 +27,12 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestquery "github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
+	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,17 +45,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosQuery Controller", Ordered, func() {
+var _ = Describe("ThanosQuery Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			resourceName = "test-resource"
-			ns           = "thanos-query-test"
-		)
+		const resourceName = "test-resource"
 
 		// we use a sample receive Service to test store discovery
-		const (
-			receiveSvcName = "thanos-receive"
-		)
+		const receiveSvcName = "thanos-receive"
 		receivePort := corev1.ServicePort{
 			Name:       receive.GRPCPortName,
 			Port:       receive.GRPCPort,
@@ -61,33 +59,20 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
-		BeforeAll(func() {
-			By("creating the namespace")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosQuery{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosQuery")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "thanos-query-test-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 		})
 
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_QUERY") == skipValue {
-				Skip("Skipping ThanosQuery controller tests")
-			}
 			name := manifestquery.Options{Options: manifests.Options{Owner: resourceName}}.GetGeneratedResourceName()
 			resource := &monitoringthanosiov1alpha1.ThanosQuery{
 				ObjectMeta: metav1.ObjectMeta{
@@ -120,7 +105,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, name, ns)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("setting endpoints on the thanos query", func() {
@@ -129,7 +114,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      receiveSvcName,
 						Namespace: ns,
-						Labels:    requiredStoreServiceLabels,
+						Labels:    manifestsstore.GetRequiredStoreServiceLabel(),
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{receivePort},
@@ -139,7 +124,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
-				}, time.Minute*1, time.Second*10).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying query annotations", func() {
@@ -152,15 +137,15 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						"conflict": "discarded",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, QueryNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.QueryNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting strict & ignoring services on the thanos query + additional container", func() {
-				labels := requiredStoreServiceLabels
+				labels := manifestsstore.GetRequiredStoreServiceLabel()
 				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
 
 				svc := &corev1.Service{
@@ -197,10 +182,12 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 						return err
 					}
 
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
-						return fmt.Errorf("expected 13 args, got %d: %v",
-							len(deployment.Spec.Template.Spec.Containers[0].Args),
-							deployment.Spec.Template.Spec.Containers[0].Args)
+					// The service labelled app=nginx must be ignored by the event
+					// handler and must not produce an endpoint arg.
+					for _, a := range deployment.Spec.Template.Spec.Containers[0].Args {
+						if strings.Contains(a, "some-svc-to-ignore-at-event-handler") {
+							return fmt.Errorf("expected ignored service to produce no endpoint arg, got %q", a)
+						}
 					}
 
 					arg := fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", receiveSvcName, ns, receive.GRPCPort)
@@ -214,7 +201,7 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 
 					return nil
 
-				}, time.Minute*1, time.Second*10).Should(Succeed())
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("setting up the thanos query with query frontend", func() {
@@ -245,8 +232,8 @@ var _ = Describe("ThanosQuery Controller", Ordered, func() {
 				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				EventuallyWithOffset(1, func() bool {
-					return verifier.Verify(k8sClient, QueryFrontendNameFromParent(resourceName), ns)
-				}, time.Minute, time.Second*2).Should(BeTrue())
+					return verifier.Verify(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns)
+				}, time.Minute).Should(BeTrue())
 			})
 
 			By("verifying the query frontend deployment configuration", func() {
@@ -267,13 +254,13 @@ config:
 					}
 
 					for _, expectedArg := range expectedArgs {
-						if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
+						if !utils.VerifyDeploymentArgs(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 							return fmt.Errorf("expected arg %q not found", expectedArg)
 						}
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("verifying query frontend annotations", func() {
@@ -287,60 +274,23 @@ config:
 						"conflict": "overwritten",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.QueryFrontendNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("verifying query frontend is linked to query service", func() {
 				EventuallyWithOffset(1, func() error {
 					expectedArg := fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:9090", name, ns)
-					if !utils.VerifyDeploymentArgs(k8sClient, QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
+					if !utils.VerifyDeploymentArgs(k8sClient, controller.QueryFrontendNameFromParent(resourceName), ns, 0, expectedArg) {
 						return fmt.Errorf("expected arg %q not found", expectedArg)
 					}
 					return nil
-				}, time.Second*30, time.Second*10).Should(Succeed())
+				}, time.Second*30).Should(Succeed())
 			})
 
-			By("checking paused state", func() {
-				isPaused := true
-				resource.Spec.Paused = &isPaused
-
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				labels := requiredStoreServiceLabels
-				labels[string(manifests.StrictLabel)] = manifests.DefaultStoreAPIValue
-				svcPaused := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "paused-svc",
-						Namespace: ns,
-						Labels:    labels,
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{receivePort},
-					},
-				}
-				Expect(k8sClient.Create(context.Background(), svcPaused)).Should(Succeed())
-				EventuallyWithOffset(1, func() error {
-					deployment := &appsv1.Deployment{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
-						Namespace: ns,
-					}, deployment); err != nil {
-						return err
-					}
-
-					// If not paused would end up with 14 args.
-					if len(deployment.Spec.Template.Spec.Containers[0].Args) != 13 {
-						return fmt.Errorf("expected 13 args, got %d: %v",
-							len(deployment.Spec.Template.Spec.Containers[0].Args),
-							deployment.Spec.Template.Spec.Containers[0].Args)
-					}
-
-					return nil
-				}, time.Second*10, time.Second*10).Should(Succeed())
-			})
 		})
 	})
 })

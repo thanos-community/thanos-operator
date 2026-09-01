@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package store
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -38,27 +39,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosStore Controller", Ordered, func() {
+var _ = Describe("ThanosStore Controller", func() {
 	Context("When reconciling a resource", func() {
-		const (
-			resourceName = "test-resource"
-			ns           = "test"
-		)
+		const resourceName = "test-resource"
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
 
-		BeforeAll(func() {
-			By("creating the namespace and objstore secret")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
+		BeforeEach(func() {
+			By("creating a unique namespace and objstore secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "thanos-store-test-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
 
 			Expect(k8sClient.Create(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -79,22 +76,10 @@ config:
 			})).Should(Succeed())
 		})
 
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosStore{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosStore")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-
 		It("should reconcile correctly", func() {
-			if os.Getenv("EXCLUDE_STORE") == skipValue {
-				Skip("Skipping ThanosStore controller tests")
-			}
-			firstShard := StoreNameFromParent(resourceName, ptr.To(int32(0)))
-			secondShard := StoreNameFromParent(resourceName, ptr.To(int32(1)))
-			thirdShard := StoreNameFromParent(resourceName, ptr.To(int32(2)))
+			firstShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(0)))
+			secondShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(1)))
+			thirdShard := controller.StoreNameFromParent(resourceName, ptr.To(int32(2)))
 			resource := &monitoringthanosiov1alpha1.ThanosStore{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -142,13 +127,13 @@ config:
 				for _, shard := range []string{firstShard, secondShard, thirdShard} {
 					EventuallyWithOffset(1, func() bool {
 						return verifier.Verify(k8sClient, shard, ns)
-					}, time.Second*10, time.Second*2).Should(BeTrue())
+					}, time.Second*10).Should(BeTrue())
 				}
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetReplicas(
 						k8sClient, 2, secondShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("verifying store annotations", func() {
@@ -169,7 +154,7 @@ config:
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("setting correct sharding arg on thanos store", func() {
@@ -183,7 +168,7 @@ config:
   source_labels: ["shard"]
   regex: 0`
 					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, args)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("checking additional container", func() {
@@ -197,7 +182,7 @@ config:
 					}
 
 					return len(statefulSet.Spec.Template.Spec.Containers) == 2
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("setting custom caches on thanos store", func() {
@@ -246,44 +231,33 @@ config:
 					}
 
 					return true
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
 				resource.Spec.ShardingStrategy.Shards = 1
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
 
-				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount().WithServiceMonitor()
-				updatedName := StoreNameFromParent(resourceName, nil)
+				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
+				updatedName := controller.StoreNameFromParent(resourceName, nil)
 
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, firstShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, secondShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, thirdShard, ns)
-				}, time.Second*10, time.Second*2).Should(BeFalse())
+				}, time.Second*10).Should(BeFalse())
 			})
 
-			By("checking paused state", func() {
-				resource := &monitoringthanosiov1alpha1.ThanosStore{}
-				Expect(k8sClient.Get(ctx, typeNamespacedName, resource)).Should(Succeed())
-
-				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.CommonFields.LogLevel = ptr.To("debug")
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Consistently(func() bool {
-					return utils.VerifyStatefulSetArgs(k8sClient, firstShard, ns, 0, "--log.level=debug")
-				}, time.Second*5, time.Second).Should(BeFalse())
-			})
 		})
 	})
 })

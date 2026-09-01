@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package receive
 
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,13 +27,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
+
+	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,11 +42,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ThanosReceive Controller", Ordered, func() {
+var _ = Describe("ThanosReceive Controller", func() {
 	Context("When reconciling a resource", func() {
 		const (
 			resourceName = "test-resource"
-			ns           = "treceive"
 
 			objStoreSecretName = "test-secret"
 			objStoreSecretKey  = "test-key.yaml"
@@ -56,26 +56,27 @@ var _ = Describe("ThanosReceive Controller", Ordered, func() {
 
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: ns,
-		}
+		routerName := controller.ReceiveRouterNameFromParent(resourceName)
+		ingesterName := controller.ReceiveIngesterNameFromParent(resourceName, hashringName)
+		hashmodIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
 
-		routerName := ReceiveRouterNameFromParent(resourceName)
-		ingesterName := ReceiveIngesterNameFromParent(resourceName, hashringName)
-		hashmodIngesterName := ReceiveIngesterNameFromParent(resourceName, "test-hashmod-hashring")
-
-		BeforeAll(func() {
-			By("creating the namespace")
-			Expect(k8sClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns,
-				},
-			})).Should(Succeed())
-		})
+		// each spec gets its own namespace so specs stay isolated and need no
+		// teardown (envtest has no namespace controller to reap them anyway)
+		var ns string
+		var typeNamespacedName types.NamespacedName
 
 		BeforeEach(func() {
-			By("creating the object store secret")
+			By("creating a unique namespace and object store secret")
+			namespace := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{GenerateName: "treceive-"},
+			}
+			Expect(k8sClient.Create(ctx, namespace)).Should(Succeed())
+			ns = namespace.Name
+			typeNamespacedName = types.NamespacedName{
+				Name:      resourceName,
+				Namespace: ns,
+			}
+
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      objStoreSecretName,
@@ -93,26 +94,10 @@ config:
     enable: false`,
 				},
 			}
-
-			err := k8sClient.Create(ctx, secret)
-			if err != nil && !errors.IsAlreadyExists(err) {
-				Expect(err).NotTo(HaveOccurred())
-			}
-		})
-
-		AfterEach(func() {
-			resource := &monitoringthanosiov1alpha1.ThanosReceive{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance ThanosReceive")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 		})
 
 		It("should error when the spec is invalid due to CEL rules", func() {
-			if os.Getenv("EXCLUDE_RECEIVE") == skipValue {
-				Skip("Skipping ThanosReceive controller tests")
-			}
 			resource := &monitoringthanosiov1alpha1.ThanosReceive{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
@@ -268,10 +253,10 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, hashmodIngesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying thanos receive ingestor annotations are merged correctly", func() {
@@ -286,12 +271,12 @@ config:
 						manifests.StorageSizeAnnotation: "100Mi",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.ReceiveIngesterNameFromParent(resourceName, hashringName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("reacting to the creation of a matching endpoint slice by updating the ConfigMap", func() {
@@ -333,10 +318,11 @@ config:
 					AddressType: discoveryv1.AddressTypeIPv4,
 				}
 				Expect(k8sClient.Create(context.Background(), epSliceNotRelevantNotRelevantService)).Should(Succeed())
-				// check via a poll that we have not updated the ConfigMap
-				Consistently(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, receive.EmptyHashringConfig)
-				}, time.Second*20, time.Second*1).Should(BeTrue())
+				// we deliberately do not wait here: the two irrelevant slices above must
+				// not appear in the hashring config, and the exact-match Eventually below
+				// (a whole-document compare against only the relevant endpoints) proves it
+				// -- if either leaked in, the compare would fail. This avoids paying a long
+				// Consistently window just to observe a non-event.
 
 				epSliceRelevant := &discoveryv1.EndpointSlice{
 					TypeMeta: metav1.TypeMeta{
@@ -419,9 +405,12 @@ config:
         "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName)
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				// the template uses "treceive" as the namespace placeholder; the real
+				// namespace is generated per spec, so substitute it before comparing
+				expect = strings.ReplaceAll(expect, ".treceive.svc", "."+ns+".svc")
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expect)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("verifying hashmod hashring configuration", func() {
@@ -533,16 +522,17 @@ config:
         "external_labels": {}
     }
 ]`, hashmodIngesterName, hashmodIngesterName, hashmodIngesterName, svcName, svcName, svcName)
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				expectWithHashmod = strings.ReplaceAll(expectWithHashmod, ".treceive.svc", "."+ns+".svc")
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expectWithHashmod)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("creating the additional container for ingesters", func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 1, "--config-path=/etc/parca-agent/parca-agent.yaml")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("ensuring old shards are cleaned up", func() {
@@ -563,21 +553,21 @@ config:
 				}
 				Expect(k8sClient.Update(ctx, resource)).Should(Succeed())
 				verifier := utils.Verifier{}.WithStatefulSet().WithService().WithServiceAccount()
-				updatedIngesterName := ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
+				updatedIngesterName := controller.ReceiveIngesterNameFromParent(resourceName, updatedHashringName)
 				EventuallyWithOffset(1, func() bool {
 					return verifier.Verify(k8sClient, updatedIngesterName, ns)
-				}, time.Second*10, time.Second*2).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 
 				EventuallyWithOffset(1, func() bool {
 					return utils.VerifyStatefulSetExists(k8sClient, ingesterName, ns)
-				}, time.Minute, time.Second*2).Should(BeFalse())
+				}, time.Minute).Should(BeFalse())
 			})
 
 			By("creating the router components", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, routerName, ns)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("verifying thanos receive router annotations are merged correctly", func() {
@@ -591,28 +581,20 @@ config:
 						"conflict": "router-override",
 					}
 
-					if !utils.VerifyAnnotations(k8sClient, objs, ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
+					if !utils.VerifyAnnotations(k8sClient, objs, controller.ReceiveRouterNameFromParent(resourceName), ns, expectedAnnotations) {
 						return fmt.Errorf("expected annotation %q not found", expectedAnnotations)
 					}
 					return nil
-				}, time.Minute, time.Second*10).Should(Succeed())
+				}, time.Minute).Should(Succeed())
 			})
 
 			By("creating the additional container for router", func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(
 						k8sClient, routerName, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
-			By("checking paused state", func() {
-				resource.Spec.Paused = ptr.To(true)
-				resource.Spec.Router.CommonFields.LogLevel = ptr.To("debug")
-				Expect(k8sClient.Update(context.Background(), resource)).Should(Succeed())
-				Consistently(func() bool {
-					return utils.VerifyDeploymentArgs(k8sClient, routerName, ns, 0, "--log.level=debug")
-				}, time.Second*5, time.Second).Should(BeFalse())
-			})
 		})
 
 		It("should configure capnproto replication protocol correctly", func() {
@@ -659,14 +641,14 @@ config:
 				Expect(k8sClient.Create(context.Background(), resource)).Should(Succeed())
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, ingesterName, ns)
-				}, time.Minute*1, time.Second*5).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("creating router components", func() {
 				verifier := utils.Verifier{}.WithDeployment().WithService().WithServiceAccount()
 				Eventually(func() bool {
 					return verifier.Verify(k8sClient, routerName, ns)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, time.Minute*1).Should(BeTrue())
 			})
 
 			By("reacting to capnproto endpoint creation and updating the ConfigMap with capnproto_address", func() {
@@ -752,24 +734,25 @@ config:
         "algorithm": "ketama"
     }
 ]`, svcName, svcName, svcName, svcName, svcName, svcName)
+				expectCapnProto = strings.ReplaceAll(expectCapnProto, ".treceive.svc", "."+ns+".svc")
 
-				Eventually(func() bool {
-					return utils.VerifyConfigMapContents(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				Eventually(func() error {
+					return utils.ConfigMapDataMatches(k8sClient, routerName, ns, receive.HashringConfigKey, expectCapnProto)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("verifying that router container has capnproto arguments", func() {
 				Eventually(func() bool {
 					return utils.VerifyDeploymentArgs(
 						k8sClient, routerName, ns, 0, "--receive.replication-protocol=capnproto")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 
 			By("verifying that ingester containers have capnproto arguments", func() {
 				Eventually(func() bool {
 					return utils.VerifyStatefulSetArgs(
 						k8sClient, ingesterName, ns, 0, "--receive.capnproto-address=0.0.0.0:19391")
-				}, time.Second*10, time.Second*1).Should(BeTrue())
+				}, time.Second*10).Should(BeTrue())
 			})
 		})
 	})

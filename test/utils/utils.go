@@ -57,6 +57,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -432,30 +433,56 @@ func VerifyPodDisruptionBudgetExists(c client.Client, name string, namespace str
 	return err == nil
 }
 
-func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
+// ConfigMapDataMatches fetches the ConfigMap and compares data[key] against
+// expect. JSON and YAML are compared semantically, so field order and whitespace
+// do not matter (list order still does); anything else falls back to an exact
+// string compare. It returns nil on a match, otherwise an error showing expected
+// vs actual -- pass it to Eventually(...).Should(Succeed()) so a failure prints
+// the diff instead of a bare false.
+func ConfigMapDataMatches(c client.Client, name, namespace, key, expect string) error {
 	cm := &corev1.ConfigMap{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}, cm); err != nil {
+		return fmt.Errorf("getting configmap %s/%s: %w", namespace, name, err)
+	}
+
+	data, ok := cm.Data[key]
+	if !ok {
+		return fmt.Errorf("configmap %s/%s has no key %q", namespace, name, key)
+	}
+
+	if semanticDataEqual(data, expect) {
+		return nil
+	}
+	return fmt.Errorf("configmap %s/%s key %q mismatch:\n--- expected ---\n%s\n--- actual ---\n%s",
+		namespace, name, key, expect, data)
+}
+
+// semanticDataEqual reports whether two serialized documents are equal, ignoring
+// formatting when both are JSON or both are YAML (field order and whitespace are
+// irrelevant; list order still matters). Anything else compares byte-for-byte.
+func semanticDataEqual(a, b string) bool {
+	if json.Valid([]byte(a)) && json.Valid([]byte(b)) {
+		var ja, jb any
+		if json.Unmarshal([]byte(a), &ja) == nil && json.Unmarshal([]byte(b), &jb) == nil {
+			return equality.Semantic.DeepEqual(ja, jb)
+		}
 		return false
 	}
-
-	data := cm.Data[key]
-
-	if json.Valid([]byte(data)) && json.Valid([]byte(expect)) {
-		var jData any
-		if err := json.Unmarshal([]byte(data), &jData); err != nil {
-			return false
-		}
-		var jExpect any
-		if err := json.Unmarshal([]byte(expect), &jExpect); err != nil {
-			return false
-		}
-		return equality.Semantic.DeepEqual(jData, jExpect)
-
+	var ya, yb any
+	if yaml.Unmarshal([]byte(a), &ya) == nil && yaml.Unmarshal([]byte(b), &yb) == nil {
+		return equality.Semantic.DeepEqual(ya, yb)
 	}
-	return data == expect
+	return a == b
+}
+
+// VerifyConfigMapContents reports whether the ConfigMap's data[key] matches expect
+// (see ConfigMapDataMatches for the comparison rules). Prefer ConfigMapDataMatches
+// with Eventually(...).Should(Succeed()) when you want the diff on failure.
+func VerifyConfigMapContents(c client.Client, name, namespace, key, expect string) bool {
+	return ConfigMapDataMatches(c, name, namespace, key, expect) == nil
 }
 
 // StartPortForward initiates a port forwarding connection to a pod on the

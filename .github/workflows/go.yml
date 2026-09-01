@@ -53,6 +53,18 @@ jobs:
         with:
           go-version: ${{ env.golang-version }}
       - run: make --always-make test
+  integration-tests:
+    runs-on: ubuntu-latest
+    name: Integration tests
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.golang-version }}
+      - run: make --always-make test-integration
   e2e-tests:
     name: E2E tests (Thanos ${{ matrix.thanos-version }}) (${{ matrix.kind-image }})
     runs-on: ubuntu-latest
