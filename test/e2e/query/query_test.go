@@ -161,7 +161,7 @@ func createStoreAPIService(name string, ha bool) error {
 					TargetPort: intstr.FromInt32(manifestsquery.GRPCPort),
 				},
 			},
-			// No selector so no pods back the service; the query still renders the flag.
+			// Selector intentionally matches no pods; the query controller still renders the flag based on the Service.
 			Selector: map[string]string{"e2e-query.fake": name},
 		},
 	}
