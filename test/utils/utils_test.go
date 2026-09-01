@@ -294,7 +294,7 @@ func TestRemoteWrite(t *testing.T) {
 		return &http.Response{
 			StatusCode: http.StatusBadGateway,
 		}, nil
-	}), nil)
+	}), nil, 19291)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -303,7 +303,7 @@ func TestRemoteWrite(t *testing.T) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 		}, nil
-	}), nil)
+	}), nil, 19291)
 	if err != nil {
 		t.Errorf("expected no error")
 	}

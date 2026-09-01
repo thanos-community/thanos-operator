@@ -44,11 +44,11 @@ Enable features using the `--enable-feature` flag when starting the operator:
 
 ### What It Achieves
 
-Automatically creates and manages ServiceMonitor resources for Thanos components, eliminating the need to manually define ServiceMonitors for scraping the resources deployed by the operator. This feature integrates seamlessly with the Prometheus Operator ecosystem.
+Automatically creates and manages ServiceMonitor resources for Thanos components It eliminates the need to manually define ServiceMonitors for scraping the resources deployed by the operator. This feature integrates seamlessly within the Prometheus Operator ecosystem.
 
 ### How It Works
 
-When enabled, the operator automatically creates ServiceMonitor resources alongside each Thanos component. These ServiceMonitors are configured with appropriate labels, selectors, and endpoints to enable Prometheus discovery and scraping.
+When enabled, the operator automatically creates ServiceMonitor resources alongside each Thanos component. These ServiceMonitors inherit the labels from the workload. The selectors and endpoints are configured to enable Prometheus discovery and scraping.
 
 ### Prerequisites
 
@@ -63,11 +63,11 @@ When enabled, the operator automatically creates ServiceMonitor resources alongs
 
 ### What It Achieves
 
-Enables ThanosRuler to automatically discover and mount PrometheusRule resources as configuration. This allows you to define alerting and recording rules as Kubernetes custom resources rather than manually managing ConfigMaps.
+Enables ThanosRuler to automatically discover and mount PrometheusRule resources as configuration. This allows you to define alerting and recording rules as custom resources rather than manually managing ConfigMaps.
 
 ### How It Works
 
-The operator watches for PrometheusRule resources that match the configured label selector, converts them into ConfigMaps, and mounts them into ThanosRuler pods. This provides automatic rule discovery and lifecycle management.
+The operator watches for PrometheusRule resources that match the configured label selector It converts them into ConfigMaps, and mounts them into ThanosRuler pods. This provides automatic rule discovery and lifecycle management.
 
 ### Configuration
 
