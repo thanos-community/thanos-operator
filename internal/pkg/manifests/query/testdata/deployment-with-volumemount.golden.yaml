@@ -70,12 +70,11 @@ spec:
         image: some-custom-image:v0.42.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
-          failureThreshold: 4
+          failureThreshold: 3
           httpGet:
             path: /-/healthy
             port: 9090
-          initialDelaySeconds: 30
-          periodSeconds: 30
+          periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
         name: thanos-query
@@ -85,13 +84,12 @@ spec:
         - containerPort: 9090
           name: http
         readinessProbe:
-          failureThreshold: 20
+          failureThreshold: 30
           httpGet:
             path: /-/ready
             port: 9090
             scheme: HTTP
-          initialDelaySeconds: 30
-          periodSeconds: 5
+          periodSeconds: 2
           successThreshold: 1
           timeoutSeconds: 1
         resources: {}

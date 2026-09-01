@@ -193,6 +193,19 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				},
 			},
 		},
+		StartupProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   "/-/ready",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+			TimeoutSeconds:   1,
+			PeriodSeconds:    2,
+			SuccessThreshold: 1,
+			FailureThreshold: 150,
+		},
 		ReadinessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -201,11 +214,10 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       5,
-			SuccessThreshold:    1,
-			FailureThreshold:    20,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    5,
+			SuccessThreshold: 1,
+			FailureThreshold: 3,
 		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -214,11 +226,10 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 					Port: intstr.FromInt32(HTTPPort),
 				},
 			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       30,
-			SuccessThreshold:    1,
-			FailureThreshold:    4,
+			TimeoutSeconds:   1,
+			PeriodSeconds:    10,
+			SuccessThreshold: 1,
+			FailureThreshold: 3,
 		},
 		Env: []corev1.EnvVar{
 			{
