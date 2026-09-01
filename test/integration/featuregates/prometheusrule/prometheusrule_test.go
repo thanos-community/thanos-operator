@@ -21,6 +21,8 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+const testRulerName = "test-ruler"
+
 const objstoreYAML = `type: S3
 config:
   bucket: test
@@ -102,7 +104,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		createObjstoreSecret(ns)
 		createQuery(ns)
 
-		rulerName := "test-ruler"
+		rulerName := testRulerName
 		ss := controller.RulerNameFromParent(rulerName)
 		cfgmapName := fmt.Sprintf("%s-promrule-0", rulerName)
 
@@ -152,7 +154,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		createObjstoreSecret(ns)
 		createQuery(ns)
 
-		rulerName := "test-ruler"
+		rulerName := testRulerName
 		cfgmapName := fmt.Sprintf("%s-promrule-0", rulerName)
 
 		ruler := newRuler(rulerName, ns,
@@ -228,7 +230,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		createObjstoreSecret(ns)
 		createQuery(ns)
 
-		rulerName := "test-ruler"
+		rulerName := testRulerName
 		ss := controller.RulerNameFromParent(rulerName)
 		cfgmapName := fmt.Sprintf("%s-promrule-0", rulerName)
 
@@ -303,7 +305,7 @@ var _ = Describe("PrometheusRule feature gate", func() {
 		createObjstoreSecret(ns)
 		createQuery(ns)
 
-		rulerName := "test-ruler"
+		rulerName := testRulerName
 		ss := controller.RulerNameFromParent(rulerName)
 
 		ruler := newRuler(rulerName, ns,
