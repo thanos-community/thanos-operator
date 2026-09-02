@@ -273,7 +273,7 @@ type deploymentConfig struct {
 // resources that configure Prometheus to scrape metrics from Thanos components.
 func WithServiceMonitor() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.EnableServiceMonitor = true
+		c.featureGate.ServiceMonitor = featuregate.Enabled()
 	}
 }
 
@@ -284,7 +284,7 @@ func WithServiceMonitor() DeploymentOption {
 // configures Thanos Ruler to evaluate these rules for alerting.
 func WithPrometheusRule() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.EnablePrometheusRuleDiscovery = true
+		c.featureGate.PrometheusRule = featuregate.Enabled()
 	}
 }
 
@@ -295,7 +295,7 @@ func WithPrometheusRule() DeploymentOption {
 // restarts, improving the responsiveness of hashring configuration updates.
 func WithSync() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.EnableKubeResourceSync = true
+		c.featureGate.KubeResourceSync = &featuregate.KubeResourceSyncConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
 	}
 }
 
@@ -307,7 +307,7 @@ func WithSync() DeploymentOption {
 // installed in the cluster.
 func WithOtelSidecar() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.EnableOtelSidecar = true
+		c.featureGate.OtelSidecar = featuregate.Enabled()
 	}
 }
 
@@ -318,7 +318,7 @@ func WithOtelSidecar() DeploymentOption {
 // orphan and recreate StatefulSets when necessary to apply storage changes.
 func WithVolumeResize() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.EnableVolumeResize = true
+		c.featureGate.VolumeResize = featuregate.Enabled()
 	}
 }
 
@@ -340,15 +340,15 @@ func WithFeatures(features ...string) DeploymentOption {
 		for _, feature := range features {
 			switch feature {
 			case featuregate.ServiceMonitor:
-				c.featureGate.EnableServiceMonitor = true
+				c.featureGate.ServiceMonitor = featuregate.Enabled()
 			case featuregate.PrometheusRule:
-				c.featureGate.EnablePrometheusRuleDiscovery = true
+				c.featureGate.PrometheusRule = featuregate.Enabled()
 			case featuregate.OtelSidecar:
-				c.featureGate.EnableOtelSidecar = true
+				c.featureGate.OtelSidecar = featuregate.Enabled()
 			case featuregate.KubeResourceSync:
-				c.featureGate.EnableKubeResourceSync = true
+				c.featureGate.KubeResourceSync = &featuregate.KubeResourceSyncConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
 			case featuregate.VolumeResize:
-				c.featureGate.EnableVolumeResize = true
+				c.featureGate.VolumeResize = featuregate.Enabled()
 			}
 		}
 	}
@@ -473,19 +473,19 @@ func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
 func buildManagerArgs(featureGate featuregate.Config) []string {
 	args := []string{"--leader-elect", "--metrics-secure", "--metrics-bind-address=:8443", "--health-probe-bind-address=:8081", "--log.format=logfmt", "--log.level=debug"}
 
-	if featureGate.EnableServiceMonitor {
+	if featureGate.ServiceMonitorEnabled() {
 		args = append(args, "--enable-feature="+featuregate.ServiceMonitor)
 	}
-	if featureGate.EnablePrometheusRuleDiscovery {
+	if featureGate.PrometheusRuleEnabled() {
 		args = append(args, "--enable-feature="+featuregate.PrometheusRule)
 	}
-	if featureGate.EnableKubeResourceSync {
+	if featureGate.KubeResourceSyncEnabled() {
 		args = append(args, "--enable-feature="+featuregate.KubeResourceSync)
 	}
-	if featureGate.EnableOtelSidecar {
+	if featureGate.OtelSidecarEnabled() {
 		args = append(args, "--enable-feature="+featuregate.OtelSidecar)
 	}
-	if featureGate.EnableVolumeResize {
+	if featureGate.VolumeResizeEnabled() {
 		args = append(args, "--enable-feature="+featuregate.VolumeResize)
 	}
 

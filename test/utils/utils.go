@@ -81,10 +81,6 @@ type PrometheusResponse struct {
 	} `json:"data"`
 }
 
-func warnError(err error) {
-	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
-}
-
 // InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
 func InstallPrometheusOperator() error {
 	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
@@ -111,24 +107,6 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	}
 
 	return output, nil
-}
-
-// UninstallPrometheusOperator uninstalls the prometheus
-func UninstallPrometheusOperator() {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
-}
-
-// UninstallCertManager uninstalls the cert manager
-func UninstallCertManager() {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
 }
 
 // InstallCertManager installs the cert manager bundle.
@@ -162,20 +140,6 @@ func LoadImageToKindClusterWithName(name string) error {
 	return err
 }
 
-// GetNonEmptyLines converts given command output string into individual objects
-// according to line breakers, and ignores the empty elements in it.
-func GetNonEmptyLines(output string) []string {
-	var res []string
-	elements := strings.SplitSeq(output, "\n")
-	for element := range elements {
-		if element != "" {
-			res = append(res, element)
-		}
-	}
-
-	return res
-}
-
 // GetProjectDir returns the repo root by walking up from the working directory
 // until it finds go.mod, so it resolves correctly no matter how deeply nested the
 // caller's package is (e.g. test/e2e/compact) rather than assuming a fixed suffix.
@@ -201,14 +165,6 @@ func InstallMinIO() error {
 	cmd := exec.Command("kubectl", "apply", "-f", minioTestData())
 	_, err := Run(cmd)
 	return err
-}
-
-// UninstallMinIO uninstalls the object store
-func UninstallMinIO() {
-	cmd := exec.Command("kubectl", "delete", "-f", minioTestData())
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
 }
 
 func CreateMinioObjectStorageSecret() error {

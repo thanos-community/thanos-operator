@@ -33,7 +33,7 @@ func TestOtelSidecar(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	env, ctx, cancel = suite.Setup(featuregate.Config{EnableOtelSidecar: true})
+	env, ctx, cancel = suite.Setup(featuregate.Config{OtelSidecar: featuregate.Enabled()})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
 })

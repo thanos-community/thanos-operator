@@ -31,7 +31,7 @@ func TestServiceMonitorGate(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	env, ctx, cancel = suite.Setup(featuregate.Config{EnableServiceMonitor: true})
+	env, ctx, cancel = suite.Setup(featuregate.Config{ServiceMonitor: featuregate.Enabled()})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
 })

@@ -78,12 +78,17 @@ func TestConfig_OtelSidecarEnabled(t *testing.T) {
 	}{
 		{
 			name:   "otel sidecar enabled",
-			config: Config{EnableOtelSidecar: true},
+			config: Config{OtelSidecar: Enabled()},
 			want:   true,
 		},
 		{
 			name:   "otel sidecar disabled",
-			config: Config{EnableOtelSidecar: false},
+			config: Config{OtelSidecar: &FeatureConfig{Enabled: false}},
+			want:   false,
+		},
+		{
+			name:   "otel sidecar unset",
+			config: Config{},
 			want:   false,
 		},
 	}
@@ -105,12 +110,17 @@ func TestConfig_VolumeResizeEnabled(t *testing.T) {
 	}{
 		{
 			name:   "volume resize enabled",
-			config: Config{EnableVolumeResize: true},
+			config: Config{VolumeResize: Enabled()},
 			want:   true,
 		},
 		{
 			name:   "volume resize disabled",
-			config: Config{EnableVolumeResize: false},
+			config: Config{VolumeResize: &FeatureConfig{Enabled: false}},
+			want:   false,
+		},
+		{
+			name:   "volume resize unset",
+			config: Config{},
 			want:   false,
 		},
 	}
@@ -133,21 +143,17 @@ func TestFlag_ToFeatureGate(t *testing.T) {
 		{
 			name:     "no features",
 			features: []string{},
-			want: Config{
-				EnableServiceMonitor:          false,
-				EnablePrometheusRuleDiscovery: false,
-				EnableOtelSidecar:             false,
-				EnableVolumeResize:            false,
-			},
+			want:     Config{},
 		},
 		{
 			name:     "all features enabled",
-			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, VolumeResize},
+			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, KubeResourceSync, VolumeResize},
 			want: Config{
-				EnableServiceMonitor:          true,
-				EnablePrometheusRuleDiscovery: true,
-				EnableOtelSidecar:             true,
-				EnableVolumeResize:            true,
+				ServiceMonitor:   Enabled(),
+				PrometheusRule:   Enabled(),
+				OtelSidecar:      Enabled(),
+				KubeResourceSync: &KubeResourceSyncConfig{FeatureConfig: FeatureConfig{Enabled: true}},
+				VolumeResize:     Enabled(),
 			},
 		},
 	}
