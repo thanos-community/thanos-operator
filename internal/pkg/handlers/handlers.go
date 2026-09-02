@@ -117,7 +117,7 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 
 		err := h.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if errors.IsNotFound(err) || meta.IsNoMatchError(err) {
 				continue
 			}
 
@@ -139,7 +139,7 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 // If the item does not exist, it does not return an error.
 func (h *handler) deleteResource(ctx context.Context, obj client.Object) error {
 	logger := loggerForObj(h.logger, obj)
-	if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) {
+	if err := h.client.Delete(ctx, obj); err != nil && !errors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 		logger.Error(err, fmt.Sprintf("failed to delete resource %s, name: %s",
 			obj.GetObjectKind().GroupVersionKind().GroupKind().String(),
 			obj.GetName(),
