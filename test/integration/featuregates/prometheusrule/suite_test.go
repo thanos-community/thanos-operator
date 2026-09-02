@@ -32,7 +32,7 @@ func TestPrometheusRuleGate(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	env, ctx, cancel = suite.Setup(featuregate.Config{EnablePrometheusRuleDiscovery: true})
+	env, ctx, cancel = suite.Setup(featuregate.Config{PrometheusRule: featuregate.Enabled()})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
 })

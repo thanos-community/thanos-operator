@@ -343,9 +343,9 @@ func main() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
 	}
 	if featureGateConfig.KubeResourceSyncEnabled() {
-		featureGateConfig.KubeResourceSyncImage = defaultKubeResourceSyncImage
+		featureGateConfig.KubeResourceSync.Image = defaultKubeResourceSyncImage
 		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
-			featureGateConfig.KubeResourceSyncImage = image
+			featureGateConfig.KubeResourceSync.Image = image
 		}
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}

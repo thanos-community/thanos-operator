@@ -35,8 +35,10 @@ func TestKubeResourceSync(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	env, ctx, cancel = suite.Setup(featuregate.Config{
-		EnableKubeResourceSync: true,
-		KubeResourceSyncImage:  kubeResourceSyncImage,
+		KubeResourceSync: &featuregate.KubeResourceSyncConfig{
+			FeatureConfig: featuregate.FeatureConfig{Enabled: true},
+			Image:         kubeResourceSyncImage,
+		},
 	})
 	k8sClient = env.Client
 	Expect(k8sClient).NotTo(BeNil())
