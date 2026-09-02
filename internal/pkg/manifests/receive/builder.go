@@ -77,11 +77,6 @@ type TenancyOpts struct {
 	TenantLabelName        string
 }
 
-type FeatureGateConfig struct {
-	KubeResourceSyncEnabled bool
-	KubeResourceSyncImage   string
-}
-
 // RouterOptions for Thanos Receive router
 type RouterOptions struct {
 	manifests.Options
@@ -89,7 +84,6 @@ type RouterOptions struct {
 	ExternalLabels      map[string]string
 	HashringConfig      string
 	ReplicationProtocol string
-	FeatureGateConfig   *FeatureGateConfig
 }
 
 // Build builds the ingester for Thanos Receive
@@ -141,7 +135,7 @@ func (opts RouterOptions) Build() []client.Object {
 	objs = append(objs, newRouterDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newHashringConfigMap(name, opts.Namespace, opts.HashringConfig, objectMetaLabels))
 
-	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+	if opts.KubeResourceSyncEnabled() {
 		objs = append(objs, newRouterRole(name, opts.Namespace, objectMetaLabels))
 		objs = append(objs, newRouterRoleBinding(name, opts.Namespace, objectMetaLabels))
 	}
@@ -154,7 +148,7 @@ func (opts RouterOptions) Build() []client.Object {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
 
 		// Add separate ServiceMonitor for kube-resource-sync metrics when enabled
-		if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+		if opts.KubeResourceSyncEnabled() {
 			kubeResourceSyncSMName := name + "-kube-resource-sync"
 			kubeResourceSyncSMOpts := manifests.ServiceMonitorOptions{
 				Port:     ptr.To("kube-resource-sync"),
@@ -394,7 +388,7 @@ func newRouterService(opts RouterOptions, selectorLabels, objectMetaLabels map[s
 	svc := newService(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations)
 
 	// Add kube-resource-sync metrics port when enabled
-	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+	if opts.KubeResourceSyncEnabled() {
 		kubeResourceSyncPort := corev1.ServicePort{
 			Name:       "kube-resource-sync",
 			Port:       8080,
@@ -682,7 +676,7 @@ func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceM
 
 // buildRouterVolumes builds the volumes for the router pod
 func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
-	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+	if opts.KubeResourceSyncEnabled() {
 		// When KubeResourceSync is enabled, use EmptyDir and let the sidecar sync from ConfigMap
 		return []corev1.Volume{
 			{
@@ -714,7 +708,7 @@ func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
 func buildRouterContainers(opts RouterOptions) []corev1.Container {
 	containers := []corev1.Container{buildThanosRouterContainer(opts)}
 
-	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+	if opts.KubeResourceSyncEnabled() {
 		containers = append(containers, buildKubeResourceSyncContainer(opts))
 	}
 
@@ -725,7 +719,7 @@ func buildRouterContainers(opts RouterOptions) []corev1.Container {
 func buildRouterInitContainers(opts RouterOptions) []corev1.Container {
 	var initContainers []corev1.Container
 
-	if opts.FeatureGateConfig != nil && opts.FeatureGateConfig.KubeResourceSyncEnabled {
+	if opts.KubeResourceSyncEnabled() {
 		initContainers = append(initContainers, buildKubeResourceSyncInitContainer(opts))
 	}
 
@@ -823,10 +817,7 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 
 // buildKubeResourceSyncContainer builds the kube-resource-sync sidecar container
 func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
-	var image string
-	if opts.FeatureGateConfig != nil {
-		image = opts.FeatureGateConfig.KubeResourceSyncImage
-	}
+	image := opts.GetKubeResourceSyncImage()
 
 	return corev1.Container{
 		Name:            kubeResourceSyncContainerName,

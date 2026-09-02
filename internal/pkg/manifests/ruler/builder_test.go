@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 	"github.com/thanos-community/thanos-operator/test/utils"
@@ -267,8 +268,8 @@ func TestNewRulerStatefulSet(t *testing.T) {
 					Annotations: map[string]string{
 						"test": "annotation",
 					},
-					Features: manifests.Features{
-						EnableOtelSidecar: true,
+					Config: featuregate.Config{
+						OtelSidecar: featuregate.Enabled(),
 					},
 				},
 				Endpoints: []Endpoint{
