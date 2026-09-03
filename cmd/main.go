@@ -171,6 +171,7 @@ func main() {
 	var enableHTTP2 bool
 
 	var enabledFeatures featuregate.Flag
+	var featureGateConfigFile string
 
 	var logLevelStr string
 	var logFormatStr string
@@ -192,6 +193,8 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
+	flag.StringVar(&featureGateConfigFile, "feature-gate-config-file", featuregate.DefaultConfigFilePath,
+		"Path to a YAML file containing per-feature configuration. This file is optional; if missing, defaults apply.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
 	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
 	flag.Parse()
@@ -336,6 +339,14 @@ func main() {
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
 	featureGateConfig := enabledFeatures.ToFeatureGate()
+
+	fileConfig, err := featuregate.LoadFileConfig(featureGateConfigFile, featureGateConfig)
+	if err != nil {
+		setupLog.Error(err, "failed to load feature gate config file")
+		os.Exit(1)
+	}
+	featureGateConfig = featureGateConfig.ApplyFileConfig(fileConfig)
+
 	if featureGateConfig.ServiceMonitorEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
 	}

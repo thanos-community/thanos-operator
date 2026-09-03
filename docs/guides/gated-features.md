@@ -38,6 +38,37 @@ Enable features using the `--enable-feature` flag when starting the operator:
   --enable-feature volume-resize
 ```
 
+### Config File
+
+Features can also be configured via a YAML file using the `--feature-gate-config-file` flag:
+
+```bash
+./thanos-operator --feature-gate-config-file /etc/thanos-operator/feature-gates.yaml
+```
+
+The default path is `/etc/thanos-operator/feature-gates.yaml`. If the file is missing, the operator
+uses default values.
+
+**Important**: The config file **does not enable features**. A feature must be enabled via
+`--enable-feature` first. The config file only provides custom settings for enabled features.
+Blocks for disabled features are ignored, even if they contain invalid values.
+
+Example `feature-gates.yaml`:
+
+```yaml
+kube-resource-sync:
+  image: custom-registry/kube-resource-sync:v1.0.0
+```
+
+In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-resource-sync`,
+the custom image will be used. If the feature is not enabled, the `kube-resource-sync` block is
+ignored.
+
+**Precedence** (highest to lowest):
+1. Config file (`--feature-gate-config-file`)
+2. Environment variables (e.g., `KUBE_RESOURCE_SYNC_IMAGE`)
+3. Hardcoded defaults
+
 ## ServiceMonitor Feature
 
 **Flag**: `service-monitor`
@@ -271,10 +302,22 @@ roleRef:
 
 ### Custom Image Configuration
 
+The image can be configured via environment variable or config file:
+
 ```bash
 # Environment variable
 export KUBE_RESOURCE_SYNC_IMAGE=custom-registry/kube-resource-sync:v1.0.0
 ```
+
+Or in your `feature-gates.yaml` config file:
+
+```yaml
+kube-resource-sync:
+  image: custom-registry/kube-resource-sync:v1.0.0
+```
+
+When multiple sources are set, the config file takes precedence over environment variables,
+which take precedence over the hardcoded default.
 
 ---
 
