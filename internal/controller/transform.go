@@ -236,13 +236,6 @@ func receiverV1Alpha1ToRouterOptions(in receiverV1Alpha1ToRouterTransformInput) 
 		ExternalLabels:    router.ExternalLabels,
 	}
 
-	if in.FeatureGate.KubeResourceSyncEnabled() {
-		ropts.FeatureGateConfig = &manifestreceive.FeatureGateConfig{
-			KubeResourceSyncEnabled: in.FeatureGate.KubeResourceSyncEnabled(),
-			KubeResourceSyncImage:   in.FeatureGate.GetKubeResourceSyncImage(),
-		}
-	}
-
 	if router.ReplicationProtocol != nil {
 		ropts.ReplicationProtocol = string(*router.ReplicationProtocol)
 	}
@@ -463,9 +456,7 @@ func commonToOpts(
 		},
 		StatefulSet:     statefulSetToOpts(statefulSet),
 		SecurityContext: common.SecurityContext,
-		Features: manifests.Features{
-			EnableOtelSidecar: featureGate.OtelSidecarEnabled(),
-		},
+		Config:          featureGate,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -231,8 +232,8 @@ func TestNewQueryFrontendDeployment(t *testing.T) {
 						"test": "annotation",
 					},
 					Replicas: 2,
-					Features: manifests.Features{
-						EnableOtelSidecar: true,
+					Config: featuregate.Config{
+						OtelSidecar: featuregate.Enabled(),
 					},
 				},
 				QueryService:         "thanos-query",

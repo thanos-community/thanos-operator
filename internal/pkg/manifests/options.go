@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -119,8 +121,8 @@ type Options struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext
-	// Features holds feature flags for the component
-	Features Features
+	// Config holds the operator feature gate configuration shared by all components.
+	featuregate.Config
 }
 
 // Placement is a struct that holds the placement configuration for the component
@@ -129,10 +131,6 @@ type Placement struct {
 	Affinity                  *corev1.Affinity
 	Tolerations               []corev1.Toleration
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint
-}
-
-type Features struct {
-	EnableOtelSidecar bool
 }
 
 // ValidateAndSanitizeResourceName sanitizes the provided name to a valid DNS-1123 subdomain.
@@ -263,7 +261,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}
 
-		if opts.Features.EnableOtelSidecar {
+		if opts.OtelSidecarEnabled() {
 			augmentOtel(&o.Spec.Template)
 		}
 
@@ -299,7 +297,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
 		}
 
-		if opts.Features.EnableOtelSidecar {
+		if opts.OtelSidecarEnabled() {
 			augmentOtel(&o.Spec.Template)
 		}
 

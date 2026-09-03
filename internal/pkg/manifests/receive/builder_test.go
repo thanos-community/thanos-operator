@@ -3,6 +3,7 @@ package receive
 import (
 	"testing"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -191,8 +192,8 @@ func TestNewIngestorStatefulSet(t *testing.T) {
 					Annotations: map[string]string{
 						"test": "annotation",
 					},
-					Features: manifests.Features{
-						EnableOtelSidecar: true,
+					Config: featuregate.Config{
+						OtelSidecar: featuregate.Enabled(),
 					},
 				},
 			},
@@ -308,8 +309,8 @@ func TestNewRouterDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"test": "annotation",
 					},
-					Features: manifests.Features{
-						EnableOtelSidecar: true,
+					Config: featuregate.Config{
+						OtelSidecar: featuregate.Enabled(),
 					},
 				},
 			},
@@ -325,10 +326,12 @@ func TestNewRouterDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"test": "annotation",
 					},
-				},
-				FeatureGateConfig: &FeatureGateConfig{
-					KubeResourceSyncEnabled: true,
-					KubeResourceSyncImage:   "quay.io/philipgough/kube-resource-sync:main",
+					Config: featuregate.Config{
+						KubeResourceSync: &featuregate.KubeResourceSyncConfig{
+							FeatureConfig: featuregate.FeatureConfig{Enabled: true},
+							Image:         "quay.io/philipgough/kube-resource-sync:main",
+						},
+					},
 				},
 			},
 		},
@@ -343,9 +346,6 @@ func TestNewRouterDeployment(t *testing.T) {
 					Annotations: map[string]string{
 						"test": "annotation",
 					},
-				},
-				FeatureGateConfig: &FeatureGateConfig{
-					KubeResourceSyncEnabled: false,
 				},
 			},
 		},

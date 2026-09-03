@@ -5,6 +5,7 @@ import (
 
 	"gotest.tools/v3/assert"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
@@ -134,7 +135,7 @@ func TestNewStoreStatefulSet(t *testing.T) {
 			golden: "statefulset-with-otel-sidecar.golden.yaml",
 			opts: func() Options {
 				opts := buildDefaultOpts()
-				opts.Features.EnableOtelSidecar = true
+				opts.OtelSidecar = featuregate.Enabled()
 				return opts
 			},
 		},
