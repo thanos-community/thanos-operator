@@ -138,8 +138,8 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.logger.Error(err, "failed to sync resources", "resource", receiver.GetName(), "namespace", receiver.GetNamespace())
 		r.recorder.Eventf(receiver, nil, corev1.EventTypeWarning, "SyncFailed", "Reconcile", "Failed to sync resources: %v", err)
 		r.updateCondition(ctx, receiver, metav1.Condition{
-			Type:    ConditionReconcileFailed,
-			Status:  metav1.ConditionTrue,
+			Type:    ConditionReady,
+			Status:  metav1.ConditionFalse,
 			Reason:  ReasonReconcileError,
 			Message: err.Error(),
 		})
@@ -147,7 +147,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	r.updateCondition(ctx, receiver, metav1.Condition{
-		Type:    ConditionReconcileSuccess,
+		Type:    ConditionReady,
 		Status:  metav1.ConditionTrue,
 		Reason:  ReasonReconcileComplete,
 		Message: "Reconciliation completed successfully",

@@ -45,9 +45,8 @@ import (
 
 // Define condition types and reasons
 const (
-	ConditionReconcileSuccess = "ReconcileSuccess"
-	ConditionReconcileFailed  = "ReconcileFailed"
-	ConditionPaused           = "Paused"
+	ConditionReady  = "Ready"
+	ConditionPaused = "Paused"
 
 	ReasonReconcileComplete = "ReconcileComplete"
 	ReasonReconcileError    = "ReconcileError"
