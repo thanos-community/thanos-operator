@@ -46,12 +46,9 @@ Features can also be configured via a YAML file using the `--feature-gate-config
 ./thanos-operator --feature-gate-config-file /etc/thanos-operator/feature-gates.yaml
 ```
 
-The default path is `/etc/thanos-operator/feature-gates.yaml`. If the file is missing, the operator
-uses default values.
+The default path is `/etc/thanos-operator/feature-gates.yaml`. If the file is missing, the operator uses default values.
 
-**Important**: The config file **does not enable features**. A feature must be enabled via
-`--enable-feature` first. The config file only provides custom settings for enabled features.
-Blocks for disabled features are ignored, even if they contain invalid values.
+**Important**: The config file **does not enable features**. A feature must be enabled via `--enable-feature` first. The config file only provides custom settings for enabled features. Blocks for disabled features are ignored, even if they contain invalid values.
 
 Example `feature-gates.yaml`:
 
@@ -60,9 +57,7 @@ kube-resource-sync:
   image: custom-registry/kube-resource-sync:v1.0.0
 ```
 
-In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-resource-sync`,
-the custom image will be used. If the feature is not enabled, the `kube-resource-sync` block is
-ignored.
+In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-resource-sync`, the custom image will be used. If the feature is not enabled, the `kube-resource-sync` block is ignored.
 
 **Precedence** (highest to lowest):
 1. Config file (`--feature-gate-config-file`)
@@ -316,8 +311,7 @@ kube-resource-sync:
   image: custom-registry/kube-resource-sync:v1.0.0
 ```
 
-When multiple sources are set, the config file takes precedence over environment variables,
-which take precedence over the hardcoded default.
+When multiple sources are set, the config file takes precedence over environment variables, which take precedence over the hardcoded default.
 
 ---
 

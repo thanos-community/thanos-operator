@@ -38,6 +38,8 @@ Usage of ./bin/manager:
     	Experimental feature to enable. Repeat for multiple features. Available features: service-monitor, prometheus-rule, kube-resource-sync, otel-sidecar, volume-resize.
   -enable-http2
     	If set, HTTP/2 will be enabled for the metrics and webhook servers
+  -feature-gate-config-file string
+    	Path to a YAML file containing per-feature configuration. This file is optional; if missing, defaults apply. (default "/etc/thanos-operator/feature-gates.yaml")
   -health-probe-bind-address string
     	The address the probe endpoint binds to. (default ":8081")
   -kubeconfig string

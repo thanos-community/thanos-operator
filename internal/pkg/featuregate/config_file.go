@@ -14,7 +14,7 @@ const DefaultConfigFilePath = "/etc/thanos-operator/feature-gates.yaml"
 // It carries only per-feature settings (not enablement); enablement is CLI-only.
 // All fields are optional.
 type FileConfig struct {
-	KubeResourceSync *KubeResourceSyncFileConfig `json:"kube-resource-sync,omitempty"`
+	KubeResourceSync *KubeResourceSyncFileConfig `json:"kube-resource-sync,omitempty"` //nolint:tagliatelle // Match the feature gate name.
 }
 
 // KubeResourceSyncFileConfig carries settings for the kube-resource-sync feature.

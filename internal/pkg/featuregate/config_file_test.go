@@ -10,12 +10,12 @@ import (
 
 func TestLoadFileConfig(t *testing.T) {
 	tests := []struct {
-		name             string
-		fileContent      string
-		enabledFeatures  Config
-		expectedImage    string
-		expectError      bool
-		errorContains    string
+		name            string
+		fileContent     string
+		enabledFeatures Config
+		expectedImage   string
+		expectError     bool
+		errorContains   string
 	}{
 		{
 			name:            "missing file returns empty config",
