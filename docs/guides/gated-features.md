@@ -61,8 +61,7 @@ In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-r
 
 **Precedence** (highest to lowest):
 1. Config file (`--feature-gate-config-file`)
-2. Environment variables (e.g., `KUBE_RESOURCE_SYNC_IMAGE`)
-3. Hardcoded defaults
+2. Hardcoded defaults
 
 ## ServiceMonitor Feature
 
@@ -297,21 +296,14 @@ roleRef:
 
 ### Custom Image Configuration
 
-The image can be configured via environment variable or config file:
-
-```bash
-# Environment variable
-export KUBE_RESOURCE_SYNC_IMAGE=custom-registry/kube-resource-sync:v1.0.0
-```
-
-Or in your `feature-gates.yaml` config file:
+The image can be configured in your `feature-gates.yaml` config file:
 
 ```yaml
 kube-resource-sync:
   image: custom-registry/kube-resource-sync:v1.0.0
 ```
 
-When multiple sources are set, the config file takes precedence over environment variables, which take precedence over the hardcoded default.
+If not set in the config file, the hardcoded default is used.
 
 ---
 

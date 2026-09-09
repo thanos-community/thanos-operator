@@ -340,12 +340,12 @@ func main() {
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
 	featureGateConfig := enabledFeatures.ToFeatureGate()
 
-	fileConfig, err := featuregate.LoadFileConfig(featureGateConfigFile, featureGateConfig)
-	if err != nil {
-		setupLog.Error(err, "failed to load feature gate config file")
+	var fileErr error
+	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
+	if fileErr != nil {
+		setupLog.Error(fileErr, "failed to load feature gate config file")
 		os.Exit(1)
 	}
-	featureGateConfig = featureGateConfig.ApplyFileConfig(fileConfig)
 
 	if featureGateConfig.ServiceMonitorEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
@@ -354,9 +354,8 @@ func main() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
 	}
 	if featureGateConfig.KubeResourceSyncEnabled() {
-		featureGateConfig.KubeResourceSync.Image = defaultKubeResourceSyncImage
-		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
-			featureGateConfig.KubeResourceSync.Image = image
+		if featureGateConfig.KubeResourceSync.Image == "" {
+			featureGateConfig.KubeResourceSync.Image = defaultKubeResourceSyncImage
 		}
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
