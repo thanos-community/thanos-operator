@@ -448,8 +448,7 @@ func TestAugmentWithOptions_Deployment_Golden(t *testing.T) {
 							},
 						},
 					},
-					ServiceMonitorConfig: &ServiceMonitorConfig{},
-					PodDisruptionConfig:  &PodDisruptionBudgetOptions{},
+					PodDisruptionConfig: &PodDisruptionBudgetOptions{},
 				},
 			},
 		},
@@ -850,8 +849,7 @@ func TestAugmentWithOptions_StatefulSet_Golden(t *testing.T) {
 							},
 						},
 					},
-					ServiceMonitorConfig: &ServiceMonitorConfig{},
-					PodDisruptionConfig:  &PodDisruptionBudgetOptions{},
+					PodDisruptionConfig: &PodDisruptionBudgetOptions{},
 					StatefulSet: StatefulSet{
 						PodManagementPolicy: "Parallel",
 						PVCRetentionPolicy: PVCRetentionPolicy{

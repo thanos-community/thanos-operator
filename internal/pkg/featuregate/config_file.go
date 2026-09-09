@@ -5,10 +5,35 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/prometheus/common/model"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/yaml"
 )
 
 const DefaultConfigFilePath = "/etc/thanos-operator/feature-gates.yaml"
+
+type serviceMonitorFileConfig struct {
+	AdditionalLabels map[string]string `json:"additionalLabels,omitempty"`
+	Interval         string            `json:"interval,omitempty"`
+}
+
+func (c serviceMonitorFileConfig) validate() error {
+	if c.Interval != "" {
+		interval, err := model.ParseDuration(c.Interval)
+		if err != nil || interval <= 0 {
+			return fmt.Errorf("interval %q must be a positive Prometheus duration", c.Interval)
+		}
+	}
+	for key, value := range c.AdditionalLabels {
+		if errs := validation.IsQualifiedName(key); len(errs) > 0 {
+			return fmt.Errorf("invalid label key %q: %v", key, errs)
+		}
+		if errs := validation.IsValidLabelValue(value); len(errs) > 0 {
+			return fmt.Errorf("invalid value for label %q: %v", key, errs)
+		}
+	}
+	return nil
+}
 
 // LoadAndApplyConfig reads and applies a YAML config file on top of the current Config.
 // A missing file returns the current Config unchanged and no error.
@@ -32,6 +57,24 @@ func LoadAndApplyConfig(path string, current Config) (Config, error) {
 	var rawConfig map[string]json.RawMessage
 	if err := json.Unmarshal(jsonData, &rawConfig); err != nil {
 		return current, fmt.Errorf("failed to decode feature gate config file %q: %w", path, err)
+	}
+
+	if current.ServiceMonitorEnabled() {
+		if raw, exists := rawConfig[ServiceMonitor]; exists {
+			var smConfig serviceMonitorFileConfig
+			if err := json.Unmarshal(raw, &smConfig); err != nil {
+				return current, fmt.Errorf("failed to decode service-monitor config in %q: %w", path, err)
+			}
+			if err := smConfig.validate(); err != nil {
+				return current, fmt.Errorf("invalid service-monitor config in %q: %w", path, err)
+			}
+			if smConfig.AdditionalLabels != nil {
+				current.ServiceMonitor.AdditionalLabels = smConfig.AdditionalLabels
+			}
+			if smConfig.Interval != "" {
+				current.ServiceMonitor.Interval = smConfig.Interval
+			}
+		}
 	}
 
 	// Only decode kube-resource-sync block if the feature is enabled

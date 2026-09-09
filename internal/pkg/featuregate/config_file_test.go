@@ -95,3 +95,56 @@ func TestLoadAndApplyConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadServiceMonitorConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		content       string
+		disabled      bool
+		missingFile   bool
+		wantLabels    map[string]string
+		wantInterval  string
+		errorContains string
+	}{
+		{name: "missing file", missingFile: true},
+		{name: "empty file"},
+		{name: "missing block", content: "kube-resource-sync: {}"},
+		{name: "empty block", content: "service-monitor: {}"},
+		{name: "explicit empty settings", content: "service-monitor:\n  additionalLabels: {}\n  interval: ''", wantLabels: map[string]string{}},
+		{name: "labels and interval", content: "service-monitor:\n  additionalLabels:\n    prometheus: platform\n  interval: 30s", wantLabels: map[string]string{"prometheus": "platform"}, wantInterval: "30s"},
+		{name: "compound interval", content: "service-monitor:\n  interval: 1m30s", wantInterval: "1m30s"},
+		{name: "enablement stays in flags", content: "service-monitor:\n  enabled: false\n  interval: 1m", wantInterval: "1m"},
+		{name: "disabled block ignored", disabled: true, content: "service-monitor:\n  enabled: true\n  additionalLabels: wrong\n  interval: invalid"},
+		{name: "invalid labels type", content: "service-monitor:\n  additionalLabels: wrong", errorContains: "failed to decode service-monitor config"},
+		{name: "invalid label key", content: "service-monitor:\n  additionalLabels:\n    invalid/key/name: value", errorContains: "invalid label key"},
+		{name: "invalid label value", content: "service-monitor:\n  additionalLabels:\n    prometheus: invalid value", errorContains: "invalid value for label"},
+		{name: "invalid interval type", content: "service-monitor:\n  interval: 30", errorContains: "failed to decode service-monitor config"},
+		{name: "invalid duration", content: "service-monitor:\n  interval: invalid", errorContains: "must be a positive Prometheus duration"},
+		{name: "zero duration", content: "service-monitor:\n  interval: 0s", errorContains: "must be a positive Prometheus duration"},
+		{name: "negative duration", content: "service-monitor:\n  interval: -1s", errorContains: "must be a positive Prometheus duration"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "feature-gates.yaml")
+			if !tc.missingFile {
+				assert.NilError(t, os.WriteFile(path, []byte(tc.content), 0600))
+			}
+			base := Config{}
+			if !tc.disabled {
+				base.ServiceMonitor = &ServiceMonitorConfig{FeatureConfig: FeatureConfig{Enabled: true}}
+			}
+			cfg, err := LoadAndApplyConfig(path, base)
+			if tc.errorContains != "" {
+				assert.ErrorContains(t, err, tc.errorContains)
+				return
+			}
+			assert.NilError(t, err)
+			assert.Equal(t, cfg.ServiceMonitorEnabled(), !tc.disabled)
+			if tc.disabled {
+				assert.Assert(t, cfg.ServiceMonitor == nil)
+				return
+			}
+			assert.DeepEqual(t, cfg.ServiceMonitor.AdditionalLabels, tc.wantLabels)
+			assert.Equal(t, cfg.ServiceMonitor.Interval, tc.wantInterval)
+		})
+	}
+}

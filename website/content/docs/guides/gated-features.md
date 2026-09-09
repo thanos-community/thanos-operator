@@ -75,6 +75,23 @@ Automatically creates and manages ServiceMonitor resources for Thanos components
 
 When enabled, the operator automatically creates ServiceMonitor resources alongside each Thanos component. These ServiceMonitors inherit the labels from the workload. The selectors and endpoints are configured to enable Prometheus discovery and scraping.
 
+### Configuration
+
+Add settings to your `feature-gates.yaml` file and enable the feature with `--enable-feature=service-monitor`:
+
+```yaml
+service-monitor:
+  additionalLabels:
+    prometheus: platform
+  interval: 30s
+```
+
+`additionalLabels` adds labels to the metadata of every generated ServiceMonitor, including the receive router's kube-resource-sync monitor. Use these labels to match your Prometheus instance's `spec.serviceMonitorSelector`. They do not change Service or pod labels, or the ServiceMonitor's selector. Existing workload and operator labels take precedence on conflicts. The default is an empty set of additional labels.
+
+`interval` sets the scrape interval for generated ServiceMonitors. Use a positive Prometheus duration such as `30s` or `1m`. When omitted or empty, Prometheus uses its global scrape interval.
+
+These settings are read at operator startup. Restart the operator after changing the file. The block is ignored when the `service-monitor` feature is disabled.
+
 ### Prerequisites
 
 - Prometheus Operator must be installed in the cluster

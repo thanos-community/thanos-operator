@@ -63,12 +63,21 @@ type KubeResourceSyncConfig struct {
 	Image string
 }
 
+// ServiceMonitorConfig configures generated ServiceMonitors.
+type ServiceMonitorConfig struct {
+	FeatureConfig
+	// AdditionalLabels are added to ServiceMonitor metadata.
+	AdditionalLabels map[string]string
+	// Interval overrides the Prometheus scrape interval when set.
+	Interval string
+}
+
 // Config holds information about globally enabled features.
 // This represents the actual feature state used by controllers and manifest builders.
 // A nil pointer means the feature is not configured, which is treated as disabled.
 type Config struct {
 	// ServiceMonitor configures management of ServiceMonitor objects.
-	ServiceMonitor *FeatureConfig
+	ServiceMonitor *ServiceMonitorConfig
 	// PrometheusRule configures discovery of PrometheusRule objects.
 	PrometheusRule *FeatureConfig
 	// OtelSidecar configures OpenTelemetry collector sidecar injection.
@@ -122,7 +131,7 @@ func (c Config) GetKubeResourceSyncImage() string {
 func (f *Flag) ToFeatureGate() Config {
 	var c Config
 	if f.EnablesServiceMonitor() {
-		c.ServiceMonitor = Enabled()
+		c.ServiceMonitor = &ServiceMonitorConfig{FeatureConfig: FeatureConfig{Enabled: true}}
 	}
 	if f.EnablesPrometheusRule() {
 		c.PrometheusRule = Enabled()

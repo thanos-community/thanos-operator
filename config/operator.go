@@ -273,7 +273,7 @@ type deploymentConfig struct {
 // resources that configure Prometheus to scrape metrics from Thanos components.
 func WithServiceMonitor() DeploymentOption {
 	return func(c *deploymentConfig) {
-		c.featureGate.ServiceMonitor = featuregate.Enabled()
+		c.featureGate.ServiceMonitor = &featuregate.ServiceMonitorConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
 	}
 }
 
@@ -340,7 +340,7 @@ func WithFeatures(features ...string) DeploymentOption {
 		for _, feature := range features {
 			switch feature {
 			case featuregate.ServiceMonitor:
-				c.featureGate.ServiceMonitor = featuregate.Enabled()
+				c.featureGate.ServiceMonitor = &featuregate.ServiceMonitorConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
 			case featuregate.PrometheusRule:
 				c.featureGate.PrometheusRule = featuregate.Enabled()
 			case featuregate.OtelSidecar:

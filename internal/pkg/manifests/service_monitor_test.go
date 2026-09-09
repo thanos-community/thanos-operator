@@ -3,8 +3,9 @@ package manifests
 import (
 	"testing"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
+
 	"gotest.tools/v3/golden"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -24,23 +25,23 @@ func TestBuildServiceMonitor(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		golden string
-		opts   ServiceMonitorOptions
+		config featuregate.ServiceMonitorConfig
 	}{
 		{
 			name:   "test service monitor correctness with defaults",
 			golden: "servicemonitor-basic.golden.yaml",
-			opts:   ServiceMonitorOptions{},
+			config: featuregate.ServiceMonitorConfig{},
 		},
 		{
 			name:   "test service monitor with custom interval",
 			golden: "servicemonitor-custom-interval.golden.yaml",
-			opts: ServiceMonitorOptions{
-				Interval: ptr.To(Duration("60s")),
+			config: featuregate.ServiceMonitorConfig{
+				Interval: "60s",
 			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sm := BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.opts)
+			sm := BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.config, "http")
 
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(sm)

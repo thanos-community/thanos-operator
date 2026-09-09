@@ -103,9 +103,8 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig != nil {
-		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+	if opts.ServiceMonitorEnabled() {
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
 	return objs
 }
@@ -593,13 +592,6 @@ func GetLabels(opts Options) map[string]string {
 		return lbls
 	}
 	return manifests.SanitizeStoreAPIEndpointLabels(manifests.MergeMaps(lbls, manifestsstore.GetRequiredStoreServiceLabel()))
-}
-
-func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
-	return manifests.ServiceMonitorOptions{
-		Port:     ptr.To(HTTPPortName),
-		Interval: from.Interval,
-	}
 }
 
 // Convert PrometheusRule groups to YAML format
