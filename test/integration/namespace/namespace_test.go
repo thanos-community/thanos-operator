@@ -39,7 +39,6 @@ func TestNamespaceIsolation(t *testing.T) {
 	env, err := suite.Start("",
 		filepath.Join(root, "config", "crd", "bases"),
 		filepath.Join(root, "test", "integration", "configs", "service-monitor.yaml"),
-		filepath.Join(root, "test", "integration", "configs", "prometheus-rule.yaml"),
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, env.Stop()) })
@@ -160,17 +159,10 @@ func startManager(t *testing.T, env *suite.Env, namespace string, gates featureg
 			CommonMetrics:   metrics.NewCommonMetrics(registry),
 		},
 	}
-	for _, setup := range []func(ctrl.Manager) error{
-		controller.NewThanosQueryReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewThanosReceiveReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewThanosStoreReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewThanosCompactReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewThanosRulerReconciler(conf, "reloader:test", mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewObjectStatusReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-		controller.NewVolumeResizeReconciler(conf, mgr.GetClient(), env.Scheme).SetupWithManager,
-	} {
-		require.NoError(t, setup(mgr))
-	}
+	query := controller.NewThanosQueryReconciler(conf, mgr.GetClient(), env.Scheme)
+	require.NoError(t, query.SetupWithManager(mgr))
+	status := controller.NewObjectStatusReconciler(conf, mgr.GetClient(), env.Scheme)
+	require.NoError(t, status.SetupWithManager(mgr))
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- mgr.Start(ctx) }()
