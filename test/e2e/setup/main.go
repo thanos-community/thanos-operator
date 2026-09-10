@@ -33,7 +33,6 @@ import (
 	operatorconfig "github.com/thanos-community/thanos-operator/config"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,7 +61,7 @@ func run() error {
 
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, appsv1.AddToScheme, rbacv1.AddToScheme, monitoringv1.AddToScheme,
+		corev1.AddToScheme, rbacv1.AddToScheme, monitoringv1.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			return fmt.Errorf("building scheme: %w", err)
@@ -71,9 +70,6 @@ func run() error {
 	c, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
-	}
-	if err := checkLegacyOperator(c); err != nil {
-		return err
 	}
 	if err := installOperatorRoles(c); err != nil {
 		return fmt.Errorf("installing operator roles: %w", err)
@@ -107,20 +103,6 @@ func run() error {
 		log.Printf(">> loading operator image %s into kind", *image)
 		if err := utils.LoadImageToKindClusterWithName(*image); err != nil {
 			return fmt.Errorf("loading image into kind: %w", err)
-		}
-	}
-	return nil
-}
-
-func checkLegacyOperator(c client.Client) error {
-	deployments := &appsv1.DeploymentList{}
-	if err := c.List(context.Background(), deployments, client.InNamespace(operatorNamespace),
-		client.MatchingLabels{"control-plane": "controller-manager"}); err != nil {
-		return err
-	}
-	for _, deployment := range deployments.Items {
-		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas > 0 {
-			return fmt.Errorf("remove the legacy test operator deployment %s/%s before running namespace-isolated suites", operatorNamespace, deployment.Name)
 		}
 	}
 	return nil

@@ -44,4 +44,4 @@ Watch scoping does not change installed RBAC. For namespaced workload permission
 E2E_IMG=example.com/thanos-operator:v0.0.1 go test ./test/e2e/namespace -ginkgo.v
 ```
 
-Use a dedicated test cluster. Setup rejects a running legacy test operator in `thanos-operator-system` because it would overlap with the per-suite operators.
+Use a dedicated test cluster.
