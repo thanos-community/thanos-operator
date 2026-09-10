@@ -33,15 +33,3 @@ Deploy each operator in the namespace it manages and give the instances disjoint
 Leader-election leases remain in each operator's deployment namespace. Replicas in that namespace share a lease; operators deployed in separate namespaces elect their leaders independently.
 
 Watch scoping does not change installed RBAC. For namespaced workload permissions, bind the generated manager ClusterRole to the operator ServiceAccount using a RoleBinding in the managed namespace. Keep the separate leader-election RoleBinding in the deployment namespace. Secure operator metrics also require the existing cluster-scoped token-review and subject-access-review permissions.
-
-## End-to-end tests
-
-`make e2e-setup` installs shared dependencies and loads the operator image. Each suite then creates its own operator, ServiceAccount, and bindings in its test namespace. Features are disabled unless the suite passes them explicitly to `suite.Setup`.
-
-`make test-e2e` passes `E2E_IMG` to the suites. When running a suite directly after setup, pass the same image if you changed the default:
-
-```bash
-E2E_IMG=example.com/thanos-operator:v0.0.1 go test ./test/e2e/namespace -ginkgo.v
-```
-
-Use a dedicated test cluster.

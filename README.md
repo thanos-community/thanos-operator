@@ -110,7 +110,7 @@ See the [feature gates guide](docs/guides/gated-features.md).
 
 ### Namespace Scoping
 
-Use `--watch-namespace` to run an operator for a single namespace. See the [namespace scoping guide](docs/guides/namespace-scoping.md) for deployment and per-suite test configuration.
+Use `--watch-namespace` to run an operator for a single namespace. See the [namespace scoping guide](docs/guides/namespace-scoping.md) for deployment and RBAC configuration.
 
 ## Contributing and development
 
