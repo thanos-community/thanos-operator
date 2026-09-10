@@ -149,7 +149,7 @@ func TestFlag_ToFeatureGate(t *testing.T) {
 			name:     "all features enabled",
 			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, KubeResourceSync, VolumeResize},
 			want: Config{
-				ServiceMonitor:   Enabled(),
+				ServiceMonitor:   &ServiceMonitorConfig{FeatureConfig: FeatureConfig{Enabled: true}},
 				PrometheusRule:   Enabled(),
 				OtelSidecar:      Enabled(),
 				KubeResourceSync: &KubeResourceSyncConfig{FeatureConfig: FeatureConfig{Enabled: true}},

@@ -111,9 +111,6 @@ type Options struct {
 	LogLevel *string
 	// LogFormat is the log format for the component
 	LogFormat *string
-	//ServiceMonitorConfig is the configuration for the ServiceMonitor
-	// If not set, the ServiceMonitor will not be created.
-	ServiceMonitorConfig *ServiceMonitorConfig
 	// PodDisruptionConfig is the configuration for the PodDisruptionBudget
 	// If not set, the PodDisruptionBudget will not be created.
 	PodDisruptionConfig *PodDisruptionBudgetOptions

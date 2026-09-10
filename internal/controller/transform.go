@@ -446,7 +446,6 @@ func commonToOpts(
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
 		Additional:           additionalToOpts(additional),
-		ServiceMonitorConfig: serviceMonitorConfigToOptsGlobal(featureGate, labels),
 		PodDisruptionConfig:  podDisruptionBudgetConfigToOpts(replicas, common.PodDisruptionBudgetConfig),
 		PlacementConfig: &manifests.Placement{
 			NodeSelector:              common.NodeSelector,
@@ -493,15 +492,6 @@ func additionalToOpts(in v1alpha1.Additional) manifests.Additional {
 		ServicePorts: in.ServicePorts,
 		ConfigMaps:   in.ConfigMaps,
 		Secrets:      in.Secrets,
-	}
-}
-
-func serviceMonitorConfigToOptsGlobal(fg featuregate.Config, labels map[string]string) *manifests.ServiceMonitorConfig {
-	if !fg.ServiceMonitorEnabled() {
-		return nil
-	}
-	return &manifests.ServiceMonitorConfig{
-		Labels: labels,
 	}
 }
 

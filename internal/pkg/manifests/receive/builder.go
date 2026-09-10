@@ -101,9 +101,8 @@ func (opts IngesterOptions) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig != nil {
-		smLabels := manifests.MergeMaps(opts.ServiceMonitorConfig.Labels, objectMetaLabels)
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, selectorLabels, smLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+	if opts.ServiceMonitorEnabled() {
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
 	return objs
 }
@@ -144,17 +143,13 @@ func (opts RouterOptions) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	if opts.ServiceMonitorConfig != nil {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+	if opts.ServiceMonitorEnabled() {
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 
 		// Add separate ServiceMonitor for kube-resource-sync metrics when enabled
 		if opts.KubeResourceSyncEnabled() {
 			kubeResourceSyncSMName := name + "-kube-resource-sync"
-			kubeResourceSyncSMOpts := manifests.ServiceMonitorOptions{
-				Port:     ptr.To("kube-resource-sync"),
-				Interval: opts.ServiceMonitorConfig.Interval,
-			}
-			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, kubeResourceSyncSMOpts))
+			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, "kube-resource-sync"))
 		}
 	}
 	return objs
@@ -665,13 +660,6 @@ func GetRouterLabels(opts RouterOptions) map[string]string {
 	l := opts.GetSelectorLabels()
 	l[manifests.DefaultRemoteWriteAPILabel] = manifests.DefaultRemoteWriteAPIValue
 	return manifests.MergeMaps(opts.Labels, l)
-}
-
-func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
-	return manifests.ServiceMonitorOptions{
-		Port:     ptr.To(HTTPPortName),
-		Interval: from.Interval,
-	}
 }
 
 // buildRouterVolumes builds the volumes for the router pod

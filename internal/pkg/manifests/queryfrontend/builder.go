@@ -52,8 +52,8 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newQueryFrontendDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
-	if opts.ServiceMonitorConfig != nil {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, serviceMonitorOpts(opts.ServiceMonitorConfig)))
+	if opts.ServiceMonitorEnabled() {
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
@@ -268,11 +268,4 @@ func (opts Options) GetSelectorLabels() map[string]string {
 // GetLabels returns a map of labels that can be used to look up qfe resources.
 func GetLabels(opts Options) map[string]string {
 	return manifests.MergeMaps(opts.Labels, opts.GetSelectorLabels())
-}
-
-func serviceMonitorOpts(from *manifests.ServiceMonitorConfig) manifests.ServiceMonitorOptions {
-	return manifests.ServiceMonitorOptions{
-		Port:     ptr.To(HTTPPortName),
-		Interval: from.Interval,
-	}
 }

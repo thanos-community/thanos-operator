@@ -382,8 +382,9 @@ func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoring
 
 	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
-	name := manifestquery.Options{Options: manifests.Options{Owner: owner}}.GetGeneratedResourceName()
-	errCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, []string{name}, ns))
+	if !r.featureGate.ServiceMonitorEnabled() {
+		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
+	}
 
 	if resource.Spec.Replicas < 2 {
 		pruner := r.handler.NewResourcePruner().WithPodDisruptionBudget()

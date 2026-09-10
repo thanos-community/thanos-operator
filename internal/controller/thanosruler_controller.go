@@ -991,7 +991,9 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 
 	cleanErrCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
-	cleanErrCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, []string{RulerNameFromParent(owner)}, ns))
+	if !r.featureGate.ServiceMonitorEnabled() {
+		cleanErrCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
+	}
 
 	if resource.Spec.Replicas < 2 {
 		listOpt := manifests.GetLabelSelectorForOwner(manifestruler.Options{Options: manifests.Options{Owner: owner}})

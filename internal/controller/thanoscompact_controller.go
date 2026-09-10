@@ -169,9 +169,10 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
-	if errCount = r.handler.DeleteResource(ctx,
-		getDisabledFeatureGatedResources(r.featureGate, expectResources, compact.GetNamespace())); errCount > 0 {
-		return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
+	if !r.featureGate.ServiceMonitorEnabled() {
+		if errCount = r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &compact); errCount > 0 {
+			return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
+		}
 	}
 
 	return nil

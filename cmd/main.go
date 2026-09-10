@@ -171,6 +171,7 @@ func main() {
 	var enableHTTP2 bool
 
 	var enabledFeatures featuregate.Flag
+	var featureGateConfigFile string
 
 	var logLevelStr string
 	var logFormatStr string
@@ -192,6 +193,8 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.Var(&enabledFeatures, "enable-feature", fmt.Sprintf("Experimental feature to enable. Repeat for multiple features. Available features: %s.", strings.Join(featuregate.AllFeatures(), ", ")))
+	flag.StringVar(&featureGateConfigFile, "feature-gate-config-file", featuregate.DefaultConfigFilePath,
+		"Path to a YAML file containing per-feature configuration. This file is optional; if missing, defaults apply.")
 	flag.StringVar(&logLevelStr, "log.level", "info", psflag.LevelFlagHelp)
 	flag.StringVar(&logFormatStr, "log.format", "logfmt", psflag.FormatFlagHelp)
 	flag.Parse()
@@ -329,13 +332,18 @@ func main() {
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
-	const (
-		defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
-		defaultConfigReloaderImage   = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
-	)
+	const defaultConfigReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
 	featureGateConfig := enabledFeatures.ToFeatureGate()
+
+	var fileErr error
+	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
+	if fileErr != nil {
+		setupLog.Error(fileErr, "failed to load feature gate config file")
+		os.Exit(1)
+	}
+
 	if featureGateConfig.ServiceMonitorEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
 	}
@@ -343,10 +351,6 @@ func main() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
 	}
 	if featureGateConfig.KubeResourceSyncEnabled() {
-		featureGateConfig.KubeResourceSync.Image = defaultKubeResourceSyncImage
-		if image, ok := os.LookupEnv("KUBE_RESOURCE_SYNC_IMAGE"); ok {
-			featureGateConfig.KubeResourceSync.Image = image
-		}
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
 	if featureGateConfig.VolumeResizeEnabled() {

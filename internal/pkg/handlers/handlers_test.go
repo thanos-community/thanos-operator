@@ -7,16 +7,23 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"gotest.tools/v3/assert"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -191,6 +198,132 @@ func TestHandler_GetEndpointSlices(t *testing.T) {
 			if eps.Items[0].Labels[discoveryv1.LabelServiceName] != svcName && eps.Items[0].Labels["explain"] != "should be included" {
 				t.Errorf("unexpected endpoint slice: %v", eps.Items[0])
 			}
+		})
+	}
+}
+
+func TestPruneByOwner(t *testing.T) {
+	ctx := context.Background()
+	testScheme := runtime.NewScheme()
+	assert.NilError(t, scheme.AddToScheme(testScheme))
+	assert.NilError(t, monitoringv1.AddToScheme(testScheme))
+	owner := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Name: "owner", Namespace: "test", UID: "owner-uid",
+	}}
+	ownerRef := *metav1.NewControllerRef(owner, appsv1.SchemeGroupVersion.WithKind("StatefulSet"))
+	otherRef := ownerRef
+	otherRef.UID = "other-uid"
+	nonControllerRef := ownerRef
+	nonControllerRef.Controller = ptr.To(false)
+
+	for _, tc := range []struct {
+		name      string
+		object    client.Object
+		configure func(*resourcePruner) *resourcePruner
+	}{
+		{
+			name: "service monitors",
+			object: &monitoringv1.ServiceMonitor{TypeMeta: metav1.TypeMeta{
+				APIVersion: monitoringv1.SchemeGroupVersion.String(), Kind: "ServiceMonitor",
+			}},
+			configure: (*resourcePruner).WithServiceMonitor,
+		},
+		{
+			name: "config maps",
+			object: &corev1.ConfigMap{TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1", Kind: "ConfigMap",
+			}},
+			configure: (*resourcePruner).WithConfigMap,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixtures := []struct {
+				name, namespace string
+				refs            []metav1.OwnerReference
+				wantDeleted     bool
+			}{
+				{"owned", owner.Namespace, []metav1.OwnerReference{ownerRef}, true},
+				{"also-owned", owner.Namespace, []metav1.OwnerReference{ownerRef}, true},
+				{"other-owner", owner.Namespace, []metav1.OwnerReference{otherRef}, false},
+				{"unowned", owner.Namespace, nil, false},
+				{"non-controller", owner.Namespace, []metav1.OwnerReference{nonControllerRef}, false},
+				{"other-namespace", "other", []metav1.OwnerReference{ownerRef}, false},
+			}
+			objects := make([]client.Object, 0, len(fixtures))
+			for _, fixture := range fixtures {
+				obj := tc.object.DeepCopyObject().(client.Object)
+				obj.SetName(fixture.name)
+				obj.SetNamespace(fixture.namespace)
+				obj.SetOwnerReferences(fixture.refs)
+				objects = append(objects, obj)
+			}
+			unselected := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name: "owned-secret", Namespace: owner.Namespace, OwnerReferences: []metav1.OwnerReference{ownerRef},
+			}}
+			c := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(objects...).WithObjects(unselected).Build()
+			h := NewHandler(c, testScheme, logr.Discard()).SetFeatureGates([]schema.GroupVersionKind{
+				tc.object.GetObjectKind().GroupVersionKind(),
+			})
+
+			assert.Equal(t, tc.configure(h.NewResourcePruner()).PruneByOwner(ctx, owner), 0)
+			for i, obj := range objects {
+				err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+				if fixtures[i].wantDeleted {
+					assert.Assert(t, apierrors.IsNotFound(err), "resource %s should be deleted: %v", obj.GetName(), err)
+				} else {
+					assert.NilError(t, err, "resource %s should remain", obj.GetName())
+				}
+			}
+			assert.NilError(t, c.Get(ctx, client.ObjectKeyFromObject(unselected), unselected))
+		})
+	}
+}
+
+func TestPruneByOwnerErrors(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	assert.NilError(t, monitoringv1.AddToScheme(testScheme))
+	owner := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Name: "owner", Namespace: "test", UID: "owner-uid",
+	}}
+	resource := monitoringv1.SchemeGroupVersion.WithResource("servicemonitors").GroupResource()
+	missingKind := &meta.NoKindMatchError{GroupKind: monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor").GroupKind()}
+	missingResource := apierrors.NewNotFound(resource, "monitor")
+	forbidden := apierrors.NewForbidden(resource, "monitor", fmt.Errorf("denied"))
+
+	for _, tc := range []struct {
+		name         string
+		listErr      error
+		deleteErr    error
+		wantErrCount int
+	}{
+		{name: "missing kind", listErr: missingKind},
+		{name: "missing resource", listErr: missingResource},
+		{name: "list forbidden", listErr: forbidden, wantErrCount: 1},
+		{name: "already deleted", deleteErr: missingResource},
+		{name: "kind removed before delete", deleteErr: missingKind},
+		{name: "delete forbidden", deleteErr: forbidden, wantErrCount: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			monitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{
+				Name: "monitor", Namespace: owner.Namespace,
+				OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(owner, appsv1.SchemeGroupVersion.WithKind("StatefulSet"))},
+			}}
+			c := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(monitor).WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if tc.listErr != nil {
+						return tc.listErr
+					}
+					return c.List(ctx, list, opts...)
+				},
+				Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+					if tc.deleteErr != nil {
+						return tc.deleteErr
+					}
+					return c.Delete(ctx, obj, opts...)
+				},
+			}).Build()
+			pruner := NewHandler(c, testScheme, logr.Discard()).NewResourcePruner().WithServiceMonitor()
+			assert.Equal(t, pruner.PruneByOwner(context.Background(), owner), tc.wantErrCount)
 		})
 	}
 }

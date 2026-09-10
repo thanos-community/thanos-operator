@@ -16,6 +16,7 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -52,8 +53,7 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 	}
 }
 
-// SetFeatureGates sets the feature gates for the handler.
-// Handler will ignore actions on resources with the given GroupVersionKind.
+// SetFeatureGates sets the resource types skipped by CreateOrUpdate and DeleteResource.
 func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) *Handler {
 	h.gatedGVK = gvk
 	return h
@@ -223,14 +223,25 @@ func (r *resourcePruner) WithPodDisruptionBudget() *resourcePruner {
 // It logs the operation and any errors encountered.
 // It returns the number of errors encountered.
 func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, listOpts ...client.ListOption) int {
-	var errCount int
-	deleteOrphanedResources := func(obj client.Object) error {
-		if !slices.Contains(keepResourceNames, obj.GetName()) {
-			return r.deleteResource(ctx, obj)
-		}
-		return nil
+	return r.prune(ctx, func(obj client.Object) bool {
+		return !slices.Contains(keepResourceNames, obj.GetName())
+	}, listOpts...)
+}
+
+// PruneByOwner deletes enabled resources controlled by owner in its namespace.
+// It ignores feature gates and returns the number of errors encountered.
+func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object) int {
+	if owner.GetUID() == "" {
+		return 0
 	}
 
+	return r.prune(ctx, func(obj client.Object) bool {
+		return metav1.IsControlledBy(obj, owner)
+	}, client.InNamespace(owner.GetNamespace()))
+}
+
+func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Object) bool, listOpts ...client.ListOption) int {
+	var errCount int
 	resourceTypes := []struct {
 		enabled bool
 		list    client.ObjectList
@@ -248,6 +259,10 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 	for _, rt := range resourceTypes {
 		if rt.enabled {
 			if err := r.client.List(ctx, rt.list, listOpts...); err != nil {
+				if errors.IsNotFound(err) || meta.IsNoMatchError(err) {
+					continue
+				}
+				r.logger.Error(err, "failed to list resources for pruning")
 				errCount++
 				continue
 			}
@@ -258,7 +273,11 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 				continue
 			}
 			for _, item := range items {
-				if err := deleteOrphanedResources(item.(client.Object)); err != nil {
+				obj := item.(client.Object)
+				if !shouldDelete(obj) {
+					continue
+				}
+				if err := r.deleteResource(ctx, obj); err != nil {
 					errCount++
 					continue
 				}
