@@ -56,6 +56,10 @@ func TestNamespaceIsolation(t *testing.T) {
 		}))
 	}
 
+	outside := &v1alpha1.ThanosQuery{}
+	outsideKey := client.ObjectKey{Name: queryName, Namespace: namespaces[2]}
+	require.NoError(t, env.Client.Get(ctx, outsideKey, outside))
+
 	t.Run("scoped managers", func(t *testing.T) {
 		startManager(t, env, namespaces[0], featuregate.Config{
 			ServiceMonitor: &featuregate.ServiceMonitorConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}},
@@ -96,9 +100,6 @@ func TestNamespaceIsolation(t *testing.T) {
 			return env.Client.Get(ctx, monitorKey, &monitoringv1.ServiceMonitor{}) == nil
 		}, time.Minute, 100*time.Millisecond)
 
-		outside := &v1alpha1.ThanosQuery{}
-		outsideKey := client.ObjectKey{Name: queryName, Namespace: namespaces[2]}
-		require.NoError(t, env.Client.Get(ctx, outsideKey, outside))
 		require.Never(t, func() bool {
 			plainMonitor := client.ObjectKey{Name: monitorKey.Name, Namespace: namespaces[1]}
 			err := env.Client.Get(ctx, plainMonitor, &monitoringv1.ServiceMonitor{})

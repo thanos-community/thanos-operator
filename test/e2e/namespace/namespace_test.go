@@ -28,8 +28,9 @@ func TestNamespaceIsolation(t *testing.T) {
 var _ = Describe("Operators in separate namespaces", func() {
 	It("keeps feature configuration local and leaves unwatched resources alone", func() {
 		ctx := context.Background()
-		c, monitored, _ := suite.Setup("e2e-ns-monitored", featuregate.ServiceMonitor)
-		_, plain, _ := suite.Setup("e2e-ns-plain")
+		const monitored, plain = "e2e-ns-monitored", "e2e-ns-plain"
+		c := suite.Setup(monitored, featuregate.ServiceMonitor)
+		suite.Setup(plain)
 		outside := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "e2e-ns-unwatched"}}
 		Expect(c.Create(ctx, outside)).To(Succeed())
 		DeferCleanup(func() { Expect(c.Delete(ctx, outside)).To(Succeed()) })

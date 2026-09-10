@@ -18,7 +18,7 @@ limitations under the License.
 // heart of the e2e coverage: a remote-write lands in the receiver, a query reads it
 // back, and a ruler evaluates against it. These specs must run in order, so they live
 // in one binary rather than being split per area like the leaf feature suites. Like
-// those suites it creates its own throwaway namespace and tears it down in AfterSuite,
+// those suites it creates its own throwaway namespace and cleans it up after the suite,
 // alongside its own namespace-scoped operator. Shared dependencies are bootstrapped
 // once by `make e2e-setup`.
 package core
@@ -38,10 +38,7 @@ import (
 
 const namespace = "e2e-core"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestCore(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -50,12 +47,6 @@ func TestCore(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c = suite.Setup(namespace)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })

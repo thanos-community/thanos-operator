@@ -24,7 +24,6 @@ package suite
 import (
 	"context"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -77,7 +76,7 @@ config:
 // Setup deploys a namespace-scoped operator and object-storage secret.
 // Features are disabled unless explicitly requested. Shared dependencies must
 // already be installed by make e2e-setup.
-func Setup(namespace string, features ...string) (client.Client, string, func()) {
+func Setup(namespace string, features ...string) client.Client {
 	c := NewClient()
 	ctx := context.Background()
 	for _, feature := range features {
@@ -87,19 +86,15 @@ func Setup(namespace string, features ...string) (client.Client, string, func())
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	err := c.Create(ctx, ns)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "remove the existing test namespace %s before rerunning", namespace)
-	var cleanup sync.Once
-	teardown := func() {
-		cleanup.Do(func() {
-			gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, &rbacv1.ClusterRoleBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: metricsAuthBindingName(namespace)},
-			}))).To(gomega.Succeed())
-			gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, ns))).To(gomega.Succeed())
-			gomega.Eventually(func() bool {
-				return apierrors.IsNotFound(c.Get(ctx, client.ObjectKeyFromObject(ns), &corev1.Namespace{}))
-			}, 3*time.Minute, time.Second).Should(gomega.BeTrue(), "test namespace must be deleted before it can be reused")
-		})
-	}
-	ginkgo.DeferCleanup(teardown)
+	ginkgo.DeferCleanup(func() {
+		gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: metricsAuthBindingName(namespace)},
+		}))).To(gomega.Succeed())
+		gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, ns))).To(gomega.Succeed())
+		gomega.Eventually(func() bool {
+			return apierrors.IsNotFound(c.Get(ctx, client.ObjectKeyFromObject(ns), &corev1.Namespace{}))
+		}, 3*time.Minute, time.Second).Should(gomega.BeTrue(), "test namespace must be deleted before it can be reused")
+	})
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: ObjStoreSecret, Namespace: namespace},
@@ -115,7 +110,7 @@ func Setup(namespace string, features ...string) (client.Client, string, func())
 	gomega.Eventually(func() bool {
 		return utils.VerifyDeploymentReplicasRunning(c, 1, "controller-manager", namespace)
 	}, 3*time.Minute, time.Second).Should(gomega.BeTrue(), "namespace-scoped operator must become ready")
-	return c, namespace, teardown
+	return c
 }
 
 // ObjStoreConfig references the per-namespace object-storage secret Setup creates,

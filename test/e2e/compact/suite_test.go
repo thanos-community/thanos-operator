@@ -35,10 +35,7 @@ import (
 
 const namespace = "e2e-compact"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestCompact(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -47,12 +44,6 @@ func TestCompact(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c = suite.Setup(namespace)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })

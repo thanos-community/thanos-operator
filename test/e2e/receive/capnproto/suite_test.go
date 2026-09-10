@@ -38,10 +38,7 @@ import (
 
 const namespace = "e2e-receive-capnproto"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestCapnproto(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -50,12 +47,6 @@ func TestCapnproto(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c = suite.Setup(namespace)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })

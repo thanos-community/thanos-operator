@@ -38,10 +38,7 @@ import (
 
 const namespace = "e2e-receive-krs"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestKubeResourceSync(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -50,12 +47,6 @@ func TestKubeResourceSync(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace, featuregate.KubeResourceSync)
+	c = suite.Setup(namespace, featuregate.KubeResourceSync)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })
