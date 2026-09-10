@@ -15,8 +15,7 @@ limitations under the License.
 */
 
 // Package prometheusrule runs the PrometheusRule feature-gate e2e as its own test
-// binary against the shared cluster bootstrapped by `make e2e-setup` (the operator is
-// deployed with --enable-feature=prometheus-rule). It stands up its own query so the
+// binary with its own operator enabling prometheus-rule. It stands up its own query so the
 // ruler can reconcile, then proves a PrometheusRule-derived rule is wired into a real
 // ruler pod and evaluates end-to-end. It sits beside ruler/stateless under
 // test/e2e/ruler and runs in parallel with it.
@@ -28,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/test/e2e/suite"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +49,7 @@ func TestPrometheusRuleFeatureGate(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c, _, teardown = suite.Setup(namespace, featuregate.PrometheusRule)
 	Expect(c).NotTo(BeNil())
 })
 

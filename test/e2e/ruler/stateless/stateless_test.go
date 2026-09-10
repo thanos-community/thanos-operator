@@ -130,9 +130,10 @@ var _ = Describe("Thanos stateless ruler", Ordered, func() {
 		header := map[string]string{
 			"THANOS-TENANT": "stateless_tenant",
 		}
+		// Allow kubelet to project hashring updates without kube-resource-sync.
 		Eventually(func() error {
 			return utils.DoRemoteWriteRequest(c, utils.StatelessRemoteWriteRequest(), namespace, routerLabels, header, receive.RemoteWritePort)
-		}, time.Minute*1, time.Second*1).Should(Succeed())
+		}, time.Minute*3, time.Second*1).Should(Succeed())
 	})
 
 	It("should allow querying of evaluated rules", func() {

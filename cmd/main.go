@@ -169,6 +169,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var watchNamespace string
 
 	var enabledFeatures featuregate.Flag
 	var featureGateConfigFile string
@@ -178,6 +179,7 @@ func main() {
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&watchNamespace, "watch-namespace", "", "Namespace to watch. Empty watches all namespaces.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -222,6 +224,16 @@ func main() {
 		),
 	)
 	setupLog := ctrl.Log.WithName("setup")
+	cacheOptions, err := controller.CacheOptionsForNamespace(watchNamespace)
+	if err != nil {
+		setupLog.Error(err, "invalid namespace scope")
+		os.Exit(1)
+	}
+	if watchNamespace == "" {
+		setupLog.Info("watching all namespaces")
+	} else {
+		setupLog.Info("watching namespace", "namespace", watchNamespace)
+	}
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
 	// prevent from being vulnerable to the HTTP/2 Stream Cancelation and
@@ -297,6 +309,7 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
+		Cache:                  cacheOptions,
 		Metrics:                metricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,

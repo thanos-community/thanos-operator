@@ -19,6 +19,11 @@ func TestControllerManagerDeployment(t *testing.T) {
 			opts:   []DeploymentOption{},
 		},
 		{
+			name:   "deployment watching its own namespace",
+			golden: "deployment-watch-own-namespace.golden.yaml",
+			opts:   []DeploymentOption{WithWatchOwnNamespace()},
+		},
+		{
 			name:   "deployment with service monitor",
 			golden: "deployment-service-monitor.golden.yaml",
 			opts:   []DeploymentOption{WithServiceMonitor()},

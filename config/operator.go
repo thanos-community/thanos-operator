@@ -263,7 +263,15 @@ type DeploymentOption func(*deploymentConfig)
 
 // deploymentConfig holds the configuration for the controller manager deployment.
 type deploymentConfig struct {
-	featureGate featuregate.Config
+	featureGate       featuregate.Config
+	watchOwnNamespace bool
+}
+
+// WithWatchOwnNamespace limits the operator to its deployment namespace.
+func WithWatchOwnNamespace() DeploymentOption {
+	return func(c *deploymentConfig) {
+		c.watchOwnNamespace = true
+	}
 }
 
 // WithServiceMonitor enables the service monitor feature.
@@ -466,6 +474,16 @@ func ControllerManagerDeployment(opts ...DeploymentOption) *appsv1.Deployment {
 		},
 	}
 
+	if config.watchOwnNamespace {
+		manager := &deployment.Spec.Template.Spec.Containers[0]
+		manager.Args = append(manager.Args, "--watch-namespace=$(POD_NAMESPACE)")
+		manager.Env = append(manager.Env, corev1.EnvVar{
+			Name: "POD_NAMESPACE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			},
+		})
+	}
 	return deployment
 }
 

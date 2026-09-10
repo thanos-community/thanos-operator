@@ -62,6 +62,8 @@ Usage of ./bin/manager:
     	The path to the client CA certificate file for mutual TLS authentication.
   -metrics-secure
     	If set the metrics endpoint is served securely
+  -watch-namespace string
+    	Namespace to watch. Empty watches all namespaces.
 ```
 
 CRDs supported by this operator are defined in [./config/crd/bases](./config/crd/bases/). Operator deployment manifests are defined in [./config/manager](./config/manager/). To edit and build configuration refer to [CRD docs](docs/api-reference/api.md).
@@ -105,6 +107,10 @@ Read more about getting started [here](docs/get-started.md) and how to [install]
 ### Feature Gates
 
 See the [feature gates guide](docs/guides/gated-features.md).
+
+### Namespace Scoping
+
+Use `--watch-namespace` to run an operator for a single namespace. See the [namespace scoping guide](docs/guides/namespace-scoping.md) for deployment and per-suite test configuration.
 
 ## Contributing and development
 
