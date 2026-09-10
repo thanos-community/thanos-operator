@@ -394,7 +394,7 @@ func (r *ThanosReceiveReconciler) cleanup(ctx context.Context, resource monitori
 
 	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedIngesters)
 	if !r.featureGate.ServiceMonitorEnabled() {
-		errCount += deleteOwnedServiceMonitors(ctx, r.Client, &resource)
+		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	} else if !r.featureGate.KubeResourceSyncEnabled() {
 		errCount += r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
 			ObjectMeta: metav1.ObjectMeta{Name: routerName + "-kube-resource-sync", Namespace: ns},

@@ -164,7 +164,7 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 
 	cleanErrCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
 	if !r.featureGate.ServiceMonitorEnabled() {
-		cleanErrCount += deleteOwnedServiceMonitors(ctx, r.Client, &store)
+		cleanErrCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &store)
 	}
 
 	if store.Spec.Replicas < 2 {

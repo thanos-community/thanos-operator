@@ -992,7 +992,7 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 	cleanErrCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
 	if !r.featureGate.ServiceMonitorEnabled() {
-		cleanErrCount += deleteOwnedServiceMonitors(ctx, r.Client, &resource)
+		cleanErrCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	}
 
 	if resource.Spec.Replicas < 2 {

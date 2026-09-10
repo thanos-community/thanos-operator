@@ -170,7 +170,7 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	}
 
 	if !r.featureGate.ServiceMonitorEnabled() {
-		if errCount = deleteOwnedServiceMonitors(ctx, r.Client, &compact); errCount > 0 {
+		if errCount = r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &compact); errCount > 0 {
 			return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
 		}
 	}

@@ -383,7 +383,7 @@ func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoring
 	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
 	if !r.featureGate.ServiceMonitorEnabled() {
-		errCount += deleteOwnedServiceMonitors(ctx, r.Client, &resource)
+		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	}
 
 	if resource.Spec.Replicas < 2 {
