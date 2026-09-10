@@ -64,6 +64,7 @@ func TestNamespaceIsolation(t *testing.T) {
 		startManager(t, env, namespaces[1], featuregate.Config{})
 		for i, namespace := range namespaces[:2] {
 			key := client.ObjectKey{Name: controller.QueryNameFromParent(queryName), Namespace: namespace}
+			// Verify existing namespace-local discovery still works with a scoped cache.
 			require.Eventually(t, func() bool {
 				deployment := &appsv1.Deployment{}
 				if env.Client.Get(ctx, key, deployment) != nil {
