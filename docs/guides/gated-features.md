@@ -40,13 +40,18 @@ Enable features using the `--enable-feature` flag when starting the operator:
 
 ### Config File
 
-Features can also be configured via a YAML file using the `--feature-gate-config-file` flag:
+Configure enabled features via a YAML file using the `--feature-gate-config-file` flag:
 
 ```bash
-./thanos-operator --feature-gate-config-file /etc/thanos-operator/feature-gates.yaml
+./thanos-operator \
+  --enable-feature service-monitor \
+  --enable-feature kube-resource-sync \
+  --feature-gate-config-file /etc/thanos-operator/feature-gates.yaml
 ```
 
-The default path is `/etc/thanos-operator/feature-gates.yaml`. If the file is missing, the operator uses default values.
+The default path is `/etc/thanos-operator/feature-gates.yaml`. Defaults apply when the file, a feature's block, or a setting is omitted. An empty block also uses defaults.
+
+The file is read at operator startup. Restart the operator after changing the file or feature flags.
 
 **Important**: The config file **does not enable features**. A feature must be enabled via `--enable-feature` first. The config file only provides custom settings for enabled features. Blocks for disabled features are ignored, even if they contain invalid values.
 
@@ -55,9 +60,13 @@ Example `feature-gates.yaml`:
 ```yaml
 kube-resource-sync:
   image: custom-registry/kube-resource-sync:v1.0.0
+service-monitor:
+  additionalLabels:
+    prometheus: platform
+  interval: 30s
 ```
 
-In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-resource-sync`, the custom image will be used. If the feature is not enabled, the `kube-resource-sync` block is ignored.
+With both features enabled, this uses the custom resource-sync image and adds the label and scrape interval to generated ServiceMonitors.
 
 **Precedence** (highest to lowest):
 1. Config file (`--feature-gate-config-file`)
@@ -69,13 +78,15 @@ In this example, if `kube-resource-sync` is enabled via `--enable-feature=kube-r
 
 ### What It Achieves
 
-Automatically creates and manages ServiceMonitor resources for Thanos components It eliminates the need to manually define ServiceMonitors for scraping the resources deployed by the operator. This feature integrates seamlessly within the Prometheus Operator ecosystem.
+Creates and manages ServiceMonitor resources so Prometheus can scrape the Thanos components deployed by the operator.
 
 ### How It Works
 
 When enabled, the operator automatically creates ServiceMonitor resources alongside each Thanos component. These ServiceMonitors inherit the labels from the workload. The selectors and endpoints are configured to enable Prometheus discovery and scraping.
 
 ### Configuration
+
+ServiceMonitor settings apply to all components managed by the operator and are configured in the operator's file. The Thanos custom resource specs do not expose ServiceMonitor settings.
 
 Add settings to your `feature-gates.yaml` file and enable the feature with `--enable-feature=service-monitor`:
 
@@ -90,7 +101,11 @@ service-monitor:
 
 `interval` sets the scrape interval for generated ServiceMonitors. Use a positive Prometheus duration such as `30s` or `1m`. When omitted or empty, Prometheus uses its global scrape interval.
 
-These settings are read at operator startup. Restart the operator after changing the file. The block is ignored when the `service-monitor` feature is disabled.
+### Disabling the Feature
+
+Remove `--enable-feature=service-monitor` and restart the operator. During reconciliation, each controller deletes all ServiceMonitors in the Thanos resource's namespace whose controller owner reference matches that resource's UID. This includes monitors with obsolete names. This cleanup leaves monitors owned by other resources and monitors without a matching controller owner reference in place.
+
+If `service-monitor` stays enabled but `kube-resource-sync` is disabled, the Receive controller removes the router's kube-resource-sync monitor and keeps the router and ingester monitors.
 
 ### Prerequisites
 
@@ -320,7 +335,7 @@ kube-resource-sync:
   image: custom-registry/kube-resource-sync:v1.0.0
 ```
 
-If not set in the config file, the hardcoded default is used.
+When `image` is omitted or empty, the default is `quay.io/philipgough/kube-resource-sync:0.1.0`. Both the sidecar and init container use this image. The same default applies when the config file or `kube-resource-sync` block is missing.
 
 ---
 

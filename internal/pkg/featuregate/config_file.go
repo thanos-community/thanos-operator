@@ -35,10 +35,14 @@ func (c serviceMonitorFileConfig) validate() error {
 	return nil
 }
 
-// LoadAndApplyConfig reads and applies a YAML config file on top of the current Config.
-// A missing file returns the current Config unchanged and no error.
+// LoadAndApplyConfig applies defaults and YAML overrides to the current Config.
+// A missing file keeps the defaults and current settings.
 // Blocks for disabled features are never decoded, so invalid content there will not cause an error.
 func LoadAndApplyConfig(path string, current Config) (Config, error) {
+	if current.KubeResourceSyncEnabled() && current.KubeResourceSync.Image == "" {
+		current.KubeResourceSync.Image = defaultKubeResourceSyncImage
+	}
+
 	content, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

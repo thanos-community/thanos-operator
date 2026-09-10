@@ -114,6 +114,8 @@ Feature flags can be enabled using the `--enable-feature` flag. The following fe
 
 `kube-resource-sync` - Enables [kube-resource-sync](https://github.com/philipgough/kube-resource-sync) sidecar for Thanos Receive router deployments. This provides immediate synchronization of ConfigMap changes without requiring pod restarts.
 
+Use `--feature-gate-config-file` to configure the resource-sync image and ServiceMonitor labels and scrape interval. Features must be enabled with `--enable-feature`. See the [feature gates guide](docs/guides/gated-features.md) for configuration, defaults, and cleanup when features are disabled.
+
 ## Contributing and development
 
 Requirements to build, and test the project,

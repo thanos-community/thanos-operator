@@ -1,6 +1,8 @@
 package featuregate
 
 import (
+	"slices"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -27,6 +29,8 @@ const (
 	VolumeResize = "volume-resize"
 )
 
+const defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
+
 // AllFeatures returns a slice of all available feature flag names.
 // This is useful for validation and help text generation.
 func AllFeatures() []string {
@@ -41,12 +45,7 @@ func AllFeatures() []string {
 
 // IsValidFeature checks if a given feature name is valid.
 func IsValidFeature(feature string) bool {
-	for _, f := range AllFeatures() {
-		if f == feature {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(AllFeatures(), feature)
 }
 
 // FeatureConfig is the base configuration shared by all features.

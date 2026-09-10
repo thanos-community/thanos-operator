@@ -332,10 +332,7 @@ func main() {
 	prometheus.DefaultRegisterer = ctrlmetrics.Registry
 	baseLogger := ctrl.Log.WithName(manifests.DefaultManagedByLabel)
 
-	const (
-		defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
-		defaultConfigReloaderImage   = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
-	)
+	const defaultConfigReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
 	featureGateConfig := enabledFeatures.ToFeatureGate()
@@ -354,9 +351,6 @@ func main() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
 	}
 	if featureGateConfig.KubeResourceSyncEnabled() {
-		if featureGateConfig.KubeResourceSync.Image == "" {
-			featureGateConfig.KubeResourceSync.Image = defaultKubeResourceSyncImage
-		}
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
 	if featureGateConfig.VolumeResizeEnabled() {

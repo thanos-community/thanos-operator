@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/client-go/tools/events"
 
@@ -392,7 +393,13 @@ func (r *ThanosReceiveReconciler) cleanup(ctx context.Context, resource monitori
 	owner := resource.GetName()
 
 	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedIngesters)
-	errCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, append(expectedIngesters, routerName), ns))
+	if !r.featureGate.ServiceMonitorEnabled() {
+		errCount += deleteOwnedServiceMonitors(ctx, r.Client, &resource)
+	} else if !r.featureGate.KubeResourceSyncEnabled() {
+		errCount += r.handler.DeleteResource(ctx, []client.Object{&monitoringv1.ServiceMonitor{
+			ObjectMeta: metav1.ObjectMeta{Name: routerName + "-kube-resource-sync", Namespace: ns},
+		}})
+	}
 
 	if resource.Spec.Router.Replicas < 2 {
 		listOpt := manifests.GetLabelSelectorForOwner(manifestreceive.RouterOptions{Options: manifests.Options{Owner: owner}})

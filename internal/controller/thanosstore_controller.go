@@ -163,7 +163,9 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 	var cleanErrCount int
 
 	cleanErrCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
-	cleanErrCount += r.handler.DeleteResource(ctx, getDisabledFeatureGatedResources(r.featureGate, expectShards, store.GetNamespace()))
+	if !r.featureGate.ServiceMonitorEnabled() {
+		cleanErrCount += deleteOwnedServiceMonitors(ctx, r.Client, &store)
+	}
 
 	if store.Spec.Replicas < 2 {
 		listOpt := manifests.GetLabelSelectorForOwner(manifestsstore.Options{Options: manifests.Options{Owner: store.GetName()}})
