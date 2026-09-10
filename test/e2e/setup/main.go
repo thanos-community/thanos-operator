@@ -18,8 +18,7 @@ limitations under the License.
 // prometheus-operator, cert-manager, MinIO + its object-storage secret, and the
 // test Prometheus. It runs once (via `make e2e-setup`) before the suites, so the
 // per-suite test binaries can run concurrently against one cluster without racing
-// on this shared setup. Operator image build/load and deploy are handled by the
-// make target around this command.
+// on this shared setup. Each suite deploys its own namespace-scoped operator.
 package main
 
 import (
@@ -27,9 +26,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	operatorconfig "github.com/thanos-community/thanos-operator/config"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -40,6 +41,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/yaml"
 )
 
 const operatorNamespace = "thanos-operator-system"
@@ -67,6 +70,9 @@ func run() error {
 	c, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
 		return fmt.Errorf("creating client: %w", err)
+	}
+	if err := installOperatorRoles(c); err != nil {
+		return fmt.Errorf("installing operator roles: %w", err)
 	}
 
 	log.Println(">> installing prometheus-operator")
@@ -97,6 +103,27 @@ func run() error {
 		log.Printf(">> loading operator image %s into kind", *image)
 		if err := utils.LoadImageToKindClusterWithName(*image); err != nil {
 			return fmt.Errorf("loading image into kind: %w", err)
+		}
+	}
+	return nil
+}
+
+func installOperatorRoles(c client.Client) error {
+	content, err := os.ReadFile("config/rbac/role.yaml")
+	if err != nil {
+		return err
+	}
+	managerRole := &rbacv1.ClusterRole{}
+	if err := yaml.Unmarshal(content, managerRole); err != nil {
+		return err
+	}
+	for _, role := range []*rbacv1.ClusterRole{managerRole, operatorconfig.MetricsAuthClusterRole()} {
+		rules := role.DeepCopy().Rules
+		if _, err := controllerutil.CreateOrUpdate(context.Background(), c, role, func() error {
+			role.Rules = rules
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 	return nil

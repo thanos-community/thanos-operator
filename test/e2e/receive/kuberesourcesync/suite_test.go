@@ -15,8 +15,7 @@ limitations under the License.
 */
 
 // Package kuberesourcesync runs the kube-resource-sync feature-gate e2e specs for the
-// receive router as its own test binary against the shared cluster bootstrapped by
-// `make e2e-setup` (which enables the feature on the operator). Unlike the envtest
+// receive router with its own operator enabling kube-resource-sync. Unlike the envtest
 // integration suite, which can only inspect the rendered Deployment, this exercises the
 // feature for real: the router pod must come up with the injected init container and
 // sidecar, and remote-write must route through the hashring the sidecar syncs into the
@@ -29,6 +28,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/test/e2e/suite"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,10 +38,7 @@ import (
 
 const namespace = "e2e-receive-krs"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestKubeResourceSync(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -50,12 +47,6 @@ func TestKubeResourceSync(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c = suite.Setup(namespace, featuregate.KubeResourceSync)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })

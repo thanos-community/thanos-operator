@@ -61,7 +61,7 @@ var _ = Describe("core", Ordered, func() {
 				deployments := &appsv1.DeploymentList{}
 				if err := c.List(context.Background(), deployments,
 					client.MatchingLabels{"control-plane": "controller-manager"},
-					client.InNamespace(operatorNamespace)); err != nil {
+					client.InNamespace(namespace)); err != nil {
 					return err
 				}
 				if len(deployments.Items) != 1 {

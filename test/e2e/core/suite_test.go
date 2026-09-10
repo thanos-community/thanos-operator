@@ -18,10 +18,9 @@ limitations under the License.
 // heart of the e2e coverage: a remote-write lands in the receiver, a query reads it
 // back, and a ruler evaluates against it. These specs must run in order, so they live
 // in one binary rather than being split per area like the leaf feature suites. Like
-// those suites it creates its own throwaway namespace and tears it down in AfterSuite,
-// so reruns are idempotent and nothing leaks into the shared operator namespace. The
-// cluster (operator, prometheus-operator, cert-manager, MinIO, test Prometheus) is
-// bootstrapped once by `make e2e-setup`.
+// those suites it creates its own throwaway namespace and cleans it up after the suite,
+// alongside its own namespace-scoped operator. Shared dependencies are bootstrapped
+// once by `make e2e-setup`.
 package core
 
 import (
@@ -37,19 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-const (
-	// namespace is the dedicated, throwaway namespace this suite creates and tears
-	// down, so reruns are idempotent and nothing leaks into the shared operator ns.
-	namespace = "e2e-core"
-	// operatorNamespace is where `make e2e-setup` deploys the operator. The suite only
-	// reads the controller-manager deployment there; it never modifies it.
-	operatorNamespace = "thanos-operator-system"
-)
+const namespace = "e2e-core"
 
-var (
-	c        client.Client
-	teardown func()
-)
+var c client.Client
 
 func TestCore(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -58,12 +47,6 @@ func TestCore(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	c, _, teardown = suite.Setup(namespace)
+	c = suite.Setup(namespace)
 	Expect(c).NotTo(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	if teardown != nil {
-		teardown()
-	}
 })

@@ -16,10 +16,9 @@ limitations under the License.
 
 // Package suite provides the shared bootstrap for the e2e suites. The expensive
 // one-time cluster setup (operator image, prometheus-operator, cert-manager,
-// MinIO, test Prometheus) is done once by `make e2e-setup` before the suites run;
-// each suite only calls Setup to get a client scoped to its own namespace against
-// that shared cluster. Splitting per area lets the suites run as parallel `go test`
-// binaries while ordering within a suite is preserved.
+// MinIO, test Prometheus) is done once by `make e2e-setup` before the suites run.
+// Each suite deploys an operator watching only its own namespace, with explicit
+// feature gates, so suites can run concurrently against the shared cluster.
 package suite
 
 import (
@@ -27,6 +26,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
 	"k8s.io/utils/ptr"
@@ -35,12 +35,14 @@ import (
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,18 +73,28 @@ config:
     enable: false
 `
 
-// Setup builds a controller-runtime client, ensures the given namespace exists,
-// and creates the object-storage secret in it. It returns the client, the
-// namespace name, and a teardown func (deletes the namespace) intended to be
-// called from AfterSuite. The one-time cluster bootstrap is assumed to be already
-// in place via `make e2e-setup`.
-func Setup(namespace string) (client.Client, string, func()) {
+// Setup deploys a namespace-scoped operator and object-storage secret.
+// Features are disabled unless explicitly requested. Shared dependencies must
+// already be installed by make e2e-setup.
+func Setup(namespace string, features ...string) client.Client {
 	c := NewClient()
 	ctx := context.Background()
+	for _, feature := range features {
+		gomega.Expect(featuregate.IsValidFeature(feature)).To(gomega.BeTrue(), "unknown feature %q", feature)
+	}
 
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	err := c.Create(ctx, ns)
-	gomega.Expect(client.IgnoreAlreadyExists(err)).NotTo(gomega.HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "remove the existing test namespace %s before rerunning", namespace)
+	ginkgo.DeferCleanup(func() {
+		gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: metricsAuthBindingName(namespace)},
+		}))).To(gomega.Succeed())
+		gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, ns))).To(gomega.Succeed())
+		gomega.Eventually(func() bool {
+			return apierrors.IsNotFound(c.Get(ctx, client.ObjectKeyFromObject(ns), &corev1.Namespace{}))
+		}, 3*time.Minute, time.Second).Should(gomega.BeTrue(), "test namespace must be deleted before it can be reused")
+	})
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: ObjStoreSecret, Namespace: namespace},
@@ -90,12 +102,15 @@ func Setup(namespace string) (client.Client, string, func()) {
 		Data:       map[string][]byte{ObjStoreSecretKey: []byte(objStoreConfig)},
 	}
 	err = c.Create(ctx, secret)
-	gomega.Expect(client.IgnoreAlreadyExists(err)).NotTo(gomega.HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	teardown := func() {
-		_ = c.Delete(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
+	for _, obj := range operatorObjects(namespace, features) {
+		gomega.Expect(c.Create(ctx, obj)).To(gomega.Succeed())
 	}
-	return c, namespace, teardown
+	gomega.Eventually(func() bool {
+		return utils.VerifyDeploymentReplicasRunning(c, 1, "controller-manager", namespace)
+	}, 3*time.Minute, time.Second).Should(gomega.BeTrue(), "namespace-scoped operator must become ready")
+	return c
 }
 
 // ObjStoreConfig references the per-namespace object-storage secret Setup creates,

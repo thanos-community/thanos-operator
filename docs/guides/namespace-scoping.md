@@ -1,0 +1,35 @@
+# Namespace Scoping
+
+By default, Thanos Operator watches all namespaces. Use `--watch-namespace` to restrict an instance to one namespace:
+
+```bash
+./thanos-operator --watch-namespace=monitoring
+```
+
+The setting limits which namespaces the operator watches and reconciles, including status updates and optional controllers such as volume resizing. It takes effect at startup; restart the operator to change it. An empty value preserves cluster-wide behavior.
+
+Service discovery already selects services in the owning resource's namespace, including when the operator watches all namespaces. This setting preserves that behavior.
+
+## Watch the operator's own namespace
+
+Use the Downward API to pass the Deployment's namespace:
+
+```yaml
+env:
+  - name: POD_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+args:
+  - --watch-namespace=$(POD_NAMESPACE)
+```
+
+Add these entries to the manager container's existing environment and arguments. The Go deployment builder provides the same configuration through `config.WithWatchOwnNamespace()`.
+
+## Run multiple instances
+
+Deploy each operator in the namespace it manages and give the instances disjoint scopes. Each instance can enable its own [feature gates](./gated-features.md). A cluster-wide instance would also reconcile those namespaces, so stop or rescope it before introducing scoped instances.
+
+Leader-election leases remain in each operator's deployment namespace. Replicas in that namespace share a lease; operators deployed in separate namespaces elect their leaders independently.
+
+Watch scoping does not change installed RBAC. For namespaced workload permissions, bind the generated manager ClusterRole to the operator ServiceAccount using a RoleBinding in the managed namespace. Keep the separate leader-election RoleBinding in the deployment namespace. Secure operator metrics also require the existing cluster-scoped token-review and subject-access-review permissions.
