@@ -104,17 +104,7 @@ Read more about getting started [here](docs/get-started.md) and how to [install]
 
 ### Feature Gates
 
-The controllers within Thanos Operator have the ability to extend behaviour beyond standard features. This behaviour is generally controlled behind feature gates since it may require the presence of other operators or components.
-
-Feature flags can be enabled using the `--enable-feature` flag. The following feature gates are available:
-
-`service-monitor` - Enables ServiceMonitor management by the operator for Thanos components it deploys. This requires Prometheus Operator to be installed in the cluster.
-
-`prometheus-rule` - Enables PrometheusRule discovery for Thanos Ruler. This requires Prometheus Operator to be installed in the cluster. This allows ThanosRuler to discover PrometheusRule objects in the cluster and apply them to itself.
-
-`kube-resource-sync` - Enables [kube-resource-sync](https://github.com/philipgough/kube-resource-sync) sidecar for Thanos Receive router deployments. This provides immediate synchronization of ConfigMap changes without requiring pod restarts.
-
-Use `--feature-gate-config-file` to configure the resource-sync image and ServiceMonitor labels and scrape interval. Features must be enabled with `--enable-feature`. See the [feature gates guide](docs/guides/gated-features.md) for configuration, defaults, and cleanup when features are disabled.
+See the [feature gates guide](docs/guides/gated-features.md).
 
 ## Contributing and development
 
