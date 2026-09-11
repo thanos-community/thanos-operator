@@ -332,6 +332,7 @@ func WithVolumeResize() DeploymentOption {
 
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
+// The server-tls feature requires WithWatchOwnNamespace().
 //
 // Available features:
 //   - "service-monitor": Enables ServiceMonitor management

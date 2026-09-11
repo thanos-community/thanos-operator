@@ -7,8 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/thanos-community/thanos-operator/test/integration/suite"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,7 +18,6 @@ var (
 	k8sClient client.Client
 	env       *suite.Env
 	ctx       context.Context
-	cancel    context.CancelFunc
 )
 
 func TestTLSGate(t *testing.T) {
@@ -26,16 +26,20 @@ func TestTLSGate(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	// ServiceMonitor is enabled to check the TLS settings on generated scrapes.
-	flags := featuregate.Flag{featuregate.ServerTLS, featuregate.ServiceMonitor}
-	env, ctx, cancel = suite.Setup(flags.ToFeatureGate())
+	ctx = context.Background()
+	Expect(cmv1.AddToScheme(scheme.Scheme)).To(Succeed())
+	var err error
+	env, err = suite.Start("",
+		"../../../../config/crd/bases",
+		"../../configs/service-monitor.yaml",
+		"../../configs/prometheus-rule.yaml",
+		"../../configs/cert-manager.yaml",
+	)
+	Expect(err).NotTo(HaveOccurred())
 	k8sClient = env.Client
 })
 
 var _ = AfterSuite(func() {
-	if cancel != nil {
-		cancel()
-	}
 	if env != nil {
 		Expect(env.Stop()).To(Succeed())
 	}

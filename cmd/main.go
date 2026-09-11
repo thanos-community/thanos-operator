@@ -226,7 +226,16 @@ func main() {
 		),
 	)
 	setupLog := ctrl.Log.WithName("setup")
-	cacheOptions, err := controller.CacheOptionsForNamespace(watchNamespace)
+	featureGateConfig := enabledFeatures.ToFeatureGate()
+
+	var fileErr error
+	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
+	if fileErr != nil {
+		setupLog.Error(fileErr, "failed to load feature gate config file")
+		os.Exit(1)
+	}
+
+	cacheOptions, err := controller.CacheOptionsForNamespace(watchNamespace, featureGateConfig)
 	if err != nil {
 		setupLog.Error(err, "invalid namespace scope")
 		os.Exit(1)
@@ -350,14 +359,6 @@ func main() {
 	const defaultConfigReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
-	featureGateConfig := enabledFeatures.ToFeatureGate()
-
-	var fileErr error
-	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
-	if fileErr != nil {
-		setupLog.Error(fileErr, "failed to load feature gate config file")
-		os.Exit(1)
-	}
 
 	for _, feature := range []struct {
 		name    string
@@ -381,7 +382,8 @@ func main() {
 
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: featureGateConfig,
+			FeatureGate:    featureGateConfig,
+			WatchNamespace: watchNamespace,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorder(fmt.Sprintf("%s-controller", component)),
