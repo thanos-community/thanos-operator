@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -184,8 +183,8 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		// Ensure restrictive context for the container
 		// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			RunAsNonRoot:             ptr.To(true),
+			AllowPrivilegeEscalation: new(false),
+			RunAsNonRoot:             new(true),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"ALL",
@@ -302,7 +301,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 						Name: opts.ObjStoreSecret.Name,
 					},
 					Key:      opts.ObjStoreSecret.Key,
-					Optional: ptr.To(false),
+					Optional: new(false),
 				},
 			},
 		})
@@ -728,13 +727,13 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		// Don't enable runAsNonRoot for config-reloader, as it uses non-numeric user nobody.
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"ALL",
 				},
 			},
-			ReadOnlyRootFilesystem: ptr.To(true),
+			ReadOnlyRootFilesystem: new(true),
 		},
 		Args:         args,
 		VolumeMounts: volumeMounts,

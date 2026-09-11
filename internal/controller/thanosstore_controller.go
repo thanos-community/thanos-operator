@@ -33,12 +33,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -205,7 +203,7 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 				Regex:       fmt.Sprintf("%d", i),
 			},
 		}
-		storeShardOpts.ShardIndex = ptr.To(i)
+		storeShardOpts.ShardIndex = new(i)
 		buildables[i] = storeShardOpts
 	}
 	return buildables
@@ -252,7 +250,7 @@ func (r *ThanosStoreReconciler) updateCondition(ctx context.Context, store *moni
 	meta.SetStatusCondition(&conditions, condition)
 	store.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
-		store.Status.Paused = ptr.To(true)
+		store.Status.Paused = new(true)
 	}
 	if err := r.Status().Update(ctx, store); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosStore", "name", store.Name)

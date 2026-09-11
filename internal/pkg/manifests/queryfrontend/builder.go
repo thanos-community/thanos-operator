@@ -9,8 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -135,8 +133,8 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 							},
 							Env: env,
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsNonRoot:             new(true),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",

@@ -11,8 +11,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -217,7 +215,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
-			Replicas:    ptr.To(opts.Replicas),
+			Replicas:    new(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
@@ -237,8 +235,8 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 							// Ensure restrictive context for the container
 							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsNonRoot:             new(true),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",
@@ -306,7 +304,7 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 												Name: opts.ObjStoreSecret.Name,
 											},
 											Key:      opts.ObjStoreSecret.Key,
-											Optional: ptr.To(false),
+											Optional: new(false),
 										},
 									},
 								},
@@ -478,7 +476,7 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 			Annotations: opts.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptr.To(opts.Replicas),
+			Replicas: new(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
@@ -494,17 +492,17 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 					InitContainers:               initContainers,
 					Containers:                   containers,
 					ServiceAccountName:           name,
-					AutomountServiceAccountToken: ptr.To(true),
+					AutomountServiceAccountToken: new(true),
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-					MaxSurge:       ptr.To(intstr.FromInt32(0)),
+					MaxUnavailable: new(intstr.FromInt32(1)),
+					MaxSurge:       new(intstr.FromInt32(0)),
 				},
 			},
-			RevisionHistoryLimit: ptr.To(int32(10)),
+			RevisionHistoryLimit: new(int32(10)),
 		},
 	}
 	manifests.AugmentWithOptions(deployment, opts.Options)
@@ -685,7 +683,7 @@ func buildRouterVolumes(opts RouterOptions, name string) []corev1.Volume {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: name,
 					},
-					DefaultMode: ptr.To(int32(420)),
+					DefaultMode: new(int32(420)),
 				},
 			},
 		},
@@ -723,8 +721,8 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 		// Ensure restrictive context for the container
 		// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot:             ptr.To(true),
-			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:             new(true),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"ALL",
@@ -812,8 +810,8 @@ func buildKubeResourceSyncContainer(opts RouterOptions) corev1.Container {
 		Image:           image,
 		ImagePullPolicy: corev1.PullAlways,
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot:             ptr.To(true),
-			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:             new(true),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},

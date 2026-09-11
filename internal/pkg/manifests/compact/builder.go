@@ -9,8 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -130,7 +128,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 						Name: opts.ObjStoreSecret.Name,
 					},
 					Key:      opts.ObjStoreSecret.Key,
-					Optional: ptr.To(false),
+					Optional: new(false),
 				},
 			},
 		},
@@ -153,7 +151,7 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 				WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
 			},
 			ServiceName: name,
-			Replicas:    ptr.To(int32(1)),
+			Replicas:    new(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
@@ -173,8 +171,8 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 							// Ensure restrictive context for the container
 							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsNonRoot:             new(true),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",

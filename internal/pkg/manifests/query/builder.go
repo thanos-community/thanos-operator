@@ -9,8 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -133,8 +131,8 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 		// Ensure restrictive context for the container
 		// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 		SecurityContext: &corev1.SecurityContext{
-			RunAsNonRoot:             ptr.To(true),
-			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:             new(true),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{
 					"ALL",

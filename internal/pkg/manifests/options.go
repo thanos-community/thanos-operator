@@ -13,8 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -216,11 +214,11 @@ func hashString(s string, length int) string {
 // ToFlags returns the flags for the Options
 func (o Options) ToFlags() []string {
 	if o.LogLevel == nil || *o.LogLevel == "" {
-		o.LogLevel = ptr.To(defaultLogLevel)
+		o.LogLevel = new(defaultLogLevel)
 	}
 
 	if o.LogFormat == nil || *o.LogFormat == "" {
-		o.LogFormat = ptr.To(defaultLogFormat)
+		o.LogFormat = new(defaultLogFormat)
 	}
 
 	return []string{
@@ -232,7 +230,7 @@ func (o Options) ToFlags() []string {
 // GetContainerImage for the Options
 func (o Options) GetContainerImage() string {
 	if o.Image == nil || *o.Image == "" {
-		o.Image = ptr.To(DefaultThanosImage)
+		o.Image = new(DefaultThanosImage)
 	}
 
 	// If the image already contains a tag (colon), return it as is
@@ -242,7 +240,7 @@ func (o Options) GetContainerImage() string {
 
 	// Otherwise, append the version
 	if o.Version == nil || *o.Version == "" {
-		o.Version = ptr.To(DefaultThanosVersion)
+		o.Version = new(DefaultThanosVersion)
 	}
 	return fmt.Sprintf("%s:%s", *o.Image, *o.Version)
 }
@@ -288,7 +286,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 		}
 
 		o.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
-			FSGroup: ptr.To(DefaultFSGroup),
+			FSGroup: new(DefaultFSGroup),
 		}
 		if opts.SecurityContext != nil {
 			o.Spec.Template.Spec.SecurityContext = opts.SecurityContext
