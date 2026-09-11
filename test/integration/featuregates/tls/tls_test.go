@@ -2,6 +2,7 @@ package tls
 
 import (
 	"fmt"
+	"time"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -24,6 +25,47 @@ import (
 )
 
 var _ = Describe("TLS feature gate", func() {
+	It("updates Deployment and StatefulSet templates when namespace trust changes", func() {
+		const ns = "tls-trust-update"
+		createNamespace(ns)
+		Expect(k8sClient.Create(ctx, &v1alpha1.ThanosQuery{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: ns},
+			Spec:       v1alpha1.ThanosQuerySpec{CommonFields: commonFields(), Replicas: 1},
+		})).To(Succeed())
+		Expect(k8sClient.Create(ctx, &v1alpha1.ThanosStore{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: ns},
+			Spec: v1alpha1.ThanosStoreSpec{
+				CommonFields: commonFields(), Replicas: 1, ObjectStorageConfig: objstoreConfig(),
+				StorageConfiguration: v1alpha1.StorageConfiguration{Size: resource.MustParse("1Gi")},
+			},
+		})).To(Succeed())
+		workloads := []client.Object{
+			&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: controller.QueryNameFromParent("test"), Namespace: ns}},
+			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: controller.StoreNameFromParent("test", nil), Namespace: ns}},
+		}
+		for _, workload := range workloads {
+			expectTLSWorkload(workload, true, manifests.ServiceDNSName(workload.GetName(), ns))
+		}
+		secret := &corev1.Secret{}
+		Expect(k8sClient.Get(ctx, client.ObjectKey{Name: featuregate.TLSCAName, Namespace: ns}, secret)).To(Succeed())
+		oldRoot := string(secret.Data[corev1.TLSCertKey])
+		secret.Data = caSecret(ns).Data
+		Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+		Eventually(func(g Gomega) {
+			bundle := &corev1.ConfigMap{}
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(secret), bundle)).To(Succeed())
+			g.Expect(bundle.Data[featuregate.TLSCAKey]).To(ContainSubstring(oldRoot))
+			g.Expect(bundle.Data[featuregate.TLSCAKey]).To(ContainSubstring(string(secret.Data[corev1.TLSCertKey])))
+			for _, workload := range workloads {
+				current := workload.DeepCopyObject().(client.Object)
+				g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(current), current)).To(Succeed())
+				checksum := manifests.PodTemplate(current).Annotations[manifests.TLSTrustChecksumAnnotation]
+				g.Expect(checksum).NotTo(BeEmpty())
+				g.Expect(checksum).NotTo(Equal(manifests.PodTemplate(workload).Annotations[manifests.TLSTrustChecksumAnnotation]))
+			}
+		}, 10*time.Second, 100*time.Millisecond).Should(Succeed())
+	})
+
 	It("creates namespace issuers, a CA Certificate, and a public trust ConfigMap", func() {
 		const ns = "tls-ca"
 		createNamespace(ns)

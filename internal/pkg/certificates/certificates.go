@@ -197,27 +197,17 @@ func (m Manager) CleanupWorkload(ctx context.Context, workload client.Object) er
 	return client.IgnoreNotFound(m.Client.Delete(ctx, web))
 }
 
-// SetChecksum causes a rollout when mounted credentials or trust change.
-func (m Manager) SetChecksum(ctx context.Context, workload client.Object) error {
-	secret := &corev1.Secret{}
-	err := m.Client.Get(ctx, client.ObjectKey{Namespace: workload.GetNamespace(), Name: manifests.TLSResourceName(workload.GetName())}, secret)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
+// SetTrustChecksum refreshes clients that load their CA bundle only at startup.
+// Thanos reloads leaf certificates from the mounted Secret without a rollout.
+func (m Manager) SetTrustChecksum(ctx context.Context, workload client.Object) error {
 	ref := m.Config.CABundle()
 	bundle := &corev1.ConfigMap{}
 	if err := m.Client.Get(ctx, client.ObjectKey{Namespace: workload.GetNamespace(), Name: ref.Name}, bundle); err != nil {
 		return err
 	}
-	hash := sha256.New()
-	for _, data := range [][]byte{secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey], []byte(bundle.Data[ref.Key])} {
-		_, _ = hash.Write(data)
-	}
+	hash := sha256.Sum256([]byte(bundle.Data[ref.Key]))
 	template := manifests.PodTemplate(workload)
-	template.Annotations = manifests.MergeMaps(template.Annotations, map[string]string{manifests.TLSChecksumAnnotation: fmt.Sprintf("%x", hash.Sum(nil))})
+	template.Annotations = manifests.MergeMaps(template.Annotations, map[string]string{manifests.TLSTrustChecksumAnnotation: fmt.Sprintf("%x", hash)})
 	return nil
 }
 

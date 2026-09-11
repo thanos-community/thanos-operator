@@ -2,6 +2,7 @@ package coretls
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -30,8 +31,7 @@ import (
 	"github.com/thanos-community/thanos-operator/test/utils"
 )
 
-// Port-forwarding changes the address, but TLS still verifies the Service identity.
-func request(namespace, service string, remotePort int32, path string, body []byte, serverName string) ([]byte, error) {
+func readyServicePod(namespace, service string) (*corev1.Pod, error) {
 	svc := &corev1.Service{}
 	if err := c.Get(ctx, client.ObjectKey{Name: service, Namespace: namespace}, svc); err != nil {
 		return nil, err
@@ -40,29 +40,20 @@ func request(namespace, service string, remotePort int32, path string, body []by
 	if err := c.List(ctx, pods, client.InNamespace(namespace), client.MatchingLabels(svc.Spec.Selector)); err != nil {
 		return nil, err
 	}
-	podName := ""
 	for _, pod := range pods.Items {
 		if pod.DeletionTimestamp != nil {
 			continue
 		}
 		for _, cond := range pod.Status.Conditions {
 			if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-				podName = pod.Name
-				break
+				return &pod, nil
 			}
 		}
-		if podName != "" {
-			break
-		}
 	}
-	if podName == "" {
-		return nil, fmt.Errorf("no ready pod for %s", service)
-	}
-	port, cancel, err := utils.StartPortForward(ctx, intstr.FromInt32(remotePort), "https", podName, namespace)
-	if err != nil {
-		return nil, err
-	}
-	defer cancel()
+	return nil, fmt.Errorf("no ready pod for %s", service)
+}
+
+func serverTLSConfig(namespace, serverName string) (*tls.Config, error) {
 	ca := &corev1.ConfigMap{}
 	if err := c.Get(ctx, client.ObjectKey{Name: featuregate.TLSCAName, Namespace: namespace}, ca); err != nil {
 		return nil, err
@@ -71,10 +62,50 @@ func request(namespace, service string, remotePort int32, path string, body []by
 	if !roots.AppendCertsFromPEM([]byte(ca.Data[featuregate.TLSCAKey])) {
 		return nil, fmt.Errorf("invalid CA")
 	}
+	return &tls.Config{RootCAs: roots, ServerName: serverName, MinVersion: tls.VersionTLS12}, nil
+}
+
+// servingCertificate makes a fresh, verified handshake to the original pod.
+func servingCertificate(namespace, service, podName string, remotePort int32) ([]byte, error) {
+	config, err := serverTLSConfig(namespace, manifests.ServiceDNSName(service, namespace))
+	if err != nil {
+		return nil, err
+	}
+	config.NextProtos = []string{"h2", "http/1.1"}
+	port, cancel, err := utils.StartPortForward(ctx, intstr.FromInt32(remotePort), "tls", podName, namespace)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
+	dialCtx, cancelDial := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelDial()
+	conn, err := (&tls.Dialer{Config: config}).DialContext(dialCtx, "tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Close() }()
+	return conn.(*tls.Conn).ConnectionState().PeerCertificates[0].Raw, nil
+}
+
+// Port-forwarding changes the address, but TLS still verifies the Service identity.
+func request(namespace, service string, remotePort int32, path string, body []byte, serverName string) ([]byte, error) {
+	pod, err := readyServicePod(namespace, service)
+	if err != nil {
+		return nil, err
+	}
+	port, cancel, err := utils.StartPortForward(ctx, intstr.FromInt32(remotePort), "https", pod.Name, namespace)
+	if err != nil {
+		return nil, err
+	}
+	defer cancel()
 	if serverName == "" {
 		serverName = manifests.ServiceDNSName(service, namespace)
 	}
-	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, ServerName: serverName, MinVersion: tls.VersionTLS12}}
+	config, err := serverTLSConfig(namespace, serverName)
+	if err != nil {
+		return nil, err
+	}
+	transport := &http.Transport{TLSClientConfig: config}
 	defer transport.CloseIdleConnections()
 	method := http.MethodGet
 	if body != nil {

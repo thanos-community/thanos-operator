@@ -61,6 +61,10 @@ func createNamespace(namespace string) {
 	})).To(Succeed())
 
 	// Envtest has no cert-manager controller. Supply its CA output as a fixture.
+	Expect(k8sClient.Create(ctx, caSecret(namespace))).To(Succeed())
+}
+
+func caSecret(namespace string) *corev1.Secret {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	Expect(err).NotTo(HaveOccurred())
 	certificate := &x509.Certificate{
@@ -72,7 +76,7 @@ func createNamespace(namespace string) {
 	Expect(err).NotTo(HaveOccurred())
 	keyDER, err := x509.MarshalECPrivateKey(key)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient.Create(ctx, &corev1.Secret{
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: featuregate.TLSCAName, Namespace: namespace,
 			Labels:      map[string]string{manifests.TLSLabel: "true"},
@@ -83,7 +87,7 @@ func createNamespace(namespace string) {
 			corev1.TLSCertKey:       pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
 			corev1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}),
 		},
-	})).To(Succeed())
+	}
 }
 
 func expectTLSWorkload(workload client.Object, grpc bool, dnsNames ...string) *corev1.PodTemplateSpec {
@@ -92,6 +96,7 @@ func expectTLSWorkload(workload client.Object, grpc bool, dnsNames ...string) *c
 		name := manifests.TLSResourceName(workload.GetName())
 		template := manifests.PodTemplate(workload)
 		g.Expect(template).NotTo(BeNil())
+		g.Expect(template.Annotations[manifests.TLSTrustChecksumAnnotation]).NotTo(BeEmpty())
 		g.Expect(template.Spec.Containers).NotTo(BeEmpty())
 		container := template.Spec.Containers[0]
 		g.Expect(container.Args).To(ContainElement("--http.config=" + manifests.TLSWebConfigFile))
