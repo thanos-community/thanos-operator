@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +26,48 @@ import (
 )
 
 var _ = Describe("TLS feature gate", func() {
+	It("reconciles namespace trust while workload reconciliation is paused", func() {
+		const ns = "tls-controller"
+		Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})).To(Succeed())
+		Expect(k8sClient.Create(ctx, &v1alpha1.ThanosQuery{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: ns},
+			Spec:       v1alpha1.ThanosQuerySpec{Paused: new(true), Replicas: 1},
+		})).To(Succeed())
+		key := client.ObjectKey{Namespace: ns, Name: featuregate.TLSCAName}
+		Eventually(func(g Gomega) {
+			ca := &cmv1.Certificate{}
+			g.Expect(k8sClient.Get(ctx, key, ca)).To(Succeed())
+			g.Expect(ca.Spec.IsCA).To(BeTrue())
+		}).Should(Succeed())
+		Expect(apierrors.IsNotFound(k8sClient.Get(ctx, key, &corev1.ConfigMap{}))).To(BeTrue(), "trust waits for cert-manager to issue the CA")
+		secret := caSecret(ns)
+		Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+		bundle := &corev1.ConfigMap{}
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, key, bundle)).To(Succeed())
+			g.Expect(bundle.Data[featuregate.TLSCAKey]).To(ContainSubstring(string(secret.Data[corev1.TLSCertKey])))
+		}).Should(Succeed())
+		oldUID := bundle.UID
+		Expect(k8sClient.Delete(ctx, bundle)).To(Succeed())
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, key, bundle)).To(Succeed())
+			g.Expect(bundle.UID).NotTo(Equal(oldUID))
+			g.Expect(bundle.Data[featuregate.TLSCAKey]).To(ContainSubstring(string(secret.Data[corev1.TLSCertKey])))
+		}).Should(Succeed())
+		issuer := &cmv1.Issuer{ObjectMeta: metav1.ObjectMeta{Name: "thanos-operator-selfsigned", Namespace: ns}}
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(issuer), issuer)).To(Succeed())
+		oldUID = issuer.UID
+		Expect(k8sClient.Delete(ctx, issuer)).To(Succeed())
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(issuer), issuer)).To(Succeed())
+			g.Expect(issuer.UID).NotTo(Equal(oldUID))
+			g.Expect(issuer.Spec.SelfSigned).NotTo(BeNil())
+		}).Should(Succeed())
+		deployments := &appsv1.DeploymentList{}
+		Expect(k8sClient.List(ctx, deployments, client.InNamespace(ns))).To(Succeed())
+		Expect(deployments.Items).To(BeEmpty(), "the TLS controller must not reconcile workloads")
+	})
+
 	It("updates Deployment and StatefulSet templates when namespace trust changes", func() {
 		const ns = "tls-trust-update"
 		createNamespace(ns)

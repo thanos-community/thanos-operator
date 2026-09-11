@@ -109,7 +109,7 @@ func NewThanosRulerReconciler(conf Config, configReloaderImage string, client cl
 		recorder:            conf.InstrumentationConfig.EventRecorder,
 		featureGate:         conf.FeatureGate,
 		configReloaderImage: configReloaderImage,
-		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
+		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
 	}
 
 	return reconciler
@@ -190,6 +190,9 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 
 	objs = append(objs, opts.Build()...)
 
+	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &ruler, objs); err != nil {
+		return err
+	}
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
@@ -292,7 +295,13 @@ func (r *ThanosRulerReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectedResources, listOpts...)
+	errCount := pruner.Prune(ctx, expectedResources, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		tlsOpts := append(listOpts, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			Prune(ctx, manifests.TLSResourceNames(expectedResources), tlsOpts...)
+	}
+	return errCount
 }
 
 // getStoreAPIServiceEndpoints returns the list of endpoints for the QueryAPI services that match the ThanosRuler queryLabelSelector.
@@ -991,6 +1000,10 @@ func (r *ThanosRulerReconciler) cleanup(ctx context.Context, resource monitoring
 
 	cleanErrCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
+	if !r.featureGate.ServerTLSEnabled() {
+		cleanErrCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &resource, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		cleanErrCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	}

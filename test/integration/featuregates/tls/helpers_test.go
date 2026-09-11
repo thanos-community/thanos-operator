@@ -129,11 +129,12 @@ func expectTLSWorkload(workload client.Object, grpc bool, dnsNames ...string) *c
 		g.Expect(cert.Spec.IssuerRef).To(Equal(cmmeta.ObjectReference{Name: featuregate.TLSCAName, Kind: "Issuer", Group: "cert-manager.io"}))
 		g.Expect(cert.Spec.PrivateKey).NotTo(BeNil())
 		g.Expect(cert.Spec.PrivateKey.RotationPolicy).To(Equal(cmv1.RotationPolicyAlways))
-		g.Expect(metav1.IsControlledBy(cert, workload)).To(BeTrue())
+		g.Expect(metav1.GetControllerOf(workload)).NotTo(BeNil())
+		g.Expect(metav1.GetControllerOf(cert)).To(Equal(metav1.GetControllerOf(workload)))
 		web := &corev1.ConfigMap{}
 		g.Expect(k8sClient.Get(ctx, key, web)).To(Succeed())
 		g.Expect(web.Data).To(HaveKeyWithValue("http.yaml", manifests.TLSWebConfig))
-		g.Expect(metav1.IsControlledBy(web, workload)).To(BeTrue())
+		g.Expect(metav1.GetControllerOf(web)).To(Equal(metav1.GetControllerOf(workload)))
 
 		monitor := &monitoringv1.ServiceMonitor{}
 		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(workload), monitor)).To(Succeed())

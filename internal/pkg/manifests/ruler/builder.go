@@ -107,6 +107,7 @@ func (opts Options) Build() []client.Object {
 	if opts.ServiceMonitorEnabled() {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
+	objs = manifests.AppendTLSResources(objs, opts.Config)
 	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 

@@ -127,7 +127,7 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 		metrics:     controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
 	}
 
 	return reconciler
@@ -159,7 +159,11 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 
 	// now we can create what we expect to be built based on the spec
 	for _, opt := range options {
-		errCount += r.handler.CreateOrUpdate(ctx, compact.GetNamespace(), &compact, opt.Build())
+		objects := opt.Build()
+		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &compact, objects); err != nil {
+			return err
+		}
+		errCount += r.handler.CreateOrUpdate(ctx, compact.GetNamespace(), &compact, objects)
 	}
 
 	if errCount > 0 {
@@ -167,6 +171,12 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 		return fmt.Errorf("failed to create or update %d resources for compact or compact shard(s)", errCount)
 	}
 
+	if !r.featureGate.ServerTLSEnabled() {
+		if errs := r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &compact, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue}); errs > 0 {
+			return fmt.Errorf("failed to delete %d TLS resources for the compactor", errs)
+		}
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		if errCount = r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &compact); errCount > 0 {
 			return fmt.Errorf("failed to delete %d feature gated resources for the compactor", errCount)
@@ -181,7 +191,13 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithServiceMonitor()
-	return pruner.Prune(ctx, expectShards, listOpts...)
+	errCount := pruner.Prune(ctx, expectShards, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		tlsOpts := append(listOpts, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			Prune(ctx, manifests.TLSResourceNames(expectShards), tlsOpts...)
+	}
+	return errCount
 }
 
 func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {

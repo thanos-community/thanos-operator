@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +32,29 @@ func TestTLSComponents(t *testing.T) {
 			receive.IngesterOptions{Options: opts}, receive.RouterOptions{Options: opts}, ruler.Options{Options: opts}, compact.Options{Options: opts},
 		} {
 			t.Run(b.GetGeneratedResourceName()+"/tls="+map[bool]string{true: "true", false: "false"}[enabled], func(t *testing.T) {
-				for _, obj := range b.Build() {
+				objects := b.Build()
+				var certs []*cmv1.Certificate
+				var configs []*corev1.ConfigMap
+				for _, obj := range objects {
+					switch obj := obj.(type) {
+					case *cmv1.Certificate:
+						certs = append(certs, obj)
+					case *corev1.ConfigMap:
+						if obj.GetLabels()[manifests.TLSLabel] == "true" {
+							configs = append(configs, obj)
+						}
+					case *corev1.Secret:
+						require.NotEqual(t, manifests.TLSResourceName(b.GetGeneratedResourceName()), obj.Name, "cert-manager must issue the leaf Secret")
+					}
+				}
+				if enabled {
+					require.Len(t, certs, 1)
+					require.Len(t, configs, 1)
+				} else {
+					require.Empty(t, certs)
+					require.Empty(t, configs)
+				}
+				for _, obj := range objects {
 					if sm, ok := obj.(*monitoringv1.ServiceMonitor); ok {
 						ep := sm.Spec.Endpoints[0]
 						if enabled {
@@ -51,6 +75,30 @@ func TestTLSComponents(t *testing.T) {
 					require.Equal(t, enabled, strings.Contains(args, "--http.config="))
 					if !enabled {
 						continue
+					}
+					cert, config := certs[0], configs[0]
+					require.Equal(t, obj.GetNamespace(), cert.Namespace)
+					require.Equal(t, cert.Namespace, config.Namespace)
+					require.Equal(t, manifests.TLSResourceName(obj.GetName()), cert.Name)
+					require.Equal(t, cert.Name, cert.Spec.SecretName)
+					require.Equal(t, cert.Name, config.Name)
+					require.Equal(t, manifests.TLSWebConfig, config.Data["http.yaml"])
+					require.Equal(t, cmmeta.ObjectReference{Name: featuregate.TLSCAName, Kind: "Issuer", Group: "cert-manager.io"}, cert.Spec.IssuerRef)
+					require.Equal(t, []cmv1.KeyUsage{cmv1.UsageDigitalSignature, cmv1.UsageServerAuth}, cert.Spec.Usages)
+					require.Equal(t, cmv1.RotationPolicyAlways, cert.Spec.PrivateKey.RotationPolicy)
+					require.Equal(t, "true", cert.Spec.SecretTemplate.Labels[manifests.TLSLabel])
+					dnsNames := []string{obj.GetName() + ".test.svc"}
+					if c.Args[0] == "receive" {
+						dnsNames = append(dnsNames, "*."+dnsNames[0])
+					}
+					require.Equal(t, dnsNames, cert.Spec.DNSNames)
+					for _, volume := range pod.Spec.Volumes {
+						switch volume.Name {
+						case "thanos-tls-server":
+							require.Equal(t, cert.Spec.SecretName, volume.Secret.SecretName)
+						case "thanos-tls-web":
+							require.Equal(t, config.Name, volume.ConfigMap.Name)
+						}
 					}
 					require.NoError(t, manifests.ValidateTLSWorkload(pod))
 					for _, probe := range []*corev1.Probe{c.StartupProbe, c.ReadinessProbe, c.LivenessProbe} {
