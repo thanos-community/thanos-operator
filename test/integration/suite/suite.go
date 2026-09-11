@@ -76,7 +76,7 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 		filepath.Join(root, "test", "integration", "configs", "service-monitor.yaml"),
 		filepath.Join(root, "test", "integration", "configs", "prometheus-rule.yaml"),
 	}
-	if gates.TLSEnabled() {
+	if gates.ServerTLSEnabled() {
 		gomega.Expect(cmv1.AddToScheme(scheme.Scheme)).To(gomega.Succeed())
 		crdPaths = append(crdPaths, filepath.Join(root, "test", "integration", "configs", "cert-manager.yaml"))
 	}

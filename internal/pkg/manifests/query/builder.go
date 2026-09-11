@@ -70,7 +70,7 @@ func (opts Options) Build() []client.Object {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	name := opts.GetGeneratedResourceName()
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		objs = append(objs, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: opts.Namespace, Labels: manifests.MergeMaps(objectMetaLabels, map[string]string{TLSEndpointConfigLabel: "true"})},
 			Data:       map[string]string{"endpoints.yaml": tlsEndpointConfig(opts.Endpoints)},
@@ -115,7 +115,7 @@ func NewQueryDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		opts.Additional.Volumes = append(opts.Additional.Volumes, corev1.Volume{
 			Name: "thanos-endpoints", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{Name: name}, DefaultMode: new(int32(420)),
@@ -307,7 +307,7 @@ func queryArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
 	}
 
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		args = append(args, "--endpoint.sd-config-file="+manifests.TLSMountPath+"/endpoints/endpoints.yaml", "--endpoint.sd-config-reload-interval=5s")
 		return manifests.PruneEmptyArgs(args)
 	}

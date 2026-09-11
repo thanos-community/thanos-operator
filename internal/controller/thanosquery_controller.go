@@ -79,7 +79,7 @@ func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:     controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
 	}
 
 	return reconciler
@@ -235,7 +235,7 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 			Namespace:   svc.GetNamespace(),
 			Type:        etype,
 		}
-		if r.featureGate.TLSEnabled() && etype == manifests.RegularLabel {
+		if r.featureGate.ServerTLSEnabled() && etype == manifests.RegularLabel {
 			resolved, err := r.resolveTLSFanout(ctx, endpoint)
 			if err != nil {
 				return nil, err
@@ -313,7 +313,7 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	withPredicate := predicate.Or(withLabelChangedPredicate, withGenerationChangePredicate)
 
 	b := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosQueryList{})
-	if r.featureGate.TLSEnabled() {
+	if r.featureGate.ServerTLSEnabled() {
 		b.Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 			service := &corev1.Service{}
 			if err := r.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: obj.GetLabels()[discoveryv1.LabelServiceName]}, service); err != nil {
@@ -433,7 +433,7 @@ func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *moni
 
 func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosQuery, expectedResources []string) int {
 	var errCount int
-	if !r.featureGate.TLSEnabled() {
+	if !r.featureGate.ServerTLSEnabled() {
 		errCount += r.handler.NewResourcePruner().WithConfigMap().PruneByOwner(ctx, &resource, client.MatchingLabels{manifestquery.TLSEndpointConfigLabel: "true"})
 	}
 	ns := resource.GetNamespace()

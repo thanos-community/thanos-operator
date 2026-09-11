@@ -67,7 +67,7 @@ func ValidateTLSWorkload(template *corev1.PodTemplateSpec) error {
 }
 
 func augmentTLS(obj client.Object, opts Options) {
-	if !opts.TLSEnabled() {
+	if !opts.ServerTLSEnabled() {
 		return
 	}
 	t := PodTemplate(obj)
@@ -76,7 +76,7 @@ func augmentTLS(obj client.Object, opts Options) {
 	}
 	c := &t.Spec.Containers[0]
 	name := TLSResourceName(obj.GetName())
-	ca := opts.TLS.CABundle()
+	ca := opts.ServerTLS.CABundle()
 	t.Labels = MergeMaps(t.Labels, map[string]string{TLSLabel: "true"})
 	t.Spec.Volumes = append(t.Spec.Volumes,
 		corev1.Volume{Name: "thanos-tls-server", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: name, DefaultMode: ptr.To(int32(420))}}},
@@ -120,7 +120,7 @@ func augmentTLS(obj client.Object, opts Options) {
 
 // ConfigureTLSMonitors uses the public trust bundle for Prometheus scrapes.
 func ConfigureTLSMonitors(objects []client.Object, cfg featuregate.Config, port string) []client.Object {
-	if !cfg.TLSEnabled() {
+	if !cfg.ServerTLSEnabled() {
 		return objects
 	}
 	for _, obj := range objects {
@@ -128,7 +128,7 @@ func ConfigureTLSMonitors(objects []client.Object, cfg featuregate.Config, port 
 		if !ok {
 			continue
 		}
-		ca := cfg.TLS.CABundle()
+		ca := cfg.ServerTLS.CABundle()
 		for i := range sm.Spec.Endpoints {
 			ep := &sm.Spec.Endpoints[i]
 			if ep.Port != port {

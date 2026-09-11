@@ -27,7 +27,7 @@ func TestTLSGate(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	// ServiceMonitor is enabled to check the TLS settings on generated scrapes.
-	flags := featuregate.Flag{featuregate.TLS, featuregate.ServiceMonitor}
+	flags := featuregate.Flag{featuregate.ServerTLS, featuregate.ServiceMonitor}
 	env, ctx, cancel = suite.Setup(flags.ToFeatureGate())
 	k8sClient = env.Client
 })

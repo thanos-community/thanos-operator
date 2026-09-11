@@ -56,7 +56,7 @@ const (
 var _ = Describe("core with TLS", Ordered, func() {
 	const namespace = "e2e-core-tls"
 	BeforeAll(func() {
-		suite.Setup(namespace, featuregate.TLS, featuregate.ServiceMonitor)
+		suite.Setup(namespace, featuregate.ServerTLS, featuregate.ServiceMonitor)
 	})
 	Context("Operator", func() {
 

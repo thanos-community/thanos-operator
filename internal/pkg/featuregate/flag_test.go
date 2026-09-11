@@ -32,6 +32,17 @@ func TestFlag_Set(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid server-tls",
+			feature: "server-tls",
+			wantErr: false,
+		},
+		{
+			name:        "old tls name is not supported",
+			feature:     "tls",
+			wantErr:     true,
+			errContains: "unknown feature",
+		},
+		{
 			name:        "invalid feature",
 			feature:     "invalid-feature",
 			wantErr:     true,

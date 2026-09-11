@@ -52,7 +52,7 @@ func TestTLSEndpointDiscovery(t *testing.T) {
 }
 
 func TestTLSMembershipChangesOnlyTheEndpointConfig(t *testing.T) {
-	flags := featuregate.Flag{featuregate.TLS}
+	flags := featuregate.Flag{featuregate.ServerTLS}
 	opts := Options{Options: manifests.Options{Owner: "query", Namespace: "metrics", Config: flags.ToFeatureGate()}}
 	before := NewQueryDeployment(opts)
 	opts.Endpoints = []Endpoint{{ServiceName: "store", Namespace: "metrics", Port: 10901, Type: manifests.RegularLabel, Address: "10.0.0.1:10901"}}
