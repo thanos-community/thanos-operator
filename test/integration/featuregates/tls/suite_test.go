@@ -8,8 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	"github.com/thanos-community/thanos-operator/test/integration/suite"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/thanos-community/thanos-operator/test/integration/suite"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

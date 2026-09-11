@@ -4,8 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"gotest.tools/v3/assert"
+
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 )
 
 func TestCacheOptionsForNamespace(t *testing.T) {
