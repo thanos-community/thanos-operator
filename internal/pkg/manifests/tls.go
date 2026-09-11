@@ -7,7 +7,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,18 +45,9 @@ func PodTemplate(obj client.Object) *corev1.PodTemplateSpec {
 	}
 }
 
-// ValidateTLSWorkload rejects versions and transports that cannot provide TLS.
+// ValidateTLSWorkload rejects Receive transports that cannot provide TLS.
 func ValidateTLSWorkload(template *corev1.PodTemplateSpec) error {
 	c := template.Spec.Containers[0]
-	image := c.Image
-	if strings.Contains(image, "@") {
-		return fmt.Errorf("TLS requires a versioned Thanos image tag (v0.42.0 or newer), got %q", image)
-	}
-	tag := image[strings.LastIndex(image, ":")+1:]
-	v, err := version.ParseSemantic(tag)
-	if err != nil || v.LessThan(version.MustParseSemantic("v0.42.0")) {
-		return fmt.Errorf("TLS requires Thanos v0.42.0 or newer, got %q", image)
-	}
 	for _, arg := range c.Args {
 		if strings.HasPrefix(arg, "--receive.replication-protocol=capnproto") || strings.HasPrefix(arg, "--receive.capnproto-address=") {
 			return fmt.Errorf("TLS requires Receive's gRPC replication protocol")
