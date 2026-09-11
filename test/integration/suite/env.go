@@ -97,11 +97,14 @@ func Start(binaryAssetsDir string, crdPaths ...string) (*Env, error) {
 }
 
 // StartManager runs the manager in a background goroutine until ctx is cancelled.
-func (e *Env) StartManager(ctx context.Context) {
+func (e *Env) StartManager(ctx context.Context) <-chan struct{} {
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		defer ginkgo.GinkgoRecover()
 		gomega.Expect(e.Manager.Start(ctx)).To(gomega.Succeed())
 	}()
+	return done
 }
 
 // Stop tears down the envtest control plane.

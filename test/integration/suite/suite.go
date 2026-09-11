@@ -20,10 +20,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/thanos-community/thanos-operator/internal/controller"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -33,8 +35,10 @@ import (
 	"k8s.io/client-go/tools/events"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const configReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
@@ -44,6 +48,7 @@ type Option func(*options)
 
 type options struct {
 	enableConditionUpdates bool
+	watchNamespace         string
 }
 
 // WithConditionUpdates keeps the status-condition writes enabled instead of
@@ -52,6 +57,11 @@ type options struct {
 // that a reconcile ran and took the paused branch.
 func WithConditionUpdates() Option {
 	return func(o *options) { o.enableConditionUpdates = true }
+}
+
+// WithWatchNamespace limits a manager to one namespace.
+func WithWatchNamespace(namespace string) Option {
+	return func(o *options) { o.watchNamespace = namespace }
 }
 
 // Setup boots an envtest control plane with all five controllers registered under
@@ -63,13 +73,6 @@ func WithConditionUpdates() Option {
 // the go.mod, so suites can nest at any depth under test/integration/. Binary
 // assets come from KUBEBUILDER_ASSETS (set by the Makefile test target).
 func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, context.CancelFunc) {
-	var o options
-	for _, apply := range opts {
-		apply(&o)
-	}
-	logf.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.UseDevMode(true)))
-	ctx, cancel := context.WithCancel(context.Background())
-
 	root := repoRoot()
 	crdPaths := []string{
 		filepath.Join(root, "config", "crd", "bases"),
@@ -83,10 +86,39 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 	env, err := Start("", crdPaths...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+	return StartControllers(env, gates, opts...)
+}
+
+// StartControllers starts controllers using an existing envtest control plane.
+// A scoped manager gets its own cache and metrics registry; the caller owns API server teardown.
+func StartControllers(env *Env, gates featuregate.Config, opts ...Option) (*Env, context.Context, context.CancelFunc) {
+	var o options
+	for _, apply := range opts {
+		apply(&o)
+	}
+	logf.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.UseDevMode(true)))
+	ctx, cancel := context.WithCancel(context.Background())
+	cacheOptions, err := controller.CacheOptionsForNamespace(o.watchNamespace, gates)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if o.watchNamespace != "" {
+		scoped := *env
+		env = &scoped
+		env.Manager, err = ctrl.NewManager(env.Cfg, ctrl.Options{
+			Scheme:  env.Scheme,
+			Cache:   cacheOptions,
+			Metrics: metricsserver.Options{BindAddress: "0"},
+			// Each case starts a new manager with the same controller names.
+			Controller: controllerconfig.Controller{SkipNameValidation: new(true)},
+		})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		env.Registry = prometheus.NewRegistry()
+	}
+
 	logger := ctrl.Log.WithName("integration")
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: gates,
+			FeatureGate:    gates,
+			WatchNamespace: o.watchNamespace,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          logger.WithName(component),
 				EventRecorder:   events.NewFakeRecorder(100).WithLogger(logger),
@@ -128,8 +160,11 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 	gomega.Expect(ruler.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	gomega.Expect(compact.SetupWithManager(env.Manager)).To(gomega.Succeed())
 
-	env.StartManager(ctx)
-	return env, ctx, cancel
+	done := env.StartManager(ctx)
+	return env, ctx, func() {
+		cancel()
+		gomega.Eventually(done, 15*time.Second).Should(gomega.BeClosed(), "manager did not stop")
+	}
 }
 
 // repoRoot walks up from the current working directory (the test binary runs in

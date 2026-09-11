@@ -64,8 +64,11 @@ func TestControllerManagerDeployment(t *testing.T) {
 }
 
 func TestControllerManagerServerTLSFeature(t *testing.T) {
-	deployment := ControllerManagerDeployment(WithFeatures("server-tls"))
+	deployment := ControllerManagerDeployment(WithFeatures("server-tls"), WithWatchOwnNamespace())
 	args := deployment.Spec.Template.Spec.Containers[0].Args
+	if !slices.Contains(args, "--watch-namespace=$(POD_NAMESPACE)") {
+		t.Fatalf("expected namespace scope for server-tls, got %v", args)
+	}
 	if !slices.Contains(args, "--enable-feature=server-tls") {
 		t.Fatalf("expected server-tls feature flag in operator arguments, got %v", args)
 	}

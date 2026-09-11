@@ -1,6 +1,7 @@
 package tls
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -13,6 +14,7 @@ import (
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +24,7 @@ import (
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
+	"github.com/thanos-community/thanos-operator/test/integration/suite"
 )
 
 const objstoreYAML = `type: S3
@@ -53,8 +56,17 @@ func argValue(args []string, prefix string) string {
 	return ""
 }
 
-func createNamespace(namespace string) {
+func startNamespace(namespace string) {
+	ctx = context.Background()
 	Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})).To(Succeed())
+	flags := featuregate.Flag{featuregate.ServerTLS, featuregate.ServiceMonitor}
+	_, managerCtx, cancel := suite.StartControllers(env, flags.ToFeatureGate(), suite.WithWatchNamespace(namespace))
+	ctx = managerCtx
+	DeferCleanup(cancel)
+}
+
+func createNamespace(namespace string) {
+	startNamespace(namespace)
 	Expect(k8sClient.Create(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "thanos-objstore", Namespace: namespace},
 		StringData: map[string]string{"thanos.yaml": objstoreYAML},

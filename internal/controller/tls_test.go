@@ -78,17 +78,17 @@ func TestTLSEventSelection(t *testing.T) {
 				CABundleConfigMap: &featuregate.CABundleReference{Name: "platform-trust", Key: "roots.pem"},
 			}
 		}
-		r := NewTLSReconciler(Config{FeatureGate: featuregate.Config{ServerTLS: &cfg}}, nil, nil)
+		r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: featuregate.Config{ServerTLS: &cfg}}, nil, nil)
 		for _, tc := range []struct {
 			name string
 			obj  client.Object
 			want bool
 		}{
-			{"query", &v1alpha1.ThanosQuery{}, true},
-			{"receive", &v1alpha1.ThanosReceive{}, true},
-			{"store", &v1alpha1.ThanosStore{}, true},
-			{"ruler", &v1alpha1.ThanosRuler{}, true},
-			{"compact", &v1alpha1.ThanosCompact{}, true},
+			{"query", &v1alpha1.ThanosQuery{}, false},
+			{"receive", &v1alpha1.ThanosReceive{}, false},
+			{"store", &v1alpha1.ThanosStore{}, false},
+			{"ruler", &v1alpha1.ThanosRuler{}, false},
+			{"compact", &v1alpha1.ThanosCompact{}, false},
 			{featuregate.TLSCAName, &cmv1.Certificate{}, !external},
 			{featuregate.TLSCAName, &corev1.Secret{}, !external},
 			{featuregate.TLSCAName, &cmv1.Issuer{}, !external},
@@ -100,6 +100,8 @@ func TestTLSEventSelection(t *testing.T) {
 			{"unrelated", &cmv1.Issuer{}, false},
 		} {
 			tc.obj.SetName(tc.name)
+			tc.obj.SetNamespace("unrelated")
+			require.Empty(t, r.enqueueNamespace(context.Background(), tc.obj))
 			tc.obj.SetNamespace("metrics")
 			requests := r.enqueueNamespace(context.Background(), tc.obj)
 			if tc.want {
@@ -123,11 +125,9 @@ func TestTLSReconcileScope(t *testing.T) {
 	for _, add := range []func(*runtime.Scheme) error{v1alpha1.AddToScheme, corev1.AddToScheme, cmv1.AddToScheme} {
 		require.NoError(t, add(scheme))
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&v1alpha1.ThanosQuery{
-		ObjectMeta: metav1.ObjectMeta{Name: "query", Namespace: "metrics"},
-	}).Build()
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	r := NewTLSReconciler(Config{FeatureGate: flags.ToFeatureGate()}, c, scheme)
+	r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: flags.ToFeatureGate()}, c, scheme)
 	ctx := context.Background()
 	key := client.ObjectKey{Namespace: "unrelated", Name: featuregate.TLSCAName}
 	_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
@@ -135,7 +135,7 @@ func TestTLSReconcileScope(t *testing.T) {
 	require.True(t, apierrors.IsNotFound(c.Get(ctx, key, &cmv1.Certificate{})))
 	key.Namespace = "metrics"
 	_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
-	require.ErrorContains(t, err, "waiting for namespace CA")
+	require.ErrorContains(t, err, "waiting for namespace CA", "bootstrap without component resources")
 	ca := &cmv1.Certificate{}
 	require.NoError(t, c.Get(ctx, key, ca))
 	require.True(t, ca.Spec.IsCA)
@@ -143,10 +143,25 @@ func TestTLSReconcileScope(t *testing.T) {
 	require.True(t, apierrors.IsNotFound(c.Get(ctx, key, &corev1.ConfigMap{})))
 
 	query := &v1alpha1.ThanosQuery{ObjectMeta: metav1.ObjectMeta{Name: "query", Namespace: "metrics"}}
+	require.NoError(t, c.Create(ctx, query))
 	require.NoError(t, c.Delete(ctx, query))
 	_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
-	require.NoError(t, err, "stop retrying after the last Thanos resource is deleted")
+	require.ErrorContains(t, err, "waiting for namespace CA", "keep preparing trust after the last component is deleted")
 	require.NoError(t, c.Get(ctx, key, ca), "retain existing namespace trust resources")
+}
+
+func TestTLSRequiresWatchNamespace(t *testing.T) {
+	flags := featuregate.Flag{featuregate.ServerTLS}
+	cfg := flags.ToFeatureGate()
+	_, err := CacheOptionsForNamespace("", cfg)
+	require.ErrorContains(t, err, "server-tls requires --watch-namespace")
+	r := NewTLSReconciler(Config{FeatureGate: cfg}, nil, nil)
+	require.ErrorContains(t, r.SetupWithManager(nil), "server-tls requires --watch-namespace")
+	scoped, err := CacheOptionsForNamespace("metrics", cfg)
+	require.NoError(t, err)
+	require.Contains(t, scoped.DefaultNamespaces, "metrics")
+	_, err = CacheOptionsForNamespace("metrics,other", cfg)
+	require.ErrorContains(t, err, "invalid watch namespace")
 }
 
 func TestTLSDisabled(t *testing.T) {
@@ -162,11 +177,9 @@ func newTestTLSReconciler(t *testing.T) *TLSReconciler {
 	for _, add := range []func(*runtime.Scheme) error{v1alpha1.AddToScheme, corev1.AddToScheme, cmv1.AddToScheme} {
 		require.NoError(t, add(scheme))
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&v1alpha1.ThanosQuery{
-		ObjectMeta: metav1.ObjectMeta{Name: "query", Namespace: "test"},
-	}).Build()
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	return NewTLSReconciler(Config{FeatureGate: flags.ToFeatureGate()}, c, scheme)
+	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c, scheme)
 }
 
 func reconcileTestTLSNamespace(ctx context.Context, r *TLSReconciler) error {
@@ -248,7 +261,7 @@ func newTLSResourceReconciler(t *testing.T) (*TLSReconciler, *handlers.Handler) 
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	return NewTLSReconciler(Config{FeatureGate: flags.ToFeatureGate()}, c, scheme), handlers.NewHandler(c, scheme, logr.Discard())
+	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c, scheme), handlers.NewHandler(c, scheme, logr.Discard())
 }
 
 func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
@@ -290,7 +303,7 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 	require.Equal(t, *initialTemplate, workload.Spec.Template, "initial issuance must not roll pods")
 	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
 	require.Equal(t, *initialTemplate, workload.Spec.Template, "unchanged trust must keep the template stable")
-	require.NoError(t, r.syncCertificateSecrets(ctx, owner.Namespace))
+	require.NoError(t, r.syncCertificateSecrets(ctx))
 	require.NoError(t, r.Client.Get(ctx, key, secret))
 	require.True(t, metav1.IsControlledBy(secret, cert))
 	secret.Data[corev1.TLSCertKey] = []byte("certificate two")

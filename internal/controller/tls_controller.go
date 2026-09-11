@@ -16,14 +16,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -38,6 +39,7 @@ type TLSReconciler struct {
 	Scheme *runtime.Scheme
 
 	featureGate featuregate.Config
+	namespace   string
 }
 
 func NewTLSReconciler(conf Config, c client.Client, scheme *runtime.Scheme) *TLSReconciler {
@@ -45,45 +47,42 @@ func NewTLSReconciler(conf Config, c client.Client, scheme *runtime.Scheme) *TLS
 		Client:      c,
 		Scheme:      scheme,
 		featureGate: conf.FeatureGate,
+		namespace:   conf.WatchNamespace,
 	}
 }
 
 func (r *TLSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if !r.featureGate.ServerTLSEnabled() || req.Namespace == "" {
+	if !r.featureGate.ServerTLSEnabled() || r.namespace == "" || req.Namespace != r.namespace {
 		return ctrl.Result{}, nil
 	}
-	needed, err := r.hasThanosResources(ctx, req.Namespace)
-	if err != nil || !needed {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, r.syncResources(ctx, req.Namespace)
+	return ctrl.Result{}, r.syncResources(ctx)
 }
 
-func (r *TLSReconciler) syncResources(ctx context.Context, namespace string) error {
+func (r *TLSReconciler) syncResources(ctx context.Context) error {
 	cfg := r.featureGate.ServerTLS
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
 	if cfg.Automatic() {
-		if err := r.syncCAResources(ctx, namespace); err != nil {
+		if err := r.syncCAResources(ctx); err != nil {
 			return err
 		}
-		if err := r.publishTrustBundle(ctx, namespace); err != nil {
+		if err := r.publishTrustBundle(ctx); err != nil {
 			return err
 		}
 	}
-	if _, err := readTLSTrustBundle(ctx, r.Client, namespace, cfg.CABundle()); err != nil {
+	if _, err := readTLSTrustBundle(ctx, r.Client, r.namespace, cfg.CABundle()); err != nil {
 		return err
 	}
-	return r.syncCertificateSecrets(ctx, namespace)
+	return r.syncCertificateSecrets(ctx)
 }
 
-func (r *TLSReconciler) syncCAResources(ctx context.Context, namespace string) error {
-	if err := checkTLSSecret(ctx, r.Client, featuregate.TLSCAName, namespace); err != nil {
+func (r *TLSReconciler) syncCAResources(ctx context.Context) error {
+	if err := checkTLSSecret(ctx, r.Client, featuregate.TLSCAName, r.namespace); err != nil {
 		return err
 	}
 	// Shared trust must outlive individual workloads and Thanos resources.
-	for _, obj := range manifests.BuildNamespaceTLSResources(namespace) {
+	for _, obj := range manifests.BuildNamespaceTLSResources(r.namespace) {
 		desired := obj.DeepCopyObject().(client.Object)
 		mutate := manifests.MutateFuncFor(obj, desired)
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, func() error {
@@ -99,16 +98,16 @@ func (r *TLSReconciler) syncCAResources(ctx context.Context, namespace string) e
 	return nil
 }
 
-func (r *TLSReconciler) publishTrustBundle(ctx context.Context, namespace string) error {
+func (r *TLSReconciler) publishTrustBundle(ctx context.Context) error {
 	secret := &corev1.Secret{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: featuregate.TLSCAName}, secret); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{Namespace: r.namespace, Name: featuregate.TLSCAName}, secret); err != nil {
 		return fmt.Errorf("waiting for namespace CA: %w", err)
 	}
 	root := secret.Data[corev1.TLSCertKey]
 	if err := validateTLSBundle(root); err != nil {
 		return fmt.Errorf("namespace CA: %w", err)
 	}
-	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: namespace}}
+	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: r.namespace}}
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, bundle, func() error {
 		if err := checkManagedTLSResource(bundle, nil); err != nil {
 			return err
@@ -130,39 +129,20 @@ func (r *TLSReconciler) publishTrustBundle(ctx context.Context, namespace string
 	return nil
 }
 
-func (r *TLSReconciler) hasThanosResources(ctx context.Context, namespace string) (bool, error) {
-	for _, list := range []client.ObjectList{
-		&v1alpha1.ThanosQueryList{}, &v1alpha1.ThanosReceiveList{}, &v1alpha1.ThanosStoreList{},
-		&v1alpha1.ThanosRulerList{}, &v1alpha1.ThanosCompactList{},
-	} {
-		if err := r.List(ctx, list, client.InNamespace(namespace)); err != nil {
-			return false, err
-		}
-		items, err := meta.ExtractList(list)
-		if err != nil {
-			return false, err
-		}
-		for _, item := range items {
-			if item.(metav1.Object).GetDeletionTimestamp() == nil {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
 func (r *TLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if !r.featureGate.ServerTLSEnabled() {
 		return nil
 	}
-	enqueue := handler.EnqueueRequestsFromMapFunc(r.enqueueNamespace)
-	b := ctrl.NewControllerManagedBy(mgr).Named("tls")
-	for _, obj := range []client.Object{
-		&v1alpha1.ThanosQuery{}, &v1alpha1.ThanosReceive{}, &v1alpha1.ThanosStore{},
-		&v1alpha1.ThanosRuler{}, &v1alpha1.ThanosCompact{},
-	} {
-		b = b.Watches(obj, enqueue, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	if _, err := CacheOptionsForNamespace(r.namespace, r.featureGate); err != nil {
+		return err
 	}
+	enqueue := handler.EnqueueRequestsFromMapFunc(r.enqueueNamespace)
+	b := ctrl.NewControllerManagedBy(mgr).Named("tls").
+		WatchesRawSource(source.Func(func(_ context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
+			// Bootstrap before any component resources exist.
+			queue.Add(ctrl.Request{NamespacedName: client.ObjectKey{Namespace: r.namespace, Name: featuregate.TLSCAName}})
+			return nil
+		}))
 	return b.Watches(&corev1.Secret{}, enqueue).
 		Watches(&corev1.ConfigMap{}, enqueue).
 		Watches(&cmv1.Certificate{}, enqueue).
@@ -171,7 +151,7 @@ func (r *TLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *TLSReconciler) enqueueNamespace(_ context.Context, obj client.Object) []reconcile.Request {
-	if obj.GetNamespace() == "" {
+	if obj.GetNamespace() != r.namespace {
 		return nil
 	}
 	cfg := r.featureGate.ServerTLS
@@ -192,6 +172,8 @@ func (r *TLSReconciler) enqueueNamespace(_ context.Context, obj client.Object) [
 		if !cfg.Automatic() || (obj.GetName() != featuregate.TLSCAName && obj.GetName() != manifests.TLSBootstrapIssuerName) {
 			return nil
 		}
+	default:
+		return nil
 	}
 	return []reconcile.Request{{NamespacedName: client.ObjectKey{Namespace: obj.GetNamespace(), Name: featuregate.TLSCAName}}}
 }
@@ -274,9 +256,9 @@ func prepareTLSResources(ctx context.Context, c client.Client, fg featuregate.Co
 }
 
 // syncCertificateSecrets keeps leaf Secrets tied to their Certificates for garbage collection.
-func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context, namespace string) error {
+func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context) error {
 	list := &cmv1.CertificateList{}
-	if err := r.List(ctx, list, client.InNamespace(namespace), client.MatchingLabels{manifests.TLSLabel: tlsManagedValue}); err != nil {
+	if err := r.List(ctx, list, client.InNamespace(r.namespace), client.MatchingLabels{manifests.TLSLabel: tlsManagedValue}); err != nil {
 		return err
 	}
 	for _, cert := range list.Items {
@@ -289,11 +271,11 @@ func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context, namespace st
 		default:
 			continue
 		}
-		if err := checkTLSSecret(ctx, r.Client, cert.Spec.SecretName, namespace); err != nil {
+		if err := checkTLSSecret(ctx, r.Client, cert.Spec.SecretName, r.namespace); err != nil {
 			return err
 		}
 		secret := &corev1.Secret{}
-		if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: cert.Spec.SecretName}, secret); err != nil {
+		if err := r.Get(ctx, client.ObjectKey{Namespace: r.namespace, Name: cert.Spec.SecretName}, secret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}

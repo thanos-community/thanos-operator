@@ -26,13 +26,9 @@ import (
 )
 
 var _ = Describe("TLS feature gate", func() {
-	It("reconciles namespace trust while workload reconciliation is paused", func() {
+	It("bootstraps namespace trust before any component exists", func() {
 		const ns = "tls-controller"
-		Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})).To(Succeed())
-		Expect(k8sClient.Create(ctx, &v1alpha1.ThanosQuery{
-			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: ns},
-			Spec:       v1alpha1.ThanosQuerySpec{Paused: new(true), Replicas: 1},
-		})).To(Succeed())
+		startNamespace(ns)
 		key := client.ObjectKey{Namespace: ns, Name: featuregate.TLSCAName}
 		Eventually(func(g Gomega) {
 			ca := &cmv1.Certificate{}
