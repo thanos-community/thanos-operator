@@ -142,7 +142,11 @@ func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitor
 	expectShards := make([]string, len(opts))
 	for i, opt := range opts {
 		expectShards[i] = opt.GetGeneratedResourceName()
-		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, opt.Build())
+		objects := opt.Build()
+		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &store, objects); err != nil {
+			return err
+		}
+		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, objects)
 	}
 
 	if errCount > 0 {
@@ -161,6 +165,10 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 	var cleanErrCount int
 
 	cleanErrCount = r.pruneOrphanedResources(ctx, store.GetNamespace(), store.GetName(), expectShards)
+	if !r.featureGate.ServerTLSEnabled() {
+		cleanErrCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &store, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		cleanErrCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &store)
 	}
@@ -214,12 +222,18 @@ func (r *ThanosStoreReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectShards, listOpts...)
+	errCount := pruner.Prune(ctx, expectShards, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		tlsOpts := append(listOpts, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			Prune(ctx, manifests.TLSResourceNames(expectShards), tlsOpts...)
+	}
+	return errCount
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := ctrl.NewControllerManagedBy(mgr).
+	err := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosStoreList{}).
 		For(&monitoringthanosiov1alpha1.ThanosStore{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).

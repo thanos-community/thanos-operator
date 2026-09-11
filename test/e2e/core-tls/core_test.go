@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package core
+package coretls
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	"github.com/thanos-community/thanos-operator/test/e2e/suite"
@@ -35,7 +36,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +52,12 @@ const (
 	hashringTwoName = "two"
 )
 
-var _ = Describe("core", Ordered, func() {
+// Keep these scenarios aligned with test/e2e/core/core_test.go.
+var _ = Describe("core with TLS", Ordered, func() {
+	const namespace = "e2e-core-tls"
+	BeforeAll(func() {
+		suite.Setup(namespace, featuregate.ServerTLS, featuregate.ServiceMonitor)
+	})
 	Context("Operator", func() {
 
 		It("should run successfully", func() {
@@ -128,16 +133,18 @@ var _ = Describe("core", Ordered, func() {
 							ReplicationFactor: 1,
 							HashringPolicy:    ptr.To(v1alpha1.HashringPolicyStatic),
 							ExternalLabels: map[string]string{
-								"receive": "true",
+								"receive": namespace,
 							},
 						},
 					},
 				}
 				err := c.Create(context.Background(), cr)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetReplicasRunning(c, 1, ingesterName, namespace)
-				}, time.Minute*5, time.Second*2).Should(BeTrue())
+				for _, name := range []string{ingesterName, ingesterTwoName} {
+					Eventually(func() bool {
+						return utils.VerifyStatefulSetReplicasRunning(c, 1, name, namespace)
+					}, 5*time.Minute, 2*time.Second).Should(BeTrue(), name)
+				}
 			})
 
 			Context("When the ingesters have been created", func() {
@@ -188,13 +195,9 @@ var _ = Describe("core", Ordered, func() {
 
 		Context("When ThanosReceive is fully operational", func() {
 			It("should accept metrics over remote write", func() {
-				matchLabels := map[string]string{
-					manifests.ComponentLabel: receive.RouterComponentName,
-					manifests.OwnerLabel:     receiveName,
-				}
 				Eventually(func() error {
-					return utils.DoRemoteWriteRequest(c, utils.DefaultRemoteWriteRequest(), namespace, matchLabels, nil, receive.RemoteWritePort)
-				}, time.Minute*3, time.Second*1).Should(Succeed())
+					return remoteWrite(namespace, routerName, utils.DefaultRemoteWriteRequest())
+				}, 3*time.Minute, time.Second).Should(Succeed())
 			})
 		})
 	})
@@ -222,12 +225,6 @@ var _ = Describe("core", Ordered, func() {
 								manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 							},
 						},
-						// Default is 30s. When the ruler pod rolls (e.g. first rule file
-						// added), query only reconnects to the new IP on the next SD tick,
-						// so a low interval keeps the evaluated-rules query fast.
-						Additional: v1alpha1.Additional{
-							Args: []string{"--store.sd-dns-interval=5s"},
-						},
 					},
 				}
 				err := c.Create(context.Background(), cr)
@@ -236,44 +233,17 @@ var _ = Describe("core", Ordered, func() {
 				deploymentName := controller.QueryNameFromParent(queryName)
 				Eventually(func() bool {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
-				svcName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
-				Eventually(func() bool {
-					return utils.VerifyDeploymentArgs(c,
-						deploymentName,
-						namespace,
-						0,
-						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", svcName, namespace),
-					)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				}, 3*time.Minute, time.Second).Should(BeTrue())
+				expectQueryDiscovery(namespace, deploymentName,
+					controller.ReceiveIngesterNameFromParent(receiveName, hashringName),
+					controller.ReceiveIngesterNameFromParent(receiveName, hashringTwoName))
 			})
 		})
 		Context("When querying for written metrics", func() {
 			It("should be able to query the test metric written via remote write", func() {
-				ctx := context.Background()
-				selector := client.MatchingLabels{
-					manifests.ComponentLabel: "query-layer",
-				}
-				queryPods := &corev1.PodList{}
-				err := c.List(ctx, queryPods, selector, &client.ListOptions{Namespace: namespace})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(queryPods.Items).NotTo(BeEmpty())
-
-				pod := queryPods.Items[0].Name
-				localPort, cancelFn, err := utils.StartPortForward(ctx, intstr.FromInt32(prometheusPort), "https", pod, namespace)
-				Expect(err).NotTo(HaveOccurred())
-				defer cancelFn()
-
 				Eventually(func() error {
-					resp, err := utils.QueryPrometheus("test_metric", localPort)
-					if err != nil {
-						return err
-					}
-					if len(resp.Data.Result) == 0 {
-						return fmt.Errorf("no results found for test_metric")
-					}
-					return nil
-				}, time.Minute*3, time.Second*5).Should(Succeed())
+					return queryMetric(namespace, controller.QueryNameFromParent(queryName), "test_metric", 1)
+				}, 3*time.Minute, 2*time.Second).Should(Succeed())
 			})
 		})
 	})
@@ -329,14 +299,7 @@ var _ = Describe("core", Ordered, func() {
 			})
 
 			It("should validate the ruler has discovered the query service", func() {
-				Eventually(func() bool {
-					return utils.VerifyStatefulSetArgs(c,
-						statefulSetName,
-						namespace,
-						0,
-						fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", svcName, namespace),
-					)
-				}, time.Minute*3, time.Second*1).Should(BeTrue())
+				expectRulerDiscovery(namespace, statefulSetName, svcName)
 			})
 
 			It("should pick up a rule configmap when configured", func() {
@@ -378,21 +341,47 @@ var _ = Describe("core", Ordered, func() {
 			})
 
 			It("should allow querying of evaluated rules", func() {
-				localPort, cancelFn, err := utils.SetupQueryPortForward(c, namespace)
-				Expect(err).NotTo(HaveOccurred())
-				defer cancelFn()
-
 				Eventually(func() error {
-					resp, err := utils.QueryPrometheus(`example_recording_rule`, localPort)
-					if err != nil {
-						return err
-					}
-					if len(resp.Data.Result) == 0 {
-						return fmt.Errorf("no results found for recording rule")
-					}
-					return nil
-				}, time.Minute*3, time.Second*1).Should(Succeed())
+					return queryMetric(namespace, controller.QueryNameFromParent(queryName), "example_recording_rule", 1)
+				}, 3*time.Minute, time.Second).Should(Succeed())
 			})
 		})
+	})
+
+	It("evaluates a rule against Query over HTTPS", func() {
+		rules := &corev1.ConfigMap{}
+		Expect(c.Get(ctx, client.ObjectKey{Name: "my-rules", Namespace: namespace}, rules)).To(Succeed())
+		rules.Data["my-rules.yaml"] = `groups:
+- name: tls-core
+  rules:
+  - record: core_tls_evaluated_metric
+    expr: sum(test_metric)
+`
+		Expect(c.Update(ctx, rules)).To(Succeed())
+		Eventually(func() error {
+			if err := remoteWrite(namespace, controller.ReceiveRouterNameFromParent(receiveName), utils.DefaultRemoteWriteRequest()); err != nil {
+				return err
+			}
+			return queryMetric(namespace, controller.QueryNameFromParent(queryName), "core_tls_evaluated_metric", 1)
+		}, 3*time.Minute, 2*time.Second).Should(Succeed())
+	})
+
+	It("issues certificates and serves verified HTTPS for every core workload", func() {
+		for _, workload := range []struct {
+			name string
+			port int32
+		}{
+			{controller.ReceiveRouterNameFromParent(receiveName), receive.HTTPPort},
+			{controller.ReceiveIngesterNameFromParent(receiveName, hashringName), receive.HTTPPort},
+			{controller.ReceiveIngesterNameFromParent(receiveName, hashringTwoName), receive.HTTPPort},
+			{controller.QueryNameFromParent(queryName), prometheusPort},
+			{controller.RulerNameFromParent(rulerName), prometheusPort},
+		} {
+			expectTLSWorkload(namespace, workload.name, workload.port)
+		}
+	})
+
+	It("lets Prometheus scrape every core workload over HTTPS", func() {
+		expectPrometheusTargets(namespace, 5)
 	})
 })

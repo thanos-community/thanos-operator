@@ -141,7 +141,7 @@ func newQuery(namespace string) *v1alpha1.ThanosQuery {
 
 func startManager(t *testing.T, env *suite.Env, namespace string, gates featuregate.Config) {
 	t.Helper()
-	cacheOptions, err := controller.CacheOptionsForNamespace(namespace)
+	cacheOptions, err := controller.CacheOptionsForNamespace(namespace, gates)
 	require.NoError(t, err)
 	mgr, err := ctrl.NewManager(env.Cfg, ctrl.Options{
 		Scheme:     env.Scheme,

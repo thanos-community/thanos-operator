@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -36,7 +37,7 @@ type handler struct {
 // resourcePruner creates an object that prunes resources in the Kubernetes cluster.
 type resourcePruner struct {
 	*handler
-	sa, svc, sts, dep, cm, secret, pdb, svcMon bool
+	sa, svc, sts, dep, cm, secret, pdb, svcMon, cert bool
 }
 
 // NewHandler creates a new Handler.
@@ -92,7 +93,7 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 
 		err := h.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if err != nil {
-			if errors.IsNotFound(err) || meta.IsNoMatchError(err) {
+			if errors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err) {
 				continue
 			}
 
@@ -175,6 +176,12 @@ func (r *resourcePruner) WithDeployment() *resourcePruner {
 	return r
 }
 
+// WithCertificate returns a resourcePruner with Certificate enabled.
+func (r *resourcePruner) WithCertificate() *resourcePruner {
+	r.cert = true
+	return r
+}
+
 // WithServiceMonitor returns a resourcePruner with ServiceMonitor enabled.
 func (r *resourcePruner) WithServiceMonitor() *resourcePruner {
 	r.svcMon = true
@@ -205,14 +212,15 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 
 // PruneByOwner deletes enabled resources controlled by owner in its namespace.
 // It returns the number of errors encountered.
-func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object) int {
+func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object, listOpts ...client.ListOption) int {
 	if owner.GetUID() == "" {
 		return 0
 	}
 
+	listOpts = append(listOpts, client.InNamespace(owner.GetNamespace()))
 	return r.prune(ctx, func(obj client.Object) bool {
 		return metav1.IsControlledBy(obj, owner)
-	}, client.InNamespace(owner.GetNamespace()))
+	}, listOpts...)
 }
 
 func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Object) bool, listOpts ...client.ListOption) int {
@@ -221,6 +229,7 @@ func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Obj
 		enabled bool
 		list    client.ObjectList
 	}{
+		{r.cert, &cmv1.CertificateList{}},
 		{r.sa, &corev1.ServiceAccountList{}},
 		{r.svc, &corev1.ServiceList{}},
 		{r.sts, &appsv1.StatefulSetList{}},
@@ -234,7 +243,7 @@ func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Obj
 	for _, rt := range resourceTypes {
 		if rt.enabled {
 			if err := r.client.List(ctx, rt.list, listOpts...); err != nil {
-				if errors.IsNotFound(err) || meta.IsNoMatchError(err) {
+				if errors.IsNotFound(err) || meta.IsNoMatchError(err) || runtime.IsNotRegisteredError(err) {
 					continue
 				}
 				r.logger.Error(err, "failed to list resources for pruning")

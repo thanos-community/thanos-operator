@@ -65,7 +65,8 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
 
-	return objs
+	objs = manifests.AppendTLSResources(objs, opts.Config)
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts Options) Valid() error {

@@ -332,6 +332,7 @@ func WithVolumeResize() DeploymentOption {
 
 // WithFeatures enables multiple specific features at once.
 // Accepts feature names as defined in the featuregate package.
+// The server-tls feature requires WithWatchOwnNamespace().
 //
 // Available features:
 //   - "service-monitor": Enables ServiceMonitor management
@@ -339,6 +340,7 @@ func WithVolumeResize() DeploymentOption {
 //   - "kube-resource-sync": Enables kube-resource-sync sidecar
 //   - "otel-sidecar": Enables OpenTelemetry sidecar injection
 //   - "volume-resize": Enables volume resize controller
+//   - "server-tls": Enables server TLS for Thanos components
 //
 // Example:
 //
@@ -355,6 +357,8 @@ func WithFeatures(features ...string) DeploymentOption {
 				c.featureGate.OtelSidecar = featuregate.Enabled()
 			case featuregate.KubeResourceSync:
 				c.featureGate.KubeResourceSync = &featuregate.KubeResourceSyncConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
+			case featuregate.ServerTLS:
+				c.featureGate.ServerTLS = &featuregate.ServerTLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}, Provider: featuregate.CertManagerProvider}
 			case featuregate.VolumeResize:
 				c.featureGate.VolumeResize = featuregate.Enabled()
 			}
@@ -502,6 +506,9 @@ func buildManagerArgs(featureGate featuregate.Config) []string {
 	}
 	if featureGate.OtelSidecarEnabled() {
 		args = append(args, "--enable-feature="+featuregate.OtelSidecar)
+	}
+	if featureGate.ServerTLSEnabled() {
+		args = append(args, "--enable-feature="+featuregate.ServerTLS)
 	}
 	if featureGate.VolumeResizeEnabled() {
 		args = append(args, "--enable-feature="+featuregate.VolumeResize)

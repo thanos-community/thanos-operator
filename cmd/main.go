@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -36,7 +37,6 @@ import (
 	"github.com/prometheus/common/promslog"
 	psflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
-	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
@@ -55,6 +55,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -76,6 +77,7 @@ func init() {
 	utilruntime.Must(monitoringthanosiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+	utilruntime.Must(cmv1.AddToScheme(scheme))
 }
 
 // registerClientGoMetrics registers client-go metrics adapters to expose
@@ -224,7 +226,16 @@ func main() {
 		),
 	)
 	setupLog := ctrl.Log.WithName("setup")
-	cacheOptions, err := controller.CacheOptionsForNamespace(watchNamespace)
+	featureGateConfig := enabledFeatures.ToFeatureGate()
+
+	var fileErr error
+	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
+	if fileErr != nil {
+		setupLog.Error(fileErr, "failed to load feature gate config file")
+		os.Exit(1)
+	}
+
+	cacheOptions, err := controller.CacheOptionsForNamespace(watchNamespace, featureGateConfig)
 	if err != nil {
 		setupLog.Error(err, "invalid namespace scope")
 		os.Exit(1)
@@ -348,26 +359,20 @@ func main() {
 	const defaultConfigReloaderImage = "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
 
 	commonMetrics := metrics.NewCommonMetrics(ctrlmetrics.Registry)
-	featureGateConfig := enabledFeatures.ToFeatureGate()
 
-	var fileErr error
-	featureGateConfig, fileErr = featuregate.LoadAndApplyConfig(featureGateConfigFile, featureGateConfig)
-	if fileErr != nil {
-		setupLog.Error(fileErr, "failed to load feature gate config file")
-		os.Exit(1)
-	}
-
-	if featureGateConfig.ServiceMonitorEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
-	}
-	if featureGateConfig.PrometheusRuleEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
-	}
-	if featureGateConfig.KubeResourceSyncEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
-	}
-	if featureGateConfig.VolumeResizeEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.VolumeResize).Set(1)
+	for _, feature := range []struct {
+		name    string
+		enabled bool
+	}{
+		{featuregate.ServiceMonitor, featureGateConfig.ServiceMonitorEnabled()},
+		{featuregate.PrometheusRule, featureGateConfig.PrometheusRuleEnabled()},
+		{featuregate.KubeResourceSync, featureGateConfig.KubeResourceSyncEnabled()},
+		{featuregate.ServerTLS, featureGateConfig.ServerTLSEnabled()},
+		{featuregate.VolumeResize, featureGateConfig.VolumeResizeEnabled()},
+	} {
+		if feature.enabled {
+			commonMetrics.FeatureGatesInfo.WithLabelValues(feature.name).Set(1)
+		}
 	}
 
 	configReloaderImage := defaultConfigReloaderImage
@@ -377,13 +382,23 @@ func main() {
 
 	buildConfig := func(component string) controller.Config {
 		return controller.Config{
-			FeatureGate: featureGateConfig,
+			FeatureGate:    featureGateConfig,
+			WatchNamespace: watchNamespace,
 			InstrumentationConfig: controller.InstrumentationConfig{
 				Logger:          baseLogger.WithName(component),
 				EventRecorder:   mgr.GetEventRecorder(fmt.Sprintf("%s-controller", component)),
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   commonMetrics,
 			},
+		}
+	}
+
+	if featureGateConfig.ServerTLSEnabled() {
+		if err = controller.NewTLSReconciler(
+			buildConfig("tls"), mgr.GetClient(), mgr.GetScheme(),
+		).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TLS")
+			os.Exit(1)
 		}
 	}
 

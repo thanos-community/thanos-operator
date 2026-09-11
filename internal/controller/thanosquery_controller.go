@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 	"sort"
 
 	"github.com/go-logr/logr"
@@ -37,6 +38,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -166,6 +168,9 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontend.Build()...)
 	}
 
+	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &query, objs); err != nil {
+		return err
+	}
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
@@ -213,8 +218,8 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	endpointCountByType := make(map[manifests.EndpointType]int)
-	endpoints := make([]manifestquery.Endpoint, len(services.Items))
-	for i, svc := range services.Items {
+	endpoints := make([]manifestquery.Endpoint, 0, len(services.Items))
+	for _, svc := range services.Items {
 
 		port, ok := manifests.IsGrpcServiceWithLabels(&svc, requiredStoreServiceLabels)
 		if !ok {
@@ -227,11 +232,20 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 
 		etype := r.getServiceTypeFromLabel(svc.ObjectMeta)
 
-		endpoints[i] = manifestquery.Endpoint{
+		endpoint := manifestquery.Endpoint{
 			ServiceName: svc.GetName(),
 			Port:        port,
 			Namespace:   svc.GetNamespace(),
 			Type:        etype,
+		}
+		if r.featureGate.ServerTLSEnabled() && etype == manifests.RegularLabel {
+			resolved, err := r.resolveTLSFanout(ctx, endpoint)
+			if err != nil {
+				return nil, err
+			}
+			endpoints = append(endpoints, resolved...)
+		} else {
+			endpoints = append(endpoints, endpoint)
 		}
 		endpointCountByType[etype]++
 	}
@@ -241,8 +255,43 @@ func (r *ThanosQueryReconciler) getStoreAPIServiceEndpoints(ctx context.Context,
 	}
 
 	sort.Slice(endpoints, func(i, j int) bool {
+		if endpoints[i].ServiceName == endpoints[j].ServiceName {
+			return endpoints[i].Address < endpoints[j].Address
+		}
 		return endpoints[i].ServiceName < endpoints[j].ServiceName
 	})
+	return endpoints, nil
+}
+
+// Thanos v0.42 applies per-endpoint TLS only to static and group targets.
+// Resolve fanout here so each target retains its Service's TLS server name.
+func (r *ThanosQueryReconciler) resolveTLSFanout(ctx context.Context, endpoint manifestquery.Endpoint) ([]manifestquery.Endpoint, error) {
+	slices, err := r.handler.GetEndpointSlices(ctx, endpoint.ServiceName, endpoint.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	var endpoints []manifestquery.Endpoint
+	seen := map[string]bool{}
+	for _, slice := range slices.Items {
+		for _, port := range slice.Ports {
+			if port.Name == nil || *port.Name != manifestquery.GRPCPortName || port.Port == nil {
+				continue
+			}
+			for _, target := range slice.Endpoints {
+				if target.Conditions.Ready != nil && !*target.Conditions.Ready {
+					continue
+				}
+				for _, address := range target.Addresses {
+					resolved := endpoint
+					resolved.Address = net.JoinHostPort(address, fmt.Sprint(*port.Port))
+					if !seen[resolved.Address] {
+						endpoints = append(endpoints, resolved)
+						seen[resolved.Address] = true
+					}
+				}
+			}
+		}
+	}
 	return endpoints, nil
 }
 
@@ -266,7 +315,17 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	withGenerationChangePredicate := predicate.And(servicePredicate, predicate.GenerationChangedPredicate{}, servicePredicate)
 	withPredicate := predicate.Or(withLabelChangedPredicate, withGenerationChangePredicate)
 
-	err = ctrl.NewControllerManagedBy(mgr).
+	b := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosQueryList{})
+	if r.featureGate.ServerTLSEnabled() {
+		b.Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			service := &corev1.Service{}
+			if err := r.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: obj.GetLabels()[discoveryv1.LabelServiceName]}, service); err != nil {
+				return nil
+			}
+			return r.requestsForService(ctx, service)
+		}))
+	}
+	err = b.
 		For(&monitoringthanosiov1alpha1.ThanosQuery{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
@@ -293,42 +352,44 @@ func (r *ThanosQueryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // enqueueForService returns an EventHandler that will enqueue a request for the ThanosQuery instances
 // that matches the Service.
 func (r *ThanosQueryReconciler) enqueueForService() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if !r.isQueueableStoreService(obj) {
-			return []reconcile.Request{}
-		}
+	return handler.EnqueueRequestsFromMapFunc(r.requestsForService)
+}
 
-		listOpts := []client.ListOption{
-			client.InNamespace(obj.GetNamespace()),
-		}
+func (r *ThanosQueryReconciler) requestsForService(ctx context.Context, obj client.Object) []reconcile.Request {
+	if !r.isQueueableStoreService(obj) {
+		return []reconcile.Request{}
+	}
 
-		queriers := &monitoringthanosiov1alpha1.ThanosQueryList{}
-		err := r.List(ctx, queriers, listOpts...)
+	listOpts := []client.ListOption{
+		client.InNamespace(obj.GetNamespace()),
+	}
+
+	queriers := &monitoringthanosiov1alpha1.ThanosQueryList{}
+	err := r.List(ctx, queriers, listOpts...)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := []reconcile.Request{}
+	for _, query := range queriers.Items {
+		selector, err := manifests.BuildLabelSelectorFrom(query.Spec.StoreLabelSelector, requiredStoreServiceLabels)
 		if err != nil {
-			return []reconcile.Request{}
+			r.logger.Error(err, "failed to build label selector from store label selector", "query", query.GetName())
+			continue
 		}
 
-		requests := []reconcile.Request{}
-		for _, query := range queriers.Items {
-			selector, err := manifests.BuildLabelSelectorFrom(query.Spec.StoreLabelSelector, requiredStoreServiceLabels)
-			if err != nil {
-				r.logger.Error(err, "failed to build label selector from store label selector", "query", query.GetName())
-				continue
-			}
-
-			if selector.Matches(labels.Set(obj.GetLabels())) {
-				r.metrics.ServiceWatchesReconciliationsTotal.WithLabelValues(query.GetName(), query.GetNamespace()).Inc()
-				requests = append(requests, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      query.GetName(),
-						Namespace: query.GetNamespace(),
-					},
-				})
-			}
+		if selector.Matches(labels.Set(obj.GetLabels())) {
+			r.metrics.ServiceWatchesReconciliationsTotal.WithLabelValues(query.GetName(), query.GetNamespace()).Inc()
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      query.GetName(),
+					Namespace: query.GetNamespace(),
+				},
+			})
 		}
+	}
 
-		return requests
-	})
+	return requests
 }
 
 // isQueueableStoreService returns true if the Service is a StoreAPI service that is part of a 'thanos' and has a gRPC port.
@@ -375,11 +436,18 @@ func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *moni
 
 func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoringthanosiov1alpha1.ThanosQuery, expectedResources []string) int {
 	var errCount int
+	if !r.featureGate.ServerTLSEnabled() {
+		errCount += r.handler.NewResourcePruner().WithConfigMap().PruneByOwner(ctx, &resource, client.MatchingLabels{manifestquery.TLSEndpointConfigLabel: "true"})
+	}
 	ns := resource.GetNamespace()
 	owner := resource.GetName()
 
-	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
+	errCount += r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
+	if !r.featureGate.ServerTLSEnabled() {
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &resource, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	}
@@ -408,5 +476,16 @@ func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithDeployment().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectedResources, listOpts...)
+	errCount := pruner.Prune(ctx, expectedResources, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		for _, opts := range []manifests.Buildable{
+			manifestquery.Options{Options: manifests.Options{Owner: owner}},
+			manifestqueryfrontend.Options{Options: manifests.Options{Owner: owner}},
+		} {
+			errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+				Prune(ctx, manifests.TLSResourceNames(expectedResources), manifests.GetLabelSelectorForOwner(opts),
+					client.InNamespace(ns), client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		}
+	}
+	return errCount
 }

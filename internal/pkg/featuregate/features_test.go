@@ -10,6 +10,7 @@ import (
 
 func TestAllFeatures(t *testing.T) {
 	expected := []string{
+		ServerTLS,
 		ServiceMonitor,
 		PrometheusRule,
 		OtelSidecar,
@@ -147,13 +148,14 @@ func TestFlag_ToFeatureGate(t *testing.T) {
 		},
 		{
 			name:     "all features enabled",
-			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, KubeResourceSync, VolumeResize},
+			features: []string{ServiceMonitor, PrometheusRule, OtelSidecar, KubeResourceSync, VolumeResize, ServerTLS},
 			want: Config{
 				ServiceMonitor:   &ServiceMonitorConfig{FeatureConfig: FeatureConfig{Enabled: true}},
 				PrometheusRule:   Enabled(),
 				OtelSidecar:      Enabled(),
 				KubeResourceSync: &KubeResourceSyncConfig{FeatureConfig: FeatureConfig{Enabled: true}},
 				VolumeResize:     Enabled(),
+				ServerTLS:        &ServerTLSConfig{FeatureConfig: FeatureConfig{Enabled: true}, Provider: CertManagerProvider},
 			},
 		},
 	}

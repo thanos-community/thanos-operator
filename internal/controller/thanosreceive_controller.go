@@ -164,7 +164,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	bld := ctrl.NewControllerManagedBy(mgr)
+	bld := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosReceiveList{})
 	err := r.buildController(*bld)
 	if err != nil {
 		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosReceive{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
@@ -210,7 +210,13 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	expectIngesters := make([]string, len(ingestOpts))
 	for i, opt := range ingestOpts {
 		expectIngesters[i] = opt.GetGeneratedResourceName()
-		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, opt.Build())
+		objects := opt.Build()
+		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &receiver, objects); err != nil {
+			r.logger.Error(err, "failed to prepare ingester TLS resources")
+			errCount++
+			continue
+		}
+		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objects)
 	}
 	// we won't error out here yet as we don't want to delay updating the router configmap
 
@@ -220,7 +226,11 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	}
 	routerOpts := r.specToRouterOptions(receiver, string(hashringConfig))
 
-	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerOpts.Build()); errs > 0 {
+	routerObjects := routerOpts.Build()
+	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &receiver, routerObjects); err != nil {
+		return err
+	}
+	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerObjects); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
 
@@ -391,6 +401,10 @@ func (r *ThanosReceiveReconciler) cleanup(ctx context.Context, resource monitori
 	owner := resource.GetName()
 
 	errCount = r.pruneOrphanedResources(ctx, ns, owner, expectedIngesters)
+	if !r.featureGate.ServerTLSEnabled() {
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &resource, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	} else if !r.featureGate.KubeResourceSyncEnabled() {
@@ -421,7 +435,13 @@ func (r *ThanosReceiveReconciler) pruneOrphanedResources(ctx context.Context, ns
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithStatefulSet().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectShards, listOpts...)
+	errCount := pruner.Prune(ctx, expectShards, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		tlsOpts := append(listOpts, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			Prune(ctx, manifests.TLSResourceNames(expectShards), tlsOpts...)
+	}
+	return errCount
 }
 
 func (r *ThanosReceiveReconciler) DisableConditionUpdate() *ThanosReceiveReconciler {
