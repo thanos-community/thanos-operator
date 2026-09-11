@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 
@@ -261,9 +260,7 @@ func TestPruneByOwner(t *testing.T) {
 				Name: "owned-secret", Namespace: owner.Namespace, OwnerReferences: []metav1.OwnerReference{ownerRef},
 			}}
 			c := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(objects...).WithObjects(unselected).Build()
-			h := NewHandler(c, testScheme, logr.Discard()).SetFeatureGates([]schema.GroupVersionKind{
-				tc.object.GetObjectKind().GroupVersionKind(),
-			})
+			h := NewHandler(c, testScheme, logr.Discard())
 
 			assert.Equal(t, tc.configure(h.NewResourcePruner()).PruneByOwner(ctx, owner), 0)
 			for i, obj := range objects {

@@ -72,7 +72,7 @@ func NewObjectStatusReconciler(conf Config, client client.Client, scheme *runtim
 		Scheme:   scheme,
 		logger:   conf.InstrumentationConfig.Logger,
 		recorder: conf.InstrumentationConfig.EventRecorder,
-		handler:  handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
+		handler:  handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
 	}
 }
 

@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,8 +31,6 @@ type handler struct {
 	client client.Client
 	scheme *runtime.Scheme
 	logger logr.Logger
-
-	gatedGVK []schema.GroupVersionKind
 }
 
 // resourcePruner creates an object that prunes resources in the Kubernetes cluster.
@@ -53,12 +50,6 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 	}
 }
 
-// SetFeatureGates sets the resource types skipped by CreateOrUpdate and DeleteResource.
-func (h *Handler) SetFeatureGates(gvk []schema.GroupVersionKind) *Handler {
-	h.gatedGVK = gvk
-	return h
-}
-
 // CreateOrUpdate creates or updates the given objects in the Kubernetes cluster.
 // It sets the owner reference of each object to the given owner.
 // It logs the operation and any errors encountered.
@@ -67,11 +58,6 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 	var errCount int
 	for _, obj := range objs {
 		logger := loggerForObj(h.logger, obj)
-		if h.IsFeatureGated(obj) {
-			logger.V(1).Info("resource is feature gated, skipping")
-			continue
-		}
-
 		if manifests.IsNamespacedResource(obj) {
 			obj.SetNamespace(namespace)
 			if err := ctrl.SetControllerReference(owner, obj, h.scheme); err != nil {
@@ -96,12 +82,6 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 	return errCount
 }
 
-// IsFeatureGated returns true if the given object is feature gated.
-func (h *handler) IsFeatureGated(obj client.Object) bool {
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	return slices.Contains(h.gatedGVK, gvk)
-}
-
 // DeleteResource if they exist in the Kubernetes cluster.
 // It reads the item from the cache initially to see if it is present.
 // It issues a DELETE request to the Kubernetes API server if it exists.
@@ -109,11 +89,6 @@ func (h *Handler) DeleteResource(ctx context.Context, objs []client.Object) int 
 	var errCount int
 	for _, obj := range objs {
 		logger := loggerForObj(h.logger, obj)
-
-		if h.IsFeatureGated(obj) {
-			logger.V(1).Info("resource is feature gated, skipping")
-			continue
-		}
 
 		err := h.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if err != nil {
@@ -229,7 +204,7 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 }
 
 // PruneByOwner deletes enabled resources controlled by owner in its namespace.
-// It ignores feature gates and returns the number of errors encountered.
+// It returns the number of errors encountered.
 func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object) int {
 	if owner.GetUID() == "" {
 		return 0
