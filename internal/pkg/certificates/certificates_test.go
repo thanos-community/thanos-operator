@@ -32,7 +32,7 @@ func newManager(t *testing.T) Manager {
 	for _, add := range []func(*runtime.Scheme) error{cmv1.AddToScheme, corev1.AddToScheme, appsv1.AddToScheme} {
 		require.NoError(t, add(scheme))
 	}
-	return Manager{Client: fake.NewClientBuilder().WithScheme(scheme).Build(), Scheme: scheme, Config: featuregate.TLSConfig{Provider: featuregate.CertManagerProvider}}
+	return Manager{Client: fake.NewClientBuilder().WithScheme(scheme).Build(), Scheme: scheme, Config: featuregate.ServerTLSConfig{Provider: featuregate.CertManagerProvider}}
 }
 
 func rootPEM(t *testing.T) []byte {

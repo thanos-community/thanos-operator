@@ -65,7 +65,7 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:     controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
 	}
 
 	return reconciler

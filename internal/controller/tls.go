@@ -22,11 +22,11 @@ import (
 // TLS material is shared within a namespace; changes reconcile its Thanos resources.
 // Watches are registered only when TLS is enabled, so cert-manager remains optional.
 func withTLSWatches(b *builder.Builder, c client.Client, fg featuregate.Config, resourceList client.ObjectList) *builder.Builder {
-	if !fg.TLSEnabled() {
+	if !fg.ServerTLSEnabled() {
 		return b
 	}
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		if obj.GetLabels()[manifests.TLSLabel] != "true" && obj.GetName() != fg.TLS.CABundle().Name {
+		if obj.GetLabels()[manifests.TLSLabel] != "true" && obj.GetName() != fg.ServerTLS.CABundle().Name {
 			return nil
 		}
 		list := resourceList.DeepCopyObject().(client.ObjectList)

@@ -470,7 +470,7 @@ func NewRulerSecret(opts Options) *corev1.Secret {
 
 func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
 	rwConfig := opts.DiscoveryInfos.toRemoteWrite()
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		for i := range rwConfig.RemoteWrite {
 			rw := &rwConfig.RemoteWrite[i]
 			rw.URL = strings.Replace(rw.URL, "http://", "https://", 1)
@@ -565,7 +565,7 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key)))
 	}
 
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		configs := make([]map[string]any, 0, len(opts.Endpoints))
 		for _, endpoint := range opts.Endpoints {
 			name := manifests.ServiceDNSName(endpoint.ServiceName, endpoint.Namespace)

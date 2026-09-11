@@ -109,7 +109,7 @@ func NewThanosRulerReconciler(conf Config, configReloaderImage string, client cl
 		recorder:            conf.InstrumentationConfig.EventRecorder,
 		featureGate:         conf.FeatureGate,
 		configReloaderImage: configReloaderImage,
-		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
+		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
 	}
 
 	return reconciler

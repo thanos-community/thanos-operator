@@ -30,7 +30,7 @@ import (
 var _ = Describe("TLS lifecycle", Ordered, func() {
 	const namespace = "e2e-core-tls-lifecycle"
 	BeforeAll(func() {
-		suite.Setup(namespace, featuregate.TLS, featuregate.ServiceMonitor)
+		suite.Setup(namespace, featuregate.ServerTLS, featuregate.ServiceMonitor)
 	})
 	router := controller.ReceiveRouterNameFromParent(suite.ReceiveName)
 	query := controller.QueryNameFromParent(suite.QueryName)
@@ -127,7 +127,7 @@ var _ = Describe("TLS lifecycle", Ordered, func() {
 		caUID := ca.UID
 		operator := &appsv1.Deployment{}
 		Expect(c.Get(ctx, client.ObjectKey{Name: "controller-manager", Namespace: namespace}, operator)).To(Succeed())
-		operator.Spec.Template.Spec.Containers[0].Args = slices.DeleteFunc(operator.Spec.Template.Spec.Containers[0].Args, func(arg string) bool { return arg == "--enable-feature=tls" })
+		operator.Spec.Template.Spec.Containers[0].Args = slices.DeleteFunc(operator.Spec.Template.Spec.Containers[0].Args, func(arg string) bool { return arg == "--enable-feature="+featuregate.ServerTLS })
 		Expect(c.Update(ctx, operator)).To(Succeed())
 		Eventually(func() error {
 			certs := &cmv1.CertificateList{}
@@ -143,7 +143,7 @@ var _ = Describe("TLS lifecycle", Ordered, func() {
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(ca), ca)).To(Succeed())
 		Expect(ca.UID).To(Equal(caUID))
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(operator), operator)).To(Succeed())
-		operator.Spec.Template.Spec.Containers[0].Args = append(operator.Spec.Template.Spec.Containers[0].Args, "--enable-feature=tls")
+		operator.Spec.Template.Spec.Containers[0].Args = append(operator.Spec.Template.Spec.Containers[0].Args, "--enable-feature="+featuregate.ServerTLS)
 		Expect(c.Update(ctx, operator)).To(Succeed())
 		Eventually(func() error { return queryMetric(namespace, frontend, "tls_reloaded_metric", 9) }, 3*time.Minute, 2*time.Second).Should(Succeed())
 		Expect(c.Get(ctx, client.ObjectKeyFromObject(ca), ca)).To(Succeed())

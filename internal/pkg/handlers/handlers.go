@@ -54,7 +54,7 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 	}
 }
 
-func (h *Handler) WithTLS(features featuregate.Config) *Handler {
+func (h *Handler) WithServerTLS(features featuregate.Config) *Handler {
 	h.features = features
 	return h
 }
@@ -66,8 +66,8 @@ func (h *Handler) WithTLS(features featuregate.Config) *Handler {
 func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner client.Object, objs []client.Object) int {
 	var errCount int
 	tlsManager := certificates.Manager{Client: h.client, Scheme: h.scheme}
-	if h.features.TLSEnabled() {
-		tlsManager.Config = *h.features.TLS
+	if h.features.ServerTLSEnabled() {
+		tlsManager.Config = *h.features.ServerTLS
 		for _, obj := range objs {
 			if template := manifests.PodTemplate(obj); template != nil {
 				if err := manifests.ValidateTLSWorkload(template); err != nil {
@@ -92,7 +92,7 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 			}
 		}
 
-		if h.features.TLSEnabled() && manifests.PodTemplate(obj) != nil {
+		if h.features.ServerTLSEnabled() && manifests.PodTemplate(obj) != nil {
 			if err := tlsManager.SetChecksum(ctx, obj); err != nil {
 				logger.Error(err, "failed to read TLS material")
 				errCount++
@@ -112,7 +112,7 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 		logger.V(1).Info("resource configured", "operation", op)
 		if manifests.PodTemplate(obj) != nil {
 			var err error
-			if h.features.TLSEnabled() {
+			if h.features.ServerTLSEnabled() {
 				err = tlsManager.EnsureWorkload(ctx, obj)
 			} else {
 				err = tlsManager.CleanupWorkload(ctx, obj)

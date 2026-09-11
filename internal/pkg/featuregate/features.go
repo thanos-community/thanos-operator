@@ -24,8 +24,8 @@ const (
 	// VolumeResize enables the volume resize controller for automatic PVC resizing.
 	VolumeResize = "volume-resize"
 
-	// TLS enables server TLS between Thanos components.
-	TLS = "tls"
+	// ServerTLS enables server TLS between Thanos components.
+	ServerTLS = "server-tls"
 )
 
 const defaultKubeResourceSyncImage = "quay.io/philipgough/kube-resource-sync:0.1.0"
@@ -39,7 +39,7 @@ func AllFeatures() []string {
 		KubeResourceSync,
 		OtelSidecar,
 		VolumeResize,
-		TLS,
+		ServerTLS,
 	}
 }
 
@@ -85,8 +85,8 @@ type Config struct {
 	KubeResourceSync *KubeResourceSyncConfig
 	// VolumeResize configures the volume resize controller.
 	VolumeResize *FeatureConfig
-	// TLS configures certificates and trust for Thanos components.
-	TLS *TLSConfig
+	// ServerTLS configures certificates and trust for Thanos components.
+	ServerTLS *ServerTLSConfig
 }
 
 // Enabled returns a pointer to an enabled FeatureConfig.
@@ -120,8 +120,8 @@ func (c Config) VolumeResizeEnabled() bool {
 	return c.VolumeResize != nil && c.VolumeResize.Enabled
 }
 
-func (c Config) TLSEnabled() bool {
-	return c.TLS != nil && c.TLS.Enabled
+func (c Config) ServerTLSEnabled() bool {
+	return c.ServerTLS != nil && c.ServerTLS.Enabled
 }
 
 // GetKubeResourceSyncImage returns the image used for the kube-resource-sync sidecar.
@@ -150,8 +150,8 @@ func (f *Flag) ToFeatureGate() Config {
 	if f.EnablesVolumeResize() {
 		c.VolumeResize = Enabled()
 	}
-	if f.Contains(TLS) {
-		c.TLS = &TLSConfig{FeatureConfig: FeatureConfig{Enabled: true}, Provider: CertManagerProvider}
+	if f.Contains(ServerTLS) {
+		c.ServerTLS = &ServerTLSConfig{FeatureConfig: FeatureConfig{Enabled: true}, Provider: CertManagerProvider}
 	}
 	return c
 }

@@ -217,7 +217,7 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 
 func queryFrontendArgs(opts Options) []string {
 	scheme := "http"
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		scheme = "https"
 	}
 	args := []string{
@@ -232,7 +232,7 @@ func queryFrontendArgs(opts Options) []string {
 		fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange),
 		"--cache-compression-type=snappy",
 	}
-	if opts.TLSEnabled() {
+	if opts.ServerTLSEnabled() {
 		config, _ := json.Marshal(map[string]any{"tls_config": map[string]string{
 			"ca_file": manifests.TLSCAFile, "server_name": manifests.ServiceDNSName(opts.QueryService, opts.Namespace),
 		}})

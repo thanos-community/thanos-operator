@@ -22,7 +22,7 @@ import (
 func TestTLSComponents(t *testing.T) {
 	for _, enabled := range []bool{false, true} {
 		opts := manifests.Options{Owner: "test", Namespace: "test", Config: featuregate.Config{
-			TLS:            &featuregate.TLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: enabled}},
+			ServerTLS:      &featuregate.ServerTLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: enabled}},
 			ServiceMonitor: &featuregate.ServiceMonitorConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}},
 		}}
 		for _, b := range []manifests.Buildable{
@@ -78,7 +78,7 @@ func TestTLSVersions(t *testing.T) {
 }
 
 func TestTLSKeepsSidecarMetricsSeparate(t *testing.T) {
-	flags := featuregate.Flag{featuregate.TLS, featuregate.ServiceMonitor, featuregate.KubeResourceSync}
+	flags := featuregate.Flag{featuregate.ServerTLS, featuregate.ServiceMonitor, featuregate.KubeResourceSync}
 	opts := receive.RouterOptions{Options: manifests.Options{Owner: "test", Namespace: "metrics", Config: flags.ToFeatureGate()}}
 	foundSidecar := false
 	for _, obj := range opts.Build() {

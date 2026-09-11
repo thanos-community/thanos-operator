@@ -30,7 +30,6 @@ import (
 	"time"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -38,7 +37,6 @@ import (
 	"github.com/prometheus/common/promslog"
 	psflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/common/version"
-	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/controller"
@@ -57,6 +55,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	clientgometrics "k8s.io/client-go/tools/metrics"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -369,8 +368,8 @@ func main() {
 	if featureGateConfig.KubeResourceSyncEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
 	}
-	if featureGateConfig.TLSEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.TLS).Set(1)
+	if featureGateConfig.ServerTLSEnabled() {
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServerTLS).Set(1)
 	}
 	if featureGateConfig.VolumeResizeEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.VolumeResize).Set(1)

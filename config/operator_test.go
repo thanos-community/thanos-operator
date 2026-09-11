@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"testing"
 
 	"gotest.tools/v3/golden"
@@ -59,6 +60,14 @@ func TestControllerManagerDeployment(t *testing.T) {
 			}
 			golden.Assert(t, string(yamlBytes), tc.golden)
 		})
+	}
+}
+
+func TestControllerManagerServerTLSFeature(t *testing.T) {
+	deployment := ControllerManagerDeployment(WithFeatures("server-tls"))
+	args := deployment.Spec.Template.Spec.Containers[0].Args
+	if !slices.Contains(args, "--enable-feature=server-tls") {
+		t.Fatalf("expected server-tls feature flag in operator arguments, got %v", args)
 	}
 }
 

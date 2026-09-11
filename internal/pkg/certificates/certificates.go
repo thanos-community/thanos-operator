@@ -32,7 +32,7 @@ const (
 type Manager struct {
 	Client client.Client
 	Scheme *runtime.Scheme
-	Config featuregate.TLSConfig
+	Config featuregate.ServerTLSConfig
 }
 
 func labels() map[string]string { return map[string]string{manifests.TLSLabel: managedValue} }
