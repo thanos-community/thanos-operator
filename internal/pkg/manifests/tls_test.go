@@ -69,11 +69,22 @@ func TestTLSComponents(t *testing.T) {
 	}
 }
 
-func TestTLSVersions(t *testing.T) {
-	for _, version := range []string{"v0.41.0", "v0.42.0", "v0.43.0", "latest", "v0.42.0-rc.0"} {
-		pod := manifests.PodTemplate(query.NewQueryDeployment(query.Options{Options: manifests.Options{Owner: "test", Version: &version}}))
-		err := manifests.ValidateTLSWorkload(pod)
-		require.Equal(t, version != "v0.42.0" && version != "v0.43.0", err != nil, version)
+func TestTLSDoesNotRestrictImages(t *testing.T) {
+	flags := featuregate.Flag{featuregate.ServerTLS}
+	for _, image := range []string{
+		"quay.io/thanos/thanos:v0.41.0",
+		"quay.io/thanos/thanos:v0.42.0",
+		"quay.io/thanos/thanos:latest",
+		"quay.io/thanos/thanos:v0.42.0-rc.0",
+		"example.com/thanos:custom",
+		"example.com/thanos@sha256:" + strings.Repeat("a", 64),
+	} {
+		t.Run(image, func(t *testing.T) {
+			pod := manifests.PodTemplate(query.NewQueryDeployment(query.Options{Options: manifests.Options{Owner: "test", Image: &image, Config: flags.ToFeatureGate()}}))
+			require.NoError(t, manifests.ValidateTLSWorkload(pod))
+			require.Equal(t, image, pod.Spec.Containers[0].Image)
+			require.Contains(t, pod.Spec.Containers[0].Args, "--http.config="+manifests.TLSWebConfigFile)
+		})
 	}
 }
 
