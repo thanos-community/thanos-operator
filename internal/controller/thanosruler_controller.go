@@ -109,7 +109,7 @@ func NewThanosRulerReconciler(conf Config, configReloaderImage string, client cl
 		recorder:            conf.InstrumentationConfig.EventRecorder,
 		featureGate:         conf.FeatureGate,
 		configReloaderImage: configReloaderImage,
-		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
+		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
 	}
 
 	return reconciler
@@ -662,7 +662,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	bldr := ctrl.NewControllerManagedBy(mgr).
+	bldr := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosRulerList{}).
 		For(&monitoringthanosiov1alpha1.ThanosRuler{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).

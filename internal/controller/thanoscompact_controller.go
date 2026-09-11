@@ -127,7 +127,7 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 		metrics:     controllermetrics.NewThanosCompactMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
 	}
 
 	return reconciler
@@ -135,7 +135,7 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	return withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosCompactList{}).
 		For(&monitoringthanosiov1alpha1.ThanosCompact{}).
 		Complete(r)
 }

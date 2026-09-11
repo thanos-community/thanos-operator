@@ -8,6 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/certificates"
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,6 +33,8 @@ type handler struct {
 	client client.Client
 	scheme *runtime.Scheme
 	logger logr.Logger
+
+	features featuregate.Config
 }
 
 // resourcePruner creates an object that prunes resources in the Kubernetes cluster.
@@ -50,12 +54,33 @@ func NewHandler(client client.Client, scheme *runtime.Scheme, logger logr.Logger
 	}
 }
 
+func (h *Handler) WithTLS(features featuregate.Config) *Handler {
+	h.features = features
+	return h
+}
+
 // CreateOrUpdate creates or updates the given objects in the Kubernetes cluster.
 // It sets the owner reference of each object to the given owner.
 // It logs the operation and any errors encountered.
 // It returns the number of errors encountered.
 func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner client.Object, objs []client.Object) int {
 	var errCount int
+	tlsManager := certificates.Manager{Client: h.client, Scheme: h.scheme}
+	if h.features.TLSEnabled() {
+		tlsManager.Config = *h.features.TLS
+		for _, obj := range objs {
+			if template := manifests.PodTemplate(obj); template != nil {
+				if err := manifests.ValidateTLSWorkload(template); err != nil {
+					h.logger.Error(err, "invalid TLS workload", "name", obj.GetName())
+					return 1
+				}
+			}
+		}
+		if err := tlsManager.EnsureNamespace(ctx, namespace); err != nil {
+			h.logger.Error(err, "failed to reconcile TLS trust", "namespace", namespace)
+			return 1
+		}
+	}
 	for _, obj := range objs {
 		logger := loggerForObj(h.logger, obj)
 		if manifests.IsNamespacedResource(obj) {
@@ -67,6 +92,13 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 			}
 		}
 
+		if h.features.TLSEnabled() && manifests.PodTemplate(obj) != nil {
+			if err := tlsManager.SetChecksum(ctx, obj); err != nil {
+				logger.Error(err, "failed to read TLS material")
+				errCount++
+				continue
+			}
+		}
 		desired := obj.DeepCopyObject().(client.Object)
 		mutateFn := manifests.MutateFuncFor(obj, desired)
 
@@ -78,6 +110,18 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 			continue
 		}
 		logger.V(1).Info("resource configured", "operation", op)
+		if manifests.PodTemplate(obj) != nil {
+			var err error
+			if h.features.TLSEnabled() {
+				err = tlsManager.EnsureWorkload(ctx, obj)
+			} else {
+				err = tlsManager.CleanupWorkload(ctx, obj)
+			}
+			if err != nil {
+				logger.Error(err, "failed to reconcile workload certificates")
+				errCount++
+			}
+		}
 	}
 	return errCount
 }
@@ -205,14 +249,15 @@ func (r *resourcePruner) Prune(ctx context.Context, keepResourceNames []string, 
 
 // PruneByOwner deletes enabled resources controlled by owner in its namespace.
 // It returns the number of errors encountered.
-func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object) int {
+func (r *resourcePruner) PruneByOwner(ctx context.Context, owner client.Object, listOpts ...client.ListOption) int {
 	if owner.GetUID() == "" {
 		return 0
 	}
 
+	listOpts = append(listOpts, client.InNamespace(owner.GetNamespace()))
 	return r.prune(ctx, func(obj client.Object) bool {
 		return metav1.IsControlledBy(obj, owner)
-	}, client.InNamespace(owner.GetNamespace()))
+	}, listOpts...)
 }
 
 func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Object) bool, listOpts ...client.ListOption) int {
