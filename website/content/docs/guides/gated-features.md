@@ -15,8 +15,6 @@ Use `--enable-feature` for each feature you want to enable:
 
 `--feature-gate-config-file` sets the YAML configuration path, which defaults to `/etc/thanos-operator/feature-gates.yaml`. The file configures features; it does not enable them. Omitted files, sections, or settings use defaults. Restart the operator after changing flags or configuration.
 
-`service-monitor`, `kube-resource-sync`, and `tls` have config-file settings.
-
 ## ServiceMonitor Feature
 
 **Flag**: `service-monitor`
@@ -70,22 +68,22 @@ kube-resource-sync:
 
 Automatically expands persistent volumes when you increase storage sizes in Thanos custom resources. Requires a StorageClass with `allowVolumeExpansion: true`. Volumes can only grow, not shrink.
 
-## TLS Feature (detailed review draft)
+## Server TLS Feature (detailed review draft)
 
-**Flag**: `tls`
+**Flag**: `server-tls`
 
 This section documents the implemented behavior in detail for review. It includes lifecycle decisions, validation coverage, and limitations that can be condensed after review. Development-specific progress is also recorded in the local `FEATURE_GATE_NOTES.md` scratch file.
 
-The TLS gate configures server authentication and encryption for the HTTP and gRPC connections between operator-managed Thanos components. It is global to an operator instance. A namespace-scoped operator applies it only to that namespace. The gate is disabled by default, and configuring its YAML block does not enable it.
+The server-tls gate configures server authentication and encryption for the HTTP and gRPC connections between operator-managed Thanos components. It is global to an operator instance. A namespace-scoped operator applies it only to that namespace. The gate is disabled by default, and configuring its YAML block does not enable it.
 
 ### Requirements and enabling the feature
 
-Install cert-manager before starting an operator with TLS enabled. The initial provider is `cert-manager`. Thanos must use a versioned image tag of v0.42.0 or newer. Query needs the per-endpoint TLS configuration introduced in that version. Unversioned tags and digest-only images cannot currently establish compatibility and are rejected. Receive must use gRPC replication; its optional Cap'n Proto transport does not provide the TLS guarantees of this feature.
+Install cert-manager before starting an operator with TLS enabled. The initial provider is `cert-manager`. Use Thanos v0.42.0 or newer; Query needs the [per-endpoint TLS configuration](https://github.com/thanos-io/thanos/pull/8594) introduced in that version. Image compatibility is the user's responsibility. The operator does not inspect image tags or digests to enforce a version requirement. Receive must use gRPC replication; its optional Cap'n Proto transport does not provide the TLS guarantees of this feature.
 
 For automatic certificate management, no YAML settings are necessary:
 
 ```bash
-./thanos-operator --enable-feature=tls --enable-feature=service-monitor
+./thanos-operator --enable-feature=server-tls --enable-feature=service-monitor
 ```
 
 ServiceMonitor is a separate gate. Enabling TLS alone does not enable monitoring. KubeResourceSync's separate metrics listener and ServiceMonitor keep their existing HTTP configuration; only the Thanos metrics endpoint switches to HTTPS. All components that communicate within a deployment need a consistent TLS setting. Existing external clients, such as a Prometheus remote-writing to Receive, also need to switch to HTTPS and trust the configured CA.
@@ -93,7 +91,7 @@ ServiceMonitor is a separate gate. Enabling TLS alone does not enable monitoring
 ### Certificate provider and existing issuers
 
 ```yaml
-tls:
+server-tls:
   provider: cert-manager
   certManager:
     issuerRef:
@@ -110,14 +108,14 @@ The issuer signs the server certificates. The ConfigMap supplies the public PEM 
 
 In this mode, the operator creates leaf Certificate resources and references the supplied trust bundle. It does not manage the external issuer or overwrite the user's ConfigMap. The administrator must keep that bundle valid and ensure it trusts the selected issuer's certificates.
 
-| YAML setting                             | Default                                                     | Validation and scope                                                                           |
-|------------------------------------------|-------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| `tls.provider`                           | `cert-manager`                                              | Only `cert-manager` is currently accepted.                                                     |
-| `tls.certManager.issuerRef.name`         | Automatic namespace issuer when both references are omitted | Required when an existing issuer is configured. Must be a valid Kubernetes resource name.      |
-| `tls.certManager.issuerRef.kind`         | `Issuer`                                                    | Accepts `Issuer` or `ClusterIssuer`. A namespaced Issuer must exist in each managed namespace. |
-| `tls.certManager.issuerRef.group`        | `cert-manager.io`                                           | Other issuer API groups are rejected.                                                          |
-| `tls.certManager.caBundleConfigMap.name` | `thanos-operator-ca` in automatic mode                      | Required with an existing issuer. Looked up in the workload namespace.                         |
-| `tls.certManager.caBundleConfigMap.key`  | `ca.crt`                                                    | Must be a valid ConfigMap data key containing public PEM CA certificates.                      |
+| YAML setting                                    | Default                                                     | Validation and scope                                                                           |
+|-------------------------------------------------|-------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| `server-tls.provider`                           | `cert-manager`                                              | Only `cert-manager` is currently accepted.                                                     |
+| `server-tls.certManager.issuerRef.name`         | Automatic namespace issuer when both references are omitted | Required when an existing issuer is configured. Must be a valid Kubernetes resource name.      |
+| `server-tls.certManager.issuerRef.kind`         | `Issuer`                                                    | Accepts `Issuer` or `ClusterIssuer`. A namespaced Issuer must exist in each managed namespace. |
+| `server-tls.certManager.issuerRef.group`        | `cert-manager.io`                                           | Other issuer API groups are rejected.                                                          |
+| `server-tls.certManager.caBundleConfigMap.name` | `thanos-operator-ca` in automatic mode                      | Required with an existing issuer. Looked up in the workload namespace.                         |
+| `server-tls.certManager.caBundleConfigMap.key`  | `ca.crt`                                                    | Must be a valid ConfigMap data key containing public PEM CA certificates.                      |
 
 The operator checks that the trust bundle is nonempty and contains parsable CA certificates. This check does not prove that the issuer is ready, that the bundle trusts a subsequently issued leaf, or that certificates are within their validity period. cert-manager reports issuance status on Certificate resources, and TLS clients enforce the trust chain, identity, and validity period when connecting.
 
@@ -175,7 +173,21 @@ The generated Receive certificate includes `<service>.<namespace>.svc` and `*.<s
 
 ### Renewal, reloads, and migration
 
-cert-manager issues and renews certificates. The operator observes leaf Secret and trust ConfigMap changes and rolls the affected workloads when their TLS material changes. This also refreshes client transports that read their CA only at startup. Repeated reconciles with unchanged material keep the pod template checksum stable. The automatic CA has a ten-year duration and starts renewal one year before expiry. Its key is retained during renewal. The public ConfigMap accumulates previous roots so certificates issued before renewal remain trusted. Automatic pruning of historical roots is not implemented. Leaf private keys rotate on renewal; leaf validity uses cert-manager's default duration.
+cert-manager issues and renews certificates. Thanos reloads server leaf certificates and private keys from their mounted files during fresh TLS handshakes. The operator does not roll workloads when a leaf Secret is first issued, renewed, or recreated. Secret volumes use whole-directory mounts, without `subPath`, so kubelet can project replacement files into running pods. Allow for kubelet projection before expecting a new connection to present the replacement certificate.
+
+The reload paths checked against Thanos v0.42.0 are:
+
+| Listener                                           | Reload behavior                                                                                                                |
+|----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| Main HTTPS listener on each component              | Thanos uses exporter-toolkit v0.15.0, which reloads web TLS configuration and certificate files for new connections.           |
+| gRPC listeners on Query, Receive, Store, and Ruler | Thanos's `GetCertificate` callback checks certificate/key file modification times during handshakes and reloads changed files. |
+| Receive remote-write HTTPS listener                | Uses the same Thanos server TLS configuration and certificate callback as gRPC.                                                |
+
+Existing connections continue using their established TLS session. Thanos's `--grpc-server-max-connection-age` defaults to 60 minutes, encouraging periodic reconnection and fresh handshakes; the operator leaves that default in place. Certificate renewal does not require client certificates or mutual TLS. See [Thanos's TLS implementation](https://github.com/thanos-io/thanos/blob/v0.42.0/pkg/tls/options.go), [Receive listener setup](https://github.com/thanos-io/thanos/blob/v0.42.0/cmd/thanos/receive.go), and [exporter-toolkit's reload callbacks](https://github.com/prometheus/exporter-toolkit/blob/v0.15.0/web/tls_config.go).
+
+CA trust changes still trigger workload rollouts. Receive's forwarding gRPC client and Frontend's downstream HTTP transport load their root pools when their TLS configuration is constructed. A fresh connection alone does not reload those pools. The operator therefore hashes only the configured public CA bundle into `operator.thanos.io/tls-trust-checksum` and rolls all managed TLS workloads in that namespace when those bytes change. It uses one shared policy across components, including components without an outgoing TLS client. The checksum exists from initial workload creation, before leaf issuance, and stays unchanged when only a leaf certificate or key changes. Even a formatting-only change to the selected bundle data changes the checksum; unrelated ConfigMap keys do not.
+
+The automatic CA has a ten-year duration and starts renewal one year before expiry. Its key is retained during renewal. The public ConfigMap accumulates previous roots so certificates issued before renewal remain trusted. Automatic pruning of historical roots is not implemented. Leaf private keys rotate on renewal; leaf validity uses cert-manager's default duration.
 
 The existing Ruler rule reload sidecar sends its reload request to `https://localhost:9090/-/reload`. Its built-in HTTP client does not verify the server certificate. This exception is confined to the loopback connection inside the same pod; all generated connections between Thanos pods verify their server certificates. The reloader does not receive a client certificate or CA private key. A reloader with configurable CA verification would remove this limitation. Signal mode cannot be used here because that sidecar also checks a Prometheus-specific runtime API that Thanos does not expose.
 
@@ -185,11 +197,11 @@ Turning TLS on or off changes listener protocols and client settings and rolls w
 
 Unit tests cover feature configuration and defaults, invalid provider/issuer settings, server flags and volume mounts, HTTPS probes and ServiceMonitors, endpoint discovery semantics, and the plaintext behavior when the gate is off. Fake-client reconciliation tests cover automatic CA setup, supplied issuers, ownership, certificate renewal, and trust changes.
 
-The controller integration suite at `test/integration/featuregates/tls` checks resources written to an envtest API server with `tls` and `service-monitor` enabled. Each case uses its own namespace. It covers namespace Issuers, the CA Certificate and public trust ConfigMap, workload-owned leaf Certificates and HTTP ConfigMaps, Secret and ConfigMap mounts, server/client TLS flags, HTTPS probes, and ServiceMonitor CA/server-name settings. Component cases include Query and Frontend, both Receive roles, both Ruler modes, and separate Store and Compactor shards. Query uses a fixture Service and EndpointSlice to check its generated endpoint configuration; Ruler uses fixture discovery Services and a rule ConfigMap to check its HTTPS query, reload, and stateless remote-write settings.
+The controller integration suite at `test/integration/featuregates/tls` checks resources written to an envtest API server with `server-tls` and `service-monitor` enabled. Each case uses its own namespace. It covers namespace Issuers, the CA Certificate and public trust ConfigMap, workload-owned leaf Certificates and HTTP ConfigMaps, Secret and ConfigMap mounts, server/client TLS flags, HTTPS probes, and ServiceMonitor CA/server-name settings. Component cases include Query and Frontend, both Receive roles, both Ruler modes, and separate Store and Compactor shards. Query uses a fixture Service and EndpointSlice to check its generated endpoint configuration; Ruler uses fixture discovery Services and a rule ConfigMap to check its HTTPS query, reload, and stateless remote-write settings.
 
-Envtest runs the operator controllers but does not run cert-manager, kubelets, or Thanos. The suite supplies a generated CA Secret as a fixture and installs minimal Certificate/Issuer schemas that preserve their fields. It checks the operator's resource output, without claiming cert-manager admission validation or leaf issuance. Leaf Secret references are asserted in Certificates and pod volumes; actual leaf creation, renewal, and traffic remain E2E concerns. The cert-manager test schemas are loaded only when the TLS gate is enabled. All seven TLS cases passed with Kubernetes v1.34.1 envtest assets, as did all existing feature-gate integration suites and lint for the new tests and shared setup. The suite is included automatically in `make test-integration`.
+Envtest runs the operator controllers but does not run cert-manager, kubelets, or Thanos. The suite supplies a generated CA Secret as a fixture and installs minimal Certificate/Issuer schemas that preserve their fields. It checks the operator's resource output, without claiming cert-manager admission validation or leaf issuance. Leaf Secret references are asserted in Certificates and pod volumes; actual leaf creation, renewal, and traffic remain E2E concerns. The cert-manager test schemas are loaded only when the TLS gate is enabled. All eight TLS cases passed with Kubernetes v1.34.1 envtest assets, as did all existing feature-gate integration suites and lint for the new tests and shared setup. A trust-update case replaces the fixture CA, checks that the public bundle retains both roots, and verifies changed checksums on a Deployment and StatefulSet. The suite is included automatically in `make test-integration`.
 
-The isolated suite at `test/e2e/core-tls` runs operators with `tls` and `service-monitor` enabled. It contains two independent ordered groups, each with its own namespace and namespace-scoped operator:
+The isolated suite at `test/e2e/core-tls` runs operators with `server-tls` and `service-monitor` enabled. It contains two independent ordered groups, each with its own namespace and namespace-scoped operator:
 
 | File              | Namespace                   | Coverage                                                                                                                                                                                                          |
 |-------------------|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -206,20 +218,20 @@ The lifecycle group owns a separate operator because it disables and re-enables 
 
 Both core variants allow three minutes for the first successful remote write. A correct hashring ConfigMap in the API does not mean the router has received the projected file yet. During validation, the plaintext router still had its initial `[{}]` file while the API already contained both hashrings; the earlier two-minute wait could time out. This changes the retry budget, while keeping the successful-write assertion and KubeResourceSync-disabled configuration.
 
-All 20 scenarios passed on September 11, 2026 against Thanos v0.42.0, cert-manager v1.21.0, and Kubernetes v1.34.0 in a disposable Kind cluster (583.856 seconds). The original plaintext core suite also passed all 11 scenarios in that cluster. Both packages passed lint, and `core-tls` skipped all 20 scenarios on v0.41.0. The six lifecycle assertions are:
+Before the native leaf-reload change, all 20 scenarios passed on September 11, 2026 against Thanos v0.42.0, cert-manager v1.21.0, and Kubernetes v1.34.0 in a disposable Kind cluster (583.856 seconds). The original plaintext core suite also passed all 11 scenarios in that cluster. Both packages passed lint, and `core-tls` skipped all 20 scenarios on v0.41.0. The revised lifecycle assertions are:
 
-| Scenario              | Live assertion                                                                                                                                    |
-|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| Bootstrap             | Start Query, Frontend, Receive router and ingester, Ruler, Store, and Compactor; create one CA and seven leaf Certificates.                       |
-| Verified data flow    | Remote-write a sample over HTTPS, evaluate it through Ruler and Query, and read the result through Frontend. Reject an incorrect TLS server name. |
-| Rule reload           | Update the rule ConfigMap and observe the new recording rule's result through Frontend while Ruler serves HTTPS.                                  |
-| Monitoring            | Prometheus reports all seven generated Thanos scrape targets as up using the public CA.                                                           |
-| Leaf reissuance       | Delete Query's leaf Secret, observe a changed workload checksum, and recover verified queries.                                                    |
-| Disable and re-enable | Remove leaf Certificates, serve plaintext, then recover encrypted data flow with the original CA Secret UID.                                      |
+| Scenario              | Live assertion                                                                                                                                                                                      |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Bootstrap             | Start Query, Frontend, Receive router and ingester, Ruler, Store, and Compactor; create one CA and seven leaf Certificates.                                                                         |
+| Verified data flow    | Remote-write a sample over HTTPS, evaluate it through Ruler and Query, and read the result through Frontend. Reject an incorrect TLS server name.                                                   |
+| Rule reload           | Update the rule ConfigMap and observe the new recording rule's result through Frontend while Ruler serves HTTPS.                                                                                    |
+| Monitoring            | Prometheus reports all seven generated Thanos scrape targets as up using the public CA.                                                                                                             |
+| Leaf reissuance       | Recreate all seven leaf Secrets, verify the new certificates on 14 HTTP/gRPC listeners, keep pod templates, UIDs, container IDs, and restart counts unchanged, and verify fresh writes and queries. |
+| Disable and re-enable | Remove leaf Certificates, serve plaintext, then recover encrypted data flow with the original CA Secret UID.                                                                                        |
 
 The plaintext Query E2E suite also passed on both v0.41.0 and v0.42.0. The existing CI matrix includes both versions and discovers the TLS suite through `./test/e2e/...`; TLS scenarios skip on v0.41.0. Broad unit tests, the existing envtest integration suite, `go vet ./...`, `go build ./...`, and configured lint checks for the changed Go packages passed. A separate manifest regression test verifies that enabling KubeResourceSync with TLS leaves that sidecar's metrics on HTTP.
 
-Live coverage uses automatic CA mode and ordinary Query fanout. Existing Issuer/ClusterIssuer configuration, CA bundle rollover, strict/group discovery modes, and IPv6 discovery are covered by unit or fake-client tests, without a separate live cluster scenario. Missing-Secret reissuance exercises the leaf update and rollout path; it does not simulate years of CA aging or prove a zero-interruption CA rotation. The KubeResourceSync combination has manifest coverage, without a combined live test. The local Ruler reloader certificate-verification exception remains as described above.
+Live coverage uses automatic CA mode and ordinary Query fanout. Existing Issuer/ClusterIssuer configuration, CA bundle rollover, strict/group discovery modes, and IPv6 discovery are covered by unit or fake-client tests, without a separate live cluster scenario. Missing-Secret reissuance exercises cert-manager replacement and Thanos leaf reloads. It does not wait for scheduled renewal, force expiration of established gRPC sessions, simulate years of CA aging, or prove uninterrupted CA rotation. The test uses fresh verified handshakes to check the actual certificate served by each listener. The KubeResourceSync combination has manifest coverage, without a combined live test. The local Ruler reloader certificate-verification exception remains as described above.
 
 ### Observing issuance and troubleshooting
 
@@ -227,15 +239,15 @@ Check Certificate readiness in the workload namespace. In automatic mode, `thano
 
 For an existing issuer, first check its readiness and the referenced ConfigMap's namespace and data key. An empty or invalid CA bundle produces a reconciliation error. A well-formed but unrelated CA bundle passes configuration checks and then causes client certificate verification failures. The operator does not silently switch generated clients to plaintext or disable verification on these failures.
 
-For Query connection errors, compare the generated endpoint ConfigMap with the selected Services' ready EndpointSlice addresses, and check that each `client_config.server_name` matches its Service certificate. Allow time for kubelet projection followed by Query's five-second reload interval after endpoint changes. For renewal, compare the `operator.thanos.io/tls-checksum` pod-template annotation before and after a leaf or trust update. Avoid deleting the shared CA to repair a leaf issuance problem: existing peers and external clients may still depend on that CA.
+For Query connection errors, compare the generated endpoint ConfigMap with the selected Services' ready EndpointSlice addresses, and check that each `client_config.server_name` matches its Service certificate. Allow time for kubelet projection followed by Query's five-second reload interval after endpoint changes. For leaf renewal, allow for Secret projection and inspect the certificate on a fresh verified connection. The `operator.thanos.io/tls-trust-checksum` annotation should stay unchanged for leaf updates and change when the configured CA bundle changes. Avoid deleting the shared CA to repair a leaf issuance problem: existing peers and external clients may still depend on that CA.
 
 Local E2E commands must explicitly select a disposable kubeconfig. The suite changes its own operator's feature flags during lifecycle testing and creates and deletes its test namespace.
 
 ### Implementation details for review
 
-The certificate provider is implemented in `internal/pkg/certificates`. The shared resource handler invokes it around workload reconciliation: it first validates Thanos compatibility and ensures namespace trust, then computes the mounted material checksum, updates the workload, and ensures its leaf certificate and HTTP configuration. Initial issuance is asynchronous, so pods can wait for their leaf Secret after the namespace CA is ready.
+The certificate provider is implemented in `internal/pkg/certificates`. The shared resource handler invokes it around workload reconciliation: it first checks that Receive uses gRPC replication and ensures namespace trust, then computes the public trust checksum, updates the workload, and ensures its leaf certificate and HTTP configuration. Initial issuance is asynchronous, so pods can wait for their leaf Secret after the namespace CA is ready.
 
-TLS-enabled controllers watch cert-manager Certificates and Issuers, TLS-labelled Secrets and ConfigMaps, and the configured external trust ConfigMap. Changes requeue Thanos resources in the same namespace. A hash of leaf certificate, key, and public trust is placed on the pod template. Unchanged material keeps the hash stable. These cert-manager watches are absent when the feature is disabled.
+TLS-enabled controllers watch cert-manager Certificates and Issuers, TLS-labelled Secrets and ConfigMaps, and the configured external trust ConfigMap. Changes requeue Thanos resources in the same namespace. Only the public trust bundle is hashed onto the pod template. Leaf Secret events still reconcile workload ownership, so cert-manager-issued Secrets are cleaned up with their workloads. Those events do not cause a rollout while trust is unchanged. These cert-manager watches are absent when the feature is disabled.
 
 RBAC adds namespaced Certificate and Issuer management. Referencing a ClusterIssuer does not require the Thanos operator to read or modify ClusterIssuers; cert-manager resolves that reference. No CA key is required by Thanos or Prometheus.
 
