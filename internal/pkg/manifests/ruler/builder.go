@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"gopkg.in/yaml.v2"
@@ -72,6 +73,7 @@ type remoteWrite struct {
 	URL            string            `yaml:"url"`
 	Headers        map[string]string `yaml:"headers,omitempty"`
 	RelabelConfigs []relabelConfig   `yaml:"write_relabel_configs,omitempty"` //nolint
+	TLSConfig      map[string]string `yaml:"tls_config,omitempty"`            //nolint:tagliatelle
 }
 
 type remoteWriteConfig struct {
@@ -105,7 +107,7 @@ func (opts Options) Build() []client.Object {
 	if opts.ServiceMonitorEnabled() {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
-	return objs
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts Options) Valid() error {
@@ -468,6 +470,13 @@ func NewRulerSecret(opts Options) *corev1.Secret {
 
 func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
 	rwConfig := opts.DiscoveryInfos.toRemoteWrite()
+	if opts.TLSEnabled() {
+		for i := range rwConfig.RemoteWrite {
+			rw := &rwConfig.RemoteWrite[i]
+			rw.URL = strings.Replace(rw.URL, "http://", "https://", 1)
+			rw.TLSConfig = map[string]string{"ca_file": manifests.TLSCAFile}
+		}
+	}
 	stringData, _ := yaml.Marshal(rwConfig)
 
 	additionalLabels := map[string]string{
@@ -556,8 +565,21 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key)))
 	}
 
-	for _, endpoint := range opts.Endpoints {
-		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
+	if opts.TLSEnabled() {
+		configs := make([]map[string]any, 0, len(opts.Endpoints))
+		for _, endpoint := range opts.Endpoints {
+			name := manifests.ServiceDNSName(endpoint.ServiceName, endpoint.Namespace)
+			configs = append(configs, map[string]any{
+				"scheme": "https", "static_configs": []string{"dnssrv+_http._tcp." + name},
+				"http_config": map[string]any{"tls_config": map[string]string{"ca_file": manifests.TLSCAFile, "server_name": name}},
+			})
+		}
+		config, _ := json.Marshal(configs)
+		args = append(args, "--query.config="+string(config))
+	} else {
+		for _, endpoint := range opts.Endpoints {
+			args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
+		}
 	}
 
 	for _, label := range opts.AlertLabelDrop {

@@ -1,6 +1,7 @@
 package queryfrontend
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -57,7 +58,7 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	return objs
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts Options) Valid() error {
@@ -215,10 +216,14 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 }
 
 func queryFrontendArgs(opts Options) []string {
+	scheme := "http"
+	if opts.TLSEnabled() {
+		scheme = "https"
+	}
 	args := []string{
 		"query-frontend",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
-		fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:%d", opts.QueryService, opts.Namespace, opts.QueryPort),
+		fmt.Sprintf("--query-frontend.downstream-url=%s://%s.%s.svc:%d", scheme, opts.QueryService, opts.Namespace, opts.QueryPort),
 		fmt.Sprintf("--query-frontend.log-queries-longer-than=%s", opts.LogQueriesLongerThan),
 		fmt.Sprintf("--query-range.split-interval=%s", opts.RangeSplitInterval),
 		fmt.Sprintf("--labels.split-interval=%s", opts.LabelsSplitInterval),
@@ -226,6 +231,12 @@ func queryFrontendArgs(opts Options) []string {
 		fmt.Sprintf("--labels.max-retries-per-request=%d", opts.LabelsMaxRetries),
 		fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange),
 		"--cache-compression-type=snappy",
+	}
+	if opts.TLSEnabled() {
+		config, _ := json.Marshal(map[string]any{"tls_config": map[string]string{
+			"ca_file": manifests.TLSCAFile, "server_name": manifests.ServiceDNSName(opts.QueryService, opts.Namespace),
+		}})
+		args = append(args, "--query-frontend.downstream-tripper-config="+string(config))
 	}
 
 	if opts.ResponseCacheConfig.FromSecret != nil {
