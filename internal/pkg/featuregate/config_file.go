@@ -39,6 +39,9 @@ func (c serviceMonitorFileConfig) validate() error {
 // A missing file keeps the defaults and current settings.
 // Blocks for disabled features are never decoded, so invalid content there will not cause an error.
 func LoadAndApplyConfig(path string, current Config) (Config, error) {
+	if current.TLSEnabled() && current.TLS.Provider == "" {
+		current.TLS.Provider = CertManagerProvider
+	}
 	if current.KubeResourceSyncEnabled() && current.KubeResourceSync.Image == "" {
 		current.KubeResourceSync.Image = defaultKubeResourceSyncImage
 	}
@@ -96,5 +99,15 @@ func LoadAndApplyConfig(path string, current Config) (Config, error) {
 		}
 	}
 
+	if current.TLSEnabled() {
+		if raw, exists := rawConfig[TLS]; exists {
+			if err := json.Unmarshal(raw, current.TLS); err != nil {
+				return current, fmt.Errorf("failed to decode tls config in %q: %w", path, err)
+			}
+		}
+		if err := current.TLS.Validate(); err != nil {
+			return current, fmt.Errorf("invalid tls config in %q: %w", path, err)
+		}
+	}
 	return current, nil
 }

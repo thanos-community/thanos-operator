@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -76,6 +78,7 @@ func init() {
 	utilruntime.Must(monitoringthanosiov1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
+	utilruntime.Must(cmv1.AddToScheme(scheme))
 }
 
 // registerClientGoMetrics registers client-go metrics adapters to expose
@@ -365,6 +368,9 @@ func main() {
 	}
 	if featureGateConfig.KubeResourceSyncEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
+	}
+	if featureGateConfig.TLSEnabled() {
+		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.TLS).Set(1)
 	}
 	if featureGateConfig.VolumeResizeEnabled() {
 		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.VolumeResize).Set(1)

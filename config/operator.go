@@ -339,6 +339,7 @@ func WithVolumeResize() DeploymentOption {
 //   - "kube-resource-sync": Enables kube-resource-sync sidecar
 //   - "otel-sidecar": Enables OpenTelemetry sidecar injection
 //   - "volume-resize": Enables volume resize controller
+//   - "tls": Enables TLS for Thanos components
 //
 // Example:
 //
@@ -355,6 +356,8 @@ func WithFeatures(features ...string) DeploymentOption {
 				c.featureGate.OtelSidecar = featuregate.Enabled()
 			case featuregate.KubeResourceSync:
 				c.featureGate.KubeResourceSync = &featuregate.KubeResourceSyncConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}}
+			case featuregate.TLS:
+				c.featureGate.TLS = &featuregate.TLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}, Provider: featuregate.CertManagerProvider}
 			case featuregate.VolumeResize:
 				c.featureGate.VolumeResize = featuregate.Enabled()
 			}
@@ -502,6 +505,9 @@ func buildManagerArgs(featureGate featuregate.Config) []string {
 	}
 	if featureGate.OtelSidecarEnabled() {
 		args = append(args, "--enable-feature="+featuregate.OtelSidecar)
+	}
+	if featureGate.TLSEnabled() {
+		args = append(args, "--enable-feature="+featuregate.TLS)
 	}
 	if featureGate.VolumeResizeEnabled() {
 		args = append(args, "--enable-feature="+featuregate.VolumeResize)

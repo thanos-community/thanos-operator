@@ -9,7 +9,7 @@ import (
 )
 
 func TestAllFeatures(t *testing.T) {
-	expected := []string{
+	expected := []string{TLS,
 		ServiceMonitor,
 		PrometheusRule,
 		OtelSidecar,
