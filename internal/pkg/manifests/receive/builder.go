@@ -102,7 +102,7 @@ func (opts IngesterOptions) Build() []client.Object {
 	if opts.ServiceMonitorEnabled() {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
-	return objs
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts IngesterOptions) Valid() error {
@@ -150,7 +150,7 @@ func (opts RouterOptions) Build() []client.Object {
 			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, "kube-resource-sync"))
 		}
 	}
-	return objs
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts RouterOptions) Valid() error {

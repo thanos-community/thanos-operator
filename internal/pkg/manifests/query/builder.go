@@ -1,6 +1,7 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
@@ -22,8 +23,9 @@ const (
 	GRPCPort     = 10901
 	GRPCPortName = "grpc"
 
-	HTTPPort     = 9090
-	HTTPPortName = "http"
+	HTTPPort               = 9090
+	HTTPPortName           = "http"
+	TLSEndpointConfigLabel = "operator.thanos.io/query-tls-endpoints"
 )
 
 // Options for Thanos Query
@@ -59,6 +61,8 @@ type Endpoint struct {
 	Namespace   string
 	Type        manifests.EndpointType
 	Port        int32
+	// Address is the resolved target for TLS fanout endpoints.
+	Address string
 }
 
 func (opts Options) Build() []client.Object {
@@ -66,6 +70,12 @@ func (opts Options) Build() []client.Object {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	name := opts.GetGeneratedResourceName()
+	if opts.TLSEnabled() {
+		objs = append(objs, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: opts.Namespace, Labels: manifests.MergeMaps(objectMetaLabels, map[string]string{TLSEndpointConfigLabel: "true"})},
+			Data:       map[string]string{"endpoints.yaml": tlsEndpointConfig(opts.Endpoints)},
+		})
+	}
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
@@ -78,7 +88,7 @@ func (opts Options) Build() []client.Object {
 	if opts.ServiceMonitorEnabled() {
 		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
 	}
-	return objs
+	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 
 func (opts Options) Valid() error {
@@ -105,6 +115,14 @@ func NewQueryDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	if opts.TLSEnabled() {
+		opts.Additional.Volumes = append(opts.Additional.Volumes, corev1.Volume{
+			Name: "thanos-endpoints", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: name}, DefaultMode: new(int32(420)),
+			}},
+		})
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, corev1.VolumeMount{Name: "thanos-endpoints", MountPath: manifests.TLSMountPath + "/endpoints", ReadOnly: true})
+	}
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -289,6 +307,10 @@ func queryArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
 	}
 
+	if opts.TLSEnabled() {
+		args = append(args, "--endpoint.sd-config-file="+manifests.TLSMountPath+"/endpoints/endpoints.yaml", "--endpoint.sd-config-reload-interval=5s")
+		return manifests.PruneEmptyArgs(args)
+	}
 	for _, ep := range opts.Endpoints {
 		switch ep.Type {
 		case manifests.RegularLabel:
@@ -315,6 +337,34 @@ func queryArgs(opts Options) []string {
 	}
 
 	return manifests.PruneEmptyArgs(args)
+}
+
+func tlsEndpointConfig(endpoints []Endpoint) string {
+	entries := make([]map[string]any, 0, len(endpoints))
+	for _, ep := range endpoints {
+		serverName := manifests.ServiceDNSName(ep.ServiceName, ep.Namespace)
+		strict := ep.Type == manifests.StrictLabel || ep.Type == manifests.GroupStrictLabel
+		group := ep.Type == manifests.GroupLabel || ep.Type == manifests.GroupStrictLabel
+		address := "dnssrv+_grpc._tcp." + serverName
+		if ep.Type == manifests.RegularLabel {
+			if ep.Address == "" {
+				continue
+			}
+			address = ep.Address
+		}
+		if strict {
+			address = fmt.Sprintf("%s:%d", serverName, ep.Port)
+		}
+		entries = append(entries, map[string]any{
+			"address": address, "strict": strict, "group": group,
+			"client_config": map[string]any{"server_name": serverName},
+		})
+	}
+	config, _ := json.Marshal(map[string]any{
+		"default_client_config": map[string]any{"tls_config": map[string]any{"enabled": true, "ca_file": manifests.TLSCAFile}},
+		"endpoints":             entries,
+	})
+	return string(config)
 }
 
 // GetRequiredLabels returns a map of labels that can be used to look up query resources.

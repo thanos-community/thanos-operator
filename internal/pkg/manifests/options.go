@@ -248,6 +248,7 @@ func (o Options) GetContainerImage() string {
 // AugmentWithOptions augments the object with the options.
 // Supported objects are Deployment and StatefulSet.
 func AugmentWithOptions(obj client.Object, opts Options) {
+	defer augmentTLS(obj, opts)
 	switch o := obj.(type) {
 	case *appsv1.Deployment:
 		augmentPodTemplate(&o.Spec.Template, opts)
