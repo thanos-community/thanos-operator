@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	TLSLabel              = "operator.thanos.io/tls"
-	TLSChecksumAnnotation = "operator.thanos.io/tls-checksum"
-	TLSMountPath          = "/etc/thanos/tls"
-	TLSCAFile             = TLSMountPath + "/ca/ca.crt"
-	TLSCertFile           = TLSMountPath + "/server/tls.crt"
-	TLSKeyFile            = TLSMountPath + "/server/tls.key"
-	TLSWebConfigFile      = TLSMountPath + "/web/http.yaml"
-	TLSWebConfig          = `tls_server_config:
+	TLSLabel                   = "operator.thanos.io/tls"
+	TLSTrustChecksumAnnotation = "operator.thanos.io/tls-trust-checksum"
+	TLSMountPath               = "/etc/thanos/tls"
+	TLSCAFile                  = TLSMountPath + "/ca/ca.crt"
+	TLSCertFile                = TLSMountPath + "/server/tls.crt"
+	TLSKeyFile                 = TLSMountPath + "/server/tls.key"
+	TLSWebConfigFile           = TLSMountPath + "/web/http.yaml"
+	TLSWebConfig               = `tls_server_config:
   cert_file: ` + TLSCertFile + `
   key_file: ` + TLSKeyFile + `
   min_version: TLS12

@@ -1,6 +1,7 @@
 package coretls
 
 import (
+	"crypto/tls"
 	"fmt"
 	"slices"
 	"time"
@@ -106,19 +107,67 @@ var _ = Describe("TLS lifecycle", Ordered, func() {
 		expectPrometheusTargets(namespace, 7)
 	})
 
-	It("reissues a missing certificate and rolls its workload", func() {
-		deployment := &appsv1.Deployment{}
-		Expect(c.Get(ctx, client.ObjectKey{Name: query, Namespace: namespace}, deployment)).To(Succeed())
-		oldChecksum := deployment.Spec.Template.Annotations[manifests.TLSChecksumAnnotation]
-		Expect(oldChecksum).NotTo(BeEmpty())
-		Expect(c.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: manifests.TLSResourceName(query), Namespace: namespace}})).To(Succeed())
-		Eventually(func() string {
-			if err := c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
-				return ""
-			}
-			return deployment.Spec.Template.Annotations[manifests.TLSChecksumAnnotation]
-		}, 3*time.Minute, time.Second).Should(And(Not(BeEmpty()), Not(Equal(oldChecksum))))
+	It("reloads reissued certificates on HTTP and gRPC listeners without restarting pods", func() {
+		workloads := []struct {
+			workload client.Object
+			ports    []int32
+			pod      *corev1.Pod
+			secret   *corev1.Secret
+		}{
+			{workload: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: query, Namespace: namespace}}, ports: []int32{9090, 10901}},
+			{workload: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: frontend, Namespace: namespace}}, ports: []int32{9090}},
+			{workload: &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: router, Namespace: namespace}}, ports: []int32{10902, 10901, receive.RemoteWritePort}},
+			{workload: &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: controller.ReceiveIngesterNameFromParent(suite.ReceiveName, "default"), Namespace: namespace}}, ports: []int32{10902, 10901, receive.RemoteWritePort}},
+			{workload: &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: ruler, Namespace: namespace}}, ports: []int32{9090, 10901}},
+			{workload: &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: store.Options{Options: manifests.Options{Owner: "tls"}}.GetGeneratedResourceName(), Namespace: namespace}}, ports: []int32{10902, 10901}},
+			{workload: &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: compact.Options{Options: manifests.Options{Owner: "tls"}}.GetGeneratedResourceName(), Namespace: namespace}}, ports: []int32{10902}},
+		}
+		for i := range workloads {
+			state := &workloads[i]
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(state.workload), state.workload)).To(Succeed())
+			Expect(manifests.PodTemplate(state.workload).Annotations[manifests.TLSTrustChecksumAnnotation]).NotTo(BeEmpty())
+			var err error
+			state.pod, err = readyServicePod(namespace, state.workload.GetName())
+			Expect(err).NotTo(HaveOccurred())
+			state.secret = &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: manifests.TLSResourceName(state.workload.GetName()), Namespace: namespace}, state.secret)).To(Succeed())
+			Expect(c.Delete(ctx, state.secret)).To(Succeed())
+		}
+		for _, state := range workloads {
+			Eventually(func(g Gomega) {
+				secret := &corev1.Secret{}
+				g.Expect(c.Get(ctx, client.ObjectKeyFromObject(state.secret), secret)).To(Succeed())
+				g.Expect(secret.UID).NotTo(Equal(state.secret.UID))
+				g.Expect(secret.Data[corev1.TLSCertKey]).NotTo(Equal(state.secret.Data[corev1.TLSCertKey]))
+				certificate, err := tls.X509KeyPair(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
+				g.Expect(err).NotTo(HaveOccurred())
+				for _, port := range state.ports {
+					served, err := servingCertificate(namespace, state.workload.GetName(), state.pod.Name, port)
+					g.Expect(err).NotTo(HaveOccurred(), "%s:%d", state.workload.GetName(), port)
+					g.Expect(served).To(Equal(certificate.Certificate[0]), "%s:%d must serve the reissued leaf", state.workload.GetName(), port)
+				}
+			}, 3*time.Minute, 2*time.Second).Should(Succeed())
+		}
+		Eventually(func() error {
+			return remoteWrite(namespace, router, utils.RemoteWriteRequest{Data: []byte(fmt.Sprintf(`tls_renewed_metric 11 %d
+`, time.Now().UnixMilli()))})
+		}, time.Minute, time.Second).Should(Succeed())
+		Eventually(func() error { return queryMetric(namespace, frontend, "tls_renewed_metric", 11) }, time.Minute, time.Second).Should(Succeed())
 		Eventually(func() error { return queryMetric(namespace, frontend, "tls_reloaded_metric", 9) }, 3*time.Minute, 2*time.Second).Should(Succeed())
+		for _, state := range workloads {
+			current := state.workload.DeepCopyObject().(client.Object)
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(current), current)).To(Succeed())
+			Expect(manifests.PodTemplate(current)).To(Equal(manifests.PodTemplate(state.workload)), "leaf changes must not roll %s", current.GetName())
+			pod := &corev1.Pod{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(state.pod), pod)).To(Succeed())
+			Expect(pod.UID).To(Equal(state.pod.UID))
+			Expect(pod.DeletionTimestamp).To(BeNil())
+			for _, container := range state.pod.Status.ContainerStatuses {
+				Expect(pod.Status.ContainerStatuses).To(ContainElement(And(
+					HaveField("Name", container.Name), HaveField("ContainerID", container.ContainerID), HaveField("RestartCount", container.RestartCount),
+				)))
+			}
+		}
 	})
 
 	It("removes leaf resources on disable and reuses namespace trust on re-enable", func() {

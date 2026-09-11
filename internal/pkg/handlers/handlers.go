@@ -93,8 +93,8 @@ func (h *Handler) CreateOrUpdate(ctx context.Context, namespace string, owner cl
 		}
 
 		if h.features.ServerTLSEnabled() && manifests.PodTemplate(obj) != nil {
-			if err := tlsManager.SetChecksum(ctx, obj); err != nil {
-				logger.Error(err, "failed to read TLS material")
+			if err := tlsManager.SetTrustChecksum(ctx, obj); err != nil {
+				logger.Error(err, "failed to read TLS trust")
 				errCount++
 				continue
 			}
