@@ -79,7 +79,7 @@ func NewThanosQueryReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:     controllermetrics.NewThanosQueryMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithServerTLS(conf.FeatureGate),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
 	}
 
 	return reconciler
@@ -168,6 +168,9 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 		objs = append(objs, frontend.Build()...)
 	}
 
+	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &query, objs); err != nil {
+		return err
+	}
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
@@ -441,6 +444,10 @@ func (r *ThanosQueryReconciler) cleanup(ctx context.Context, resource monitoring
 
 	errCount += r.pruneOrphanedResources(ctx, ns, owner, expectedResources)
 
+	if !r.featureGate.ServerTLSEnabled() {
+		errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+			PruneByOwner(ctx, &resource, client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+	}
 	if !r.featureGate.ServiceMonitorEnabled() {
 		errCount += r.handler.NewResourcePruner().WithServiceMonitor().PruneByOwner(ctx, &resource)
 	}
@@ -469,5 +476,16 @@ func (r *ThanosQueryReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 	listOpts := []client.ListOption{listOpt, client.InNamespace(ns)}
 
 	pruner := r.handler.NewResourcePruner().WithServiceAccount().WithService().WithDeployment().WithPodDisruptionBudget().WithServiceMonitor()
-	return pruner.Prune(ctx, expectedResources, listOpts...)
+	errCount := pruner.Prune(ctx, expectedResources, listOpts...)
+	if r.featureGate.ServerTLSEnabled() {
+		for _, opts := range []manifests.Buildable{
+			manifestquery.Options{Options: manifests.Options{Owner: owner}},
+			manifestqueryfrontend.Options{Options: manifests.Options{Owner: owner}},
+		} {
+			errCount += r.handler.NewResourcePruner().WithCertificate().WithConfigMap().
+				Prune(ctx, manifests.TLSResourceNames(expectedResources), manifests.GetLabelSelectorForOwner(opts),
+					client.InNamespace(ns), client.MatchingLabels{manifests.TLSLabel: tlsManagedValue})
+		}
+	}
+	return errCount
 }

@@ -58,6 +58,7 @@ func (opts Options) Build() []client.Object {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
+	objs = manifests.AppendTLSResources(objs, opts.Config)
 	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
 }
 

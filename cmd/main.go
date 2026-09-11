@@ -359,20 +359,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	if featureGateConfig.ServiceMonitorEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServiceMonitor).Set(1)
-	}
-	if featureGateConfig.PrometheusRuleEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.PrometheusRule).Set(1)
-	}
-	if featureGateConfig.KubeResourceSyncEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.KubeResourceSync).Set(1)
-	}
-	if featureGateConfig.ServerTLSEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.ServerTLS).Set(1)
-	}
-	if featureGateConfig.VolumeResizeEnabled() {
-		commonMetrics.FeatureGatesInfo.WithLabelValues(featuregate.VolumeResize).Set(1)
+	for _, feature := range []struct {
+		name    string
+		enabled bool
+	}{
+		{featuregate.ServiceMonitor, featureGateConfig.ServiceMonitorEnabled()},
+		{featuregate.PrometheusRule, featureGateConfig.PrometheusRuleEnabled()},
+		{featuregate.KubeResourceSync, featureGateConfig.KubeResourceSyncEnabled()},
+		{featuregate.ServerTLS, featureGateConfig.ServerTLSEnabled()},
+		{featuregate.VolumeResize, featureGateConfig.VolumeResizeEnabled()},
+	} {
+		if feature.enabled {
+			commonMetrics.FeatureGatesInfo.WithLabelValues(feature.name).Set(1)
+		}
 	}
 
 	configReloaderImage := defaultConfigReloaderImage
@@ -389,6 +388,15 @@ func main() {
 				MetricsRegistry: ctrlmetrics.Registry,
 				CommonMetrics:   commonMetrics,
 			},
+		}
+	}
+
+	if featureGateConfig.ServerTLSEnabled() {
+		if err = controller.NewTLSReconciler(
+			buildConfig("tls"), mgr.GetClient(), mgr.GetScheme(),
+		).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TLS")
+			os.Exit(1)
 		}
 	}
 

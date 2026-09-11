@@ -118,6 +118,10 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 		compact = compact.DisableConditionUpdate()
 	}
 
+	if gates.ServerTLSEnabled() {
+		trust := controller.NewTLSReconciler(buildConfig("tls"), env.Manager.GetClient(), env.Manager.GetScheme())
+		gomega.Expect(trust.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	}
 	gomega.Expect(receive.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	gomega.Expect(query.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	gomega.Expect(store.SetupWithManager(env.Manager)).To(gomega.Succeed())
