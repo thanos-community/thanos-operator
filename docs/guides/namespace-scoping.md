@@ -6,9 +6,21 @@ By default, Thanos Operator watches all namespaces. Use `--watch-namespace` to r
 ./thanos-operator --watch-namespace=monitoring
 ```
 
-The setting limits which namespaces the operator watches and reconciles, including status updates and optional controllers such as volume resizing. It takes effect at startup; restart the operator to change it. An empty value preserves cluster-wide behavior.
+The setting limits which namespaces the operator watches and reconciles, including status updates and optional controllers such as volume resizing. It takes effect at startup; restart the operator to change it. An empty value preserves cluster-wide behavior when `server-tls` is disabled.
 
 Service discovery already selects services in the owning resource's namespace, including when the operator watches all namespaces. This setting preserves that behavior.
+
+## TLS requires a single namespace
+
+Initial support for the `server-tls` feature requires one explicit `--watch-namespace`, including when using an existing Issuer or ClusterIssuer:
+
+```bash
+./thanos-operator --watch-namespace=monitoring --enable-feature=server-tls
+```
+
+The selected namespace must already exist. The TLS controller begins reconciling trust on startup, before any component resource is created, and continues after the last component is deleted. In automatic mode, this bootstraps the shared CA and issuers; with an existing issuer, it validates the supplied trust bundle. It does not create or watch Namespace objects. Cluster-wide TLS is not supported yet; deploy separate scoped operators to manage TLS in multiple namespaces.
+
+See the [TLS feature guide](./gated-features.md#server-tls-feature-detailed-review-draft) for cert-manager requirements and issuer configuration.
 
 ## Watch the operator's own namespace
 
