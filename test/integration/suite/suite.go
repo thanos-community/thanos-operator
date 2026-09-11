@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,12 +71,16 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 	ctx, cancel := context.WithCancel(context.Background())
 
 	root := repoRoot()
-	env, err := Start(
-		"",
+	crdPaths := []string{
 		filepath.Join(root, "config", "crd", "bases"),
 		filepath.Join(root, "test", "integration", "configs", "service-monitor.yaml"),
 		filepath.Join(root, "test", "integration", "configs", "prometheus-rule.yaml"),
-	)
+	}
+	if gates.TLSEnabled() {
+		gomega.Expect(cmv1.AddToScheme(scheme.Scheme)).To(gomega.Succeed())
+		crdPaths = append(crdPaths, filepath.Join(root, "test", "integration", "configs", "cert-manager.yaml"))
+	}
+	env, err := Start("", crdPaths...)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	logger := ctrl.Log.WithName("integration")
