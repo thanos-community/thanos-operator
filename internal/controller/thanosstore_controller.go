@@ -65,7 +65,7 @@ func NewThanosStoreReconciler(conf Config, client client.Client, scheme *runtime
 		metrics:     controllermetrics.NewThanosStoreMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
 	}
 
 	return reconciler
@@ -219,7 +219,7 @@ func (r *ThanosStoreReconciler) pruneOrphanedResources(ctx context.Context, ns, 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := ctrl.NewControllerManagedBy(mgr).
+	err := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosStoreList{}).
 		For(&monitoringthanosiov1alpha1.ThanosStore{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).

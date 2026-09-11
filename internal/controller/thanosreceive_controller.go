@@ -89,7 +89,7 @@ func NewThanosReceiveReconciler(conf Config, client client.Client, scheme *runti
 		metrics:     controllermetrics.NewThanosReceiveMetrics(conf.InstrumentationConfig.MetricsRegistry, conf.InstrumentationConfig.CommonMetrics),
 		recorder:    conf.InstrumentationConfig.EventRecorder,
 		featureGate: conf.FeatureGate,
-		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
+		handler:     handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).WithTLS(conf.FeatureGate),
 	}
 
 	return reconciler
@@ -164,7 +164,7 @@ func (r *ThanosReceiveReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 // SetupWithManager sets up the controller with the Manager.
 func (r *ThanosReceiveReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	bld := ctrl.NewControllerManagedBy(mgr)
+	bld := withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosReceiveList{})
 	err := r.buildController(*bld)
 	if err != nil {
 		r.recorder.Eventf(&monitoringthanosiov1alpha1.ThanosReceive{}, nil, corev1.EventTypeWarning, "SetupFailed", "Setup", "Failed to set up controller: %v", err)
