@@ -31,12 +31,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -208,7 +206,7 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 			CRD:         compact,
 			FeatureGate: r.featureGate,
 		})
-		opts.ShardName = ptr.To(shard.ShardName)
+		opts.ShardName = new(shard.ShardName)
 		opts.RelabelConfigs = relabelsConfigs
 		buildable = append(buildable, opts)
 	}
@@ -230,7 +228,7 @@ func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *
 	meta.SetStatusCondition(&conditions, condition)
 	compact.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
-		compact.Status.Paused = ptr.To(true)
+		compact.Status.Paused = new(true)
 	}
 
 	if err := r.Status().Update(ctx, compact); err != nil {

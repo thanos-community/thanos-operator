@@ -42,8 +42,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -440,7 +438,7 @@ func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver 
 	meta.SetStatusCondition(&conditions, condition)
 	receiver.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
-		receiver.Status.Paused = ptr.To(true)
+		receiver.Status.Paused = new(true)
 	}
 	if err := r.Status().Update(ctx, receiver); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosReceive", "name", receiver.Name)

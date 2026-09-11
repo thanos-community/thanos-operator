@@ -474,7 +474,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 			if ruler.Spec.RuleTenancyConfig != nil {
 				tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 				if tenantValueLabel == nil {
-					tenantValueLabel = ptr.To(DefaultTenantSpecifier)
+					tenantValueLabel = new(DefaultTenantSpecifier)
 				}
 				tvl := *tenantValueLabel
 				value, exists := cfgmap.Labels[tvl]
@@ -580,7 +580,7 @@ func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context,
 		if ruler.Spec.RuleTenancyConfig != nil {
 			tenantValueLabel := ruler.Spec.RuleTenancyConfig.TenantSpecifierLabel
 			if tenantValueLabel == nil {
-				tenantValueLabel = ptr.To(DefaultTenantSpecifier)
+				tenantValueLabel = new(DefaultTenantSpecifier)
 			}
 			tvl := *tenantValueLabel
 			value, exists := rule.Labels[tvl]
@@ -887,7 +887,7 @@ func (r *ThanosRulerReconciler) processRuleGroupsWithTenancy(
 
 	tenantLabel := tenancyConfig.EnforcedTenantIdentifier
 	if tenantLabel == nil {
-		tenantLabel = ptr.To(defaultTenantIdentifier)
+		tenantLabel = new(defaultTenantIdentifier)
 	}
 	tl := *tenantLabel
 
@@ -952,7 +952,7 @@ func (r *ThanosRulerReconciler) createBucketedRuleConfigMaps(
 						Kind:       ruler.Kind,
 						Name:       ruler.Name,
 						UID:        ruler.UID,
-						Controller: ptr.To(true),
+						Controller: new(true),
 					},
 				},
 			},
@@ -968,7 +968,7 @@ func (r *ThanosRulerReconciler) createBucketedRuleConfigMaps(
 					Name: cmName,
 				},
 				Key:      key,
-				Optional: ptr.To(true),
+				Optional: new(true),
 			})
 		}
 	}
@@ -1059,7 +1059,7 @@ func (r *ThanosRulerReconciler) updateCondition(ctx context.Context, ruler *moni
 	meta.SetStatusCondition(&conditions, condition)
 	ruler.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
-		ruler.Status.Paused = ptr.To(true)
+		ruler.Status.Paused = new(true)
 	}
 	if err := r.Status().Update(ctx, ruler); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosRuler", "name", ruler.Name)

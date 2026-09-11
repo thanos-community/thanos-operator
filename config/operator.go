@@ -170,7 +170,7 @@ func ControllerManagerServiceMonitor() *monitoringv1.ServiceMonitor {
 						HTTPConfigWithTLSFiles: monitoringv1.HTTPConfigWithTLSFiles{
 							TLSConfig: &monitoringv1.TLSConfig{
 								SafeTLSConfig: monitoringv1.SafeTLSConfig{
-									InsecureSkipVerify: ptr.To(true),
+									InsecureSkipVerify: new(true),
 								},
 							},
 						},
@@ -236,7 +236,7 @@ func AllowMetricsTrafficNetworkPolicy() *networkingv1.NetworkPolicy {
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
 							Protocol: ptr.To(corev1.ProtocolTCP),
-							Port:     ptr.To(intstr.FromInt(8443)),
+							Port:     new(intstr.FromInt(8443)),
 						},
 					},
 				},

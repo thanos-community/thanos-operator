@@ -10,8 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -141,7 +139,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 						Name: opts.ObjStoreSecret.Name,
 					},
 					Key:      opts.ObjStoreSecret.Key,
-					Optional: ptr.To(false),
+					Optional: new(false),
 				},
 			},
 		},
@@ -156,7 +154,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 						Name: opts.IndexCacheConfig.FromSecret.Name,
 					},
 					Key:      opts.IndexCacheConfig.FromSecret.Key,
-					Optional: ptr.To(false),
+					Optional: new(false),
 				},
 			},
 		}
@@ -172,7 +170,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 						Name: opts.CachingBucketConfig.FromSecret.Name,
 					},
 					Key:      opts.CachingBucketConfig.FromSecret.Key,
-					Optional: ptr.To(false),
+					Optional: new(false),
 				},
 			},
 		}
@@ -192,7 +190,7 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
-			Replicas:    ptr.To(opts.Replicas),
+			Replicas:    new(opts.Replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
@@ -212,8 +210,8 @@ func newStoreShardStatefulSet(opts Options, selectorLabels, objectMetaLabels map
 							// Ensure restrictive context for the container
 							// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
 							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								RunAsNonRoot:             ptr.To(true),
+								AllowPrivilegeEscalation: new(false),
+								RunAsNonRoot:             new(true),
 								Capabilities: &corev1.Capabilities{
 									Drop: []corev1.Capability{
 										"ALL",

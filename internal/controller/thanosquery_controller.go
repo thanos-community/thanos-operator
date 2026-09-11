@@ -45,8 +45,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -368,7 +366,7 @@ func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *moni
 	meta.SetStatusCondition(&conditions, condition)
 	query.Status.Conditions = conditions
 	if condition.Type == ConditionPaused {
-		query.Status.Paused = ptr.To(true)
+		query.Status.Paused = new(true)
 	}
 	if err := r.Status().Update(ctx, query); err != nil {
 		r.logger.Error(err, "failed to update status for ThanosQuery", "name", query.Name)
