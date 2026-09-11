@@ -109,7 +109,7 @@ func NewThanosRulerReconciler(conf Config, configReloaderImage string, client cl
 		recorder:            conf.InstrumentationConfig.EventRecorder,
 		featureGate:         conf.FeatureGate,
 		configReloaderImage: configReloaderImage,
-		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger).SetFeatureGates(conf.FeatureGate.ToGVK()),
+		handler:             handlers.NewHandler(client, scheme, conf.InstrumentationConfig.Logger),
 	}
 
 	return reconciler
@@ -681,7 +681,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(configMapPredicate),
 		)
 
-	if !r.handler.IsFeatureGated(&monitoringv1.PrometheusRule{}) {
+	if r.featureGate.PrometheusRuleEnabled() {
 		bldr.Watches(
 			&monitoringv1.PrometheusRule{},
 			r.enqueueForPrometheusRule(),

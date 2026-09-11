@@ -1,10 +1,6 @@
 package featuregate
 
-import (
-	"slices"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-)
+import "slices"
 
 // Feature flag names for use with --enable-feature flag.
 // These follow Prometheus convention of kebab-case feature names.
@@ -145,24 +141,4 @@ func (f *Flag) ToFeatureGate() Config {
 		c.VolumeResize = Enabled()
 	}
 	return c
-}
-
-// ToGVK returns the GroupVersionKind for all enabled features.
-func (c Config) ToGVK() []schema.GroupVersionKind {
-	var gvk []schema.GroupVersionKind
-	if !c.ServiceMonitorEnabled() {
-		gvk = append(gvk, schema.GroupVersionKind{
-			Group:   "monitoring.coreos.com",
-			Version: "v1",
-			Kind:    "ServiceMonitor",
-		})
-	}
-	if !c.PrometheusRuleEnabled() {
-		gvk = append(gvk, schema.GroupVersionKind{
-			Group:   "monitoring.coreos.com",
-			Version: "v1",
-			Kind:    "PrometheusRule",
-		})
-	}
-	return gvk
 }
