@@ -79,7 +79,7 @@ func TestTLSEventSelection(t *testing.T) {
 				CABundleConfigMap: &featuregate.CABundleReference{Name: "platform-trust", Key: "roots.pem"},
 			}
 		}
-		r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: featuregate.Config{ServerTLS: &cfg}}, nil, nil)
+		r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: featuregate.Config{ServerTLS: &cfg}}, nil)
 		for _, tc := range []struct {
 			name string
 			obj  client.Object
@@ -115,7 +115,7 @@ func TestTLSEventSelection(t *testing.T) {
 			leaf.SetName("leaf-tls")
 			leaf.SetNamespace("metrics")
 			leaf.SetLabels(map[string]string{manifests.TLSLabel: tlsManagedValue})
-			require.Len(t, r.enqueueNamespace(context.Background(), leaf), 1)
+			require.Empty(t, r.enqueueNamespace(context.Background(), leaf))
 		}
 
 	}
@@ -128,7 +128,7 @@ func TestTLSReconcileScope(t *testing.T) {
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: flags.ToFeatureGate()}, c, scheme)
+	r := NewTLSReconciler(Config{WatchNamespace: "metrics", FeatureGate: flags.ToFeatureGate()}, c)
 	ctx := context.Background()
 	key := client.ObjectKey{Namespace: "unrelated", Name: featuregate.TLSCAName}
 	_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
@@ -156,7 +156,7 @@ func TestTLSRequiresWatchNamespace(t *testing.T) {
 	cfg := flags.ToFeatureGate()
 	_, err := CacheOptionsForNamespace("", cfg)
 	require.ErrorContains(t, err, "server-tls requires --watch-namespace")
-	r := NewTLSReconciler(Config{FeatureGate: cfg}, nil, nil)
+	r := NewTLSReconciler(Config{FeatureGate: cfg}, nil)
 	require.ErrorContains(t, r.SetupWithManager(nil), "server-tls requires --watch-namespace")
 	scoped, err := CacheOptionsForNamespace("metrics", cfg)
 	require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestTLSRequiresWatchNamespace(t *testing.T) {
 }
 
 func TestTLSDisabled(t *testing.T) {
-	r := NewTLSReconciler(Config{}, nil, nil)
+	r := NewTLSReconciler(Config{}, nil)
 	require.NoError(t, r.SetupWithManager(nil), "disabled TLS must not register watches")
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKey{Namespace: "metrics", Name: featuregate.TLSCAName}})
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func newTestTLSReconciler(t *testing.T) *TLSReconciler {
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c, scheme)
+	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c)
 }
 
 func reconcileTestTLSNamespace(ctx context.Context, r *TLSReconciler) error {
@@ -262,7 +262,7 @@ func newTLSResourceReconciler(t *testing.T) (*TLSReconciler, *handlers.Handler) 
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	flags := featuregate.Flag{featuregate.ServerTLS}
-	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c, scheme), handlers.NewHandler(c, scheme, logr.Discard())
+	return NewTLSReconciler(Config{WatchNamespace: "test", FeatureGate: flags.ToFeatureGate()}, c), handlers.NewHandler(c, scheme, logr.Discard())
 }
 
 func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
@@ -277,11 +277,6 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 		require.NoError(t, err)
 		opts.Checksum = checksum
 		objects := opts.Build()
-		for _, obj := range objects {
-			if cert, ok := obj.(*cmv1.Certificate); ok {
-				cert.UID = "certificate-uid"
-			}
-		}
 		require.Zero(t, h.CreateOrUpdate(ctx, owner.Namespace, owner, objects))
 		workload := &appsv1.StatefulSet{}
 		require.NoError(t, r.Get(ctx, client.ObjectKey{Namespace: owner.Namespace, Name: opts.GetGeneratedResourceName()}, workload))
@@ -310,9 +305,9 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 	require.NotEmpty(t, trusted.Annotations[manifests.TLSTrustChecksumAnnotation])
 	secret := managedSecret(key.Name, []byte("certificate one"))
 	require.NoError(t, r.Create(ctx, secret))
-	require.NoError(t, r.syncCertificateSecrets(ctx))
+	require.NoError(t, reconcileTestTLSNamespace(ctx, r))
 	require.NoError(t, r.Get(ctx, key, secret))
-	require.True(t, metav1.IsControlledBy(secret, cert))
+	require.Empty(t, secret.OwnerReferences, "cert-manager manages Secret ownership")
 	require.Equal(t, trusted, apply(), "initial leaf issuance must not roll pods")
 	secret.Data[corev1.TLSCertKey] = []byte("certificate two")
 	secret.Data[corev1.TLSPrivateKeyKey] = []byte("rotated private key")
@@ -323,9 +318,6 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 	require.NotEqual(t, trusted.Annotations[manifests.TLSTrustChecksumAnnotation], apply().Annotations[manifests.TLSTrustChecksumAnnotation], "trust changes must refresh clients")
 	require.Zero(t, h.NewResourcePruner().WithCertificate().WithConfigMap().
 		PruneByOwner(ctx, owner, client.MatchingLabels{manifests.TLSLabel: "true"}))
-	// The fake client does not run garbage collection; the Secret follows its Certificate.
-	require.NoError(t, r.Get(ctx, key, secret))
-	require.True(t, metav1.IsControlledBy(secret, cert))
 	require.True(t, apierrors.IsNotFound(r.Get(ctx, key, &cmv1.Certificate{})))
 	require.True(t, apierrors.IsNotFound(r.Get(ctx, key, &corev1.ConfigMap{})))
 	require.NoError(t, r.Get(ctx, client.ObjectKeyFromObject(bundle), &corev1.ConfigMap{}), "external trust must survive disable")
@@ -334,7 +326,7 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 func TestTLSTrustChecksum(t *testing.T) {
 	ctx := context.Background()
 	r := newTestTLSReconciler(t)
-	h := handlers.NewHandler(r.Client, r.Scheme, logr.Discard())
+	h := handlers.NewHandler(r.Client, r.Client.Scheme(), logr.Discard())
 	ref := r.featureGate.ServerTLS.CABundle()
 	checksum, err := h.GetConfigMapChecksum(ctx, r.namespace, ref.Name, ref.Key)
 	require.NoError(t, err)

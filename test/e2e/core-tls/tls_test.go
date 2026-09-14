@@ -70,9 +70,16 @@ var _ = Describe("TLS lifecycle", Ordered, func() {
 		for _, name := range []string{ruler, store.Options{Options: manifests.Options{Owner: "tls"}}.GetGeneratedResourceName(), compact.Options{Options: manifests.Options{Owner: "tls"}}.GetGeneratedResourceName()} {
 			Eventually(func() bool { return utils.VerifyStatefulSetReplicasRunning(c, 1, name, namespace) }, 5*time.Minute, time.Second).Should(BeTrue(), name)
 		}
-		certs := &cmv1.CertificateList{}
-		Expect(c.List(ctx, certs, client.InNamespace(namespace))).To(Succeed())
-		Expect(certs.Items).To(HaveLen(8), "one namespace CA and seven workload certificates")
+		Eventually(func(g Gomega) {
+			certs := &cmv1.CertificateList{}
+			g.Expect(c.List(ctx, certs, client.InNamespace(namespace))).To(Succeed())
+			g.Expect(certs.Items).To(HaveLen(8), "one namespace CA and seven workload certificates")
+			for _, cert := range certs.Items {
+				secret := &corev1.Secret{}
+				g.Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: cert.Spec.SecretName}, secret)).To(Succeed())
+				g.Expect(metav1.IsControlledBy(secret, &cert)).To(BeTrue(), "cert-manager must set Secret ownership")
+			}
+		}, time.Minute, time.Second).Should(Succeed())
 	})
 
 	It("verifies HTTPS identity and sends data through Receive, Query, Frontend and Ruler", func() {
@@ -185,6 +192,13 @@ var _ = Describe("TLS lifecycle", Ordered, func() {
 			}
 			if len(certs.Items) != 1 || certs.Items[0].Name != featuregate.TLSCAName {
 				return fmt.Errorf("leaf Certificates remain")
+			}
+			secrets := &corev1.SecretList{}
+			if err := c.List(ctx, secrets, client.InNamespace(namespace), client.MatchingLabels{manifests.TLSLabel: "true"}); err != nil {
+				return err
+			}
+			if len(secrets.Items) != 1 || secrets.Items[0].Name != featuregate.TLSCAName {
+				return fmt.Errorf("leaf TLS Secrets remain")
 			}
 			_, err := request(namespace, frontend, 9090, "/api/v1/query?query=vector(1)", nil, "plaintext")
 			return err

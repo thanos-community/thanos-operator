@@ -33,6 +33,7 @@ import (
 	operatorconfig "github.com/thanos-community/thanos-operator/config"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +62,7 @@ func run() error {
 
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, rbacv1.AddToScheme, monitoringv1.AddToScheme,
+		appsv1.AddToScheme, corev1.AddToScheme, rbacv1.AddToScheme, monitoringv1.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			return fmt.Errorf("building scheme: %w", err)
@@ -80,7 +81,7 @@ func run() error {
 		return fmt.Errorf("installing prometheus-operator: %w", err)
 	}
 	log.Println(">> installing cert-manager")
-	if err := utils.InstallCertManager(); err != nil {
+	if err := utils.InstallCertManager(c); err != nil {
 		return fmt.Errorf("installing cert-manager: %w", err)
 	}
 	log.Println(">> creating operator namespace")

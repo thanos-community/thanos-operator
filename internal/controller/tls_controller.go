@@ -11,45 +11,41 @@ import (
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 )
 
 const tlsManagedValue = "true"
 
-// TLSReconciler maintains namespace trust and issued Secret ownership.
+// TLSReconciler maintains namespace trust.
 type TLSReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
 
 	featureGate featuregate.Config
 	namespace   string
 }
 
-func NewTLSReconciler(conf Config, c client.Client, scheme *runtime.Scheme) *TLSReconciler {
+// NewTLSReconciler creates a trust reconciler scoped to the configured watch namespace.
+func NewTLSReconciler(conf Config, c client.Client) *TLSReconciler {
 	return &TLSReconciler{
 		Client:      c,
-		Scheme:      scheme,
 		featureGate: conf.FeatureGate,
 		namespace:   conf.WatchNamespace,
 	}
 }
 
+// Reconcile handles startup and resource events by syncing trust in the configured namespace.
 func (r *TLSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if !r.featureGate.ServerTLSEnabled() || r.namespace == "" || req.Namespace != r.namespace {
 		return ctrl.Result{}, nil
@@ -57,6 +53,7 @@ func (r *TLSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	return ctrl.Result{}, r.syncResources(ctx)
 }
 
+// syncResources validates TLS settings and trust, provisioning and publishing the CA in automatic mode.
 func (r *TLSReconciler) syncResources(ctx context.Context) error {
 	cfg := r.featureGate.ServerTLS
 	if err := cfg.Validate(); err != nil {
@@ -70,14 +67,13 @@ func (r *TLSReconciler) syncResources(ctx context.Context) error {
 			return err
 		}
 	}
-	if _, err := readTLSTrustBundle(ctx, r.Client, r.namespace, cfg.CABundle()); err != nil {
-		return err
-	}
-	return r.syncCertificateSecrets(ctx)
+	_, err := readTLSTrustBundle(ctx, r.Client, r.namespace, cfg.CABundle())
+	return err
 }
 
+// syncCAResources creates or updates the shared CA Certificate and bootstrap and signing Issuers.
+// These resources have no component owner, so they survive component deletion.
 func (r *TLSReconciler) syncCAResources(ctx context.Context) error {
-	// Shared trust must outlive individual workloads and Thanos resources.
 	for _, obj := range manifests.BuildNamespaceTLSResources(r.namespace) {
 		desired := obj.DeepCopyObject().(client.Object)
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, manifests.MutateFuncFor(obj, desired))
@@ -88,6 +84,8 @@ func (r *TLSReconciler) syncCAResources(ctx context.Context) error {
 	return nil
 }
 
+// publishTrustBundle copies public CA certificates from the issued Secret into the trust ConfigMap.
+// Previous roots are retained so existing leaf certificates remain trusted after CA renewal.
 func (r *TLSReconciler) publishTrustBundle(ctx context.Context) error {
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, client.ObjectKey{Namespace: r.namespace, Name: featuregate.TLSCAName}, secret); err != nil {
@@ -103,7 +101,6 @@ func (r *TLSReconciler) publishTrustBundle(ctx context.Context) error {
 		if bundle.Data == nil {
 			bundle.Data = map[string]string{}
 		}
-		// Keep old roots while certificates issued before CA renewal remain in use.
 		old := bundle.Data[featuregate.TLSCAKey]
 		if !bytes.Contains([]byte(old), bytes.TrimSpace(root)) {
 			bundle.Data[featuregate.TLSCAKey] = old + "\n" + string(root)
@@ -116,6 +113,8 @@ func (r *TLSReconciler) publishTrustBundle(ctx context.Context) error {
 	return nil
 }
 
+// SetupWithManager registers shared trust watches when TLS is enabled and queues a startup request.
+// The startup request allows trust to be prepared before any component resources exist.
 func (r *TLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if !r.featureGate.ServerTLSEnabled() {
 		return nil
@@ -130,13 +129,15 @@ func (r *TLSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			queue.Add(ctrl.Request{NamespacedName: client.ObjectKey{Namespace: r.namespace, Name: featuregate.TLSCAName}})
 			return nil
 		}))
-	return b.Watches(&corev1.Secret{}, enqueue).
-		Watches(&corev1.ConfigMap{}, enqueue).
-		Watches(&cmv1.Certificate{}, enqueue).
-		Watches(&cmv1.Issuer{}, enqueue).
-		Complete(r)
+	if r.featureGate.ServerTLS.Automatic() {
+		b = b.Watches(&corev1.Secret{}, enqueue).
+			Watches(&cmv1.Certificate{}, enqueue).
+			Watches(&cmv1.Issuer{}, enqueue)
+	}
+	return b.Watches(&corev1.ConfigMap{}, enqueue).Complete(r)
 }
 
+// enqueueNamespace maps relevant shared trust events to a single request for the configured namespace.
 func (r *TLSReconciler) enqueueNamespace(_ context.Context, obj client.Object) []reconcile.Request {
 	if obj.GetNamespace() != r.namespace {
 		return nil
@@ -148,11 +149,7 @@ func (r *TLSReconciler) enqueueNamespace(_ context.Context, obj client.Object) [
 			return nil
 		}
 	case *corev1.Secret, *cmv1.Certificate:
-		if obj.GetName() == featuregate.TLSCAName {
-			if !cfg.Automatic() {
-				return nil
-			}
-		} else if obj.GetLabels()[manifests.TLSLabel] != tlsManagedValue {
+		if !cfg.Automatic() || obj.GetName() != featuregate.TLSCAName {
 			return nil
 		}
 	case *cmv1.Issuer:
@@ -165,8 +162,8 @@ func (r *TLSReconciler) enqueueNamespace(_ context.Context, obj client.Object) [
 	return []reconcile.Request{{NamespacedName: client.ObjectKey{Namespace: obj.GetNamespace(), Name: featuregate.TLSCAName}}}
 }
 
-// TLS material is shared within a namespace; changes reconcile its Thanos resources.
-// Watches are registered only when TLS is enabled, so cert-manager remains optional.
+// withTLSWatches adds component watches for owned Certificates and the trust ConfigMap when TLS is enabled.
+// Trust changes requeue components in the same namespace to refresh their pod-template checksums.
 func withTLSWatches(b *builder.Builder, c client.Client, fg featuregate.Config, resourceList client.ObjectList) *builder.Builder {
 	if !fg.ServerTLSEnabled() {
 		return b
@@ -193,47 +190,7 @@ func withTLSWatches(b *builder.Builder, c client.Client, fg featuregate.Config, 
 	return b.Owns(&cmv1.Certificate{}).Watches(&corev1.ConfigMap{}, enqueue)
 }
 
-// syncCertificateSecrets keeps leaf Secrets tied to their Certificates for garbage collection.
-func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context) error {
-	list := &cmv1.CertificateList{}
-	if err := r.List(ctx, list, client.InNamespace(r.namespace), client.MatchingLabels{manifests.TLSLabel: tlsManagedValue}); err != nil {
-		return err
-	}
-	for _, cert := range list.Items {
-		owner := metav1.GetControllerOf(&cert)
-		if owner == nil || owner.APIVersion != v1alpha1.GroupVersion.String() {
-			continue
-		}
-		switch owner.Kind {
-		case "ThanosQuery", "ThanosReceive", "ThanosStore", "ThanosRuler", "ThanosCompact":
-		default:
-			continue
-		}
-		secret := &corev1.Secret{}
-		if err := r.Get(ctx, client.ObjectKey{Namespace: r.namespace, Name: cert.Spec.SecretName}, secret); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
-		// Only attach garbage collection to a Secret issued for this Certificate.
-		if secret.Annotations["cert-manager.io/certificate-name"] != cert.Name {
-			continue
-		}
-		before := secret.DeepCopy()
-		if err := controllerutil.SetControllerReference(&cert, secret, r.Scheme); err != nil {
-			return err
-		}
-		if !metav1.IsControlledBy(before, &cert) {
-			if err := r.Patch(ctx, secret, client.MergeFrom(before)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// readTLSTrustBundle reads and validates the configured public CA bundle.
+// readTLSTrustBundle reads the configured ConfigMap key and validates its public CA bundle.
 func readTLSTrustBundle(ctx context.Context, c client.Client, namespace string, ref featuregate.CABundleReference) ([]byte, error) {
 	bundle := &corev1.ConfigMap{}
 	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ref.Name}, bundle); err != nil {

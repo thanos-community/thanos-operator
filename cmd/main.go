@@ -395,7 +395,7 @@ func main() {
 
 	if featureGateConfig.ServerTLSEnabled() {
 		if err = controller.NewTLSReconciler(
-			buildConfig("tls"), mgr.GetClient(), mgr.GetScheme(),
+			buildConfig("tls"), mgr.GetClient(),
 		).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "TLS")
 			os.Exit(1)

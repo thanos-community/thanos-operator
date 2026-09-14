@@ -151,7 +151,7 @@ func StartControllers(env *Env, gates featuregate.Config, opts ...Option) (*Env,
 	}
 
 	if gates.ServerTLSEnabled() {
-		trust := controller.NewTLSReconciler(buildConfig("tls"), env.Manager.GetClient(), env.Manager.GetScheme())
+		trust := controller.NewTLSReconciler(buildConfig("tls"), env.Manager.GetClient())
 		gomega.Expect(trust.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	}
 	gomega.Expect(receive.SetupWithManager(env.Manager)).To(gomega.Succeed())
