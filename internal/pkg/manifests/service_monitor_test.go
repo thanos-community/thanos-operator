@@ -53,7 +53,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sm := manifests.BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.config, "http")
+			sm := manifests.BuildServiceMonitor(name, ns, randObjMeta, randSelectorLabels, tc.config, "http", nil)
 
 			// Test against golden file
 			yamlBytes, err := yaml.Marshal(sm)

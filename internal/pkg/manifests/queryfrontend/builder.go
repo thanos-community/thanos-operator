@@ -1,8 +1,10 @@
 package queryfrontend
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -51,12 +53,19 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
 	}
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
+	}
 	return objs
 }
 
@@ -84,6 +93,16 @@ func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	var env []corev1.EnvVar
 
 	if opts.ResponseCacheConfig.FromSecret != nil {
@@ -115,7 +134,8 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
@@ -146,7 +166,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/-/ready",
 										Port:   intstr.FromInt32(HTTPPort),
-										Scheme: corev1.URISchemeHTTP,
+										Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -157,8 +177,9 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/healthy",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/healthy",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -215,10 +236,14 @@ func newQueryFrontendService(opts Options, selectorLabels, objectMetaLabels map[
 }
 
 func queryFrontendArgs(opts Options) []string {
+	scheme := "http"
+	if opts.ServerTLSEnabled() {
+		scheme = "https"
+	}
 	args := []string{
 		"query-frontend",
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
-		fmt.Sprintf("--query-frontend.downstream-url=http://%s.%s.svc:%d", opts.QueryService, opts.Namespace, opts.QueryPort),
+		fmt.Sprintf("--query-frontend.downstream-url=%s://%s.%s.svc:%d", scheme, opts.QueryService, opts.Namespace, opts.QueryPort),
 		fmt.Sprintf("--query-frontend.log-queries-longer-than=%s", opts.LogQueriesLongerThan),
 		fmt.Sprintf("--query-range.split-interval=%s", opts.RangeSplitInterval),
 		fmt.Sprintf("--labels.split-interval=%s", opts.LabelsSplitInterval),
@@ -226,6 +251,13 @@ func queryFrontendArgs(opts Options) []string {
 		fmt.Sprintf("--labels.max-retries-per-request=%d", opts.LabelsMaxRetries),
 		fmt.Sprintf("--labels.default-time-range=%s", opts.LabelsDefaultTimeRange),
 		"--cache-compression-type=snappy",
+	}
+	if opts.ServerTLSEnabled() {
+		args = append(args, "--http.config="+manifests.TLSWebConfigFile)
+		config, _ := json.Marshal(map[string]any{"tls_config": map[string]string{
+			"ca_file": manifests.TLSCAFile, "server_name": manifests.ServiceDNSName(opts.QueryService, opts.Namespace),
+		}})
+		args = append(args, "--query-frontend.downstream-tripper-config="+string(config))
 	}
 
 	if opts.ResponseCacheConfig.FromSecret != nil {

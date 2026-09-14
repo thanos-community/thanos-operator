@@ -11,6 +11,8 @@
 [[mounts]]
   source = "content"
   target = "content"
+  # Keep AsciiDoc review notes out of the Markdown-only theme.
+  excludeFiles = "docs/guides/tls-review-qa.adoc"
 
 ## data
 [[mounts]]

@@ -1,8 +1,10 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,8 +24,9 @@ const (
 	GRPCPort     = 10901
 	GRPCPortName = "grpc"
 
-	HTTPPort     = 9090
-	HTTPPortName = "http"
+	HTTPPort               = 9090
+	HTTPPortName           = "http"
+	TLSEndpointConfigLabel = "operator.thanos.io/query-tls-endpoints"
 )
 
 // Options for Thanos Query
@@ -59,6 +62,8 @@ type Endpoint struct {
 	Namespace   string
 	Type        manifests.EndpointType
 	Port        int32
+	// Address is the resolved target for TLS fanout endpoints.
+	Address string
 }
 
 func (opts Options) Build() []client.Object {
@@ -66,6 +71,12 @@ func (opts Options) Build() []client.Object {
 	selectorLabels := opts.GetSelectorLabels()
 	objectMetaLabels := GetLabels(opts)
 	name := opts.GetGeneratedResourceName()
+	if opts.ServerTLSEnabled() {
+		objs = append(objs, &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: opts.Namespace, Labels: manifests.MergeMaps(objectMetaLabels, map[string]string{TLSEndpointConfigLabel: "true"})},
+			Data:       map[string]string{"endpoints.yaml": tlsEndpointConfig(opts.Endpoints)},
+		})
+	}
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
@@ -76,7 +87,14 @@ func (opts Options) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
+	}
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
 	}
 	return objs
 }
@@ -105,6 +123,22 @@ func NewQueryDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+		opts.Additional.Volumes = append(opts.Additional.Volumes, corev1.Volume{
+			Name: "thanos-endpoints", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: name}, DefaultMode: new(int32(420)),
+			}},
+		})
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, corev1.VolumeMount{Name: "thanos-endpoints", MountPath: manifests.TLSMountPath + "/endpoints", ReadOnly: true})
+	}
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -144,7 +178,7 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/-/ready",
 					Port:   intstr.FromInt32(HTTPPort),
-					Scheme: corev1.URISchemeHTTP,
+					Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -155,8 +189,9 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/healthy",
-					Port: intstr.FromInt32(HTTPPort),
+					Path:   "/-/healthy",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: manifests.TLSProbeScheme("", opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -197,7 +232,8 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
@@ -256,6 +292,14 @@ func newQueryService(opts Options, selectorLabels, objectMetaLabels map[string]s
 
 func queryArgs(opts Options) []string {
 	args := []string{"query"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+			"--grpc-server-tls-cert="+manifests.TLSCertFile,
+			"--grpc-server-tls-key="+manifests.TLSKeyFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
@@ -289,6 +333,10 @@ func queryArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
 	}
 
+	if opts.ServerTLSEnabled() {
+		args = append(args, "--endpoint.sd-config-file="+manifests.TLSMountPath+"/endpoints/endpoints.yaml", "--endpoint.sd-config-reload-interval=5s")
+		return manifests.PruneEmptyArgs(args)
+	}
 	for _, ep := range opts.Endpoints {
 		switch ep.Type {
 		case manifests.RegularLabel:
@@ -315,6 +363,34 @@ func queryArgs(opts Options) []string {
 	}
 
 	return manifests.PruneEmptyArgs(args)
+}
+
+func tlsEndpointConfig(endpoints []Endpoint) string {
+	entries := make([]map[string]any, 0, len(endpoints))
+	for _, ep := range endpoints {
+		serverName := manifests.ServiceDNSName(ep.ServiceName, ep.Namespace)
+		strict := ep.Type == manifests.StrictLabel || ep.Type == manifests.GroupStrictLabel
+		group := ep.Type == manifests.GroupLabel || ep.Type == manifests.GroupStrictLabel
+		address := "dnssrv+_grpc._tcp." + serverName
+		if ep.Type == manifests.RegularLabel {
+			if ep.Address == "" {
+				continue
+			}
+			address = ep.Address
+		}
+		if strict {
+			address = fmt.Sprintf("%s:%d", serverName, ep.Port)
+		}
+		entries = append(entries, map[string]any{
+			"address": address, "strict": strict, "group": group,
+			"client_config": map[string]any{"server_name": serverName},
+		})
+	}
+	config, _ := json.Marshal(map[string]any{
+		"default_client_config": map[string]any{"tls_config": map[string]any{"enabled": true, "ca_file": manifests.TLSCAFile}},
+		"endpoints":             entries,
+	})
+	return string(config)
 }
 
 // GetRequiredLabels returns a map of labels that can be used to look up query resources.

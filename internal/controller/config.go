@@ -14,9 +14,12 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 )
 
-// CacheOptionsForNamespace limits namespaced watches and reads. Empty watches all namespaces.
-func CacheOptionsForNamespace(namespace string) (cache.Options, error) {
+// CacheOptionsForNamespace limits namespaced watches and reads. TLS requires an explicit namespace.
+func CacheOptionsForNamespace(namespace string, features featuregate.Config) (cache.Options, error) {
 	if namespace == "" {
+		if features.ServerTLSEnabled() {
+			return cache.Options{}, fmt.Errorf("server-tls requires --watch-namespace to select a single namespace")
+		}
 		return cache.Options{}, nil
 	}
 	if errs := validation.IsDNS1123Label(namespace); len(errs) > 0 {
@@ -27,6 +30,8 @@ func CacheOptionsForNamespace(namespace string) (cache.Options, error) {
 
 // Config holds the configuration for all controllers.
 type Config struct {
+	// WatchNamespace is the namespace selected by --watch-namespace.
+	WatchNamespace string
 	// FeatureGate holds information about enabled features.
 	FeatureGate featuregate.Config
 	// InstrumentationConfig contains the common instrumentation configuration for all controllers.

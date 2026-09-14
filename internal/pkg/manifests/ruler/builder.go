@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"gopkg.in/yaml.v2"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	k8syaml "sigs.k8s.io/yaml"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
@@ -72,6 +74,7 @@ type remoteWrite struct {
 	URL            string            `yaml:"url"`
 	Headers        map[string]string `yaml:"headers,omitempty"`
 	RelabelConfigs []relabelConfig   `yaml:"write_relabel_configs,omitempty"` //nolint
+	TLSConfig      map[string]string `yaml:"tls_config,omitempty"`            //nolint:tagliatelle
 }
 
 type remoteWriteConfig struct {
@@ -103,7 +106,14 @@ func (opts Options) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
+	}
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
 	}
 	return objs
 }
@@ -135,6 +145,16 @@ func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
 
 func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -196,7 +216,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/-/ready",
 					Port:   intstr.FromInt32(HTTPPort),
-					Scheme: corev1.URISchemeHTTP,
+					Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -209,7 +229,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/-/ready",
 					Port:   intstr.FromInt32(HTTPPort),
-					Scheme: corev1.URISchemeHTTP,
+					Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -220,8 +240,9 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/healthy",
-					Port: intstr.FromInt32(HTTPPort),
+					Path:   "/-/healthy",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: manifests.TLSProbeScheme("", opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -355,7 +376,8 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			PodManagementPolicy: appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
@@ -468,6 +490,13 @@ func NewRulerSecret(opts Options) *corev1.Secret {
 
 func newRulerSecret(opts Options, objectMetaLabels map[string]string) *corev1.Secret {
 	rwConfig := opts.DiscoveryInfos.toRemoteWrite()
+	if opts.ServerTLSEnabled() {
+		for i := range rwConfig.RemoteWrite {
+			rw := &rwConfig.RemoteWrite[i]
+			rw.URL = strings.Replace(rw.URL, "http://", "https://", 1)
+			rw.TLSConfig = map[string]string{"ca_file": manifests.TLSCAFile}
+		}
+	}
 	stringData, _ := yaml.Marshal(rwConfig)
 
 	additionalLabels := map[string]string{
@@ -529,6 +558,14 @@ func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
 
 func rulerArgs(opts Options) []string {
 	args := []string{"rule"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+			"--grpc-server-tls-cert="+manifests.TLSCertFile,
+			"--grpc-server-tls-key="+manifests.TLSKeyFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
@@ -556,8 +593,21 @@ func rulerArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--rule-file=%s", fmt.Sprintf("/etc/thanos/rules/%s/%s", ruleFile.Name, ruleFile.Key)))
 	}
 
-	for _, endpoint := range opts.Endpoints {
-		args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
+	if opts.ServerTLSEnabled() {
+		configs := make([]map[string]any, 0, len(opts.Endpoints))
+		for _, endpoint := range opts.Endpoints {
+			name := manifests.ServiceDNSName(endpoint.ServiceName, endpoint.Namespace)
+			configs = append(configs, map[string]any{
+				"scheme": "https", "static_configs": []string{"dnssrv+_http._tcp." + name},
+				"http_config": map[string]any{"tls_config": map[string]string{"ca_file": manifests.TLSCAFile, "server_name": name}},
+			})
+		}
+		config, _ := json.Marshal(configs)
+		args = append(args, "--query.config="+string(config))
+	} else {
+		for _, endpoint := range opts.Endpoints {
+			args = append(args, fmt.Sprintf("--query=dnssrv+_http._tcp.%s.%s.svc", endpoint.ServiceName, endpoint.Namespace))
+		}
 	}
 
 	for _, label := range opts.AlertLabelDrop {
@@ -712,9 +762,13 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 		watchedDirs = append(watchedDirs, mountPath)
 	}
 
+	scheme := "http"
+	if opts.ServerTLSEnabled() {
+		scheme = "https"
+	}
 	args := []string{
 		fmt.Sprintf("--listen-address=:%d", configReloaderPort),
-		fmt.Sprintf("--reload-url=http://localhost:%d/-/reload", HTTPPort),
+		fmt.Sprintf("--reload-url=%s://localhost:%d/-/reload", scheme, HTTPPort),
 	}
 
 	for _, dir := range watchedDirs {

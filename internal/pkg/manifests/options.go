@@ -116,6 +116,8 @@ type Options struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Default is set via kubebuilder in CommonFields with FSGroup=1001.
 	SecurityContext *corev1.PodSecurityContext
+	// Checksum will be added to the Pod template spec if set.
+	Checksum string
 	// Config holds the operator feature gate configuration shared by all components.
 	featuregate.Config
 }

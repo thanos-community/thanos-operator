@@ -2,7 +2,9 @@ package receive
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
@@ -100,7 +102,14 @@ func (opts IngesterOptions) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
+	}
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
 	}
 	return objs
 }
@@ -112,7 +121,7 @@ func (opts IngesterOptions) Valid() error {
 	if opts.HashringName == "" {
 		return fmt.Errorf("hashring name cannot be empty")
 	}
-	return nil
+	return validateReplicationProtocol(opts.Options, opts.ReplicationProtocol)
 }
 
 func (opts IngesterOptions) GetGeneratedResourceName() string {
@@ -142,13 +151,20 @@ func (opts RouterOptions) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
 
 		// Add separate ServiceMonitor for kube-resource-sync metrics when enabled
 		if opts.KubeResourceSyncEnabled() {
 			kubeResourceSyncSMName := name + "-kube-resource-sync"
-			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, "kube-resource-sync"))
+			objs = append(objs, manifests.BuildServiceMonitor(kubeResourceSyncSMName, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, "kube-resource-sync", nil))
 		}
+	}
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
 	}
 	return objs
 }
@@ -157,7 +173,7 @@ func (opts RouterOptions) Valid() error {
 	if opts.Owner == "" {
 		return fmt.Errorf("owner cannot be empty")
 	}
-	return nil
+	return validateReplicationProtocol(opts.Options, opts.ReplicationProtocol)
 }
 
 func (opts RouterOptions) GetGeneratedResourceName() string {
@@ -181,6 +197,16 @@ func NewIngestorStatefulSet(opts IngesterOptions) *appsv1.StatefulSet {
 
 func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +249,8 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 			VolumeClaimTemplates: vc,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
@@ -246,8 +273,9 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 							StartupProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/ready",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -258,8 +286,9 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/ready",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -270,8 +299,9 @@ func newIngestorStatefulSet(opts IngesterOptions, selectorLabels, objectMetaLabe
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/healthy",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/healthy",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -460,6 +490,16 @@ func NewRouterDeployment(opts RouterOptions) *appsv1.Deployment {
 
 func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	volumes := buildRouterVolumes(opts, name)
 	containers := buildRouterContainers(opts)
 	initContainers := buildRouterInitContainers(opts)
@@ -482,9 +522,10 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: opts.Namespace,
-					Labels:    objectMetaLabels,
+					Name:        name,
+					Namespace:   opts.Namespace,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					SecurityContext:              &corev1.PodSecurityContext{},
@@ -511,6 +552,18 @@ func newRouterDeployment(opts RouterOptions, selectorLabels, objectMetaLabels ma
 
 func ingestorArgsFrom(opts IngesterOptions) []string {
 	args := []string{"receive"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+			"--grpc-server-tls-cert="+manifests.TLSCertFile,
+			"--grpc-server-tls-key="+manifests.TLSKeyFile,
+			"--remote-write.server-tls-cert="+manifests.TLSCertFile,
+			"--remote-write.server-tls-key="+manifests.TLSKeyFile,
+			"--remote-write.client-tls-secure",
+			"--remote-write.client-tls-ca="+manifests.TLSCAFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 
 	args = append(args,
@@ -552,6 +605,18 @@ func ingestorArgsFrom(opts IngesterOptions) []string {
 
 func routerArgsFrom(opts RouterOptions) []string {
 	args := []string{"receive"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+			"--grpc-server-tls-cert="+manifests.TLSCertFile,
+			"--grpc-server-tls-key="+manifests.TLSKeyFile,
+			"--remote-write.server-tls-cert="+manifests.TLSCertFile,
+			"--remote-write.server-tls-key="+manifests.TLSKeyFile,
+			"--remote-write.client-tls-secure",
+			"--remote-write.client-tls-ca="+manifests.TLSCAFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 
 	grpcDisableEndlessRetry := `{
@@ -583,6 +648,21 @@ func routerArgsFrom(opts RouterOptions) []string {
 	}
 
 	return manifests.PruneEmptyArgs(args)
+}
+
+func validateReplicationProtocol(opts manifests.Options, protocol string) error {
+	if !opts.ServerTLSEnabled() {
+		return nil
+	}
+	if protocol == CapnProtoPortName {
+		return fmt.Errorf("TLS requires Receive's gRPC replication protocol")
+	}
+	for _, arg := range opts.Args {
+		if strings.HasPrefix(arg, "--receive.replication-protocol=capnproto") || strings.HasPrefix(arg, "--receive.capnproto-address=") {
+			return fmt.Errorf("TLS requires Receive's gRPC replication protocol")
+		}
+	}
+	return nil
 }
 
 // newHashringConfigMap creates a skeleton ConfigMap for the hashring configuration.
@@ -732,8 +812,9 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 		ReadinessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/ready",
-					Port: intstr.FromInt32(HTTPPort),
+					Path:   "/-/ready",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: manifests.TLSProbeScheme("", opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -744,8 +825,9 @@ func buildThanosRouterContainer(opts RouterOptions) corev1.Container {
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/healthy",
-					Port: intstr.FromInt32(HTTPPort),
+					Path:   "/-/healthy",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: manifests.TLSProbeScheme("", opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,

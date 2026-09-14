@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"dario.cat/mergo"
@@ -20,6 +21,8 @@ import (
 // MutateFuncFor returns a mutate function based on the existing resource's concrete type.
 // It currently supports the following types and will return an error for other types:
 //
+//   - Certificate
+//   - Issuer
 //   - ConfigMap
 //   - Secret
 //   - Service
@@ -49,6 +52,11 @@ func MutateFuncFor(existing, desired client.Object) controllerutil.MutateFn {
 		}
 
 		switch existing.(type) {
+		case *cmv1.Certificate:
+			existing.(*cmv1.Certificate).Spec = desired.(*cmv1.Certificate).Spec
+		case *cmv1.Issuer:
+			existing.(*cmv1.Issuer).Spec = desired.(*cmv1.Issuer).Spec
+
 		case *corev1.ConfigMap:
 			cm := existing.(*corev1.ConfigMap)
 			wantCm := desired.(*corev1.ConfigMap)

@@ -86,7 +86,9 @@ func Setup(namespace string, features ...string) client.Client {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	err := c.Create(ctx, ns)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "remove the existing test namespace %s before rerunning", namespace)
+	diagnosticNamespaces[namespace] = struct{}{}
 	ginkgo.DeferCleanup(func() {
+		defer delete(diagnosticNamespaces, namespace)
 		gomega.Expect(client.IgnoreNotFound(c.Delete(ctx, &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: metricsAuthBindingName(namespace)},
 		}))).To(gomega.Succeed())
@@ -167,6 +169,7 @@ func NewReceive(c client.Client, namespace string) string {
 			},
 			Router: v1alpha1.RouterSpec{
 				CommonFields:      v1alpha1.CommonFields{Version: ThanosVersion()},
+				Additional:        v1alpha1.Additional{Args: []string{"--receive.hashrings-file-refresh-interval=5s"}},
 				Replicas:          1,
 				ReplicationFactor: 1,
 				HashringPolicy:    ptr.To(v1alpha1.HashringPolicyStatic),
