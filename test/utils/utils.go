@@ -160,9 +160,14 @@ func GetProjectDir() (string, error) {
 	}
 }
 
-// InstallMinIO installs the object store
+// InstallMinIO waits for the shared object store to accept requests before suites start.
 func InstallMinIO() error {
 	cmd := exec.Command("kubectl", "apply", "-f", minioTestData())
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	cmd = exec.Command("kubectl", "rollout", "status", "deployment/minio",
+		"--namespace", "thanos-operator-system", "--timeout", "5m")
 	_, err := Run(cmd)
 	return err
 }
