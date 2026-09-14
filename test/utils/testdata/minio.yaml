@@ -41,10 +41,16 @@ spec:
               value: 'thanos'
             - name: MINIO_SECRET_KEY
               value: 'thanos-secret'
-          image: minio/minio
+          image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
           name: minio
           ports:
             - containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            periodSeconds: 2
+            timeoutSeconds: 2
           volumeMounts:
             - mountPath: /storage
               name: storage

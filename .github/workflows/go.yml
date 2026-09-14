@@ -94,3 +94,13 @@ jobs:
         run: |
           export KUBECONFIG="${HOME}/.kube/config"
           THANOS_VERSION=${{ matrix.thanos-version }} make test-e2e
+      - name: Report shared E2E dependencies on failure
+        if: failure()
+        run: |
+          for namespace in thanos-operator-system cert-manager; do
+            kubectl -n "$namespace" get deployments,pods,pvc,services,endpointslices -o wide || true
+            kubectl -n "$namespace" get events --sort-by=.lastTimestamp || true
+            kubectl -n "$namespace" describe pods || true
+          done
+          kubectl -n thanos-operator-system logs deployment/minio --all-containers --tail=100 || true
+          kubectl -n thanos-operator-system logs deployment/minio --all-containers --tail=100 --previous || true
