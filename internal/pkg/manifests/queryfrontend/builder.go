@@ -86,6 +86,16 @@ func NewQueryFrontendDeployment(opts Options) *appsv1.Deployment {
 
 func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.Deployment {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	var env []corev1.EnvVar
 
 	if opts.ResponseCacheConfig.FromSecret != nil {
@@ -117,7 +127,8 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
@@ -148,7 +159,7 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/-/ready",
 										Port:   intstr.FromInt32(HTTPPort),
-										Scheme: corev1.URISchemeHTTP,
+										Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -159,8 +170,9 @@ func newQueryFrontendDeployment(opts Options, selectorLabels, objectMetaLabels m
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/healthy",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/healthy",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -234,6 +246,7 @@ func queryFrontendArgs(opts Options) []string {
 		"--cache-compression-type=snappy",
 	}
 	if opts.ServerTLSEnabled() {
+		args = append(args, "--http.config="+manifests.TLSWebConfigFile)
 		config, _ := json.Marshal(map[string]any{"tls_config": map[string]string{
 			"ca_file": manifests.TLSCAFile, "server_name": manifests.ServiceDNSName(opts.QueryService, opts.Namespace),
 		}})

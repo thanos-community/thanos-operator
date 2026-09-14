@@ -190,9 +190,6 @@ func (r *ThanosRulerReconciler) syncResources(ctx context.Context, ruler monitor
 
 	objs = append(objs, opts.Build()...)
 
-	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &ruler, objs); err != nil {
-		return err
-	}
 	if errCount := r.handler.CreateOrUpdate(ctx, ruler.GetNamespace(), &ruler, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the ruler", errCount)
 	}
@@ -261,6 +258,13 @@ func (r *ThanosRulerReconciler) buildRuler(ctx context.Context, ruler monitoring
 		FeatureGate:         r.featureGate,
 		ConfigReloaderImage: r.configReloaderImage,
 	})
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		opts.Checksum, err = r.handler.GetConfigMapChecksum(ctx, ruler.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	opts.Endpoints = queryEndpoints
 	opts.RuleFiles = ruleFiles
 

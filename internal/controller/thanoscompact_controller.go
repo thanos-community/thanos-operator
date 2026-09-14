@@ -137,12 +137,16 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return withTLSWatches(ctrl.NewControllerManagedBy(mgr), r.Client, r.featureGate, &monitoringthanosiov1alpha1.ThanosCompactList{}).
 		For(&monitoringthanosiov1alpha1.ThanosCompact{}).
+		Owns(&corev1.ConfigMap{}).
 		Complete(r)
 }
 
 func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact monitoringthanosiov1alpha1.ThanosCompact) error {
 	var errCount int
-	options := r.specToOptions(compact)
+	options, err := r.specToOptions(ctx, compact)
+	if err != nil {
+		return err
+	}
 	r.metrics.ShardsConfigured.WithLabelValues(compact.GetName(), compact.GetNamespace()).Set(float64(len(options)))
 
 	// for compactor, we want to make sure we clean up any resources that are no longer needed first
@@ -160,9 +164,6 @@ func (r *ThanosCompactReconciler) syncResources(ctx context.Context, compact mon
 	// now we can create what we expect to be built based on the spec
 	for _, opt := range options {
 		objects := opt.Build()
-		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &compact, objects); err != nil {
-			return err
-		}
 		errCount += r.handler.CreateOrUpdate(ctx, compact.GetNamespace(), &compact, objects)
 	}
 
@@ -200,12 +201,23 @@ func (r *ThanosCompactReconciler) pruneOrphanedResources(ctx context.Context, ns
 	return errCount
 }
 
-func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alpha1.ThanosCompact) []manifests.Buildable {
+func (r *ThanosCompactReconciler) specToOptions(ctx context.Context, compact monitoringthanosiov1alpha1.ThanosCompact) ([]manifests.Buildable, error) {
+	var trustChecksum string
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		var err error
+		trustChecksum, err = r.handler.GetConfigMapChecksum(ctx, compact.Namespace, r.featureGate.ServerTLS.CABundle().Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if len(compact.Spec.ShardingConfig) == 0 {
-		return []manifests.Buildable{compactV1Alpha1ToOptions(compactV1Alpha1TransformInput{
+		opts := compactV1Alpha1ToOptions(compactV1Alpha1TransformInput{
 			CRD:         compact,
 			FeatureGate: r.featureGate,
-		})}
+		})
+		opts.Checksum = trustChecksum
+		return []manifests.Buildable{opts}, nil
 	}
 
 	buildable := make([]manifests.Buildable, 0, len(compact.Spec.ShardingConfig))
@@ -222,12 +234,13 @@ func (r *ThanosCompactReconciler) specToOptions(compact monitoringthanosiov1alph
 			CRD:         compact,
 			FeatureGate: r.featureGate,
 		})
+		opts.Checksum = trustChecksum
 		opts.ShardName = new(shard.ShardName)
 		opts.RelabelConfigs = relabelsConfigs
 		buildable = append(buildable, opts)
 	}
 
-	return buildable
+	return buildable, nil
 }
 
 func (r *ThanosCompactReconciler) DisableConditionUpdate() *ThanosCompactReconciler {

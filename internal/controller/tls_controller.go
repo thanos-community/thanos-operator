@@ -5,7 +5,6 @@ package controller
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -78,19 +77,10 @@ func (r *TLSReconciler) syncResources(ctx context.Context) error {
 }
 
 func (r *TLSReconciler) syncCAResources(ctx context.Context) error {
-	if err := checkTLSSecret(ctx, r.Client, featuregate.TLSCAName, r.namespace); err != nil {
-		return err
-	}
 	// Shared trust must outlive individual workloads and Thanos resources.
 	for _, obj := range manifests.BuildNamespaceTLSResources(r.namespace) {
 		desired := obj.DeepCopyObject().(client.Object)
-		mutate := manifests.MutateFuncFor(obj, desired)
-		_, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, func() error {
-			if err := checkManagedTLSResource(obj, nil); err != nil {
-				return err
-			}
-			return mutate()
-		})
+		_, err := ctrl.CreateOrUpdate(ctx, r.Client, obj, manifests.MutateFuncFor(obj, desired))
 		if err != nil {
 			return fmt.Errorf("reconciling TLS resource %s: %w", obj.GetName(), err)
 		}
@@ -109,9 +99,6 @@ func (r *TLSReconciler) publishTrustBundle(ctx context.Context) error {
 	}
 	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: r.namespace}}
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, bundle, func() error {
-		if err := checkManagedTLSResource(bundle, nil); err != nil {
-			return err
-		}
 		bundle.Labels = map[string]string{manifests.TLSLabel: tlsManagedValue}
 		if bundle.Data == nil {
 			bundle.Data = map[string]string{}
@@ -185,11 +172,7 @@ func withTLSWatches(b *builder.Builder, c client.Client, fg featuregate.Config, 
 		return b
 	}
 	enqueue := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		_, configMap := obj.(*corev1.ConfigMap)
-		if !configMap && obj.GetName() == featuregate.TLSCAName {
-			return nil
-		}
-		if obj.GetLabels()[manifests.TLSLabel] != tlsManagedValue && !(configMap && obj.GetName() == fg.ServerTLS.CABundle().Name) {
+		if obj.GetName() != fg.ServerTLS.CABundle().Name {
 			return nil
 		}
 		list := resourceList.DeepCopyObject().(client.ObjectList)
@@ -207,52 +190,7 @@ func withTLSWatches(b *builder.Builder, c client.Client, fg featuregate.Config, 
 		}
 		return requests
 	})
-	return b.Watches(&corev1.Secret{}, enqueue).Watches(&corev1.ConfigMap{}, enqueue).
-		Watches(&cmv1.Certificate{}, enqueue)
-}
-
-// prepareTLSResources resolves trust and checks collisions before normal resource application.
-func prepareTLSResources(ctx context.Context, c client.Client, fg featuregate.Config, owner client.Object, objects []client.Object) error {
-	if !fg.ServerTLSEnabled() {
-		return nil
-	}
-	bundle, err := readTLSTrustBundle(ctx, c, owner.GetNamespace(), fg.ServerTLS.CABundle())
-	if err != nil {
-		return err
-	}
-	checksum := fmt.Sprintf("%x", sha256.Sum256(bundle))
-	for _, obj := range objects {
-		if template := manifests.PodTemplate(obj); template != nil {
-			if err := manifests.ValidateTLSWorkload(template); err != nil {
-				return err
-			}
-			template.Annotations = manifests.MergeMaps(template.Annotations, map[string]string{manifests.TLSTrustChecksumAnnotation: checksum})
-		}
-		if obj.GetLabels()[manifests.TLSLabel] != tlsManagedValue {
-			continue
-		}
-		switch obj := obj.(type) {
-		case *cmv1.Certificate:
-			if err := checkTLSSecret(ctx, c, obj.Spec.SecretName, owner.GetNamespace()); err != nil {
-				return err
-			}
-		case *corev1.ConfigMap:
-		default:
-			continue
-		}
-		existing := obj.DeepCopyObject().(client.Object)
-		key := client.ObjectKey{Namespace: owner.GetNamespace(), Name: obj.GetName()}
-		if err := c.Get(ctx, key, existing); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
-		if err := checkManagedTLSResource(existing, owner); err != nil {
-			return err
-		}
-	}
-	return nil
+	return b.Owns(&cmv1.Certificate{}).Watches(&corev1.ConfigMap{}, enqueue)
 }
 
 // syncCertificateSecrets keeps leaf Secrets tied to their Certificates for garbage collection.
@@ -271,15 +209,16 @@ func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context) error {
 		default:
 			continue
 		}
-		if err := checkTLSSecret(ctx, r.Client, cert.Spec.SecretName, r.namespace); err != nil {
-			return err
-		}
 		secret := &corev1.Secret{}
 		if err := r.Get(ctx, client.ObjectKey{Namespace: r.namespace, Name: cert.Spec.SecretName}, secret); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
 			return err
+		}
+		// Only attach garbage collection to a Secret issued for this Certificate.
+		if secret.Annotations["cert-manager.io/certificate-name"] != cert.Name {
+			continue
 		}
 		before := secret.DeepCopy()
 		if err := controllerutil.SetControllerReference(&cert, secret, r.Scheme); err != nil {
@@ -290,18 +229,6 @@ func (r *TLSReconciler) syncCertificateSecrets(ctx context.Context) error {
 				return err
 			}
 		}
-	}
-	return nil
-}
-
-// checkTLSSecret refuses to reuse a Secret outside the TLS integration.
-func checkTLSSecret(ctx context.Context, c client.Client, name, namespace string) error {
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, secret); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-	if secret.Labels[manifests.TLSLabel] != tlsManagedValue || secret.Annotations["cert-manager.io/certificate-name"] != name {
-		return fmt.Errorf("TLS Secret %s/%s already exists outside this integration", namespace, name)
 	}
 	return nil
 }
@@ -317,17 +244,6 @@ func readTLSTrustBundle(ctx context.Context, c client.Client, namespace string, 
 		return nil, err
 	}
 	return data, nil
-}
-
-// checkManagedTLSResource checks existing resources before applying TLS changes.
-func checkManagedTLSResource(obj, owner client.Object) error {
-	if obj.GetResourceVersion() == "" {
-		return nil
-	}
-	if obj.GetLabels()[manifests.TLSLabel] != tlsManagedValue || (owner != nil && !metav1.IsControlledBy(obj, owner)) {
-		return fmt.Errorf("TLS resource %s/%s already exists outside this integration", obj.GetNamespace(), obj.GetName())
-	}
-	return nil
 }
 
 // validateTLSBundle requires a nonempty PEM bundle of CA certificates.

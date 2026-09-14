@@ -206,16 +206,17 @@ func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) error {
 	var errCount int
 
-	ingestOpts := r.specToIngestOptions(receiver)
+	ingestOpts, err := r.specToIngestOptions(ctx, receiver)
+	if err != nil {
+		return err
+	}
 	expectIngesters := make([]string, len(ingestOpts))
 	for i, opt := range ingestOpts {
 		expectIngesters[i] = opt.GetGeneratedResourceName()
-		objects := opt.Build()
-		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &receiver, objects); err != nil {
-			r.logger.Error(err, "failed to prepare ingester TLS resources")
-			errCount++
-			continue
+		if err := opt.Valid(); err != nil {
+			return err
 		}
+		objects := opt.Build()
 		errCount += r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, objects)
 	}
 	// we won't error out here yet as we don't want to delay updating the router configmap
@@ -224,12 +225,15 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 	if err != nil {
 		return fmt.Errorf("failed to build hashring config: %w", err)
 	}
-	routerOpts := r.specToRouterOptions(receiver, string(hashringConfig))
-
-	routerObjects := routerOpts.Build()
-	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &receiver, routerObjects); err != nil {
+	routerOpts, err := r.specToRouterOptions(ctx, receiver, string(hashringConfig))
+	if err != nil {
 		return err
 	}
+
+	if err := routerOpts.Valid(); err != nil {
+		return err
+	}
+	routerObjects := routerOpts.Build()
 	if errs := r.handler.CreateOrUpdate(ctx, receiver.GetNamespace(), &receiver, routerObjects); errs > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the receive router", errs)
 	}
@@ -248,7 +252,16 @@ func (r *ThanosReceiveReconciler) syncResources(ctx context.Context, receiver mo
 
 }
 
-func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosiov1alpha1.ThanosReceive) []manifests.Buildable {
+func (r *ThanosReceiveReconciler) specToIngestOptions(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive) ([]manifests.Buildable, error) {
+	var trustChecksum string
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		var err error
+		trustChecksum, err = r.handler.GetConfigMapChecksum(ctx, receiver.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
 	opts := make([]manifests.Buildable, len(receiver.Spec.Ingester.Hashrings))
 	for i, v := range receiver.Spec.Ingester.Hashrings {
 		opt := receiverV1Alpha1ToIngesterOptions(receiverV1Alpha1ToIngesterTransformInput{
@@ -256,19 +269,28 @@ func (r *ThanosReceiveReconciler) specToIngestOptions(receiver monitoringthanosi
 			Spec:        v,
 			FeatureGate: r.featureGate,
 		})
+		opt.Checksum = trustChecksum
 		opt.HashringName = v.Name
 		opts[i] = opt
 	}
-	return opts
+	return opts, nil
 }
 
-func (r *ThanosReceiveReconciler) specToRouterOptions(receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) manifests.Buildable {
+func (r *ThanosReceiveReconciler) specToRouterOptions(ctx context.Context, receiver monitoringthanosiov1alpha1.ThanosReceive, hashringConfig string) (manifests.Buildable, error) {
 	opts := receiverV1Alpha1ToRouterOptions(receiverV1Alpha1ToRouterTransformInput{
 		CRD:         receiver,
 		FeatureGate: r.featureGate,
 	})
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		var err error
+		opts.Checksum, err = r.handler.GetConfigMapChecksum(ctx, receiver.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
 	opts.HashringConfig = hashringConfig
-	return opts
+	return opts, nil
 }
 
 // buildHashringConfig builds the hashring configuration for the ThanosReceive resource.

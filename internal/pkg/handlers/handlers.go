@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"slices"
 
@@ -269,6 +270,19 @@ func (r *resourcePruner) prune(ctx context.Context, shouldDelete func(client.Obj
 		}
 	}
 	return errCount
+}
+
+func getChecksum(data []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(data))
+}
+
+// GetConfigMapChecksum hashes one data key, returning an empty checksum if the ConfigMap is missing.
+func (h *Handler) GetConfigMapChecksum(ctx context.Context, namespace, name, key string) (string, error) {
+	configMap := &corev1.ConfigMap{}
+	if err := h.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, configMap); err != nil {
+		return "", client.IgnoreNotFound(err)
+	}
+	return getChecksum([]byte(configMap.Data[key])), nil
 }
 
 func loggerForObj(logger logr.Logger, obj client.Object) logr.Logger {

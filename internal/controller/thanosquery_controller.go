@@ -162,15 +162,15 @@ func (r *ThanosQueryReconciler) syncResources(ctx context.Context, query monitor
 
 	if query.Spec.QueryFrontend != nil {
 		r.recorder.Eventf(&query, nil, corev1.EventTypeNormal, "BuildingQueryFrontend", "Build", "Building Query Frontend resources")
-		frontend := r.buildQueryFrontend(query)
+		frontend, err := r.buildQueryFrontend(ctx, query)
+		if err != nil {
+			return err
+		}
 
 		expectedResources = append(expectedResources, frontend.GetGeneratedResourceName())
 		objs = append(objs, frontend.Build()...)
 	}
 
-	if err := prepareTLSResources(ctx, r.Client, r.featureGate, &query, objs); err != nil {
-		return err
-	}
 	if errCount := r.handler.CreateOrUpdate(ctx, query.GetNamespace(), &query, objs); errCount > 0 {
 		return fmt.Errorf("failed to create or update %d resources for the querier and query frontend", errCount)
 	}
@@ -192,6 +192,14 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		CRD:         query,
 		FeatureGate: r.featureGate,
 	})
+
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		opts.Checksum, err = r.handler.GetConfigMapChecksum(ctx, query.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
 	opts.Endpoints = endpoints
 
 	return opts, nil
@@ -295,11 +303,20 @@ func (r *ThanosQueryReconciler) resolveTLSFanout(ctx context.Context, endpoint m
 	return endpoints, nil
 }
 
-func (r *ThanosQueryReconciler) buildQueryFrontend(query monitoringthanosiov1alpha1.ThanosQuery) manifests.Buildable {
-	return queryV1Alpha1ToQueryFrontEndOptions(queryV1Alpha1ToQueryFrontEndTransformInput{
+func (r *ThanosQueryReconciler) buildQueryFrontend(ctx context.Context, query monitoringthanosiov1alpha1.ThanosQuery) (manifests.Buildable, error) {
+	opts := queryV1Alpha1ToQueryFrontEndOptions(queryV1Alpha1ToQueryFrontEndTransformInput{
 		CRD:         query,
 		FeatureGate: r.featureGate,
 	})
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		var err error
+		opts.Checksum, err = r.handler.GetConfigMapChecksum(ctx, query.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return opts, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

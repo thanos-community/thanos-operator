@@ -136,16 +136,16 @@ func (r *ThanosStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *ThanosStoreReconciler) syncResources(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) error {
 	var errCount int
-	opts := r.specToOptions(store)
+	opts, err := r.specToOptions(ctx, store)
+	if err != nil {
+		return err
+	}
 	r.metrics.ShardsConfigured.WithLabelValues(store.GetName(), store.GetNamespace()).Set(float64(len(opts)))
 
 	expectShards := make([]string, len(opts))
 	for i, opt := range opts {
 		expectShards[i] = opt.GetGeneratedResourceName()
 		objects := opt.Build()
-		if err := prepareTLSResources(ctx, r.Client, r.featureGate, &store, objects); err != nil {
-			return err
-		}
 		errCount += r.handler.CreateOrUpdate(ctx, store.GetNamespace(), &store, objects)
 	}
 
@@ -182,13 +182,24 @@ func (r *ThanosStoreReconciler) cleanup(ctx context.Context, store monitoringtha
 	return cleanErrCount
 }
 
-func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.ThanosStore) []manifests.Buildable {
+func (r *ThanosStoreReconciler) specToOptions(ctx context.Context, store monitoringthanosiov1alpha1.ThanosStore) ([]manifests.Buildable, error) {
+	var trustChecksum string
+	if r.featureGate.ServerTLSEnabled() {
+		ref := r.featureGate.ServerTLS.CABundle()
+		var err error
+		trustChecksum, err = r.handler.GetConfigMapChecksum(ctx, store.Namespace, ref.Name, ref.Key)
+		if err != nil {
+			return nil, err
+		}
+	}
 	// no sharding strategy, or sharding strategy with 1 shard, return a single store
 	if store.Spec.ShardingStrategy.Shards == 0 || store.Spec.ShardingStrategy.Shards == 1 {
-		return []manifests.Buildable{storeV1Alpha1ToOptions(storeV1Alpha1TransformInput{
+		opts := storeV1Alpha1ToOptions(storeV1Alpha1TransformInput{
 			CRD:         store,
 			FeatureGate: r.featureGate,
-		})}
+		})
+		opts.Checksum = trustChecksum
+		return []manifests.Buildable{opts}, nil
 	}
 
 	shardCount := int(store.Spec.ShardingStrategy.Shards)
@@ -198,6 +209,7 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 			CRD:         store,
 			FeatureGate: r.featureGate,
 		})
+		storeShardOpts.Checksum = trustChecksum
 		storeShardOpts.RelabelConfigs = manifests.RelabelConfigs{
 			{
 				Action:      "hashmod",
@@ -214,7 +226,7 @@ func (r *ThanosStoreReconciler) specToOptions(store monitoringthanosiov1alpha1.T
 		storeShardOpts.ShardIndex = new(i)
 		buildables[i] = storeShardOpts
 	}
-	return buildables
+	return buildables, nil
 }
 
 func (r *ThanosStoreReconciler) pruneOrphanedResources(ctx context.Context, ns, owner string, expectShards []string) int {

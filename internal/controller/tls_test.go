@@ -31,6 +31,7 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/handlers"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/query"
+	"github.com/thanos-community/thanos-operator/internal/pkg/manifests/receive"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 )
 
@@ -229,16 +230,16 @@ func TestAutomaticCAAndRenewal(t *testing.T) {
 	require.Contains(t, bundle.Data[featuregate.TLSCAKey], string(newRoot))
 }
 
-func TestRefusesUnmanagedResources(t *testing.T) {
+func TestTLSReconcilesExistingResources(t *testing.T) {
 	ctx := context.Background()
 	r := newTestTLSReconciler(t)
 	issuer := &cmv1.Issuer{ObjectMeta: metav1.ObjectMeta{Name: manifests.TLSBootstrapIssuerName, Namespace: "test"}}
 	require.NoError(t, r.Client.Create(ctx, issuer))
-	require.ErrorContains(t, reconcileTestTLSNamespace(ctx, r), "outside this integration")
-	r = newTestTLSReconciler(t)
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: "test"}}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: "test"}, Data: map[string][]byte{corev1.TLSCertKey: rootPEM(t)}}
 	require.NoError(t, r.Client.Create(ctx, secret))
-	require.ErrorContains(t, reconcileTestTLSNamespace(ctx, r), "outside this integration")
+	require.NoError(t, reconcileTestTLSNamespace(ctx, r))
+	require.NoError(t, r.Get(ctx, client.ObjectKeyFromObject(issuer), issuer))
+	require.NotNil(t, issuer.Spec.SelfSigned)
 }
 
 func TestTLSExternalIssuer(t *testing.T) {
@@ -269,87 +270,107 @@ func TestExternalIssuerAndWorkloadLifecycle(t *testing.T) {
 	r, h := newTLSResourceReconciler(t)
 	owner := &v1alpha1.ThanosReceive{ObjectMeta: metav1.ObjectMeta{Name: "receive", Namespace: "test", UID: "cr-uid"}}
 	r.featureGate.ServerTLS.CertManager = &featuregate.CertManagerConfig{IssuerRef: &featuregate.IssuerReference{Name: "platform", Kind: "ClusterIssuer"}, CABundleConfigMap: &featuregate.CABundleReference{Name: "trust", Key: "roots.pem"}}
-	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "trust", Namespace: "test"}, Data: map[string]string{"roots.pem": string(rootPEM(t))}}
-	require.NoError(t, r.Client.Create(ctx, bundle))
-	workload := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "receive", Namespace: "test", UID: "workload-uid"}, Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Args: []string{"receive"}}}}}}}
-	resources := manifests.AppendTLSResources([]client.Object{workload}, r.featureGate)
-	for _, obj := range resources {
-		if cert, ok := obj.(*cmv1.Certificate); ok {
-			cert.UID = "certificate-uid"
+	opts := receive.IngesterOptions{Options: manifests.Options{Owner: owner.Name, Namespace: owner.Namespace, Config: r.featureGate}, HashringName: "default"}
+	apply := func() *corev1.PodTemplateSpec {
+		ref := r.featureGate.ServerTLS.CABundle()
+		checksum, err := h.GetConfigMapChecksum(ctx, owner.Namespace, ref.Name, ref.Key)
+		require.NoError(t, err)
+		opts.Checksum = checksum
+		objects := opts.Build()
+		for _, obj := range objects {
+			if cert, ok := obj.(*cmv1.Certificate); ok {
+				cert.UID = "certificate-uid"
+			}
 		}
+		require.Zero(t, h.CreateOrUpdate(ctx, owner.Namespace, owner, objects))
+		workload := &appsv1.StatefulSet{}
+		require.NoError(t, r.Get(ctx, client.ObjectKey{Namespace: owner.Namespace, Name: opts.GetGeneratedResourceName()}, workload))
+		return workload.Spec.Template.DeepCopy()
 	}
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.Zero(t, h.CreateOrUpdate(ctx, owner.Namespace, owner, resources))
+
+	initial := apply()
+	require.Empty(t, initial.Annotations[manifests.TLSTrustChecksumAnnotation], "build and apply before trust exists")
 	cert := &cmv1.Certificate{}
-	key := client.ObjectKey{Name: manifests.TLSResourceName(workload.Name), Namespace: "test"}
-	require.NoError(t, r.Client.Get(ctx, key, cert))
+	key := client.ObjectKey{Name: manifests.TLSResourceName(opts.GetGeneratedResourceName()), Namespace: owner.Namespace}
+	require.NoError(t, r.Get(ctx, key, cert))
 	require.True(t, metav1.IsControlledBy(cert, owner))
 	web := &corev1.ConfigMap{}
-	require.NoError(t, r.Client.Get(ctx, key, web))
+	require.NoError(t, r.Get(ctx, key, web))
 	require.True(t, metav1.IsControlledBy(web, owner))
-
+	require.True(t, apierrors.IsNotFound(r.Get(ctx, key, &corev1.Secret{})), "cert-manager issues the leaf Secret separately")
 	require.Equal(t, "ClusterIssuer", cert.Spec.IssuerRef.Kind)
-	require.Equal(t, []string{"receive.test.svc", "*.receive.test.svc"}, cert.Spec.DNSNames)
+	dnsName := manifests.ServiceDNSName(opts.GetGeneratedResourceName(), owner.Namespace)
+	require.Equal(t, []string{dnsName, "*." + dnsName}, cert.Spec.DNSNames)
 	require.Equal(t, []cmv1.KeyUsage{cmv1.UsageDigitalSignature, cmv1.UsageServerAuth}, cert.Spec.Usages)
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	initialTemplate := workload.Spec.Template.DeepCopy()
-	first := initialTemplate.Annotations[manifests.TLSTrustChecksumAnnotation]
-	require.NotEmpty(t, first, "trust checksum must exist before leaf issuance")
+
+	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "trust", Namespace: owner.Namespace}, Data: map[string]string{"roots.pem": string(rootPEM(t))}}
+	require.NoError(t, r.Create(ctx, bundle))
+	require.NoError(t, reconcileTestTLSNamespace(ctx, r))
+	trusted := apply()
+	require.NotEmpty(t, trusted.Annotations[manifests.TLSTrustChecksumAnnotation])
 	secret := managedSecret(key.Name, []byte("certificate one"))
-	require.NoError(t, r.Client.Create(ctx, secret))
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.Zero(t, h.CreateOrUpdate(ctx, owner.Namespace, owner, resources))
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.Equal(t, *initialTemplate, workload.Spec.Template, "initial issuance must not roll pods")
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.Equal(t, *initialTemplate, workload.Spec.Template, "unchanged trust must keep the template stable")
+	require.NoError(t, r.Create(ctx, secret))
 	require.NoError(t, r.syncCertificateSecrets(ctx))
-	require.NoError(t, r.Client.Get(ctx, key, secret))
+	require.NoError(t, r.Get(ctx, key, secret))
 	require.True(t, metav1.IsControlledBy(secret, cert))
+	require.Equal(t, trusted, apply(), "initial leaf issuance must not roll pods")
 	secret.Data[corev1.TLSCertKey] = []byte("certificate two")
 	secret.Data[corev1.TLSPrivateKeyKey] = []byte("rotated private key")
-	require.NoError(t, r.Client.Update(ctx, secret))
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.Equal(t, *initialTemplate, workload.Spec.Template, "leaf renewal must not roll pods")
+	require.NoError(t, r.Update(ctx, secret))
+	require.Equal(t, trusted, apply(), "leaf renewal must not roll pods")
 	bundle.Data["roots.pem"] += string(rootPEM(t))
-	require.NoError(t, r.Client.Update(ctx, bundle))
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.NotEqual(t, first, workload.Spec.Template.Annotations[manifests.TLSTrustChecksumAnnotation], "trust changes must refresh clients")
+	require.NoError(t, r.Update(ctx, bundle))
+	require.NotEqual(t, trusted.Annotations[manifests.TLSTrustChecksumAnnotation], apply().Annotations[manifests.TLSTrustChecksumAnnotation], "trust changes must refresh clients")
 	require.Zero(t, h.NewResourcePruner().WithCertificate().WithConfigMap().
 		PruneByOwner(ctx, owner, client.MatchingLabels{manifests.TLSLabel: "true"}))
 	// The fake client does not run garbage collection; the Secret follows its Certificate.
-	require.NoError(t, r.Client.Get(ctx, key, secret))
+	require.NoError(t, r.Get(ctx, key, secret))
 	require.True(t, metav1.IsControlledBy(secret, cert))
-	require.True(t, apierrors.IsNotFound(r.Client.Get(ctx, key, &cmv1.Certificate{})))
-	require.True(t, apierrors.IsNotFound(r.Client.Get(ctx, key, &corev1.ConfigMap{})))
-	require.NoError(t, r.Client.Get(ctx, client.ObjectKeyFromObject(bundle), &corev1.ConfigMap{}), "external trust must survive disable")
+	require.True(t, apierrors.IsNotFound(r.Get(ctx, key, &cmv1.Certificate{})))
+	require.True(t, apierrors.IsNotFound(r.Get(ctx, key, &corev1.ConfigMap{})))
+	require.NoError(t, r.Get(ctx, client.ObjectKeyFromObject(bundle), &corev1.ConfigMap{}), "external trust must survive disable")
 }
 
-func TestTrustChecksumRequiresValidBundle(t *testing.T) {
+func TestTLSTrustChecksum(t *testing.T) {
 	ctx := context.Background()
-	r, _ := newTLSResourceReconciler(t)
-	owner := &v1alpha1.ThanosReceive{ObjectMeta: metav1.ObjectMeta{Name: "receive", Namespace: "test", UID: "cr-uid"}}
-	workload := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "query", Namespace: "test"},
-		Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{Args: []string{"query"}}},
-		}}},
-	}
-	initial := workload.Spec.Template.DeepCopy()
-	resources := []client.Object{workload}
-	require.Error(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: "test"}}
-	require.NoError(t, r.Client.Create(ctx, bundle))
+	r := newTestTLSReconciler(t)
+	h := handlers.NewHandler(r.Client, r.Scheme, logr.Discard())
+	ref := r.featureGate.ServerTLS.CABundle()
+	checksum, err := h.GetConfigMapChecksum(ctx, r.namespace, ref.Name, ref.Key)
+	require.NoError(t, err)
+	require.Empty(t, checksum, "missing trust must not prevent resource creation")
+	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: featuregate.TLSCAName, Namespace: r.namespace}, Data: map[string]string{featuregate.TLSCAKey: string(rootPEM(t))}}
+	require.NoError(t, r.Create(ctx, bundle))
+	first, err := h.GetConfigMapChecksum(ctx, r.namespace, ref.Name, ref.Key)
+	require.NoError(t, err)
+	require.NotEmpty(t, first)
+	bundle.Data["unrelated"] = "changed"
+	require.NoError(t, r.Update(ctx, bundle))
+	checksum, err = h.GetConfigMapChecksum(ctx, r.namespace, ref.Name, ref.Key)
+	require.NoError(t, err)
+	require.Equal(t, first, checksum)
+	bundle.Data[featuregate.TLSCAKey] += string(rootPEM(t))
+	require.NoError(t, r.Update(ctx, bundle))
+	checksum, err = h.GetConfigMapChecksum(ctx, r.namespace, ref.Name, ref.Key)
+	require.NoError(t, err)
+	require.NotEqual(t, first, checksum)
+}
+
+func TestTLSValidatesExternalTrust(t *testing.T) {
+	ctx := context.Background()
+	r := newTestTLSReconciler(t)
+	r.featureGate.ServerTLS.CertManager = &featuregate.CertManagerConfig{IssuerRef: &featuregate.IssuerReference{Name: "platform", Kind: "ClusterIssuer"}, CABundleConfigMap: &featuregate.CABundleReference{Name: "trust", Key: "roots.pem"}}
+	require.Error(t, reconcileTestTLSNamespace(ctx, r))
+	bundle := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "trust", Namespace: r.namespace}}
+	require.NoError(t, r.Create(ctx, bundle))
 	for _, content := range []string{"", "not PEM"} {
-		bundle.Data = map[string]string{featuregate.TLSCAKey: content}
-		require.NoError(t, r.Client.Update(ctx, bundle))
-		require.Error(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-		require.Equal(t, *initial, workload.Spec.Template)
+		bundle.Data = map[string]string{"roots.pem": content}
+		require.NoError(t, r.Update(ctx, bundle))
+		require.Error(t, reconcileTestTLSNamespace(ctx, r))
 	}
-	bundle.Data[featuregate.TLSCAKey] = string(rootPEM(t))
-	require.NoError(t, r.Client.Update(ctx, bundle))
-	require.NoError(t, prepareTLSResources(ctx, r.Client, r.featureGate, owner, resources))
-	require.NotEmpty(t, workload.Spec.Template.Annotations[manifests.TLSTrustChecksumAnnotation])
+	bundle.Data["roots.pem"] = string(rootPEM(t))
+	require.NoError(t, r.Update(ctx, bundle))
+	require.NoError(t, reconcileTestTLSNamespace(ctx, r))
 }
 
 func TestTLSShardPruning(t *testing.T) {

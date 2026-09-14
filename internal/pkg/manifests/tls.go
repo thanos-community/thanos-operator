@@ -1,8 +1,6 @@
 package manifests
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -130,67 +128,29 @@ func AppendTLSResources(objects []client.Object, cfg featuregate.Config) []clien
 	return objects
 }
 
-// ValidateTLSWorkload rejects Receive transports that cannot provide TLS.
-func ValidateTLSWorkload(template *corev1.PodTemplateSpec) error {
-	c := template.Spec.Containers[0]
-	for _, arg := range c.Args {
-		if strings.HasPrefix(arg, "--receive.replication-protocol=capnproto") || strings.HasPrefix(arg, "--receive.capnproto-address=") {
-			return fmt.Errorf("TLS requires Receive's gRPC replication protocol")
-		}
+// TLSVolumes contains the leaf key pair, public trust, and HTTP configuration.
+func TLSVolumes(name string, cfg featuregate.Config) []corev1.Volume {
+	ca := cfg.ServerTLS.CABundle()
+	return []corev1.Volume{
+		{Name: "thanos-tls-server", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: TLSResourceName(name), DefaultMode: ptr.To(int32(420))}}},
+		{Name: "thanos-tls-ca", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: ca.Name}, DefaultMode: ptr.To(int32(420)), Items: []corev1.KeyToPath{{Key: ca.Key, Path: "ca.crt"}}}}},
+		{Name: "thanos-tls-web", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: TLSResourceName(name)}, DefaultMode: ptr.To(int32(420))}}},
 	}
-	return nil
 }
 
-func augmentTLS(obj client.Object, opts Options) {
-	if !opts.ServerTLSEnabled() {
-		return
+func TLSVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{Name: "thanos-tls-server", MountPath: TLSMountPath + "/server", ReadOnly: true},
+		{Name: "thanos-tls-ca", MountPath: TLSMountPath + "/ca", ReadOnly: true},
+		{Name: "thanos-tls-web", MountPath: TLSMountPath + "/web", ReadOnly: true},
 	}
-	t := PodTemplate(obj)
-	if t == nil {
-		return
+}
+
+func TLSProbeScheme(defaultScheme corev1.URIScheme, cfg featuregate.Config) corev1.URIScheme {
+	if cfg.ServerTLSEnabled() {
+		return corev1.URISchemeHTTPS
 	}
-	c := &t.Spec.Containers[0]
-	name := TLSResourceName(obj.GetName())
-	ca := opts.ServerTLS.CABundle()
-	t.Labels = MergeMaps(t.Labels, map[string]string{TLSLabel: "true"})
-	t.Spec.Volumes = append(t.Spec.Volumes,
-		corev1.Volume{Name: "thanos-tls-server", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: name, DefaultMode: ptr.To(int32(420))}}},
-		corev1.Volume{Name: "thanos-tls-ca", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: ca.Name}, DefaultMode: ptr.To(int32(420)), Items: []corev1.KeyToPath{{Key: ca.Key, Path: "ca.crt"}}}}},
-		corev1.Volume{Name: "thanos-tls-web", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: name}, DefaultMode: ptr.To(int32(420))}}},
-	)
-	c.VolumeMounts = append(c.VolumeMounts,
-		corev1.VolumeMount{Name: "thanos-tls-server", MountPath: TLSMountPath + "/server", ReadOnly: true},
-		corev1.VolumeMount{Name: "thanos-tls-ca", MountPath: TLSMountPath + "/ca", ReadOnly: true},
-		corev1.VolumeMount{Name: "thanos-tls-web", MountPath: TLSMountPath + "/web", ReadOnly: true},
-	)
-	args := []string{"--http.config=" + TLSWebConfigFile}
-	switch c.Args[0] {
-	case "query", "store", receiveCommand, "rule":
-		args = append(args, "--grpc-server-tls-cert="+TLSCertFile, "--grpc-server-tls-key="+TLSKeyFile)
-	}
-	if c.Args[0] == receiveCommand {
-		args = append(args, "--remote-write.server-tls-cert="+TLSCertFile, "--remote-write.server-tls-key="+TLSKeyFile,
-			"--remote-write.client-tls-secure", "--remote-write.client-tls-ca="+TLSCAFile)
-	}
-	c.Args = MergeArgs(c.Args, args)
-	for _, probe := range []*corev1.Probe{c.StartupProbe, c.ReadinessProbe, c.LivenessProbe} {
-		if probe != nil && probe.HTTPGet != nil {
-			probe.HTTPGet.Scheme = corev1.URISchemeHTTPS
-		}
-	}
-	// The existing reloader's HTTP client supports the pod-local TLS endpoint.
-	if c.Args[0] == "rule" {
-		for i := range t.Spec.Containers {
-			if t.Spec.Containers[i].Name != "config-reloader" {
-				continue
-			}
-			for j, arg := range t.Spec.Containers[i].Args {
-				if strings.HasPrefix(arg, "--reload-url=http://localhost:") {
-					t.Spec.Containers[i].Args[j] = strings.Replace(arg, "http://", "https://", 1)
-				}
-			}
-		}
-	}
+	return defaultScheme
 }
 
 // ConfigureTLSMonitors uses the public trust bundle for Prometheus scrapes.

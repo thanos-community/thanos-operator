@@ -23,7 +23,7 @@ import (
 
 func TestTLSComponents(t *testing.T) {
 	for _, enabled := range []bool{false, true} {
-		opts := manifests.Options{Owner: "test", Namespace: "test", Config: featuregate.Config{
+		opts := manifests.Options{Owner: "test", Namespace: "test", Checksum: "test-trust", Config: featuregate.Config{
 			ServerTLS:      &featuregate.ServerTLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: enabled}},
 			ServiceMonitor: &featuregate.ServiceMonitorConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: true}},
 		}}
@@ -74,8 +74,10 @@ func TestTLSComponents(t *testing.T) {
 					args := strings.Join(c.Args, " ")
 					require.Equal(t, enabled, strings.Contains(args, "--http.config="))
 					if !enabled {
+						require.Empty(t, pod.Annotations[manifests.TLSTrustChecksumAnnotation])
 						continue
 					}
+					require.Equal(t, "test-trust", pod.Annotations[manifests.TLSTrustChecksumAnnotation])
 					cert, config := certs[0], configs[0]
 					require.Equal(t, obj.GetNamespace(), cert.Namespace)
 					require.Equal(t, cert.Namespace, config.Namespace)
@@ -100,7 +102,6 @@ func TestTLSComponents(t *testing.T) {
 							require.Equal(t, config.Name, volume.ConfigMap.Name)
 						}
 					}
-					require.NoError(t, manifests.ValidateTLSWorkload(pod))
 					for _, probe := range []*corev1.Probe{c.StartupProbe, c.ReadinessProbe, c.LivenessProbe} {
 						if probe != nil && probe.HTTPGet != nil {
 							require.Equal(t, corev1.URISchemeHTTPS, probe.HTTPGet.Scheme)
@@ -129,7 +130,6 @@ func TestTLSDoesNotRestrictImages(t *testing.T) {
 	} {
 		t.Run(image, func(t *testing.T) {
 			pod := manifests.PodTemplate(query.NewQueryDeployment(query.Options{Options: manifests.Options{Owner: "test", Image: &image, Config: flags.ToFeatureGate()}}))
-			require.NoError(t, manifests.ValidateTLSWorkload(pod))
 			require.Equal(t, image, pod.Spec.Containers[0].Image)
 			require.Contains(t, pod.Spec.Containers[0].Args, "--http.config="+manifests.TLSWebConfigFile)
 		})
@@ -156,4 +156,29 @@ func TestTLSKeepsSidecarMetricsSeparate(t *testing.T) {
 		}
 	}
 	require.True(t, foundSidecar)
+}
+
+func TestTLSReceiveReplicationValidation(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		for _, tc := range []struct {
+			protocol string
+			args     []string
+		}{
+			{protocol: "capnproto"},
+			{args: []string{"--receive.replication-protocol=capnproto"}},
+			{args: []string{"--receive.capnproto-address=0.0.0.0:19391"}},
+		} {
+			opts := manifests.Options{Owner: "test", Additional: manifests.Additional{Args: tc.args}, Config: featuregate.Config{ServerTLS: &featuregate.ServerTLSConfig{FeatureConfig: featuregate.FeatureConfig{Enabled: enabled}}}}
+			for _, b := range []manifests.Buildable{
+				receive.IngesterOptions{Options: opts, HashringName: "default", ReplicationProtocol: tc.protocol},
+				receive.RouterOptions{Options: opts, ReplicationProtocol: tc.protocol},
+			} {
+				if enabled {
+					require.ErrorContains(t, b.Valid(), "TLS requires Receive's gRPC replication protocol")
+				} else {
+					require.NoError(t, b.Valid())
+				}
+			}
+		}
+	}
 }

@@ -138,6 +138,16 @@ func NewRulerStatefulSet(opts Options) *appsv1.StatefulSet {
 
 func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[string]string) *appsv1.StatefulSet {
 	name := opts.GetGeneratedResourceName()
+	podLabels := objectMetaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	podAffinity := corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
@@ -199,7 +209,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/-/ready",
 					Port:   intstr.FromInt32(HTTPPort),
-					Scheme: corev1.URISchemeHTTP,
+					Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -212,7 +222,7 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/-/ready",
 					Port:   intstr.FromInt32(HTTPPort),
-					Scheme: corev1.URISchemeHTTP,
+					Scheme: manifests.TLSProbeScheme(corev1.URISchemeHTTP, opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -223,8 +233,9 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/-/healthy",
-					Port: intstr.FromInt32(HTTPPort),
+					Path:   "/-/healthy",
+					Port:   intstr.FromInt32(HTTPPort),
+					Scheme: manifests.TLSProbeScheme("", opts.Config),
 				},
 			},
 			TimeoutSeconds:   1,
@@ -358,7 +369,8 @@ func newRulerStatefulSet(opts Options, selectorLabels, objectMetaLabels map[stri
 			PodManagementPolicy: appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: objectMetaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:           &podAffinity,
@@ -539,6 +551,14 @@ func (di DiscoveryInfos) toRemoteWrite() remoteWriteConfig {
 
 func rulerArgs(opts Options) []string {
 	args := []string{"rule"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+			"--grpc-server-tls-cert="+manifests.TLSCertFile,
+			"--grpc-server-tls-key="+manifests.TLSKeyFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
 		fmt.Sprintf("--http-address=0.0.0.0:%d", HTTPPort),
@@ -735,9 +755,13 @@ func buildConfigReloaderContainer(opts Options) corev1.Container {
 		watchedDirs = append(watchedDirs, mountPath)
 	}
 
+	scheme := "http"
+	if opts.ServerTLSEnabled() {
+		scheme = "https"
+	}
 	args := []string{
 		fmt.Sprintf("--listen-address=:%d", configReloaderPort),
-		fmt.Sprintf("--reload-url=http://localhost:%d/-/reload", HTTPPort),
+		fmt.Sprintf("--reload-url=%s://localhost:%d/-/reload", scheme, HTTPPort),
 	}
 
 	for _, dir := range watchedDirs {

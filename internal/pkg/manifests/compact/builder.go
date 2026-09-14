@@ -99,6 +99,16 @@ func NewStatefulSet(opts Options) *appsv1.StatefulSet {
 
 func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLabels map[string]string) *appsv1.StatefulSet {
 	name := opts.GetGeneratedResourceName()
+	podLabels := metaLabels
+	var podAnnotations map[string]string
+	if opts.ServerTLSEnabled() {
+		podLabels = manifests.MergeMaps(podLabels, map[string]string{manifests.TLSLabel: "true"})
+		if opts.Checksum != "" {
+			podAnnotations = map[string]string{manifests.TLSTrustChecksumAnnotation: opts.Checksum}
+		}
+		opts.Additional.Volumes = append(opts.Additional.Volumes, manifests.TLSVolumes(name, opts.Config)...)
+		opts.Additional.VolumeMounts = append(opts.Additional.VolumeMounts, manifests.TLSVolumeMounts()...)
+	}
 	vc := []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -160,7 +170,8 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 			PodManagementPolicy:  appsv1.PodManagementPolicyType(opts.PodManagementPolicy),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: metaLabels,
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: name,
@@ -183,8 +194,9 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 							StartupProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/ready",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -195,8 +207,9 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/ready",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/ready",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -207,8 +220,9 @@ func newShardStatefulSet(opts Options, selectorLabels map[string]string, metaLab
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/-/healthy",
-										Port: intstr.FromInt32(HTTPPort),
+										Path:   "/-/healthy",
+										Port:   intstr.FromInt32(HTTPPort),
+										Scheme: manifests.TLSProbeScheme("", opts.Config),
 									},
 								},
 								TimeoutSeconds:   1,
@@ -286,6 +300,12 @@ func newService(opts Options, selectorLabels, objectMetaLabels map[string]string
 
 func compactorArgsFrom(opts Options) []string {
 	args := []string{"compact"}
+	if opts.ServerTLSEnabled() {
+		args = append(args,
+			"--http.config="+manifests.TLSWebConfigFile,
+		)
+	}
+
 	args = append(args, opts.ToFlags()...)
 	args = append(args,
 		"--wait",
