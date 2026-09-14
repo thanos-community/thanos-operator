@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,14 +53,20 @@ func (opts Options) Build() []client.Object {
 	objs = append(objs, newQueryFrontendService(opts, selectorLabels, objectMetaLabels))
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
 	}
 	if opts.PodDisruptionConfig != nil {
 		objs = append(objs, manifests.NewPodDisruptionBudget(name, opts.Namespace, selectorLabels, objectMetaLabels, opts.Annotations, *opts.PodDisruptionConfig))
 	}
 
-	objs = manifests.AppendTLSResources(objs, opts.Config)
-	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
+	}
+	return objs
 }
 
 func (opts Options) Valid() error {

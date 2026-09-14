@@ -5,7 +5,6 @@ import (
 
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,9 +88,6 @@ func BuildNamespaceTLSResources(namespace string) []client.Object {
 
 // AppendTLSResources adds the Certificate and HTTP configuration for each workload.
 func AppendTLSResources(objects []client.Object, cfg featuregate.Config) []client.Object {
-	if !cfg.ServerTLSEnabled() {
-		return objects
-	}
 	issuer := cfg.ServerTLS.Issuer()
 	for _, obj := range objects {
 		template := PodTemplate(obj)
@@ -151,30 +147,4 @@ func TLSProbeScheme(defaultScheme corev1.URIScheme, cfg featuregate.Config) core
 		return corev1.URISchemeHTTPS
 	}
 	return defaultScheme
-}
-
-// ConfigureTLSMonitors uses the public trust bundle for Prometheus scrapes.
-func ConfigureTLSMonitors(objects []client.Object, cfg featuregate.Config, port string) []client.Object {
-	if !cfg.ServerTLSEnabled() {
-		return objects
-	}
-	for _, obj := range objects {
-		sm, ok := obj.(*monitoringv1.ServiceMonitor)
-		if !ok {
-			continue
-		}
-		ca := cfg.ServerTLS.CABundle()
-		for i := range sm.Spec.Endpoints {
-			ep := &sm.Spec.Endpoints[i]
-			if ep.Port != port {
-				continue
-			}
-			ep.Scheme = ptr.To(monitoringv1.SchemeHTTPS)
-			ep.TLSConfig = &monitoringv1.TLSConfig{SafeTLSConfig: monitoringv1.SafeTLSConfig{
-				CA:         monitoringv1.SecretOrConfigMap{ConfigMap: &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: ca.Name}, Key: ca.Key}},
-				ServerName: new(ServiceDNSName(sm.Name, sm.Namespace)),
-			}}
-		}
-	}
-	return objects
 }

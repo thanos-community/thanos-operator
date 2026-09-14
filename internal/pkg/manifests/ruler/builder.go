@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	k8syaml "sigs.k8s.io/yaml"
 
+	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	manifestsstore "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
@@ -105,10 +106,16 @@ func (opts Options) Build() []client.Object {
 	}
 
 	if opts.ServiceMonitorEnabled() {
-		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName))
+		var tlsConfig *featuregate.ServerTLSConfig
+		if opts.ServerTLSEnabled() {
+			tlsConfig = opts.ServerTLS
+		}
+		objs = append(objs, manifests.BuildServiceMonitor(name, opts.Namespace, objectMetaLabels, selectorLabels, *opts.ServiceMonitor, HTTPPortName, tlsConfig))
 	}
-	objs = manifests.AppendTLSResources(objs, opts.Config)
-	return manifests.ConfigureTLSMonitors(objs, opts.Config, HTTPPortName)
+	if opts.ServerTLSEnabled() {
+		objs = manifests.AppendTLSResources(objs, opts.Config)
+	}
+	return objs
 }
 
 func (opts Options) Valid() error {
