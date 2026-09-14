@@ -54,6 +54,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -117,15 +118,17 @@ func InstallCertManager(c client.Client) error {
 		return err
 	}
 	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	if err := c.Get(ctx, client.ObjectKey{Namespace: "cert-manager", Name: "cert-manager"}, deployment); err != nil {
-		return err
-	}
-	args := slices.DeleteFunc(deployment.Spec.Template.Spec.Containers[0].Args, func(arg string) bool {
-		return arg == "--enable-certificate-owner-ref" || strings.HasPrefix(arg, "--enable-certificate-owner-ref=")
-	})
-	deployment.Spec.Template.Spec.Containers[0].Args = append(args, "--enable-certificate-owner-ref=true")
-	if err := c.Update(ctx, deployment); err != nil {
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		deployment := &appsv1.Deployment{}
+		if err := c.Get(ctx, client.ObjectKey{Namespace: "cert-manager", Name: "cert-manager"}, deployment); err != nil {
+			return err
+		}
+		args := slices.DeleteFunc(deployment.Spec.Template.Spec.Containers[0].Args, func(arg string) bool {
+			return arg == "--enable-certificate-owner-ref" || strings.HasPrefix(arg, "--enable-certificate-owner-ref=")
+		})
+		deployment.Spec.Template.Spec.Containers[0].Args = append(args, "--enable-certificate-owner-ref=true")
+		return c.Update(ctx, deployment)
+	}); err != nil {
 		return err
 	}
 	cmd = exec.Command("kubectl", "rollout", "status", "deployment/cert-manager",
