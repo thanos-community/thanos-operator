@@ -129,6 +129,8 @@ var _ = Describe("core with TLS", Ordered, func() {
 							CommonFields: v1alpha1.CommonFields{
 								Version: suite.ThanosVersion(),
 							},
+							// Keep fallback reloads within the remote-write timeout.
+							Additional:        v1alpha1.Additional{Args: []string{"--receive.hashrings-file-refresh-interval=5s"}},
 							Replicas:          1,
 							ReplicationFactor: 1,
 							HashringPolicy:    ptr.To(v1alpha1.HashringPolicyStatic),

@@ -69,6 +69,7 @@ jobs:
     name: E2E tests (Thanos ${{ matrix.thanos-version }}) (${{ matrix.kind-image }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         kind-image: ['kindest/node:v1.34.0']
         thanos-version:
