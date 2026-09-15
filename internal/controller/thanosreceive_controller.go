@@ -192,6 +192,8 @@ func (r *ThanosReceiveReconciler) buildController(bld builder.Builder) error {
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Watches(
 			&discoveryv1.EndpointSlice{},
 			r.enqueueForEndpointSlice(r.Client),
