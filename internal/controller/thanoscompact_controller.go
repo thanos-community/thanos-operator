@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	monitoringthanosiov1alpha1 "github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/featuregate"
@@ -29,6 +30,7 @@ import (
 	manifestcompact "github.com/thanos-community/thanos-operator/internal/pkg/manifests/compact"
 	controllermetrics "github.com/thanos-community/thanos-operator/internal/pkg/metrics"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -137,6 +139,10 @@ func NewThanosCompactReconciler(conf Config, client client.Client, scheme *runti
 func (r *ThanosCompactReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&monitoringthanosiov1alpha1.ThanosCompact{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&corev1.Service{}).
+		Owns(&appsv1.StatefulSet{}).
+		Owns(&monitoringv1.ServiceMonitor{}).
 		Complete(r)
 }
 

@@ -32,6 +32,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -226,6 +227,7 @@ func (r *ThanosStoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&monitoringv1.ServiceMonitor{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
 		Complete(r)
 
 	if err != nil {
