@@ -31,15 +31,55 @@ func TestRouterGRPCServiceConfig(t *testing.T) {
 
 	// Reject ignored top-level fields, including the old misplaced retryPolicy.
 	var config struct {
-		LoadBalancingPolicy string `json:"loadBalancingPolicy"`
+		LoadBalancingPolicy string          `json:"loadBalancingPolicy"`
+		MethodConfig        json.RawMessage `json:"methodConfig"`
 	}
 	decoder := json.NewDecoder(strings.NewReader(serviceConfig))
 	decoder.DisallowUnknownFields()
 	assert.NilError(t, decoder.Decode(&config))
 	assert.Equal(t, config.LoadBalancingPolicy, "round_robin")
 
-	for _, code := range []codes.Code{codes.Unavailable, codes.AlreadyExists} {
-		t.Run(code.String(), func(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		firstCode    codes.Code
+		retryCode    codes.Code
+		wantCode     codes.Code
+		wantAttempts int32
+	}{
+		{
+			name:         "success",
+			firstCode:    codes.OK,
+			wantCode:     codes.OK,
+			wantAttempts: 1,
+		},
+		{
+			name:         "unavailable_then_success",
+			firstCode:    codes.Unavailable,
+			retryCode:    codes.OK,
+			wantCode:     codes.OK,
+			wantAttempts: 2,
+		},
+		{
+			name:         "persistent_unavailable",
+			firstCode:    codes.Unavailable,
+			retryCode:    codes.Unavailable,
+			wantCode:     codes.Unavailable,
+			wantAttempts: 2,
+		},
+		{
+			name:         "conflict",
+			firstCode:    codes.AlreadyExists,
+			wantCode:     codes.AlreadyExists,
+			wantAttempts: 1,
+		},
+		{
+			name:         "internal_error",
+			firstCode:    codes.Internal,
+			wantCode:     codes.Internal,
+			wantAttempts: 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			var attempts atomic.Int32
 			listener := bufconn.Listen(1024 * 1024)
 			server := grpc.NewServer()
@@ -52,7 +92,13 @@ func TestRouterGRPCServiceConfig(t *testing.T) {
 						if err := decode(&emptypb.Empty{}); err != nil {
 							return nil, err
 						}
-						attempts.Add(1)
+						code := tc.firstCode
+						if attempts.Add(1) > 1 {
+							code = tc.retryCode
+						}
+						if code == codes.OK {
+							return &emptypb.Empty{}, nil
+						}
 						return nil, status.Error(code, "ingester rejected write")
 					},
 				}},
@@ -77,8 +123,18 @@ func TestRouterGRPCServiceConfig(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 			err = conn.Invoke(ctx, "/thanos.WriteableStore/RemoteWrite", &emptypb.Empty{}, &emptypb.Empty{})
-			assert.Equal(t, status.Code(err), code)
-			assert.Equal(t, attempts.Load(), int32(1))
+			assert.Equal(t, status.Code(err), tc.wantCode)
+			assert.Equal(t, attempts.Load(), tc.wantAttempts)
+
+			policy := conn.GetMethodConfig("/thanos.WriteableStore/RemoteWrite").RetryPolicy
+			assert.Assert(t, policy != nil)
+			assert.Equal(t, policy.MaxAttempts, 2)
+			assert.Equal(t, policy.InitialBackoff, 100*time.Millisecond)
+			assert.Equal(t, policy.MaxBackoff, 100*time.Millisecond)
+			assert.Equal(t, policy.BackoffMultiplier, float64(1))
+			assert.DeepEqual(t, policy.RetryableStatusCodes, map[codes.Code]bool{codes.Unavailable: true})
+			assert.Assert(t, conn.GetMethodConfig("/thanos.WriteableStore/Other").RetryPolicy == nil)
+			assert.Assert(t, conn.GetMethodConfig("/thanos.Store/Series").RetryPolicy == nil)
 		})
 	}
 }

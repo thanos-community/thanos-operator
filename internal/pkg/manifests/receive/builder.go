@@ -554,9 +554,21 @@ func routerArgsFrom(opts RouterOptions) []string {
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
 
-	// Omit retryPolicy to avoid application retries. Transparent retries remain
-	// bounded by Thanos's forwarding timeout and cannot be disabled here.
-	grpcServiceConfig := `{"loadBalancingPolicy":"round_robin"}`
+	// Use the minimum two configured attempts. Transparent retries are excluded
+	// from this limit and remain bounded by Thanos's forwarding timeout.
+	grpcServiceConfig := `{
+  "loadBalancingPolicy": "round_robin",
+  "methodConfig": [{
+    "name": [{"service": "thanos.WriteableStore", "method": "RemoteWrite"}],
+    "retryPolicy": {
+      "maxAttempts": 2,
+      "initialBackoff": "0.1s",
+      "maxBackoff": "0.1s",
+      "backoffMultiplier": 1,
+      "retryableStatusCodes": ["UNAVAILABLE"]
+    }
+  }]
+}`
 
 	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
