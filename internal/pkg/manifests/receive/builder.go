@@ -554,17 +554,9 @@ func routerArgsFrom(opts RouterOptions) []string {
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
 
-	grpcDisableEndlessRetry := `{
-  "loadBalancingPolicy":"round_robin",
-  "retryPolicy": {
-    "maxAttempts": 2,
-    "initialBackoff": "0.1s",
-    "backoffMultiplier": 1,
-    "retryableStatusCodes": [
-  	  "UNAVAILABLE"
-    ]
-  }
-}`
+	// Omit retryPolicy to avoid application retries. Transparent retries remain
+	// bounded by Thanos's forwarding timeout and cannot be disabled here.
+	grpcServiceConfig := `{"loadBalancingPolicy":"round_robin"}`
 
 	args = append(args,
 		fmt.Sprintf("--grpc-address=0.0.0.0:%d", GRPCPort),
@@ -572,7 +564,7 @@ func routerArgsFrom(opts RouterOptions) []string {
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
-		fmt.Sprintf("--receive.grpc-service-config=%s", grpcDisableEndlessRetry),
+		fmt.Sprintf("--receive.grpc-service-config=%s", grpcServiceConfig),
 	)
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))
