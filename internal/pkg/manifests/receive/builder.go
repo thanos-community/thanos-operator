@@ -554,16 +554,20 @@ func routerArgsFrom(opts RouterOptions) []string {
 	args := []string{"receive"}
 	args = append(args, opts.ToFlags()...)
 
-	grpcDisableEndlessRetry := `{
-  "loadBalancingPolicy":"round_robin",
-  "retryPolicy": {
-    "maxAttempts": 2,
-    "initialBackoff": "0.1s",
-    "backoffMultiplier": 1,
-    "retryableStatusCodes": [
-  	  "UNAVAILABLE"
-    ]
-  }
+	// Use the minimum two configured attempts. Transparent retries are excluded
+	// from this limit and remain bounded by Thanos's forwarding timeout.
+	grpcServiceConfig := `{
+  "loadBalancingPolicy": "round_robin",
+  "methodConfig": [{
+    "name": [{"service": "thanos.WriteableStore", "method": "RemoteWrite"}],
+    "retryPolicy": {
+      "maxAttempts": 2,
+      "initialBackoff": "0.1s",
+      "maxBackoff": "0.1s",
+      "backoffMultiplier": 1,
+      "retryableStatusCodes": ["UNAVAILABLE"]
+    }
+  }]
 }`
 
 	args = append(args,
@@ -572,7 +576,7 @@ func routerArgsFrom(opts RouterOptions) []string {
 		fmt.Sprintf("--remote-write.address=0.0.0.0:%d", RemoteWritePort),
 		fmt.Sprintf("--receive.replication-factor=%d", opts.ReplicationFactor),
 		fmt.Sprintf("--receive.hashrings-file=%s/%s", hashringMountPath, HashringConfigKey),
-		fmt.Sprintf("--receive.grpc-service-config=%s", grpcDisableEndlessRetry),
+		fmt.Sprintf("--receive.grpc-service-config=%s", grpcServiceConfig),
 	)
 	for k, v := range opts.ExternalLabels {
 		args = append(args, fmt.Sprintf(`--label=%s="%s"`, k, v))

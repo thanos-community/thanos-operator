@@ -57,10 +57,20 @@ spec:
         - --remote-write.address=0.0.0.0:19291
         - --receive.replication-factor=0
         - --receive.hashrings-file=/var/lib/thanos-receive/hashrings.json
-        - "--receive.grpc-service-config={\n  \"loadBalancingPolicy\":\"round_robin\",\n
-          \ \"retryPolicy\": {\n    \"maxAttempts\": 2,\n    \"initialBackoff\": \"0.1s\",\n
-          \   \"backoffMultiplier\": 1,\n    \"retryableStatusCodes\": [\n  \t  \"UNAVAILABLE\"\n
-          \   ]\n  }\n}"
+        - |-
+          --receive.grpc-service-config={
+            "loadBalancingPolicy": "round_robin",
+            "methodConfig": [{
+              "name": [{"service": "thanos.WriteableStore", "method": "RemoteWrite"}],
+              "retryPolicy": {
+                "maxAttempts": 2,
+                "initialBackoff": "0.1s",
+                "maxBackoff": "0.1s",
+                "backoffMultiplier": 1,
+                "retryableStatusCodes": ["UNAVAILABLE"]
+              }
+            }]
+          }
         env:
         - name: POD_NAME
           valueFrom:
