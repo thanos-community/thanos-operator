@@ -362,13 +362,16 @@ func (r *ThanosQueryReconciler) updateCondition(ctx context.Context, query *moni
 	if r.disableConditionUpdate {
 		return
 	}
-	conditions := query.Status.Conditions
-	meta.SetStatusCondition(&conditions, condition)
-	query.Status.Conditions = conditions
-	if condition.Type == ConditionPaused {
-		query.Status.Paused = new(true)
-	}
-	if err := r.Status().Update(ctx, query); err != nil {
+
+	latest := &monitoringthanosiov1alpha1.ThanosQuery{}
+	err := patchObjectStatus(ctx, r.Client, client.ObjectKeyFromObject(query), latest, func(q *monitoringthanosiov1alpha1.ThanosQuery) error {
+		meta.SetStatusCondition(&q.Status.Conditions, condition)
+		if condition.Type == ConditionPaused {
+			q.Status.Paused = new(true)
+		}
+		return nil
+	})
+	if err != nil {
 		r.logger.Error(err, "failed to update status for ThanosQuery", "name", query.Name)
 	}
 }

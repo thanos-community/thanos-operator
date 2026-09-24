@@ -436,13 +436,16 @@ func (r *ThanosReceiveReconciler) updateCondition(ctx context.Context, receiver 
 	if r.disableConditionUpdate {
 		return
 	}
-	conditions := receiver.Status.Conditions
-	meta.SetStatusCondition(&conditions, condition)
-	receiver.Status.Conditions = conditions
-	if condition.Type == ConditionPaused {
-		receiver.Status.Paused = new(true)
-	}
-	if err := r.Status().Update(ctx, receiver); err != nil {
+
+	latest := &monitoringthanosiov1alpha1.ThanosReceive{}
+	err := patchObjectStatus(ctx, r.Client, client.ObjectKeyFromObject(receiver), latest, func(obj *monitoringthanosiov1alpha1.ThanosReceive) error {
+		meta.SetStatusCondition(&obj.Status.Conditions, condition)
+		if condition.Type == ConditionPaused {
+			obj.Status.Paused = new(true)
+		}
+		return nil
+	})
+	if err != nil {
 		r.logger.Error(err, "failed to update status for ThanosReceive", "name", receiver.Name)
 	}
 }

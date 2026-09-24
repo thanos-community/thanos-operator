@@ -117,6 +117,9 @@ func Setup(gates featuregate.Config, opts ...Option) (*Env, context.Context, con
 	gomega.Expect(store.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	gomega.Expect(ruler.SetupWithManager(env.Manager)).To(gomega.Succeed())
 	gomega.Expect(compact.SetupWithManager(env.Manager)).To(gomega.Succeed())
+	gomega.Expect(controller.NewObjectStatusReconciler(
+		buildConfig("object-status"), env.Manager.GetClient(), env.Manager.GetScheme(),
+	).SetupWithManager(env.Manager)).To(gomega.Succeed())
 
 	env.StartManager(ctx)
 	return env, ctx, cancel

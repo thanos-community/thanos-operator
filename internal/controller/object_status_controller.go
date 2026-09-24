@@ -18,12 +18,15 @@ package controller
 
 import (
 	"context"
-	"time"
+	"reflect"
 
 	"github.com/go-logr/logr"
 
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 
@@ -38,8 +41,10 @@ import (
 	storebldr "github.com/thanos-community/thanos-operator/internal/pkg/manifests/store"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -51,9 +56,19 @@ const (
 	ReasonReconcileComplete = "ReconcileComplete"
 	ReasonReconcileError    = "ReconcileError"
 	ReasonPaused            = "Paused"
+
+	DefaultName = "default"
 )
 
-// ObjectStatusReconciler reconciles status fields of ThanosOperator objects object
+var thanosOwnerKinds = map[string]struct{}{
+	"ThanosQuery":   {},
+	"ThanosReceive": {},
+	"ThanosCompact": {},
+	"ThanosStore":   {},
+	"ThanosRuler":   {},
+}
+
+// ObjectStatusReconciler reconciles replica status fields of Thanos operator CRs.
 type ObjectStatusReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -65,7 +80,7 @@ type ObjectStatusReconciler struct {
 	handler *handlers.Handler
 }
 
-// NewObjectStatusReconciler returns a reconciler for ThanosQuery resources.
+// NewObjectStatusReconciler returns a reconciler for Thanos CR replica status.
 func NewObjectStatusReconciler(conf Config, client client.Client, scheme *runtime.Scheme) *ObjectStatusReconciler {
 	return &ObjectStatusReconciler{
 		Client:   client,
@@ -88,91 +103,109 @@ func NewObjectStatusReconciler(conf Config, client client.Client, scheme *runtim
 //+kubebuilder:rbac:groups=monitoring.thanos.io,resources=thanosrulers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apps,resources=statefulsets;deployments,verbs=get;list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
+// Reconcile updates replica status for the Thanos CR identified by req.
 func (r *ObjectStatusReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.logger.Info("Reconciling ThanosQuery", "request", req)
-	r.updateAllThanosQueryStatuses(ctx)
-	r.updateAllThanosReceiveStatuses(ctx)
-	r.updateAllThanosCompactStatuses(ctx)
-	r.updateAllThanosRulerStatuses(ctx)
-	r.updateAllThanosStoreStatuses(ctx)
+	if handled, err := r.reconcileThanosQueryStatus(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	} else if handled {
+		return ctrl.Result{}, nil
+	}
 
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	if handled, err := r.reconcileThanosReceiveStatus(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	} else if handled {
+		return ctrl.Result{}, nil
+	}
+
+	if handled, err := r.reconcileThanosCompactStatus(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	} else if handled {
+		return ctrl.Result{}, nil
+	}
+
+	if handled, err := r.reconcileThanosRulerStatus(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	} else if handled {
+		return ctrl.Result{}, nil
+	}
+
+	if handled, err := r.reconcileThanosStoreStatus(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	} else if handled {
+		return ctrl.Result{}, nil
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ObjectStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := ctrl.NewControllerManagedBy(mgr).
-		Named("object_status_controller").
-		Watches(&monitoringthanosiov1alpha1.ThanosQuery{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: obj.GetNamespace(),
-					},
-				},
-			}
-		})).
-		Watches(&monitoringthanosiov1alpha1.ThanosCompact{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: obj.GetNamespace(),
-					},
-				},
-			}
-		})).
-		Watches(&monitoringthanosiov1alpha1.ThanosReceive{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: obj.GetNamespace(),
-					},
-				},
-			}
-		})).
-		Watches(&monitoringthanosiov1alpha1.ThanosStore{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: obj.GetNamespace(),
-					},
-				},
-			}
-		})).
-		Watches(&monitoringthanosiov1alpha1.ThanosRuler{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: obj.GetNamespace(),
-					},
-				},
-			}
-		})).
-		Complete(r)
+	enqueueSelf := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}}}
+	})
 
-	if err != nil {
+	return ctrl.NewControllerManagedBy(mgr).
+		Named("object_status_controller").
+		Watches(&monitoringthanosiov1alpha1.ThanosQuery{}, enqueueSelf).
+		Watches(&monitoringthanosiov1alpha1.ThanosCompact{}, enqueueSelf).
+		Watches(&monitoringthanosiov1alpha1.ThanosReceive{}, enqueueSelf).
+		Watches(&monitoringthanosiov1alpha1.ThanosStore{}, enqueueSelf).
+		Watches(&monitoringthanosiov1alpha1.ThanosRuler{}, enqueueSelf).
+		Watches(
+			&appsv1.Deployment{},
+			r.enqueueForWorkload(),
+			builder.WithPredicates(predicate.NewPredicateFuncs(isThanosManagedWorkload)),
+		).
+		Watches(
+			&appsv1.StatefulSet{},
+			r.enqueueForWorkload(),
+			builder.WithPredicates(predicate.NewPredicateFuncs(isThanosManagedWorkload)),
+		).
+		Complete(r)
+}
+
+func isThanosManagedWorkload(obj client.Object) bool {
+	labels := obj.GetLabels()
+	if labels == nil {
+		return false
+	}
+	return labels[manifests.ManagedByLabel] == manifests.DefaultManagedByLabel &&
+		labels[manifests.PartOfLabel] == manifests.DefaultPartOfLabel
+}
+
+func (r *ObjectStatusReconciler) enqueueForWorkload() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		for _, ownerRef := range obj.GetOwnerReferences() {
+			if _, ok := thanosOwnerKinds[ownerRef.Kind]; !ok {
+				continue
+			}
+			return []reconcile.Request{{
+				NamespacedName: types.NamespacedName{
+					Name:      ownerRef.Name,
+					Namespace: obj.GetNamespace(),
+				},
+			}}
+		}
+		return nil
+	})
+}
+
+func (r *ObjectStatusReconciler) patchReplicaStatus(ctx context.Context, key types.NamespacedName, obj client.Object, apply func(client.Object) bool) error {
+	latest := obj.DeepCopyObject().(client.Object)
+	if err := r.Get(ctx, key, latest); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// updateStatus updates the status of the resource.
-func (r *ObjectStatusReconciler) updateStatus(ctx context.Context, object client.Object) {
-	err := r.Status().Update(ctx, object)
-	if err != nil {
-		r.logger.Error(err, "failed to update status for object", "object", object.GetName())
+	if !apply(latest) {
+		return nil
 	}
+
+	// Use Update rather than Patch: DeploymentStatus CRD fields are required when
+	// querierStatus/routerStatus is set, and merge patches can omit zero values.
+	return r.Status().Update(ctx, latest)
 }
 
 type stats struct {
@@ -191,30 +224,21 @@ func (r *ObjectStatusReconciler) getDeploymentStatuses(ctx context.Context, obje
 	var deploymentList appsv1.DeploymentList
 	listOpts := []client.ListOption{
 		client.InNamespace(object.GetNamespace()),
-		client.MatchingLabels(object.GetLabels()),
+		client.MatchingLabels{manifests.OwnerLabel: object.GetName()},
 	}
-	err := r.List(ctx, &deploymentList, listOpts...)
-	if err != nil {
+	if err := r.List(ctx, &deploymentList, listOpts...); err != nil {
 		r.logger.Error(err, "failed to list deployments")
 		return nil
 	}
 
+	gvk := object.GetObjectKind().GroupVersionKind()
 	s := make([]stats, 0)
 	for _, deployment := range deploymentList.Items {
-		isOwned := false
-		for _, ownerRef := range deployment.OwnerReferences {
-			if ownerRef.APIVersion == object.GetObjectKind().GroupVersionKind().GroupVersion().String() &&
-				ownerRef.Kind == object.GetObjectKind().GroupVersionKind().Kind &&
-				ownerRef.Name == object.GetName() {
-				isOwned = true
-				break
-			}
-		}
-		if !isOwned {
+		if !isOwnedBy(deployment.OwnerReferences, gvk, object.GetName()) {
 			continue
 		}
 
-		containerNames := []string{}
+		containerNames := make([]string, 0, len(deployment.Spec.Template.Spec.Containers))
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			containerNames = append(containerNames, container.Name)
 		}
@@ -238,30 +262,21 @@ func (r *ObjectStatusReconciler) getStatefulsetStatuses(ctx context.Context, obj
 	var statefulsetList appsv1.StatefulSetList
 	listOpts := []client.ListOption{
 		client.InNamespace(object.GetNamespace()),
-		client.MatchingLabels(object.GetLabels()),
+		client.MatchingLabels{manifests.OwnerLabel: object.GetName()},
 	}
-	err := r.List(ctx, &statefulsetList, listOpts...)
-	if err != nil {
+	if err := r.List(ctx, &statefulsetList, listOpts...); err != nil {
 		r.logger.Error(err, "failed to list statefulsets")
 		return nil
 	}
 
+	gvk := object.GetObjectKind().GroupVersionKind()
 	s := make([]stats, 0)
 	for _, statefulset := range statefulsetList.Items {
-		isOwned := false
-		for _, ownerRef := range statefulset.OwnerReferences {
-			if ownerRef.APIVersion == object.GetObjectKind().GroupVersionKind().GroupVersion().String() &&
-				ownerRef.Kind == object.GetObjectKind().GroupVersionKind().Kind &&
-				ownerRef.Name == object.GetName() {
-				isOwned = true
-				break
-			}
-		}
-		if !isOwned {
+		if !isOwnedBy(statefulset.OwnerReferences, gvk, object.GetName()) {
 			continue
 		}
 
-		containerNames := []string{}
+		containerNames := make([]string, 0, len(statefulset.Spec.Template.Spec.Containers))
 		for _, container := range statefulset.Spec.Template.Spec.Containers {
 			containerNames = append(containerNames, container.Name)
 		}
@@ -281,17 +296,30 @@ func (r *ObjectStatusReconciler) getStatefulsetStatuses(ctx context.Context, obj
 	return s
 }
 
-// updateAllThanosQueryStatuses updates the status of all ThanosQuery resources.
-func (r *ObjectStatusReconciler) updateAllThanosQueryStatuses(ctx context.Context) {
-	var queryList monitoringthanosiov1alpha1.ThanosQueryList
-	err := r.List(ctx, &queryList)
-	if err != nil {
-		r.logger.Error(err, "failed to list ThanosQuery resources for status update")
-		return
+func isOwnedBy(ownerRefs []metav1.OwnerReference, gvk schema.GroupVersionKind, name string) bool {
+	for _, ownerRef := range ownerRefs {
+		if ownerRef.APIVersion == gvk.GroupVersion().String() &&
+			ownerRef.Kind == gvk.Kind &&
+			ownerRef.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *ObjectStatusReconciler) reconcileThanosQueryStatus(ctx context.Context, req ctrl.Request) (bool, error) {
+	query := &monitoringthanosiov1alpha1.ThanosQuery{}
+	if err := r.Get(ctx, req.NamespacedName, query); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	for _, query := range queryList.Items {
-		deploymentStatuses := r.getDeploymentStatuses(ctx, &query)
+	deploymentStatuses := r.getDeploymentStatuses(ctx, query)
+	err := r.patchReplicaStatus(ctx, req.NamespacedName, query, func(obj client.Object) bool {
+		query := obj.(*monitoringthanosiov1alpha1.ThanosQuery)
+		original := query.Status.DeepCopy()
 
 		for _, status := range deploymentStatuses {
 			for _, containerName := range status.containerNames {
@@ -311,21 +339,32 @@ func (r *ObjectStatusReconciler) updateAllThanosQueryStatuses(ctx context.Contex
 				}
 			}
 		}
-		r.updateStatus(ctx, &query)
+
+		return !reflect.DeepEqual(original, &query.Status)
+	})
+	if err != nil {
+		r.logger.Error(err, "failed to patch ThanosQuery replica status", "name", query.Name)
+		return true, err
 	}
+
+	return true, nil
 }
 
-// updateAllThanosReceiveStatuses updates the status of all ThanosReceive resources.
-func (r *ObjectStatusReconciler) updateAllThanosReceiveStatuses(ctx context.Context) {
-	var receiveList monitoringthanosiov1alpha1.ThanosReceiveList
-	err := r.List(ctx, &receiveList)
-	if err != nil {
-		r.logger.Error(err, "failed to list ThanosReceive resources for status update")
-		return
+func (r *ObjectStatusReconciler) reconcileThanosReceiveStatus(ctx context.Context, req ctrl.Request) (bool, error) {
+	receive := &monitoringthanosiov1alpha1.ThanosReceive{}
+	if err := r.Get(ctx, req.NamespacedName, receive); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	for _, receive := range receiveList.Items {
-		deploymentStatuses := r.getDeploymentStatuses(ctx, &receive)
+	deploymentStatuses := r.getDeploymentStatuses(ctx, receive)
+	statefulsetStatuses := r.getStatefulsetStatuses(ctx, receive)
+	err := r.patchReplicaStatus(ctx, req.NamespacedName, receive, func(obj client.Object) bool {
+		receive := obj.(*monitoringthanosiov1alpha1.ThanosReceive)
+		original := receive.Status.DeepCopy()
+
 		for _, status := range deploymentStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == receivebldr.RouterComponentName {
@@ -339,14 +378,12 @@ func (r *ObjectStatusReconciler) updateAllThanosReceiveStatuses(ctx context.Cont
 		}
 
 		receive.Status.HashringStatus = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
-
-		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &receive)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == receivebldr.IngestComponentName {
 					hashringName := status.labels[manifests.HashringLabel]
 					if hashringName == "" {
-						hashringName = "default"
+						hashringName = DefaultName
 					}
 					receive.Status.HashringStatus[hashringName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 						AvailableReplicas: status.availableReplicas,
@@ -359,63 +396,75 @@ func (r *ObjectStatusReconciler) updateAllThanosReceiveStatuses(ctx context.Cont
 			}
 		}
 
-		r.updateStatus(ctx, &receive)
+		return !reflect.DeepEqual(original, &receive.Status)
+	})
+	if err != nil {
+		r.logger.Error(err, "failed to patch ThanosReceive replica status", "name", receive.Name)
+		return true, err
 	}
+
+	return true, nil
 }
 
-// updateAllThanosCompactStatuses updates the status of all ThanosCompact resources.
-func (r *ObjectStatusReconciler) updateAllThanosCompactStatuses(ctx context.Context) {
-	var compactList monitoringthanosiov1alpha1.ThanosCompactList
-	err := r.List(ctx, &compactList)
-	if err != nil {
-		r.logger.Error(err, "failed to list ThanosCompact resources for status update")
-		return
+func (r *ObjectStatusReconciler) reconcileThanosCompactStatus(ctx context.Context, req ctrl.Request) (bool, error) {
+	compact := &monitoringthanosiov1alpha1.ThanosCompact{}
+	if err := r.Get(ctx, req.NamespacedName, compact); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	for _, compact := range compactList.Items {
-		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &compact)
+	statefulsetStatuses := r.getStatefulsetStatuses(ctx, compact)
+	err := r.patchReplicaStatus(ctx, req.NamespacedName, compact, func(obj client.Object) bool {
+		compact := obj.(*monitoringthanosiov1alpha1.ThanosCompact)
+		original := compact.Status.DeepCopy()
+
 		compact.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
-				if containerName == compactbldr.Name {
-					r.logger.Info("Updating ThanosCompact statuses", "containerName", containerName, "status", status)
-					shardName, ok := status.labels[manifests.ShardLabel]
-					if !ok {
-						compact.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.StatefulSetStatus{
-							AvailableReplicas: status.availableReplicas,
-							Replicas:          status.replicas,
-							UpdatedReplicas:   status.updatedReplicas,
-							ReadyReplicas:     status.readyReplicas,
-							CurrentReplicas:   status.currentReplicas,
-						}
-					} else {
-						compact.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
-							AvailableReplicas: status.availableReplicas,
-							Replicas:          status.replicas,
-							UpdatedReplicas:   status.updatedReplicas,
-							ReadyReplicas:     status.readyReplicas,
-							CurrentReplicas:   status.currentReplicas,
-						}
-					}
+				if containerName != compactbldr.Name {
+					continue
+				}
+
+				shardName, ok := status.labels[manifests.ShardLabel]
+				if !ok {
+					shardName = DefaultName
+				}
+				compact.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
+					AvailableReplicas: status.availableReplicas,
+					Replicas:          status.replicas,
+					UpdatedReplicas:   status.updatedReplicas,
+					ReadyReplicas:     status.readyReplicas,
+					CurrentReplicas:   status.currentReplicas,
 				}
 			}
 		}
 
-		r.updateStatus(ctx, &compact)
+		return !reflect.DeepEqual(original, &compact.Status)
+	})
+	if err != nil {
+		r.logger.Error(err, "failed to patch ThanosCompact replica status", "name", compact.Name)
+		return true, err
 	}
+
+	return true, nil
 }
 
-// updateAllThanosRulerStatuses updates the status of all ThanosRuler resources.
-func (r *ObjectStatusReconciler) updateAllThanosRulerStatuses(ctx context.Context) {
-	var rulerList monitoringthanosiov1alpha1.ThanosRulerList
-	err := r.List(ctx, &rulerList)
-	if err != nil {
-		r.logger.Error(err, "failed to list ThanosRuler resources for status update")
-		return
+func (r *ObjectStatusReconciler) reconcileThanosRulerStatus(ctx context.Context, req ctrl.Request) (bool, error) {
+	ruler := &monitoringthanosiov1alpha1.ThanosRuler{}
+	if err := r.Get(ctx, req.NamespacedName, ruler); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	for _, ruler := range rulerList.Items {
-		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &ruler)
+	statefulsetStatuses := r.getStatefulsetStatuses(ctx, ruler)
+	err := r.patchReplicaStatus(ctx, req.NamespacedName, ruler, func(obj client.Object) bool {
+		ruler := obj.(*monitoringthanosiov1alpha1.ThanosRuler)
+		original := ruler.Status.DeepCopy()
+
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
 				if containerName == rulerbldr.Name {
@@ -427,47 +476,58 @@ func (r *ObjectStatusReconciler) updateAllThanosRulerStatuses(ctx context.Contex
 				}
 			}
 		}
-		r.updateStatus(ctx, &ruler)
+
+		return !reflect.DeepEqual(original, &ruler.Status)
+	})
+	if err != nil {
+		r.logger.Error(err, "failed to patch ThanosRuler replica status", "name", ruler.Name)
+		return true, err
 	}
+
+	return true, nil
 }
 
-// updateAllThanosStoreStatuses updates the status of all ThanosStore resources.
-func (r *ObjectStatusReconciler) updateAllThanosStoreStatuses(ctx context.Context) {
-	var storeList monitoringthanosiov1alpha1.ThanosStoreList
-	err := r.List(ctx, &storeList)
-	if err != nil {
-		r.logger.Error(err, "failed to list ThanosStore resources for status update")
-		return
+func (r *ObjectStatusReconciler) reconcileThanosStoreStatus(ctx context.Context, req ctrl.Request) (bool, error) {
+	store := &monitoringthanosiov1alpha1.ThanosStore{}
+	if err := r.Get(ctx, req.NamespacedName, store); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
 	}
 
-	for _, store := range storeList.Items {
-		statefulsetStatuses := r.getStatefulsetStatuses(ctx, &store)
+	statefulsetStatuses := r.getStatefulsetStatuses(ctx, store)
+	err := r.patchReplicaStatus(ctx, req.NamespacedName, store, func(obj client.Object) bool {
+		store := obj.(*monitoringthanosiov1alpha1.ThanosStore)
+		original := store.Status.DeepCopy()
+
 		store.Status.ShardStatuses = make(map[string]monitoringthanosiov1alpha1.StatefulSetStatus)
 		for _, status := range statefulsetStatuses {
 			for _, containerName := range status.containerNames {
-				if containerName == storebldr.Name {
-					shardName, ok := status.labels[manifests.ShardLabel]
-					if !ok {
-						store.Status.ShardStatuses["default"] = monitoringthanosiov1alpha1.StatefulSetStatus{
-							AvailableReplicas: status.availableReplicas,
-							Replicas:          status.replicas,
-							UpdatedReplicas:   status.updatedReplicas,
-							ReadyReplicas:     status.readyReplicas,
-							CurrentReplicas:   status.currentReplicas,
-						}
-					} else {
-						store.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
-							AvailableReplicas: status.availableReplicas,
-							Replicas:          status.replicas,
-							UpdatedReplicas:   status.updatedReplicas,
-							ReadyReplicas:     status.readyReplicas,
-							CurrentReplicas:   status.currentReplicas,
-						}
-					}
+				if containerName != storebldr.Name {
+					continue
+				}
+
+				shardName, ok := status.labels[manifests.ShardLabel]
+				if !ok {
+					shardName = DefaultName
+				}
+				store.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
+					AvailableReplicas: status.availableReplicas,
+					Replicas:          status.replicas,
+					UpdatedReplicas:   status.updatedReplicas,
+					ReadyReplicas:     status.readyReplicas,
+					CurrentReplicas:   status.currentReplicas,
 				}
 			}
 		}
 
-		r.updateStatus(ctx, &store)
+		return !reflect.DeepEqual(original, &store.Status)
+	})
+	if err != nil {
+		r.logger.Error(err, "failed to patch ThanosStore replica status", "name", store.Name)
+		return true, err
 	}
+
+	return true, nil
 }
