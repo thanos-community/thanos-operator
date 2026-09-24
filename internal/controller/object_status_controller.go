@@ -56,6 +56,8 @@ const (
 	ReasonReconcileComplete = "ReconcileComplete"
 	ReasonReconcileError    = "ReconcileError"
 	ReasonPaused            = "Paused"
+
+	DefaultName = "default"
 )
 
 var thanosOwnerKinds = map[string]struct{}{
@@ -381,7 +383,7 @@ func (r *ObjectStatusReconciler) reconcileThanosReceiveStatus(ctx context.Contex
 				if containerName == receivebldr.IngestComponentName {
 					hashringName := status.labels[manifests.HashringLabel]
 					if hashringName == "" {
-						hashringName = "default"
+						hashringName = DefaultName
 					}
 					receive.Status.HashringStatus[hashringName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 						AvailableReplicas: status.availableReplicas,
@@ -427,7 +429,7 @@ func (r *ObjectStatusReconciler) reconcileThanosCompactStatus(ctx context.Contex
 
 				shardName, ok := status.labels[manifests.ShardLabel]
 				if !ok {
-					shardName = "default"
+					shardName = DefaultName
 				}
 				compact.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 					AvailableReplicas: status.availableReplicas,
@@ -508,7 +510,7 @@ func (r *ObjectStatusReconciler) reconcileThanosStoreStatus(ctx context.Context,
 
 				shardName, ok := status.labels[manifests.ShardLabel]
 				if !ok {
-					shardName = "default"
+					shardName = DefaultName
 				}
 				store.Status.ShardStatuses[shardName] = monitoringthanosiov1alpha1.StatefulSetStatus{
 					AvailableReplicas: status.availableReplicas,
