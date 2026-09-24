@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package suite provides the shared bootstrap for the e2e suites. The expensive
 // one-time cluster setup (operator image, prometheus-operator, cert-manager,
-// MinIO, test Prometheus) is done once by `make e2e-setup` before the suites run.
+// SeaweedFS, test Prometheus) is done once by `make e2e-setup` before the suites run.
 // Each suite deploys an operator watching only its own namespace, with explicit
 // feature gates, so suites can run concurrently against the shared cluster.
 package suite
@@ -53,13 +53,13 @@ import (
 
 const (
 	// ObjStoreSecret is the name of the object-storage secret each suite creates in
-	// its namespace, pointing at the shared MinIO.
+	// its namespace, pointing at the shared SeaweedFS.
 	ObjStoreSecret = "thanos-object-storage"
 	// ObjStoreSecretKey is the key holding the Thanos object-storage config.
 	ObjStoreSecretKey = "thanos.yaml"
 )
 
-// objStoreConfig is the Thanos object-storage config pointing at the shared MinIO
+// objStoreConfig is the Thanos object-storage config pointing at the shared SeaweedFS
 // deployed by e2e-setup in thanos-operator-system. The endpoint is a fully
 // qualified service DNS name so it is reachable from any namespace.
 const objStoreConfig = `type: S3
@@ -67,7 +67,7 @@ config:
   bucket: "thanos"
   access_key: "thanos"
   secret_key: "thanos-secret"
-  endpoint: "minio.thanos-operator-system.svc:9000"
+  endpoint: "seaweedfs.thanos-operator-system.svc:8333"
   insecure: true
   trace:
     enable: false

@@ -84,7 +84,7 @@ make deploy IMG="<IMAGE_NAME>"
 
 IMAGE_NAME here is usually `example.com/thanos-operator:v0.0.1` for testing/local and `quay.io/thanos/thanos-operator:main-YYYY-MM-DD-COMMIT` (can reference latest from [quay](https://quay.io/thanos/thanos-operator))
 
-To deploy [example manifests](./config/samples/), which give you a local [MinIO](https://min.io/) object storage instance and Thanos installation in Receive architecture, run,
+To deploy [example manifests](./config/samples/), which give you a local [SeaweedFS](https://seaweedfs.com/) object storage instance and Thanos installation in Receive architecture, run,
 
 ```bash
 make install-example

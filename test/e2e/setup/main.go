@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Command setup performs the one-time cluster bootstrap the e2e suites share:
-// prometheus-operator, cert-manager, MinIO + its object-storage secret, and the
+// prometheus-operator, cert-manager, SeaweedFS + its object-storage secret, and the
 // test Prometheus. It runs once (via `make e2e-setup`) before the suites, so the
 // per-suite test binaries can run concurrently against one cluster without racing
 // on this shared setup. Each suite deploys its own namespace-scoped operator.
@@ -87,12 +87,12 @@ func run() error {
 	if err := ensureNamespace(c, operatorNamespace); err != nil {
 		return fmt.Errorf("creating namespace %s: %w", operatorNamespace, err)
 	}
-	log.Println(">> installing minio")
-	if err := utils.InstallMinIO(); err != nil {
-		return fmt.Errorf("installing minio: %w", err)
+	log.Println(">> installing seaweedfs")
+	if err := utils.InstallSeaweedFS(); err != nil {
+		return fmt.Errorf("installing seaweedfs: %w", err)
 	}
 	log.Println(">> creating object storage secret")
-	if err := utils.CreateMinioObjectStorageSecret(); err != nil {
+	if err := utils.CreateSeaweedFSObjectStorageSecret(); err != nil {
 		return fmt.Errorf("creating object storage secret: %w", err)
 	}
 	log.Println(">> setting up prometheus")
