@@ -44,7 +44,7 @@ func InteractiveDemo() error {
 		return err
 	}
 
-	if err := minio(); err != nil {
+	if err := seaweedFS(); err != nil {
 		return err
 	}
 
@@ -135,13 +135,13 @@ func prometheusOperator() error {
 	return utils.InstallPrometheusOperator()
 }
 
-// minio installs MinIO in the Kubernetes cluster
-func minio() error {
-	err := utils.InstallMinIO()
+// seaweedFS installs SeaweedFS in the Kubernetes cluster
+func seaweedFS() error {
+	err := utils.InstallSeaweedFS()
 	if err != nil {
 		return err
 	}
-	return utils.CreateMinioObjectStorageSecret()
+	return utils.CreateSeaweedFSObjectStorageSecret()
 }
 
 // BuildAndLoadLocalImage Builds the container image and loads it into the KinD cluster

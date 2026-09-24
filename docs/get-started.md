@@ -61,7 +61,7 @@ make install-example
 ```
 
 This creates:
-- MinIO object storage
+- SeaweedFS object storage
 - ThanosReceive for ingesting metrics
 - ThanosQuery for querying metrics
 - ThanosStore for long-term storage access

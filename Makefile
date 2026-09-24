@@ -440,7 +440,7 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 
 .PHONY: install-example
 install-example: manifests kustomize ## Install example definitions to K8s cluster specified in ~/.kube/config.
-install-example: ## Installs minio and definitions of all components to be used with the operator.
+install-example: ## Installs seaweedfs and definitions of all components to be used with the operator.
 install-example: ## Ensure you run make install and make deploy in ns of choice before this command
 	$(KUBECTL) apply -f test/utils/testdata/
 	$(KUSTOMIZE) build config/samples | $(KUBECTL) apply -f -

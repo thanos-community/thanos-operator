@@ -49,7 +49,7 @@ You should now be able to create CRs!
 
 You can take a look at the sample CRs we have within this repo in `config/samples`
 
-To use those samples, you can run the following. This will create a [MinIO](https://min.io/) object storage and deploy the relevant Thanos component CRs in a [Receive-based](https://thanos.io/tip/components/receive.md/) setup.
+To use those samples, you can run the following. This will create a [SeaweedFS](https://seaweedfs.com/) object storage and deploy the relevant Thanos component CRs in a [Receive-based](https://thanos.io/tip/components/receive.md/) setup.
 
 ```bash
 git clone https://github.com/thanos-community/thanos-operator.git

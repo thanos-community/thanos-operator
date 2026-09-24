@@ -102,5 +102,5 @@ jobs:
             kubectl -n "$namespace" get events --sort-by=.lastTimestamp || true
             kubectl -n "$namespace" describe pods || true
           done
-          kubectl -n thanos-operator-system logs deployment/minio --all-containers --tail=100 || true
-          kubectl -n thanos-operator-system logs deployment/minio --all-containers --tail=100 --previous || true
+          kubectl -n thanos-operator-system logs deployment/seaweedfs --all-containers --tail=100 || true
+          kubectl -n thanos-operator-system logs deployment/seaweedfs --all-containers --tail=100 --previous || true

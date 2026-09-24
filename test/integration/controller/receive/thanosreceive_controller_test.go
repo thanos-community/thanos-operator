@@ -88,7 +88,7 @@ config:
   bucket: "thanos"
   access_key: "thanos"
   secret_key: "thanos-secret"
-  endpoint: "minio.treceive.svc:9000"
+  endpoint: "seaweedfs.treceive.svc:8333"
   insecure: true
   trace:
     enable: false`,

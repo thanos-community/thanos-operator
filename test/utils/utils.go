@@ -160,21 +160,21 @@ func GetProjectDir() (string, error) {
 	}
 }
 
-// InstallMinIO waits for the shared object store to accept requests before suites start.
-func InstallMinIO() error {
-	cmd := exec.Command("kubectl", "apply", "-f", minioTestData())
+// InstallSeaweedFS waits for the shared object store to accept requests before suites start.
+func InstallSeaweedFS() error {
+	cmd := exec.Command("kubectl", "apply", "-f", seaweedFSTestData())
 	if _, err := Run(cmd); err != nil {
 		return err
 	}
-	cmd = exec.Command("kubectl", "rollout", "status", "deployment/minio",
+	cmd = exec.Command("kubectl", "rollout", "status", "deployment/seaweedfs",
 		"--namespace", "thanos-operator-system", "--timeout", "5m")
 	_, err := Run(cmd)
 	return err
 }
 
-func CreateMinioObjectStorageSecret() error {
+func CreateSeaweedFSObjectStorageSecret() error {
 	wd, _ := os.Getwd()
-	path := wd + "/test/utils/testdata/minio-secret.yaml"
+	path := wd + "/test/utils/testdata/seaweedfs-secret.yaml"
 	cmd := exec.Command("kubectl", "apply", "-f", path)
 	_, err := Run(cmd)
 	return err
@@ -529,9 +529,9 @@ func StartPortForward(ctx context.Context, port intstr.IntOrString, scheme, name
 	}
 }
 
-func minioTestData() string {
+func seaweedFSTestData() string {
 	wd, _ := os.Getwd()
-	return wd + "/test/utils/testdata/minio.yaml"
+	return wd + "/test/utils/testdata/seaweedfs.yaml"
 }
 
 // RemoteWrite sends a remote write request to the remote write endpoint which is running on localhost.
