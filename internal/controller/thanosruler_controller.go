@@ -1055,13 +1055,16 @@ func (r *ThanosRulerReconciler) updateCondition(ctx context.Context, ruler *moni
 	if r.disableConditionUpdate {
 		return
 	}
-	conditions := ruler.Status.Conditions
-	meta.SetStatusCondition(&conditions, condition)
-	ruler.Status.Conditions = conditions
-	if condition.Type == ConditionPaused {
-		ruler.Status.Paused = new(true)
-	}
-	if err := r.Status().Update(ctx, ruler); err != nil {
+
+	latest := &monitoringthanosiov1alpha1.ThanosRuler{}
+	err := patchObjectStatus(ctx, r.Client, client.ObjectKeyFromObject(ruler), latest, func(obj *monitoringthanosiov1alpha1.ThanosRuler) error {
+		meta.SetStatusCondition(&obj.Status.Conditions, condition)
+		if condition.Type == ConditionPaused {
+			obj.Status.Paused = new(true)
+		}
+		return nil
+	})
+	if err != nil {
 		r.logger.Error(err, "failed to update status for ThanosRuler", "name", ruler.Name)
 	}
 }
