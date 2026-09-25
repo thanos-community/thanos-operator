@@ -4814,6 +4814,13 @@ spec:
                 items:
                   type: string
                 type: array
+              downloadedBytesLimit:
+                default: 0
+                description: |-
+                  DownloadedBytesLimit is the maximum amount of downloaded (either fetched or touched) bytes
+                  in a single Series/LabelNames/LabelValues gRPC call. The Series call fails if this limit is exceeded.
+                format: int64
+                type: integer
               ignoreDeletionMarksDelay:
                 default: 24h
                 description: |-
