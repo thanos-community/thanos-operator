@@ -188,6 +188,9 @@ func (r *ThanosQueryReconciler) buildQuery(ctx context.Context, query monitoring
 		FeatureGate: r.featureGate,
 	})
 	opts.Endpoints = endpoints
+	if err := opts.Valid(); err != nil {
+		return nil, err
+	}
 
 	return opts, nil
 }
