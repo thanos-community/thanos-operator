@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,14 +69,17 @@ func TestNamespaceIsolation(t *testing.T) {
 			key := client.ObjectKey{Name: controller.QueryNameFromParent(queryName), Namespace: namespace}
 			// Verify existing namespace-local discovery still works with a scoped cache.
 			require.Eventually(t, func() bool {
-				deployment := &appsv1.Deployment{}
-				if env.Client.Get(ctx, key, deployment) != nil {
+				cm := &corev1.ConfigMap{}
+				if env.Client.Get(ctx, key, cm) != nil {
 					return false
 				}
-				args := deployment.Spec.Template.Spec.Containers[0].Args
+				data, ok := cm.Data["endpoints.yaml"]
+				if !ok {
+					return false
+				}
 				for _, candidate := range namespaces {
-					endpoint := fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.store-%s.%s.svc", candidate, candidate)
-					if slices.Contains(args, endpoint) != (candidate == namespace) {
+					address := fmt.Sprintf("dnssrv+_grpc._tcp.store-%s.%s.svc", candidate, candidate)
+					if strings.Contains(data, address) != (candidate == namespace) {
 						return false
 					}
 				}

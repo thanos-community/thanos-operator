@@ -41,12 +41,6 @@ import (
 var _ = Describe("Thanos Query", Ordered, func() {
 	const queryName = "example-query"
 
-	// Fake StoreAPI services representing components the query should discover without
-	// actually running them. Each carries the store-api discovery labels and a grpc
-	// port so the query controller lists it as an endpoint; the endpoint-group label on
-	// the store makes it render as an HA endpoint group. No pods back these services --
-	// the query bakes the flags into its pod template and stays ready because the
-	// endpoints are non-strict (dynamically discovered).
 	const (
 		fakeReceiveIngester = "fake-receive-ingester"
 		fakeRuler           = "fake-ruler"
@@ -55,9 +49,11 @@ var _ = Describe("Thanos Query", Ordered, func() {
 
 	It("should discover fake store-api services and bring up the query", func() {
 		By("planting fake store-api services for a receive ingester, a ruler and an HA store")
-		Expect(createStoreAPIService(fakeReceiveIngester, false)).To(Succeed())
-		Expect(createStoreAPIService(fakeRuler, false)).To(Succeed())
-		Expect(createStoreAPIService(fakeStoreHA, true)).To(Succeed())
+		Expect(createStoreAPIService(fakeReceiveIngester, nil)).To(Succeed())
+		Expect(createStoreAPIService(fakeRuler, nil)).To(Succeed())
+		Expect(createStoreAPIService(fakeStoreHA, map[string]string{
+			string(manifests.GroupLabel): "true",
+		})).To(Succeed())
 
 		By("creating a ThanosQuery without a query frontend")
 		cr := &v1alpha1.ThanosQuery{
@@ -88,15 +84,17 @@ var _ = Describe("Thanos Query", Ordered, func() {
 		}, time.Minute*3, time.Second*2).Should(BeTrue())
 	})
 
-	It("should render an endpoint flag for each discovered store-api service", func() {
-		queryDeployment := controller.QueryNameFromParent(queryName)
-		Eventually(func() bool {
-			return utils.VerifyDeploymentArgs(c, queryDeployment, namespace, 0,
-				fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", fakeReceiveIngester, namespace),
-				fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", fakeRuler, namespace),
-				fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc", fakeStoreHA, namespace),
-			)
-		}, time.Minute*2, time.Second*2).Should(BeTrue())
+	It("should write discovered store-api services into the endpoint file", func() {
+		querier := controller.QueryNameFromParent(queryName)
+		expect := fmt.Sprintf(`endpoints:
+- address: dnssrv+_grpc._tcp.%s.%s.svc
+- address: dnssrv+_grpc._tcp.%s.%s.svc
+- address: dnssrv+_grpc._tcp.%s.%s.svc
+  group: true
+`, fakeReceiveIngester, namespace, fakeRuler, namespace, fakeStoreHA, namespace)
+		Eventually(func() error {
+			return utils.ConfigMapDataMatches(c, querier, namespace, "endpoints.yaml", expect)
+		}, time.Minute*2, time.Second*2).Should(Succeed())
 	})
 
 	It("should bring up the query frontend when patched onto the query", func() {
@@ -134,17 +132,13 @@ var _ = Describe("Thanos Query", Ordered, func() {
 	})
 })
 
-// createStoreAPIService plants a Service carrying the store-api discovery labels and a
-// grpc port so the query controller renders it as an endpoint. When ha is true it also
-// carries the endpoint-group label so the query renders it as an HA endpoint group. No
-// pods back the service; it exists only to be discovered.
-func createStoreAPIService(name string, ha bool) error {
+func createStoreAPIService(name string, extraLabels map[string]string) error {
 	labels := map[string]string{
 		manifests.PartOfLabel:          manifests.DefaultPartOfLabel,
 		manifests.DefaultStoreAPILabel: manifests.DefaultStoreAPIValue,
 	}
-	if ha {
-		labels[string(manifests.GroupLabel)] = "true"
+	for key, value := range extraLabels {
+		labels[key] = value
 	}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -161,7 +155,6 @@ func createStoreAPIService(name string, ha bool) error {
 					TargetPort: intstr.FromInt32(manifestsquery.GRPCPort),
 				},
 			},
-			// Selector intentionally matches no pods; the query controller still renders the flag based on the Service.
 			Selector: map[string]string{"e2e-query.fake": name},
 		},
 	}

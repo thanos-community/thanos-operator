@@ -19,6 +19,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -238,14 +239,21 @@ var _ = Describe("core", Ordered, func() {
 					return utils.VerifyDeploymentReplicasRunning(c, 1, deploymentName, namespace)
 				}, time.Minute*1, time.Second*1).Should(BeTrue())
 				svcName := controller.ReceiveIngesterNameFromParent(receiveName, hashringName)
-				Eventually(func() bool {
-					return utils.VerifyDeploymentArgs(c,
-						deploymentName,
-						namespace,
-						0,
-						fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", svcName, namespace),
-					)
-				}, time.Minute*1, time.Second*1).Should(BeTrue())
+				address := fmt.Sprintf("dnssrv+_grpc._tcp.%s.%s.svc", svcName, namespace)
+				Eventually(func() error {
+					cm := &corev1.ConfigMap{}
+					if err := c.Get(context.Background(), client.ObjectKey{Name: deploymentName, Namespace: namespace}, cm); err != nil {
+						return err
+					}
+					data, ok := cm.Data["endpoints.yaml"]
+					if !ok {
+						return fmt.Errorf("configmap %s/%s has no endpoints.yaml", namespace, deploymentName)
+					}
+					if !strings.Contains(data, address) {
+						return fmt.Errorf("endpoints.yaml missing %s:\n%s", address, data)
+					}
+					return nil
+				}, time.Minute*1, time.Second*1).Should(Succeed())
 			})
 		})
 		Context("When querying for written metrics", func() {
