@@ -2,6 +2,7 @@ package manifests
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -168,7 +169,17 @@ func mutateStatefulSet(existing, desired *appsv1.StatefulSet) {
 }
 
 func mutatePodTemplate(existing, desired *corev1.PodTemplateSpec) {
-	existing.Annotations = desired.Annotations
+	const restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
+
+	// Preserve rollout restart requests across reconciliations.
+	restartedAt, restarted := existing.Annotations[restartedAtAnnotation]
+	existing.Annotations = maps.Clone(desired.Annotations)
+	if _, specified := existing.Annotations[restartedAtAnnotation]; restarted && !specified {
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string)
+		}
+		existing.Annotations[restartedAtAnnotation] = restartedAt
+	}
 	existing.Labels = desired.Labels
 	mutatePodSpec(&existing.Spec, &desired.Spec)
 }
