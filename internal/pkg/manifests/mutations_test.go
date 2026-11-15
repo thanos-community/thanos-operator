@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetMutateFunc_MutateObjectMeta(t *testing.T) {
@@ -647,6 +648,75 @@ func TestMutateFuncFor_MutateStatefulSetSpec(t *testing.T) {
 			require.Equal(t, tst.got.Spec.MinReadySeconds, tst.want.Spec.MinReadySeconds)
 			require.Equal(t, tst.got.Spec.PodManagementPolicy, tst.want.Spec.PodManagementPolicy)
 			require.Equal(t, tst.got.Spec.PersistentVolumeClaimRetentionPolicy, tst.want.Spec.PersistentVolumeClaimRetentionPolicy)
+		})
+	}
+}
+
+func TestMutateFuncFor_RolloutRestart(t *testing.T) {
+	const restartedAt = "kubectl.kubernetes.io/restartedAt"
+	tests := []struct {
+		name     string
+		existing map[string]string
+		desired  map[string]string
+		want     map[string]string
+	}{
+		{
+			name:     "preserve restart with nil desired annotations",
+			existing: map[string]string{restartedAt: "2026-11-15T10:00:00Z", "removed": "old"},
+			want:     map[string]string{restartedAt: "2026-11-15T10:00:00Z"},
+		},
+		{
+			name:     "preserve restart while updating managed annotations",
+			existing: map[string]string{restartedAt: "2026-11-15T11:00:00Z", "managed": "old", "removed": "old"},
+			desired:  map[string]string{"managed": "new"},
+			want:     map[string]string{restartedAt: "2026-11-15T11:00:00Z", "managed": "new"},
+		},
+		{
+			name:     "explicit desired restart takes precedence",
+			existing: map[string]string{restartedAt: "2026-11-15T10:00:00Z"},
+			desired:  map[string]string{restartedAt: "2026-11-15T11:00:00Z"},
+			want:     map[string]string{restartedAt: "2026-11-15T11:00:00Z"},
+		},
+		{
+			name:     "remove other annotations without adding restart",
+			existing: map[string]string{"removed": "old"},
+			desired:  map[string]string{"managed": "new"},
+			want:     map[string]string{"managed": "new"},
+		},
+		{
+			name: "no annotations",
+		},
+	}
+	workloads := map[string]func() (client.Object, *corev1.PodTemplateSpec){
+		"Deployment": func() (client.Object, *corev1.PodTemplateSpec) {
+			obj := &appsv1.Deployment{}
+			return obj, &obj.Spec.Template
+		},
+		"StatefulSet": func() (client.Object, *corev1.PodTemplateSpec) {
+			obj := &appsv1.StatefulSet{}
+			return obj, &obj.Spec.Template
+		},
+	}
+	for kind, newWorkload := range workloads {
+		t.Run(kind, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					existing, template := newWorkload()
+					template.Annotations = tt.existing
+					desired, desiredTemplate := newWorkload()
+					desiredTemplate.Annotations = tt.desired
+					originalDesired := desired.DeepCopyObject()
+
+					mutate := MutateFuncFor(existing, desired)
+					require.NoError(t, mutate())
+					require.Equal(t, tt.want, template.Annotations)
+					require.Equal(t, originalDesired, desired)
+
+					reconciled := existing.DeepCopyObject()
+					require.NoError(t, mutate())
+					require.Equal(t, reconciled, existing)
+				})
+			}
 		})
 	}
 }
