@@ -329,14 +329,15 @@ func compactV1Alpha1ToOptions(in compactV1Alpha1TransformInput) manifestscompact
 	}
 
 	compaction := func() *manifestscompact.CompactionOptions {
-		if in.CRD.Spec.CompactConfig == nil {
+		if in.CRD.Spec.CompactConfig == nil && in.CRD.Spec.VerticalCompactionConfig == nil {
 			return nil
 		}
-		opts := &manifestscompact.CompactionOptions{
-			CompactConcurrency:           in.CRD.Spec.CompactConfig.CompactConcurrency,
-			CompactCleanupInterval:       ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval)),
-			ConsistencyDelay:             ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay)),
-			CompactBlockFetchConcurrency: in.CRD.Spec.CompactConfig.BlockFetchConcurrency,
+		opts := &manifestscompact.CompactionOptions{}
+		if in.CRD.Spec.CompactConfig != nil {
+			opts.CompactConcurrency = in.CRD.Spec.CompactConfig.CompactConcurrency
+			opts.CompactCleanupInterval = ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.CleanupInterval))
+			opts.ConsistencyDelay = ptr.To(manifests.Duration(*in.CRD.Spec.CompactConfig.ConsistencyDelay))
+			opts.CompactBlockFetchConcurrency = in.CRD.Spec.CompactConfig.BlockFetchConcurrency
 		}
 		if in.CRD.Spec.VerticalCompactionConfig != nil {
 			opts.VerticalCompaction = &manifestscompact.VerticalCompactionOptions{
