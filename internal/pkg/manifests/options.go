@@ -103,6 +103,8 @@ type Options struct {
 	// Version is the version of Thanos
 	// If not set, DefaultThanosVersion will be used
 	Version *string
+	// ImagePullSecrets references image pull Secrets in the workload namespace.
+	ImagePullSecrets []corev1.LocalObjectReference
 	// ResourceRequirements for the component
 	ResourceRequirements *corev1.ResourceRequirements
 	// LogLevel is the log level for the component
@@ -306,6 +308,7 @@ func AugmentWithOptions(obj client.Object, opts Options) {
 }
 
 func augmentPodTemplate(tl *corev1.PodTemplateSpec, opts Options) {
+	tl.Spec.ImagePullSecrets = opts.ImagePullSecrets
 	c := &tl.Spec.Containers[0]
 	c.Image = opts.GetContainerImage()
 
