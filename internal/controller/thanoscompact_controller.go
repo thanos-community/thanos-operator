@@ -230,14 +230,16 @@ func (r *ThanosCompactReconciler) updateCondition(ctx context.Context, compact *
 	if r.disableConditionUpdate {
 		return
 	}
-	conditions := compact.Status.Conditions
-	meta.SetStatusCondition(&conditions, condition)
-	compact.Status.Conditions = conditions
-	if condition.Type == ConditionPaused {
-		compact.Status.Paused = new(true)
-	}
 
-	if err := r.Status().Update(ctx, compact); err != nil {
+	latest := &monitoringthanosiov1alpha1.ThanosCompact{}
+	err := patchObjectStatus(ctx, r.Client, client.ObjectKeyFromObject(compact), latest, func(obj *monitoringthanosiov1alpha1.ThanosCompact) error {
+		meta.SetStatusCondition(&obj.Status.Conditions, condition)
+		if condition.Type == ConditionPaused {
+			obj.Status.Paused = new(true)
+		}
+		return nil
+	})
+	if err != nil {
 		r.logger.Error(err, "failed to update status for ThanosCompact", "name", compact.Name)
 	}
 }

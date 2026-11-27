@@ -248,13 +248,16 @@ func (r *ThanosStoreReconciler) updateCondition(ctx context.Context, store *moni
 	if r.disableConditionUpdate {
 		return
 	}
-	conditions := store.Status.Conditions
-	meta.SetStatusCondition(&conditions, condition)
-	store.Status.Conditions = conditions
-	if condition.Type == ConditionPaused {
-		store.Status.Paused = new(true)
-	}
-	if err := r.Status().Update(ctx, store); err != nil {
+
+	latest := &monitoringthanosiov1alpha1.ThanosStore{}
+	err := patchObjectStatus(ctx, r.Client, client.ObjectKeyFromObject(store), latest, func(obj *monitoringthanosiov1alpha1.ThanosStore) error {
+		meta.SetStatusCondition(&obj.Status.Conditions, condition)
+		if condition.Type == ConditionPaused {
+			obj.Status.Paused = new(true)
+		}
+		return nil
+	})
+	if err != nil {
 		r.logger.Error(err, "failed to update status for ThanosStore", "name", store.Name)
 	}
 }
