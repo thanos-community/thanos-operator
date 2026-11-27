@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -8,11 +9,91 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/thanos-community/thanos-operator/api/v1alpha1"
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 )
+
+func TestCompactVerticalCompaction(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		config *v1alpha1.CompactConfig
+		args   []string
+	}{
+		{name: "without compact config"},
+		{
+			name: "with compact config",
+			config: &v1alpha1.CompactConfig{
+				CompactConcurrency:    ptr.To(int32(2)),
+				BlockFetchConcurrency: ptr.To(int32(3)),
+				CleanupInterval:       ptr.To(v1alpha1.Duration("3m")),
+				ConsistencyDelay:      ptr.To(v1alpha1.Duration("15m")),
+			},
+			args: []string{
+				"--compact.concurrency=2", "--compact.blocks-fetch-concurrency=3",
+				"--compact.cleanup-interval=3m", "--consistency-delay=15m",
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			compact := v1alpha1.ThanosCompact{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "monitoring"}}
+			compact.Spec.CompactConfig = tc.config
+			var existing *appsv1.StatefulSet
+			for _, stage := range []struct {
+				name   string
+				config *v1alpha1.VerticalCompactionConfig
+				args   []string
+			}{
+				{name: "unset"},
+				{
+					name: "enable",
+					config: &v1alpha1.VerticalCompactionConfig{
+						ReplicaLabels:     []string{"replica", "prometheus_replica"},
+						DeduplicationFunc: ptr.To("penalty"),
+					},
+					args: []string{
+						"--compact.enable-vertical-compaction", "--deduplication.replica-label=replica",
+						"--deduplication.replica-label=prometheus_replica", "--deduplication.func=penalty",
+					},
+				},
+				{
+					name:   "replace",
+					config: &v1alpha1.VerticalCompactionConfig{ReplicaLabels: []string{"new_replica"}},
+					args:   []string{"--compact.enable-vertical-compaction", "--deduplication.replica-label=new_replica"},
+				},
+				{name: "remove"},
+			} {
+				t.Run(stage.name, func(t *testing.T) {
+					compact.Spec.VerticalCompactionConfig = stage.config
+					opts := compactV1Alpha1ToOptions(compactV1Alpha1TransformInput{CRD: compact})
+					var desired *appsv1.StatefulSet
+					for _, obj := range opts.Build() {
+						if workload, ok := obj.(*appsv1.StatefulSet); ok {
+							desired = workload
+						}
+					}
+					require.NotNil(t, desired)
+					if existing == nil {
+						existing = desired.DeepCopy()
+						existing.SetCreationTimestamp(metav1.Now())
+					} else {
+						require.NoError(t, manifests.MutateFuncFor(existing, desired)())
+					}
+					var compactionArgs []string
+					for _, arg := range existing.Spec.Template.Spec.Containers[0].Args {
+						if strings.HasPrefix(arg, "--compact.") || strings.HasPrefix(arg, "--deduplication.") || strings.HasPrefix(arg, "--consistency-delay=") {
+							compactionArgs = append(compactionArgs, arg)
+						}
+					}
+					want := append(append([]string{}, tc.args...), stage.args...)
+					require.ElementsMatch(t, want, compactionArgs)
+				})
+			}
+		})
+	}
+}
 
 func TestImagePullSecrets(t *testing.T) {
 	meta := metav1.ObjectMeta{Name: "test", Namespace: "monitoring"}
