@@ -36,6 +36,7 @@ type Options struct {
 	WebOptions         WebOptions
 	TelemetryQuantiles TelemetryQuantiles
 	GRPCProxyStrategy  string
+	StoreLimitsOpts    manifests.StoreLimitsOpts
 	Endpoints          []Endpoint
 }
 
@@ -270,6 +271,7 @@ func queryArgs(opts Options) []string {
 		fmt.Sprintf("--web.prefix-header=%s", opts.WebOptions.PrefixHeader),
 		fmt.Sprintf("--grpc.proxy-strategy=%s", opts.GRPCProxyStrategy),
 	)
+	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
 
 	for _, duration := range opts.TelemetryQuantiles.Duration {
 		args = append(args, fmt.Sprintf("--query.telemetry.request-duration-seconds-quantiles=%s", duration))
