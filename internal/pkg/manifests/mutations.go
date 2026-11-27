@@ -185,6 +185,7 @@ func mutatePodTemplate(existing, desired *corev1.PodTemplateSpec) {
 }
 
 func mutatePodSpec(existing *corev1.PodSpec, desired *corev1.PodSpec) {
+	existing.ImagePullSecrets = desired.ImagePullSecrets
 	existing.Affinity = desired.Affinity
 	existing.Containers = desired.Containers
 	existing.InitContainers = desired.InitContainers

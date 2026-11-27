@@ -442,6 +442,7 @@ func commonToOpts(
 		Annotations:          manifests.MergeMaps(owner.GetAnnotations(), common.Annotations),
 		Image:                common.Image,
 		Version:              common.Version,
+		ImagePullSecrets:     common.ImagePullSecrets,
 		ResourceRequirements: common.ResourceRequirements,
 		LogLevel:             common.LogLevel,
 		LogFormat:            common.LogFormat,
