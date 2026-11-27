@@ -1,6 +1,6 @@
 # Thanos Community Code of Conduct
 
-Thanos follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md). Additionally our team members can be contacted directly for code of conduct abuse, as described below.
+Thanos follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md). Additionally our team members can be contacted directly for code of conduct abuse, as described below.
 
 ## Enforcement
 
