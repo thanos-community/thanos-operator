@@ -13,12 +13,17 @@ import (
 	"github.com/thanos-community/thanos-operator/internal/pkg/manifests"
 	"github.com/thanos-community/thanos-operator/test/utils"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const testRulerName = "test-ruler"
@@ -96,6 +101,134 @@ func alertRule(name, ns string, labels map[string]string, group string, rules []
 		},
 	}
 }
+
+var _ = Describe("Ruler rule selectors", func() {
+	DescribeTable("validates nonempty rule selectors", func(selector map[string]any, valid bool) {
+		namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "ruler-selector-"}}
+		Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
+
+		ruler := newRuler(testRulerName, namespace.Name, nil, nil)
+		ruler.Spec.Paused = ptr.To(true)
+		object, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ruler)
+		Expect(err).NotTo(HaveOccurred())
+		raw := &unstructured.Unstructured{Object: object}
+		raw.SetGroupVersionKind(monitoringthanosiov1alpha1.GroupVersion.WithKind("ThanosRuler"))
+		if selector == nil {
+			unstructured.RemoveNestedField(raw.Object, "spec", "ruleConfigSelector")
+		} else {
+			Expect(unstructured.SetNestedMap(raw.Object, selector, "spec", "ruleConfigSelector")).To(Succeed())
+		}
+
+		err = k8sClient.Create(ctx, raw)
+		if valid {
+			Expect(err).NotTo(HaveOccurred())
+			if selector == nil {
+				matchLabels, found, err := unstructured.NestedStringMap(raw.Object, "spec", "ruleConfigSelector", "matchLabels")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(matchLabels).To(Equal(controller.DefaultRuleLabels))
+			}
+			return
+		}
+		Expect(apierrors.IsInvalid(err)).To(BeTrue(), "expected invalid selector, got %v", err)
+		Expect(err.Error()).To(ContainSubstring("ruleConfigSelector must have at least one label selector"))
+
+		By("rejecting an update from a valid selector to an empty selector")
+		Expect(unstructured.SetNestedStringMap(raw.Object, controller.DefaultRuleLabels,
+			"spec", "ruleConfigSelector", "matchLabels")).To(Succeed())
+		Expect(k8sClient.Create(ctx, raw)).To(Succeed())
+		Expect(unstructured.SetNestedMap(raw.Object, selector, "spec", "ruleConfigSelector")).To(Succeed())
+		err = k8sClient.Update(ctx, raw)
+		Expect(apierrors.IsInvalid(err)).To(BeTrue(), "expected invalid selector update, got %v", err)
+		Expect(err.Error()).To(ContainSubstring("ruleConfigSelector must have at least one label selector"))
+	},
+		Entry("omitted selector uses the default", nil, true),
+		Entry("labels only", map[string]any{"matchLabels": map[string]any{"team": "observability"}}, true),
+		Entry("expressions only", map[string]any{"matchExpressions": []any{
+			map[string]any{"key": "team", "operator": "Exists"},
+		}}, true),
+		Entry("both forms", map[string]any{
+			"matchLabels": map[string]any{"team": "observability"},
+			"matchExpressions": []any{
+				map[string]any{"key": "disabled", "operator": "DoesNotExist"},
+			},
+		}, true),
+		Entry("empty selector", map[string]any{}, false),
+		Entry("empty labels", map[string]any{"matchLabels": map[string]any{}}, false),
+		Entry("empty expressions", map[string]any{"matchExpressions": []any{}}, false),
+		Entry("both forms empty", map[string]any{"matchLabels": map[string]any{}, "matchExpressions": []any{}}, false),
+	)
+
+	DescribeTable("discovers rules with expression-only rule selectors", func(source string) {
+		ns := "ruler-expressions-" + source
+		createNamespace(ns)
+		createObjstoreSecret(ns)
+		createQuery(ns)
+
+		ruler := newRuler(testRulerName, ns, nil, nil)
+		ruler.Spec.RuleConfigSelector = metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{Key: "team", Operator: metav1.LabelSelectorOpIn, Values: []string{"observability"}},
+			},
+		}
+		Expect(k8sClient.Create(ctx, ruler)).To(Succeed())
+		workloadName := controller.RulerNameFromParent(ruler.Name)
+		Eventually(func() bool {
+			return utils.VerifyStatefulSetExists(k8sClient, workloadName, ns)
+		}).Should(BeTrue())
+
+		newRule := func(name string, labels map[string]string) client.Object {
+			if source == "usercfgmap" {
+				return &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, Labels: labels},
+					Data: map[string]string{"rules.yaml": `groups:
+- name: example
+  rules:
+  - alert: TargetDown
+    expr: up == 0
+`},
+				}
+			}
+			return alertRule(name, ns, labels, "example", []monitoringv1.Rule{
+				{Alert: "TargetDown", Expr: intstr.FromString("up == 0")},
+			})
+		}
+		selected := newRule("selected", manifests.MergeMaps(controller.DefaultRuleLabels, map[string]string{"team": "observability"}))
+		excluded := newRule("excluded", manifests.MergeMaps(controller.DefaultRuleLabels, map[string]string{"team": "other"}))
+		missingRequiredLabel := newRule("missing-required-label", map[string]string{"team": "observability"})
+		for _, rule := range []client.Object{excluded, missingRequiredLabel, selected} {
+			Expect(k8sClient.Create(ctx, rule)).To(Succeed())
+		}
+
+		ruleArg := func(name string) string {
+			if source == "usercfgmap" {
+				name += "-rules"
+			}
+			return fmt.Sprintf("--rule-file=/etc/thanos/rules/%s-%s-0/%s.yaml", ruler.Name, source, name)
+		}
+		expectRuleFiles := func(included, excluded string) {
+			Eventually(func(g Gomega) {
+				var workload appsv1.StatefulSet
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: workloadName, Namespace: ns}, &workload)).To(Succeed())
+				args := workload.Spec.Template.Spec.Containers[0].Args
+				g.Expect(args).To(ContainElement(ruleArg(included)))
+				g.Expect(args).NotTo(ContainElement(ruleArg(excluded)))
+				g.Expect(args).NotTo(ContainElement(ruleArg("missing-required-label")))
+			}).Should(Succeed())
+		}
+		expectRuleFiles("selected", "excluded")
+
+		By("updating labels to change which rule matches")
+		selected.GetLabels()["team"] = "other"
+		Expect(k8sClient.Update(ctx, selected)).To(Succeed())
+		excluded.GetLabels()["team"] = "observability"
+		Expect(k8sClient.Update(ctx, excluded)).To(Succeed())
+		expectRuleFiles("excluded", "selected")
+	},
+		Entry("ConfigMap", "usercfgmap"),
+		Entry("PrometheusRule", "promrule"),
+	)
+})
 
 var _ = Describe("PrometheusRule feature gate", func() {
 	It("discovers a PrometheusRule and applies tenancy to the generated rule file", func() {

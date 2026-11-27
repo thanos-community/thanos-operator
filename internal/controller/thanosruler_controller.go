@@ -398,7 +398,7 @@ func (rcm ruleConfigMaps) getNames() []string {
 func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (ruleConfigMaps, error) {
 	result := ruleConfigMaps{}
 
-	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
+	if len(ruler.Spec.RuleConfigSelector.MatchLabels) == 0 && len(ruler.Spec.RuleConfigSelector.MatchExpressions) == 0 {
 		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
 		return result, fmt.Errorf("no prometheus rule selector specified")
 	}
@@ -534,7 +534,7 @@ func (r *ThanosRulerReconciler) getRuleConfigMaps(ctx context.Context, ruler mon
 func (r *ThanosRulerReconciler) getPrometheusRuleConfigMaps(ctx context.Context, ruler monitoringthanosiov1alpha1.ThanosRuler) (ruleConfigMaps, error) {
 	result := ruleConfigMaps{}
 
-	if ruler.Spec.RuleConfigSelector.MatchLabels == nil {
+	if len(ruler.Spec.RuleConfigSelector.MatchLabels) == 0 && len(ruler.Spec.RuleConfigSelector.MatchExpressions) == 0 {
 		r.logger.Error(fmt.Errorf("no prometheus rule selector specified"), "no prometheus rule selector specified", "ruler", ruler.Name)
 		return result, fmt.Errorf("no prometheus rule selector specified")
 	}
@@ -685,7 +685,7 @@ func (r *ThanosRulerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		bldr.Watches(
 			&monitoringv1.PrometheusRule{},
 			r.enqueueForPrometheusRule(),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+			builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})),
 		)
 	}
 

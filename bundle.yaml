@@ -33096,8 +33096,9 @@ spec:
                 x-kubernetes-map-type: atomic
                 x-kubernetes-validations:
                 - message: ruleConfigSelector must have at least one label selector
-                  rule: self.matchLabels.size() >= 1 || self.matchExpressions.size()
-                    >= 1
+                  rule: (has(self.matchLabels) && self.matchLabels.size() >= 1) ||
+                    (has(self.matchExpressions) && self.matchExpressions.size() >=
+                    1)
               ruleTenancyConfig:
                 description: RuleTenancyConfig is the configuration for the rule tenancy.
                 properties:
