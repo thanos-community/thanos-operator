@@ -43,6 +43,7 @@ type Options struct {
 	RelabelConfigs           manifests.RelabelConfigs
 	ShardIndex               *int32
 	StoreLimitsOpts          manifests.StoreLimitsOpts
+	DownloadedBytesLimit     *uint64
 	IndexHeaderOptions       *IndexHeaderOptions
 	BlockConfigOptions       *BlockConfigOptions
 }
@@ -347,6 +348,11 @@ func storeArgsFrom(opts Options) []string {
 	)
 
 	args = append(args, opts.StoreLimitsOpts.ToFlags()...)
+
+	if opts.DownloadedBytesLimit != nil && *opts.DownloadedBytesLimit > 0 {
+		args = append(args, fmt.Sprintf("--store.grpc.downloaded-bytes-limit=%d", *opts.DownloadedBytesLimit))
+	}
+
 	if opts.BlockConfigOptions != nil {
 		args = append(args, opts.BlockConfigOptions.toArgs()...)
 	}
