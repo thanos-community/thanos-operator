@@ -74,17 +74,14 @@ func MergeMaps(baseLabels map[string]string, mergeWithPriority map[string]string
 	return mergedLabels
 }
 
-// BuildLabelSelectorFrom builds a label selector from the provided label selector and required labels.
-// The required labels will be added to the MatchLabels of the provided label selector.
-// labelSelector is DeepCopied to avoid modifying the original object.
+// BuildLabelSelectorFrom adds required labels without modifying the input selector.
 func BuildLabelSelectorFrom(labelSelector *metav1.LabelSelector, requiredLabels map[string]string) (labels.Selector, error) {
 	ls := labelSelector.DeepCopy()
 
 	if ls == nil {
-		ls = &metav1.LabelSelector{MatchLabels: requiredLabels}
-	} else {
-		maps.Copy(ls.MatchLabels, requiredLabels)
+		ls = &metav1.LabelSelector{}
 	}
+	ls.MatchLabels = MergeMaps(ls.MatchLabels, requiredLabels)
 	return metav1.LabelSelectorAsSelector(ls)
 }
 

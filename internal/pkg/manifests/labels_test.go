@@ -1,6 +1,7 @@
 package manifests
 
 import (
+	"maps"
 	"reflect"
 	"testing"
 
@@ -50,7 +51,9 @@ func TestBuildLabelSelectorFrom(t *testing.T) {
 		name          string
 		labelSelector *metav1.LabelSelector
 		required      map[string]string
-		expect        map[string]string
+		expect        labels.Set
+		reject        []labels.Set
+		wantErr       bool
 	}{
 		{
 			name:          "build label selector from nil label selector",
@@ -60,7 +63,25 @@ func TestBuildLabelSelectorFrom(t *testing.T) {
 			},
 			expect: map[string]string{
 				"a": "b",
-			}},
+			},
+			reject: []labels.Set{{}, {"a": "other"}},
+		},
+		{
+			name:   "nil selector without required labels matches everything",
+			expect: labels.Set{},
+		},
+		{
+			name:          "empty selector with required labels",
+			labelSelector: &metav1.LabelSelector{},
+			required:      map[string]string{"a": "b"},
+			expect:        labels.Set{"a": "b"},
+			reject:        []labels.Set{{}, {"a": "other"}},
+		},
+		{
+			name:          "empty selector without required labels matches everything",
+			labelSelector: &metav1.LabelSelector{},
+			expect:        labels.Set{},
+		},
 		{
 			name: "build label selector from existing label selector",
 			labelSelector: &metav1.LabelSelector{
@@ -74,19 +95,89 @@ func TestBuildLabelSelectorFrom(t *testing.T) {
 			expect: map[string]string{
 				"foo": "bar",
 				"a":   "b",
-			}},
+			},
+			reject: []labels.Set{{"foo": "bar"}, {"a": "b"}},
+		},
+		{
+			name: "expression-only selector with required labels",
+			labelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "component", Operator: metav1.LabelSelectorOpIn, Values: []string{"store", "receive"}},
+				},
+			},
+			required: map[string]string{"a": "b"},
+			expect:   labels.Set{"a": "b", "component": "store"},
+			reject:   []labels.Set{{"component": "store"}, {"a": "b"}, {"a": "b", "component": "query"}},
+		},
+		{
+			name: "expression-only selector without required labels",
+			labelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "component", Operator: metav1.LabelSelectorOpExists},
+				},
+			},
+			expect: labels.Set{"component": "store"},
+			reject: []labels.Set{{}},
+		},
+		{
+			name: "labels and expressions are combined with required labels",
+			labelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"team": "metrics"},
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "disabled", Operator: metav1.LabelSelectorOpDoesNotExist},
+				},
+			},
+			required: map[string]string{"a": "b"},
+			expect:   labels.Set{"a": "b", "team": "metrics"},
+			reject: []labels.Set{
+				{"team": "metrics"},
+				{"a": "b"},
+				{"a": "b", "team": "metrics", "disabled": "true"},
+			},
+		},
+		{
+			name: "required labels retain their existing precedence",
+			labelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"a": "other"},
+			},
+			required: map[string]string{"a": "b"},
+			expect:   labels.Set{"a": "b"},
+			reject:   []labels.Set{{"a": "other"}},
+		},
+		{
+			name: "invalid expression returns an error",
+			labelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "component", Operator: "Invalid"},
+				},
+			},
+			required: map[string]string{"a": "b"},
+			wantErr:  true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			originalSelector := tc.labelSelector.DeepCopy()
+			originalRequired := maps.Clone(tc.required)
 			result, err := BuildLabelSelectorFrom(tc.labelSelector, tc.required)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			if !reflect.DeepEqual(tc.labelSelector, originalSelector) {
+				t.Error("input selector was modified")
 			}
-			if len(result.String()) == 0 {
-				t.Fatalf("expected label selector to be non-empty")
+			if !reflect.DeepEqual(tc.required, originalRequired) {
+				t.Error("required labels were modified")
 			}
-
-			if !result.Matches(labels.Set(tc.expect)) {
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got error %v, want error: %t", err, tc.wantErr)
+			}
+			if tc.wantErr {
+				return
+			}
+			if !result.Matches(tc.expect) {
 				t.Errorf("expected label selector to match %v", tc.expect)
+			}
+			for _, rejected := range tc.reject {
+				if result.Matches(rejected) {
+					t.Errorf("expected label selector not to match %v", rejected)
+				}
 			}
 		})
 	}
