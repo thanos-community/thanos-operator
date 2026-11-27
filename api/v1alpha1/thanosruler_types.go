@@ -48,7 +48,7 @@ type ThanosRulerSpec struct {
 	// Values provided here will be appended to the default which is: operator.thanos.io/prometheus-rule: "true"
 	// +kubebuilder:default:={matchLabels:{"operator.thanos.io/prometheus-rule": "true"}}
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self.matchLabels.size() >= 1 || self.matchExpressions.size() >= 1",message="ruleConfigSelector must have at least one label selector"
+	// +kubebuilder:validation:XValidation:rule="(has(self.matchLabels) && self.matchLabels.size() >= 1) || (has(self.matchExpressions) && self.matchExpressions.size() >= 1)",message="ruleConfigSelector must have at least one label selector"
 	RuleConfigSelector metav1.LabelSelector `json:"ruleConfigSelector,omitempty"`
 	// AlertmanagerURL is the URL of the Alertmanager to which the Ruler will send alerts.
 	// The scheme should not be empty e.g http might be used. The scheme may be prefixed with
