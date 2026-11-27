@@ -1,6 +1,8 @@
 package query
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -45,8 +47,8 @@ func TestBuildQuery(t *testing.T) {
 	}
 
 	objs := opts.Build()
-	if len(objs) != 4 {
-		t.Fatalf("expected 4 objects, got %d", len(objs))
+	if len(objs) != 5 {
+		t.Fatalf("expected 5 objects, got %d", len(objs))
 	}
 
 	for _, obj := range objs {
@@ -54,14 +56,18 @@ func TestBuildQuery(t *testing.T) {
 	}
 
 	utils.ValidateIsNamedServiceAccount(t, objs[0], opts, opts.Namespace)
-	utils.ValidateObjectsEqual(t, objs[1], NewQueryDeployment(opts))
-	utils.ValidateObjectsEqual(t, objs[2], NewQueryService(opts))
-	utils.ValidateIsNamedPodDisruptionBudget(t, objs[3], opts, opts.Namespace, objs[1])
+	cm, ok := objs[1].(*corev1.ConfigMap)
+	assert.Assert(t, ok)
+	assert.Equal(t, opts.GetGeneratedResourceName(), cm.GetName())
+	assert.Assert(t, cm.Data[endpointSDConfigKey] != "")
+	utils.ValidateObjectsEqual(t, objs[2], NewQueryDeployment(opts))
+	utils.ValidateObjectsEqual(t, objs[3], NewQueryService(opts))
+	utils.ValidateIsNamedPodDisruptionBudget(t, objs[4], opts, opts.Namespace, objs[2])
 
 	wantLabels := opts.GetSelectorLabels()
 	wantLabels["some-custom-label"] = someCustomLabelValue
 	wantLabels["some-other-label"] = someOtherLabelValue
-	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2]}...)
+	utils.ValidateObjectLabelsEqual(t, wantLabels, []client.Object{objs[1], objs[2], objs[3]}...)
 }
 
 func TestNewQueryDeployment(t *testing.T) {
@@ -339,38 +345,87 @@ func TestBuildQueryGolden(t *testing.T) {
 }
 
 func TestQueryArgsEndpoints(t *testing.T) {
+	endpoints := []Endpoint{
+		{ServiceName: "store", Namespace: "ns", Type: manifests.RegularLabel, Port: 10901},
+		{ServiceName: "store-strict", Namespace: "ns", Type: manifests.StrictLabel, Port: 10901},
+		{ServiceName: "store-group", Namespace: "ns", Type: manifests.GroupLabel, Port: 10901},
+		{ServiceName: "store-group-strict", Namespace: "ns", Type: manifests.GroupStrictLabel, Port: 10901},
+	}
 	opts := Options{
 		Options: manifests.Options{
 			Owner:     "test-owner",
 			Namespace: "ns",
 		},
-		Endpoints: []Endpoint{
-			{ServiceName: "store", Namespace: "ns", Type: manifests.RegularLabel, Port: 10901},
-			{ServiceName: "store-strict", Namespace: "ns", Type: manifests.StrictLabel, Port: 10901},
-			{ServiceName: "store-group", Namespace: "ns", Type: manifests.GroupLabel, Port: 10901},
-			{ServiceName: "store-group-strict", Namespace: "ns", Type: manifests.GroupStrictLabel, Port: 10901},
-		},
+		Endpoints: endpoints,
 	}
 
 	args := queryArgs(opts)
+	assert.Assert(t, contains(args, "--endpoint.sd-config-file=/etc/thanos/endpoint-sd/endpoints.yaml"), "got %v", args)
+	assert.Assert(t, contains(args, "--endpoint.sd-config-reload-interval=30s"), "got %v", args)
+	for _, arg := range args {
+		for _, forbidden := range []string{
+			"--endpoint=",
+			"--endpoint-strict=",
+			"--endpoint-group=",
+			"--endpoint-group-strict=",
+		} {
+			assert.Assert(t, !strings.Contains(arg, forbidden), "query args contain %q in %q", forbidden, arg)
+		}
+	}
 
-	// Non-strict endpoint groups must use a DNS SD prefix so gRPC resolves the
-	// individual replica IPs behind the headless service and load-balances
-	// round-robin across them. Without the prefix Thanos treats the value as a
-	// single static address and cannot balance across HA replicas.
-	//
-	// Strict endpoints (including strict groups) must NOT use a DNS SD prefix:
-	// Thanos rejects dynamically-resolved addresses in strict mode at startup,
-	// so they stay static addresses.
-	want := []string{
-		"--endpoint=dnssrv+_grpc._tcp.store.ns.svc",
-		"--endpoint-strict=store-strict.ns.svc:10901",
-		"--endpoint-group=dnssrv+_grpc._tcp.store-group.ns.svc",
-		"--endpoint-group-strict=store-group-strict.ns.svc:10901",
+	var cm *corev1.ConfigMap
+	for _, obj := range opts.Build() {
+		if found, ok := obj.(*corev1.ConfigMap); ok {
+			cm = found
+			break
+		}
 	}
-	for _, w := range want {
-		assert.Assert(t, contains(args, w), "expected args to contain %q, got %v", w, args)
-	}
+	assert.Assert(t, cm != nil, "Build() did not emit a ConfigMap")
+
+	var got wireEndpointSDFile
+	assert.NilError(t, yaml.Unmarshal([]byte(cm.Data["endpoints.yaml"]), &got))
+	assert.DeepEqual(t, got.Endpoints, []wireEndpointSD{
+		{Address: "dnssrv+_grpc._tcp.store.ns.svc"},
+		{Address: "dnssrv+_grpc._tcp.store-group.ns.svc", Group: true},
+		{Address: "store-group-strict.ns.svc:10901", Group: true, Strict: true},
+		{Address: "store-strict.ns.svc:10901", Strict: true},
+	})
+
+	without := opts
+	without.Endpoints = nil
+	assert.Assert(t,
+		reflect.DeepEqual(NewQueryDeployment(opts).Spec.Template, NewQueryDeployment(without).Spec.Template),
+		"pod template changed when endpoints changed",
+	)
+
+	empty := renderEndpointSDConfig(nil)
+	assert.Assert(t, strings.Contains(empty, "[]"), "empty document was %q", empty)
+	assert.Assert(t, !strings.Contains(empty, "null"), "empty document was %q", empty)
+	var emptyDoc wireEndpointSDFile
+	assert.NilError(t, yaml.Unmarshal([]byte(empty), &emptyDoc))
+	assert.Equal(t, 0, len(emptyDoc.Endpoints))
+}
+
+func TestQueryRejectsReservedEndpointVolume(t *testing.T) {
+	opts := Options{Options: manifests.Options{Owner: "test-owner", Namespace: "ns"}}
+	assert.NilError(t, opts.Valid())
+
+	opts.Additional.Volumes = []corev1.Volume{{Name: endpointSDVolumeName}}
+	assert.ErrorContains(t, opts.Valid(), endpointSDVolumeName)
+
+	opts.Additional.Volumes = nil
+	opts.Additional.VolumeMounts = []corev1.VolumeMount{{Name: "user", MountPath: endpointSDMountPath}}
+	assert.ErrorContains(t, opts.Valid(), endpointSDMountPath)
+}
+
+type wireEndpointSDFile struct {
+	Endpoints []wireEndpointSD `json:"endpoints"`
+}
+
+type wireEndpointSD struct {
+	Address string `json:"address"`
+	Group   bool   `json:"group"`
+	Strict  bool   `json:"strict"`
 }
 
 func contains(haystack []string, needle string) bool {

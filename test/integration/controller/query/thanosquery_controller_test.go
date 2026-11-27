@@ -19,7 +19,6 @@ package query
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -39,7 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	resourceapi "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,8 +54,6 @@ var _ = Describe("ThanosQuery Controller", func() {
 			Port:       receive.GRPCPort,
 			TargetPort: intstr.FromInt32(receive.GRPCPort),
 		}
-
-		ctx := context.Background()
 
 		// each spec gets its own namespace so specs stay isolated and need no
 		// teardown (envtest has no namespace controller to reap them anyway)
@@ -121,10 +117,10 @@ var _ = Describe("ThanosQuery Controller", func() {
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), svc)).Should(Succeed())
-				expectArg := fmt.Sprintf("--endpoint=dnssrv+_%s._tcp.%s.%s.svc", receive.GRPCPortName, receiveSvcName, ns)
-				EventuallyWithOffset(1, func() bool {
-					return utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, expectArg)
-				}, time.Minute*1).Should(BeTrue())
+				expect := fmt.Sprintf("endpoints:\n- address: dnssrv+_grpc._tcp.%s.%s.svc\n", receiveSvcName, ns)
+				EventuallyWithOffset(1, func() error {
+					return utils.ConfigMapDataMatches(k8sClient, controller.QueryNameFromParent(resourceName), ns, "endpoints.yaml", expect)
+				}, time.Minute*1).Should(Succeed())
 			})
 
 			By("verifying query annotations", func() {
@@ -174,25 +170,9 @@ var _ = Describe("ThanosQuery Controller", func() {
 				}
 				Expect(k8sClient.Create(context.Background(), svcToIgnore)).Should(Succeed())
 				EventuallyWithOffset(1, func() error {
-					deployment := &appsv1.Deployment{}
-					if err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      name,
-						Namespace: ns,
-					}, deployment); err != nil {
+					expect := fmt.Sprintf("endpoints:\n- address: %s.%s.svc:%d\n  strict: true\n", receiveSvcName, ns, receive.GRPCPort)
+					if err := utils.ConfigMapDataMatches(k8sClient, controller.QueryNameFromParent(resourceName), ns, "endpoints.yaml", expect); err != nil {
 						return err
-					}
-
-					// The service labelled app=nginx must be ignored by the event
-					// handler and must not produce an endpoint arg.
-					for _, a := range deployment.Spec.Template.Spec.Containers[0].Args {
-						if strings.Contains(a, "some-svc-to-ignore-at-event-handler") {
-							return fmt.Errorf("expected ignored service to produce no endpoint arg, got %q", a)
-						}
-					}
-
-					arg := fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", receiveSvcName, ns, receive.GRPCPort)
-					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 0, arg) == false {
-						return fmt.Errorf("expected arg %q", arg)
 					}
 
 					if utils.VerifyDeploymentArgs(k8sClient, name, ns, 1, "--reporter.grpc.host-port=jaeger-collector:14250") == false {

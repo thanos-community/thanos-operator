@@ -67,6 +67,8 @@ spec:
         - --query.auto-downsampling
         - --query.promql-engine=thanos
         - --query.max-concurrent=20
+        - --endpoint.sd-config-file=/etc/thanos/endpoint-sd/endpoints.yaml
+        - --endpoint.sd-config-reload-interval=30s
         image: some-custom-image:v0.42.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -101,6 +103,10 @@ spec:
           runAsNonRoot: true
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /etc/thanos/endpoint-sd
+          name: endpoint-sd-config
+          readOnly: true
       - args:
         - --test-arg
         env:
@@ -110,4 +116,8 @@ spec:
         name: test-container
         resources: {}
       serviceAccountName: thanos-query-test-q
+      volumes:
+      - configMap:
+          name: thanos-query-test-q
+        name: endpoint-sd-config
 status: {}

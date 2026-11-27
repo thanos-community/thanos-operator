@@ -68,6 +68,8 @@ spec:
         - --query.auto-downsampling
         - --query.promql-engine=thanos
         - --query.max-concurrent=20
+        - --endpoint.sd-config-file=/etc/thanos/endpoint-sd/endpoints.yaml
+        - --endpoint.sd-config-reload-interval=30s
         - |-
           --tracing.config=type: OTLP
           config:
@@ -108,5 +110,13 @@ spec:
           runAsNonRoot: true
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /etc/thanos/endpoint-sd
+          name: endpoint-sd-config
+          readOnly: true
       serviceAccountName: thanos-query-test-q
+      volumes:
+      - configMap:
+          name: thanos-query-test-q
+        name: endpoint-sd-config
 status: {}

@@ -15,6 +15,27 @@
       operator.thanos.io/query-api: "true"
     name: thanos-query-test-owner
     namespace: test-namespace
+- apiVersion: v1
+  data:
+    endpoints.yaml: |
+      endpoints: []
+  kind: ConfigMap
+  metadata:
+    annotations:
+      another: annotation
+      test-annotation: test-value
+    labels:
+      app.kubernetes.io/component: query-layer
+      app.kubernetes.io/instance: thanos-query-test-owner
+      app.kubernetes.io/managed-by: thanos-operator
+      app.kubernetes.io/name: thanos-query
+      app.kubernetes.io/part-of: thanos
+      app.kubernetes.io/version: v0.40.1
+      custom-label: custom-value
+      operator.thanos.io/owner: test-owner
+      operator.thanos.io/query-api: "true"
+    name: thanos-query-test-owner
+    namespace: test-namespace
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -84,6 +105,8 @@
           - --query.auto-downsampling
           - --query.promql-engine=thanos
           - --query.max-concurrent=50
+          - --endpoint.sd-config-file=/etc/thanos/endpoint-sd/endpoints.yaml
+          - --endpoint.sd-config-reload-interval=30s
           image: quay.io/thanos/thanos:v0.40.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
@@ -119,6 +142,9 @@
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
+          - mountPath: /etc/thanos/endpoint-sd
+            name: endpoint-sd-config
+            readOnly: true
           - mountPath: /etc/thanos
             name: config
         - args:
@@ -128,6 +154,9 @@
           resources: {}
         serviceAccountName: thanos-query-test-owner
         volumes:
+        - configMap:
+            name: thanos-query-test-owner
+          name: endpoint-sd-config
         - configMap:
             name: query-config
           name: config

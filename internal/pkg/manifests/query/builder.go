@@ -52,8 +52,6 @@ type TelemetryQuantiles struct {
 	Series   []string
 }
 
-// Endpoint represents a single StoreAPI DNS formatted address.
-// TODO(saswatamcode): Add validation.
 type Endpoint struct {
 	ServiceName string
 	Namespace   string
@@ -68,6 +66,7 @@ func (opts Options) Build() []client.Object {
 	name := opts.GetGeneratedResourceName()
 
 	objs = append(objs, manifests.BuildServiceAccount(opts.GetGeneratedResourceName(), opts.Namespace, selectorLabels, opts.Annotations))
+	objs = append(objs, newEndpointSDConfigMap(opts, objectMetaLabels))
 	objs = append(objs, newQueryDeployment(opts, selectorLabels, objectMetaLabels))
 	objs = append(objs, newQueryService(opts, selectorLabels, objectMetaLabels))
 
@@ -84,6 +83,16 @@ func (opts Options) Build() []client.Object {
 func (opts Options) Valid() error {
 	if opts.getOwner() == "" {
 		return fmt.Errorf("owner cannot be empty")
+	}
+	for _, volume := range opts.Additional.Volumes {
+		if volume.Name == endpointSDVolumeName {
+			return fmt.Errorf("volume name %q is reserved for the querier endpoint file", endpointSDVolumeName)
+		}
+	}
+	for _, mount := range opts.Additional.VolumeMounts {
+		if mount.Name == endpointSDVolumeName || mount.MountPath == endpointSDMountPath {
+			return fmt.Errorf("volume mount %q at %q collides with the querier endpoint file", mount.Name, mount.MountPath)
+		}
 	}
 	return nil
 }
@@ -177,6 +186,12 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		Args:                     queryArgs(opts),
+		// Directory mount. A subPath mount ignores later ConfigMap updates.
+		VolumeMounts: []corev1.VolumeMount{{
+			Name:      endpointSDVolumeName,
+			MountPath: endpointSDMountPath,
+			ReadOnly:  true,
+		}},
 	}
 
 	deployment := &appsv1.Deployment{
@@ -203,6 +218,16 @@ func newQueryDeployment(opts Options, selectorLabels, objectMetaLabels map[strin
 					Affinity:           &podAffinity,
 					Containers:         []corev1.Container{queryContainer},
 					ServiceAccountName: name,
+					Volumes: []corev1.Volume{{
+						Name: endpointSDVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: name,
+								},
+							},
+						},
+					}},
 				},
 			},
 		},
@@ -289,30 +314,10 @@ func queryArgs(opts Options) []string {
 		args = append(args, fmt.Sprintf("--query.replica-label=%s", label))
 	}
 
-	for _, ep := range opts.Endpoints {
-		switch ep.Type {
-		case manifests.RegularLabel:
-			// TODO(saswatamcode): For regular probably use SD file.
-			args = append(args, fmt.Sprintf("--endpoint=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
-		case manifests.StrictLabel:
-			// Strict endpoints must NOT use a DNS SD prefix: Thanos rejects
-			// dynamically-resolved addresses in strict mode at startup.
-			args = append(args, fmt.Sprintf("--endpoint-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		case manifests.GroupLabel:
-			// Use a DNS SD prefix so gRPC resolves the individual replica IPs
-			// behind the headless service and load-balances round-robin across
-			// them. Without a prefix Thanos treats the value as a single static
-			// address and cannot balance across HA replicas.
-			args = append(args, fmt.Sprintf("--endpoint-group=dnssrv+_grpc._tcp.%s.%s.svc", ep.ServiceName, ep.Namespace))
-		case manifests.GroupStrictLabel:
-			// Strict endpoints must NOT use a DNS SD prefix: Thanos rejects
-			// dynamically-resolved addresses in strict mode at startup. This
-			// stays a static address and therefore does not DNS-load-balance.
-			args = append(args, fmt.Sprintf("--endpoint-group-strict=%s.%s.svc:%d", ep.ServiceName, ep.Namespace, ep.Port))
-		default:
-			panic("unknown endpoint type")
-		}
-	}
+	args = append(args,
+		fmt.Sprintf("--endpoint.sd-config-file=%s/%s", endpointSDMountPath, endpointSDConfigKey),
+		fmt.Sprintf("--endpoint.sd-config-reload-interval=%s", endpointSDReloadInterval),
+	)
 
 	return manifests.PruneEmptyArgs(args)
 }
